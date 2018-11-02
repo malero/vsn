@@ -1,0 +1,33 @@
+<!doctype html>
+
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+
+  <title>VisionJS Demo</title>
+
+  <style type="text/css">
+
+  </style>
+    <script type="text/javascript">
+        var TestController = (function () {
+            function TestController() {
+                this.name = '';
+            }
+            TestController.prototype.reset = function () {
+                this.name = '';
+            };
+            return TestController;
+        }());
+    </script>
+</head>
+
+<body>
+    <div v-controller="TestController" v-name="test">
+        <h1>Hello, this is a VisionJS Demo! Value: <span v-bind="test.name">Test</span></h1>
+        <input type="text" v-bind="test.name" />
+        <button v-click="test.reset">Reset</button>
+    </div>
+    <script type="text/javascript" src="vision.js"></script>
+</body>
+</html>
