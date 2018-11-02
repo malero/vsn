@@ -1,12 +1,12 @@
 {
-  "name": "vision",
+  "name": "visionjs-framework",
   "version": "0.0.1",
   "description": "SEO Friendly Javascript/Typescript Framework",
   "keywords": [
     "framework",
     "typescript"
   ],
-  "main": "./dist/vision.js",
+  "main": "./dist/Vision.js",
   "scripts": {
     "build": "rm -rf ./dist/ && tsc",
     "demo": "rm -rf ./dist/ && tsc && browserify ./dist/Vision.js > ./demo/vision.js",
