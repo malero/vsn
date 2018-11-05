@@ -8,7 +8,7 @@ export class Controller extends Tag {
     protected setup(): void {
         const name: string = this.attributes['v-name'];
         const value: any = this.scope.get(name);
-        const controllerClassName: string = this.attributes['v-controller'];
+        const controllerClassName: string = this.attributes['v-class'];
         const cls: any = window[controllerClassName];
 
         if (name && !value && cls) {

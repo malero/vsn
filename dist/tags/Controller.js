@@ -20,7 +20,7 @@ var Controller = /** @class */ (function (_super) {
     Controller.prototype.setup = function () {
         var name = this.attributes['v-name'];
         var value = this.scope.get(name);
-        var controllerClassName = this.attributes['v-controller'];
+        var controllerClassName = this.attributes['v-class'];
         var cls = window[controllerClassName];
         if (name && !value && cls) {
             this.controllerScope = new Scope_1.Wrapper(new cls(), this.scope);

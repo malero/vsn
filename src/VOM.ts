@@ -6,9 +6,10 @@ import {Click} from "./tags/Click";
 
 export class VOM {
     public static readonly tagMap: {[key: string]: any} = {
-        '[v-controller]': Controller,
+        '[v-class]': Controller,
         '[v-bind]': Binding,
-        '[v-click]': Click
+        '[v-click]': Click,
+        '[v-list]': List,
     };
     protected tags: Tag[];
 

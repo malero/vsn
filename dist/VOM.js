@@ -16,7 +16,7 @@ var VOM = /** @class */ (function () {
         }
     }
     VOM.tagMap = {
-        '[v-controller]': Controller_1.Controller,
+        '[v-class]': Controller_1.Controller,
         '[v-bind]': Binding_1.Binding,
         '[v-click]': Click_1.Click
     };

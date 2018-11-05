@@ -12,10 +12,11 @@
     <script type="text/javascript">
         var TestController = (function () {
             function TestController() {
-                this.name = '';
+                this.reset();
             }
             TestController.prototype.reset = function () {
                 this.name = '';
+                this.items = [];
             };
             return TestController;
         }());
@@ -23,10 +24,16 @@
 </head>
 
 <body>
-    <div v-controller="TestController" v-name="test">
+    <div v-class="TestController" v-name="test">
         <h1>Hello, this is a VisionJS Demo! Value: <span v-bind="test.name">Test</span></h1>
         <input type="text" v-bind="test.name" />
         <button v-click="test.reset">Reset</button>
+        <ul v-list="test.items" v-item-class="TestModel" v-item-name="item" v-item-key="key">
+            <li>
+                <span v-bind="item.name">Tom</span> <span v-bind="item.age">22</span>
+            </li>
+        </ul>
+        <input type="text" v-bind="item.name" />
     </div>
     <script type="text/javascript" src="vision.js"></script>
 </body>

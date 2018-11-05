@@ -153,7 +153,7 @@ var VOM = /** @class */ (function () {
         }
     }
     VOM.tagMap = {
-        '[v-controller]': Controller_1.Controller,
+        '[v-class]': Controller_1.Controller,
         '[v-bind]': Binding_1.Binding,
         '[v-click]': Click_1.Click
     };
@@ -302,7 +302,7 @@ var Controller = /** @class */ (function (_super) {
     Controller.prototype.setup = function () {
         var name = this.attributes['v-name'];
         var value = this.scope.get(name);
-        var controllerClassName = this.attributes['v-controller'];
+        var controllerClassName = this.attributes['v-class'];
         var cls = window[controllerClassName];
         if (name && !value && cls) {
             this.controllerScope = new Scope_1.Wrapper(new cls(), this.scope);

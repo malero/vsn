@@ -1,5 +1,5 @@
 import {Tag} from "../Tag";
-import {Scope, ScopeReference} from "../Scope";
+import {ScopeReference} from "../Scope";
 
 export class Click extends Tag {
     protected onClickHandler: any;

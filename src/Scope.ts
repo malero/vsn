@@ -44,6 +44,9 @@ export class Scope extends EventDispatcher {
     }
 
     get(key: string): any {
+        if (!this.data[key] && this.parent)
+            return this.parent.get(key);
+
         return this.data[key];
     }
 
