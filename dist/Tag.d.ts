@@ -1,13 +1,26 @@
 import { Scope } from "./Scope";
-export declare abstract class Tag {
-    protected readonly element: HTMLElement;
-    protected readonly scope: Scope;
-    protected attributes: {
+import { Attribute } from "./Attribute";
+import { EventDispatcher } from "simple-ts-event-dispatcher";
+import { DOM } from "./DOM";
+export declare class Tag extends EventDispatcher {
+    readonly element: HTMLElement;
+    readonly dom: DOM;
+    readonly rawAttributes: {
         [key: string]: string;
     };
+    protected attributes: Attribute[];
+    protected _parent: Tag;
+    protected _scope: Scope;
+    static readonly attributeMap: {
+        [attr: string]: any;
+    };
     protected inputTags: string[];
-    constructor(element: HTMLElement, scope: Scope);
-    parseAttributes(): void;
+    constructor(element: HTMLElement, dom: DOM);
     readonly isInput: boolean;
-    protected abstract setup(): void;
+    parent: Tag;
+    scope: Scope;
+    wrapScope(cls: any): void;
+    getAttribute(key: string): Attribute;
+    buildAttributes(): void;
+    setupAttributes(): void;
 }

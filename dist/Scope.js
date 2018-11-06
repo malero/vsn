@@ -25,10 +25,27 @@ var Scope = /** @class */ (function (_super) {
     __extends(Scope, _super);
     function Scope(parent) {
         var _this = _super.call(this) || this;
-        _this.parent = parent;
+        if (parent)
+            _this.parent = parent;
+        _this.children = [];
         _this.data = new simple_ts_models_1.DataModel({});
+        _this.keys = [];
         return _this;
     }
+    Object.defineProperty(Scope.prototype, "parent", {
+        get: function () {
+            return this._parent;
+        },
+        set: function (scope) {
+            this._parent = scope;
+            scope.addChild(this);
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Scope.prototype.addChild = function (scope) {
+        this.children.push(scope);
+    };
     Scope.prototype.getReference = function (path) {
         var scopePath = path.split('.');
         var key = scopePath[0];
@@ -37,18 +54,25 @@ var Scope = /** @class */ (function (_super) {
         var len = scopePath.length;
         for (var i = 0; i < len; i++) {
             key = scopePath[i];
-            val = scope.get(key);
+            val = scope.get(key, i === 0);
             if (val === undefined && i + 1 < len) {
                 val = new Scope(scope);
                 scope.set(key, val);
             }
-            if (val && typeof val.get === 'function') {
+            if (val && val instanceof Scope) {
                 scope = val;
             }
         }
         return new ScopeReference(scope, key, val);
     };
-    Scope.prototype.get = function (key) {
+    Scope.prototype.get = function (key, searchParents) {
+        if (searchParents === void 0) { searchParents = false; }
+        var value = this.data[key];
+        if (value === undefined || value === null) {
+            if (searchParents && this.parent)
+                return this.parent.get(key, searchParents);
+            return '';
+        }
         return this.data[key];
     };
     Scope.prototype.set = function (key, value) {
@@ -59,16 +83,24 @@ var Scope = /** @class */ (function (_super) {
             this.trigger("change:" + key, value);
             this.trigger('change', key, value);
         }
+        if (this.keys.indexOf(key) === -1)
+            this.keys.push(key);
     };
-    return Scope;
-}(simple_ts_event_dispatcher_1.EventDispatcher));
-exports.Scope = Scope;
-var Wrapper = /** @class */ (function (_super) {
-    __extends(Wrapper, _super);
-    function Wrapper(wrapped, // Instantiated object from v-controller attribute,
-    parent) {
-        var _this = _super.call(this, parent) || this;
-        _this.wrapped = wrapped;
+    Scope.prototype.clear = function () {
+        for (var _i = 0, _a = this.keys; _i < _a.length; _i++) {
+            var key = _a[_i];
+            this.set(key, null);
+        }
+    };
+    Scope.prototype.cleanup = function () {
+        this.children.length = 0;
+        this.parent = null;
+    };
+    Scope.prototype.wrap = function (wrapped) {
+        var _this = this;
+        if (this.wrapped !== undefined)
+            throw Error("A scope can only wrap a single object");
+        this.wrapped = wrapped;
         var _loop_1 = function (field) {
             var getter = function () {
                 var val = _this.wrapped[field];
@@ -92,9 +124,8 @@ var Wrapper = /** @class */ (function (_super) {
         for (var field in wrapped) {
             _loop_1(field);
         }
-        return _this;
-    }
-    return Wrapper;
-}(Scope));
-exports.Wrapper = Wrapper;
+    };
+    return Scope;
+}(simple_ts_event_dispatcher_1.EventDispatcher));
+exports.Scope = Scope;
 //# sourceMappingURL=Scope.js.map

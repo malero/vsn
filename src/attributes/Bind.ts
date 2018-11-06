@@ -1,7 +1,7 @@
-import {Tag} from "../Tag";
 import {Scope, ScopeReference} from "../Scope";
+import {Attribute} from "../Attribute";
 
-export class Binding extends Tag {
+export class Bind extends Attribute {
     protected key?: string;
     protected boundScope?: Scope;
 
@@ -16,8 +16,8 @@ export class Binding extends Tag {
         return this.boundScope.get(this.key);
     }
 
-    protected setup(): void {
-        const ref: ScopeReference = this.scope.getReference(this.attributes['v-bind']);
+    public setup(): void {
+        const ref: ScopeReference = this.tag.scope.getReference(this.tag.rawAttributes['v-bind']);
 
         this.key = ref.key;
         this.boundScope = ref.scope;
@@ -28,23 +28,23 @@ export class Binding extends Tag {
         else
             this.updateTo();
 
-        if (this.isInput)
-            this.element.onkeyup = this.updateFrom.bind(this);
+        if (this.tag.isInput)
+            this.tag.element.onkeyup = this.updateFrom.bind(this);
     }
 
     updateFrom() {
-        if (this.isInput) {
-            this.value = (this.element as any).value;
+        if (this.tag.isInput) {
+            this.value = (this.tag.element as any).value;
         } else {
-            this.value = this.element.innerText;
+            this.value = this.tag.element.innerText;
         }
     }
 
     updateTo() {
-        if (this.isInput) {
-            (this.element as any).value = this.value;
+        if (this.tag.isInput) {
+            (this.tag.element as any).value = this.value;
         } else {
-            this.element.innerText = this.value;
+            this.tag.element.innerText = this.value;
         }
     }
 }

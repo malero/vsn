@@ -10,13 +10,13 @@ var __extends = (this && this.__extends) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-var Tag_1 = require("../Tag");
-var Binding = /** @class */ (function (_super) {
-    __extends(Binding, _super);
-    function Binding() {
+var Attribute_1 = require("../Attribute");
+var Bind = /** @class */ (function (_super) {
+    __extends(Bind, _super);
+    function Bind() {
         return _super !== null && _super.apply(this, arguments) || this;
     }
-    Object.defineProperty(Binding.prototype, "value", {
+    Object.defineProperty(Bind.prototype, "value", {
         get: function () {
             if (!this.boundScope)
                 return null;
@@ -30,8 +30,8 @@ var Binding = /** @class */ (function (_super) {
         enumerable: true,
         configurable: true
     });
-    Binding.prototype.setup = function () {
-        var ref = this.scope.getReference(this.attributes['v-bind']);
+    Bind.prototype.setup = function () {
+        var ref = this.tag.scope.getReference(this.tag.rawAttributes['v-bind']);
         this.key = ref.key;
         this.boundScope = ref.scope;
         this.boundScope.bind("change:" + this.key, this.updateTo, this);
@@ -39,26 +39,26 @@ var Binding = /** @class */ (function (_super) {
             this.updateFrom();
         else
             this.updateTo();
-        if (this.isInput)
-            this.element.onkeyup = this.updateFrom.bind(this);
+        if (this.tag.isInput)
+            this.tag.element.onkeyup = this.updateFrom.bind(this);
     };
-    Binding.prototype.updateFrom = function () {
-        if (this.isInput) {
-            this.value = this.element.value;
+    Bind.prototype.updateFrom = function () {
+        if (this.tag.isInput) {
+            this.value = this.tag.element.value;
         }
         else {
-            this.value = this.element.innerText;
+            this.value = this.tag.element.innerText;
         }
     };
-    Binding.prototype.updateTo = function () {
-        if (this.isInput) {
-            this.element.value = this.value;
+    Bind.prototype.updateTo = function () {
+        if (this.tag.isInput) {
+            this.tag.element.value = this.value;
         }
         else {
-            this.element.innerText = this.value;
+            this.tag.element.innerText = this.value;
         }
     };
-    return Binding;
-}(Tag_1.Tag));
-exports.Binding = Binding;
-//# sourceMappingURL=Binding.js.map
+    return Bind;
+}(Attribute_1.Attribute));
+exports.Bind = Bind;
+//# sourceMappingURL=Bind.js.map

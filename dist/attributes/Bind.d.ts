@@ -1,10 +1,10 @@
-import { Tag } from "../Tag";
 import { Scope } from "../Scope";
-export declare class Binding extends Tag {
+import { Attribute } from "../Attribute";
+export declare class Bind extends Attribute {
     protected key?: string;
     protected boundScope?: Scope;
     value: any;
-    protected setup(): void;
+    setup(): void;
     updateFrom(): void;
     updateTo(): void;
 }

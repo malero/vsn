@@ -1,7 +1,29 @@
 import {Scope} from "./Scope";
+import {Attribute} from "./Attribute";
+import {Bind} from "./attributes/Bind";
+import {Click} from "./attributes/Click";
+import {Controller} from "./attributes/Controller";
+import {List} from "./attributes/List";
+import {ListItem} from "./attributes/ListItem";
+import {EventDispatcher} from "simple-ts-event-dispatcher";
+import {DOM} from "./DOM";
+import {Name} from "./attributes/Name";
 
-export abstract class Tag {
-    protected attributes: { [key: string]: string; };
+export class Tag extends EventDispatcher {
+    public readonly rawAttributes: { [key: string]: string; };
+    protected attributes: Attribute[];
+    protected _parent: Tag;
+    protected _scope: Scope;
+
+    public static readonly attributeMap: { [attr: string]: any; } = {
+        'v-name': Name,
+        'v-class': Controller,
+        'v-list': List,
+        'v-list-item': ListItem,
+        'v-bind': Bind,
+        'v-click': Click,
+    };
+
     protected inputTags: string[] = [
         'input',
         'select',
@@ -9,19 +31,18 @@ export abstract class Tag {
     ];
 
     constructor(
-        protected readonly element: HTMLElement,
-        protected readonly scope: Scope
+        public readonly element: HTMLElement,
+        public readonly dom: DOM
     ) {
-        this.parseAttributes();
-        this.setup();
-    }
+        super();
+        this.scope = new Scope();
+        this.rawAttributes = {};
+        this.attributes = [];
 
-    parseAttributes() {
-        this.attributes = {};
         for (let i: number = 0; i < this.element.attributes.length; i++) {
             const a = this.element.attributes[i];
             if (a.name.substr(0, 2) == 'v-') {
-                this.attributes[a.name] = a.value;
+                this.rawAttributes[a.name] = a.value;
             }
         }
     }
@@ -30,5 +51,49 @@ export abstract class Tag {
         return this.inputTags.indexOf(this.element.tagName.toLowerCase()) > -1;
     }
 
-    protected abstract setup(): void;
+
+    public get parent(): Tag {
+        return this._parent;
+    }
+
+    public set parent(tag: Tag) {
+        this._parent = tag;
+        this.scope.parent = tag.scope;
+    }
+
+    public get scope(): Scope {
+        return this._scope;
+    }
+
+    public set scope(scope: Scope) {
+        this._scope = scope;
+    }
+
+    public wrapScope(cls: any) {
+
+    }
+
+    public getAttribute(key: string) {
+        const cls: any = Tag.attributeMap[key];
+        if (!cls) return;
+        for (const attr of this.attributes)
+            if (attr instanceof cls)
+                return attr;
+
+    }
+
+    public buildAttributes() {
+        this.attributes.length = 0;
+
+        for (const attr in this.rawAttributes) {
+            if (Tag.attributeMap[attr])
+                this.attributes.push(new Tag.attributeMap[attr](this));
+        }
+    }
+
+    public setupAttributes() {
+        for (const attr of this.attributes) {
+            attr.setup();
+        }
+    }
 }

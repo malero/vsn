@@ -10,27 +10,21 @@ var __extends = (this && this.__extends) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-var Tag_1 = require("../Tag");
-var Scope_1 = require("../Scope");
+var Attribute_1 = require("../Attribute");
 var Controller = /** @class */ (function (_super) {
     __extends(Controller, _super);
     function Controller() {
         return _super !== null && _super.apply(this, arguments) || this;
     }
     Controller.prototype.setup = function () {
-        var name = this.attributes['v-name'];
-        var value = this.scope.get(name);
-        var controllerClassName = this.attributes['v-class'];
+        var parentScope = this.tag.parent.scope;
+        if (!parentScope)
+            return;
+        var controllerClassName = this.tag.rawAttributes['v-class'];
         var cls = window[controllerClassName];
-        if (name && !value && cls) {
-            this.controllerScope = new Scope_1.Wrapper(new cls(), this.scope);
-            this.scope.set(name, this.controllerScope);
-        }
-        else if (value instanceof Scope_1.Wrapper) {
-            this.controllerScope = value;
-        }
+        this.tag.scope.wrap(new cls());
     };
     return Controller;
-}(Tag_1.Tag));
+}(Attribute_1.Attribute));
 exports.Controller = Controller;
 //# sourceMappingURL=Controller.js.map

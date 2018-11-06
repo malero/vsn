@@ -1,8 +1,6 @@
-import { VOM } from "./VOM";
-import { Scope } from "./Scope";
+import { DOM } from "./DOM";
 export declare class Vision {
-    protected scope: Scope;
-    protected vom?: VOM;
+    protected dom?: DOM;
     constructor();
     setup(): void;
 }

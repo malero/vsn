@@ -7,15 +7,18 @@ export declare class ScopeReference {
     constructor(scope: Scope, key: string, value: any);
 }
 export declare class Scope extends EventDispatcher {
-    protected parent?: Scope;
+    protected wrapped: any;
     protected data: DataModel;
+    protected children: Scope[];
+    protected keys: string[];
+    protected _parent: Scope;
     constructor(parent?: Scope);
+    parent: Scope;
+    addChild(scope: Scope): void;
     getReference(path: string): ScopeReference;
-    get(key: string): any;
+    get(key: string, searchParents?: boolean): any;
     set(key: string, value: any): void;
-}
-export declare class Wrapper extends Scope {
-    readonly wrapped: any;
-    constructor(wrapped: any, // Instantiated object from v-controller attribute,
-    parent?: Scope);
+    clear(): void;
+    cleanup(): void;
+    wrap(wrapped: any): void;
 }
