@@ -18,14 +18,14 @@ export class List extends Attribute {
                 this.items.push(tag);
         }
 
-        this.tag.scope.set('add', this.newItem.bind(this));
+        this.tag.scope.set('add', this.addItem.bind(this));
     }
 
     public get listItemName(): string {
         return this.tag.rawAttributes['v-list-item-name'] || 'item';
     }
 
-    protected newItem() {
+    protected addItem() {
         const element: HTMLElement = this.template.cloneNode(true) as HTMLElement;
         this.tag.element.appendChild(element);
 

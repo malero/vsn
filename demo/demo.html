@@ -28,18 +28,18 @@
         <h1>Hello, this is a VisionJS Demo! Value: <span v-bind="test.name">Test</span></h1>
         <input type="text" v-bind="test.name" />
         <button v-click="test.reset">Reset</button>
-        <ul v-list="test.items" v-name="test-list">
+        <ul v-list="test.items" v-name="list">
             <li v-list-item>
-                <span v-bind="item.name">Tom</span> <span v-bind="item.age">22</span> <input type="text" v-bind="item.name" /> <input type="text" v-bind="item.age" />
+                <span v-bind="item.name">Tom</span>, <span v-bind="item.age">22</span> Years Old <input type="text" v-bind="item.name" /> <input type="text" v-bind="item.age" /> <button v-click="list.remove(item)">X</button>
             </li>
             <li v-list-item>
-                <span v-bind="item.name">Steve</span> <span v-bind="item.age">46</span> <input type="text" v-bind="item.name" /> <input type="text" v-bind="item.age" />
+                <span v-bind="item.name">Steve</span>, <span v-bind="item.age">46</span> Years Old  <input type="text" v-bind="item.name" /> <input type="text" v-bind="item.age" /> <button v-click="list.remove(item)">X</button>
             </li>
             <li v-list-item>
-                <span v-bind="item.name">Frank</span> <span v-bind="item.age">31</span> <input type="text" v-bind="item.name" /> <input type="text" v-bind="item.age" />
+                <span v-bind="item.name">Frank</span>, <span v-bind="item.age">31</span> Years Old  <input type="text" v-bind="item.name" /> <input type="text" v-bind="item.age" /> <button v-click="list.remove(item)">X</button>
             </li>
         </ul>
-        <button v-click="test-list.add">Add New List Item</button>
+        <button v-click="list.add">Add New List Item</button>
     </div>
     <script type="text/javascript" src="vision.js"></script>
 </body>

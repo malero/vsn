@@ -5,5 +5,5 @@ export declare class List extends Attribute {
     protected template: Node;
     setup(): void;
     readonly listItemName: string;
-    protected newItem(): void;
+    protected addItem(): void;
 }

@@ -211,7 +211,7 @@ var Scope = /** @class */ (function (_super) {
 }(simple_ts_event_dispatcher_1.EventDispatcher));
 exports.Scope = Scope;
 
-},{"simple-ts-event-dispatcher":12,"simple-ts-models":24}],4:[function(require,module,exports){
+},{"simple-ts-event-dispatcher":13,"simple-ts-models":25}],4:[function(require,module,exports){
 "use strict";
 var __extends = (this && this.__extends) || (function () {
     var extendStatics = Object.setPrototypeOf ||
@@ -319,10 +319,11 @@ var Tag = /** @class */ (function (_super) {
 }(simple_ts_event_dispatcher_1.EventDispatcher));
 exports.Tag = Tag;
 
-},{"./Scope":3,"./attributes/Bind":6,"./attributes/Click":7,"./attributes/Controller":8,"./attributes/List":9,"./attributes/ListItem":10,"./attributes/Name":11,"simple-ts-event-dispatcher":12}],5:[function(require,module,exports){
+},{"./Scope":3,"./attributes/Bind":6,"./attributes/Click":7,"./attributes/Controller":8,"./attributes/List":9,"./attributes/ListItem":10,"./attributes/Name":11,"simple-ts-event-dispatcher":13}],5:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 var DOM_1 = require("./DOM");
+var Lexer_1 = require("./lang/Lexer");
 var Vision = /** @class */ (function () {
     function Vision() {
         document.addEventListener("DOMContentLoaded", this.setup.bind(this));
@@ -330,13 +331,16 @@ var Vision = /** @class */ (function () {
     Vision.prototype.setup = function () {
         this.dom = new DOM_1.DOM(document);
     };
+    Vision.prototype.parse = function (str) {
+        return Lexer_1.tokenize(str);
+    };
     return Vision;
 }());
 exports.Vision = Vision;
 exports.vision = new Vision();
 window['vision'] = exports.vision;
 
-},{"./DOM":2}],6:[function(require,module,exports){
+},{"./DOM":2,"./lang/Lexer":12}],6:[function(require,module,exports){
 "use strict";
 var __extends = (this && this.__extends) || (function () {
     var extendStatics = Object.setPrototypeOf ||
@@ -495,7 +499,7 @@ var List = /** @class */ (function (_super) {
             if (tag)
                 this.items.push(tag);
         }
-        this.tag.scope.set('add', this.newItem.bind(this));
+        this.tag.scope.set('add', this.addItem.bind(this));
     };
     Object.defineProperty(List.prototype, "listItemName", {
         get: function () {
@@ -504,7 +508,7 @@ var List = /** @class */ (function (_super) {
         enumerable: true,
         configurable: true
     });
-    List.prototype.newItem = function () {
+    List.prototype.addItem = function () {
         var element = this.template.cloneNode(true);
         this.tag.element.appendChild(element);
         this.tag.dom.buildFrom(this.tag.element);
@@ -577,6 +581,117 @@ var Name = /** @class */ (function (_super) {
 exports.Name = Name;
 
 },{"../Attribute":1}],12:[function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+var TokenType;
+(function (TokenType) {
+    TokenType[TokenType["WHITESPACE"] = 0] = "WHITESPACE";
+    TokenType[TokenType["NAME"] = 1] = "NAME";
+    TokenType[TokenType["L_BRACE"] = 2] = "L_BRACE";
+    TokenType[TokenType["R_BRACE"] = 3] = "R_BRACE";
+    TokenType[TokenType["L_BRACKET"] = 4] = "L_BRACKET";
+    TokenType[TokenType["R_BRACKET"] = 5] = "R_BRACKET";
+    TokenType[TokenType["L_PAREN"] = 6] = "L_PAREN";
+    TokenType[TokenType["R_PAREN"] = 7] = "R_PAREN";
+    TokenType[TokenType["PERIOD"] = 8] = "PERIOD";
+    TokenType[TokenType["COLON"] = 9] = "COLON";
+    TokenType[TokenType["SEMI_COLON"] = 10] = "SEMI_COLON";
+    TokenType[TokenType["STRING_LITERAL"] = 11] = "STRING_LITERAL";
+    TokenType[TokenType["NUMBER_LITERAL"] = 12] = "NUMBER_LITERAL";
+    TokenType[TokenType["BOOLEAN_LITERAL"] = 13] = "BOOLEAN_LITERAL";
+    TokenType[TokenType["NULL_LITERAL"] = 14] = "NULL_LITERAL";
+})(TokenType = exports.TokenType || (exports.TokenType = {}));
+var TOKEN_PATTERNS = [
+    {
+        type: TokenType.WHITESPACE,
+        pattern: /^\s+/
+    },
+    {
+        type: TokenType.NAME,
+        pattern: /^[_a-zA-Z][_a-zA-Z0-9]*/
+    },
+    {
+        type: TokenType.L_BRACE,
+        pattern: /^{/
+    },
+    {
+        type: TokenType.R_BRACE,
+        pattern: /^}/
+    },
+    {
+        type: TokenType.L_BRACKET,
+        pattern: /^\[/
+    },
+    {
+        type: TokenType.R_BRACKET,
+        pattern: /^]/
+    },
+    {
+        type: TokenType.L_PAREN,
+        pattern: /^\(/
+    },
+    {
+        type: TokenType.R_PAREN,
+        pattern: /^\)/
+    },
+    {
+        type: TokenType.PERIOD,
+        pattern: /^\./
+    },
+    {
+        type: TokenType.COLON,
+        pattern: /^:/
+    },
+    {
+        type: TokenType.SEMI_COLON,
+        pattern: /^;/
+    },
+    {
+        type: TokenType.STRING_LITERAL,
+        pattern: /^"([^"]*)"/
+    },
+    {
+        type: TokenType.STRING_LITERAL,
+        pattern: /^'([^']*)'/
+    },
+    {
+        type: TokenType.NUMBER_LITERAL,
+        pattern: /^-?\d+(?:\.\d+)?(?:e[+\-]?\d+)?/i
+    },
+    {
+        type: TokenType.BOOLEAN_LITERAL,
+        pattern: /^true|false/
+    },
+    {
+        type: TokenType.NULL_LITERAL,
+        pattern: /^null/
+    }
+];
+function tokenize(code) {
+    var tokens = [];
+    var foundToken;
+    do {
+        foundToken = false;
+        for (var _i = 0, TOKEN_PATTERNS_1 = TOKEN_PATTERNS; _i < TOKEN_PATTERNS_1.length; _i++) {
+            var tp = TOKEN_PATTERNS_1[_i];
+            var match = tp.pattern.exec(code);
+            if (match) {
+                console.log(match);
+                tokens.push({
+                    type: tp.type,
+                    value: match[match.length - 1]
+                });
+                code = code.substring(match[0].length);
+                foundToken = true;
+                break;
+            }
+        }
+    } while (code.length > 0 && foundToken);
+    return tokens;
+}
+exports.tokenize = tokenize;
+
+},{}],13:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 var EventCallback = /** @class */ (function () {
@@ -682,7 +797,7 @@ var EventDispatcher = /** @class */ (function () {
 }());
 exports.EventDispatcher = EventDispatcher;
 
-},{}],13:[function(require,module,exports){
+},{}],14:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 var MessageList = /** @class */ (function () {
@@ -766,7 +881,7 @@ var MessageList = /** @class */ (function () {
 }());
 exports.default = MessageList;
 
-},{}],14:[function(require,module,exports){
+},{}],15:[function(require,module,exports){
 "use strict";
 var __extends = (this && this.__extends) || (function () {
     var extendStatics = Object.setPrototypeOf ||
@@ -798,7 +913,7 @@ var Collection = /** @class */ (function (_super) {
 }(Array));
 exports.Collection = Collection;
 
-},{}],15:[function(require,module,exports){
+},{}],16:[function(require,module,exports){
 "use strict";
 var __extends = (this && this.__extends) || (function () {
     var extendStatics = Object.setPrototypeOf ||
@@ -847,7 +962,7 @@ var DataModel = /** @class */ (function (_super) {
 }(ModelAbstract_1.ModelAbstract));
 exports.DataModel = DataModel;
 
-},{"./ModelAbstract":17}],16:[function(require,module,exports){
+},{"./ModelAbstract":18}],17:[function(require,module,exports){
 "use strict";
 var __extends = (this && this.__extends) || (function () {
     var extendStatics = Object.setPrototypeOf ||
@@ -912,7 +1027,7 @@ var Model = /** @class */ (function (_super) {
 }(ModelAbstract_1.ModelAbstract));
 exports.Model = Model;
 
-},{"./ModelAbstract":17,"simple-ts-message-list":13}],17:[function(require,module,exports){
+},{"./ModelAbstract":18,"simple-ts-message-list":14}],18:[function(require,module,exports){
 "use strict";
 var __extends = (this && this.__extends) || (function () {
     var extendStatics = Object.setPrototypeOf ||
@@ -1024,7 +1139,7 @@ var ModelAbstract = /** @class */ (function (_super) {
 }(simple_ts_event_dispatcher_1.EventDispatcher));
 exports.ModelAbstract = ModelAbstract;
 
-},{"./fields/Field":20,"simple-ts-event-dispatcher":12}],18:[function(require,module,exports){
+},{"./fields/Field":21,"simple-ts-event-dispatcher":13}],19:[function(require,module,exports){
 "use strict";
 var __extends = (this && this.__extends) || (function () {
     var extendStatics = Object.setPrototypeOf ||
@@ -1062,7 +1177,7 @@ var BooleanField = /** @class */ (function (_super) {
 }(Field_1.Field));
 exports.BooleanField = BooleanField;
 
-},{"./Field":20}],19:[function(require,module,exports){
+},{"./Field":21}],20:[function(require,module,exports){
 "use strict";
 var __extends = (this && this.__extends) || (function () {
     var extendStatics = Object.setPrototypeOf ||
@@ -1093,7 +1208,7 @@ var EmailField = /** @class */ (function (_super) {
 }(Field_1.Field));
 exports.EmailField = EmailField;
 
-},{"./Field":20}],20:[function(require,module,exports){
+},{"./Field":21}],21:[function(require,module,exports){
 "use strict";
 var __extends = (this && this.__extends) || (function () {
     var extendStatics = Object.setPrototypeOf ||
@@ -1167,7 +1282,7 @@ var Field = /** @class */ (function (_super) {
 }(simple_ts_event_dispatcher_1.EventDispatcher));
 exports.Field = Field;
 
-},{"simple-ts-event-dispatcher":12}],21:[function(require,module,exports){
+},{"simple-ts-event-dispatcher":13}],22:[function(require,module,exports){
 "use strict";
 var __extends = (this && this.__extends) || (function () {
     var extendStatics = Object.setPrototypeOf ||
@@ -1209,7 +1324,7 @@ var FloatField = /** @class */ (function (_super) {
 }(Field_1.Field));
 exports.FloatField = FloatField;
 
-},{"./Field":20}],22:[function(require,module,exports){
+},{"./Field":21}],23:[function(require,module,exports){
 "use strict";
 var __extends = (this && this.__extends) || (function () {
     var extendStatics = Object.setPrototypeOf ||
@@ -1255,7 +1370,7 @@ var PositiveIntegerField = /** @class */ (function (_super) {
 }(Field_1.Field));
 exports.PositiveIntegerField = PositiveIntegerField;
 
-},{"./Field":20}],23:[function(require,module,exports){
+},{"./Field":21}],24:[function(require,module,exports){
 "use strict";
 var __extends = (this && this.__extends) || (function () {
     var extendStatics = Object.setPrototypeOf ||
@@ -1293,7 +1408,7 @@ var StringField = /** @class */ (function (_super) {
 }(Field_1.Field));
 exports.StringField = StringField;
 
-},{"./Field":20}],24:[function(require,module,exports){
+},{"./Field":21}],25:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 var Field_1 = require("./fields/Field");
@@ -1319,4 +1434,4 @@ var fields = {
 };
 exports.fields = fields;
 
-},{"./Collection":14,"./DataModel":15,"./Model":16,"./fields/BooleanField":18,"./fields/EmailField":19,"./fields/Field":20,"./fields/FloatField":21,"./fields/PositiveNumberField":22,"./fields/StringField":23}]},{},[5]);
+},{"./Collection":15,"./DataModel":16,"./Model":17,"./fields/BooleanField":19,"./fields/EmailField":20,"./fields/Field":21,"./fields/FloatField":22,"./fields/PositiveNumberField":23,"./fields/StringField":24}]},{},[5]);
