@@ -319,11 +319,12 @@ var Tag = /** @class */ (function (_super) {
 }(simple_ts_event_dispatcher_1.EventDispatcher));
 exports.Tag = Tag;
 
-},{"./Scope":3,"./attributes/Bind":6,"./attributes/Click":7,"./attributes/Controller":8,"./attributes/List":9,"./attributes/ListItem":10,"./attributes/Name":11,"simple-ts-event-dispatcher":13}],5:[function(require,module,exports){
+},{"./Scope":3,"./attributes/Bind":7,"./attributes/Click":8,"./attributes/Controller":9,"./attributes/List":10,"./attributes/ListItem":11,"./attributes/Name":12,"simple-ts-event-dispatcher":13}],5:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 var DOM_1 = require("./DOM");
-var Lexer_1 = require("./lang/Lexer");
+var ast_1 = require("./ast");
+var Scope_1 = require("./Scope");
 var Vision = /** @class */ (function () {
     function Vision() {
         document.addEventListener("DOMContentLoaded", this.setup.bind(this));
@@ -332,7 +333,16 @@ var Vision = /** @class */ (function () {
         this.dom = new DOM_1.DOM(document);
     };
     Vision.prototype.parse = function (str) {
-        return Lexer_1.tokenize(str);
+        var scope = new Scope_1.Scope();
+        scope.set('test', {
+            testing: 'Worky?'
+        });
+        scope.set('func', function () {
+            console.log('called func');
+            return 'testing';
+        });
+        var t = new ast_1.Tree(str);
+        return t.evaluate(scope);
     };
     return Vision;
 }());
@@ -340,247 +350,7 @@ exports.Vision = Vision;
 exports.vision = new Vision();
 window['vision'] = exports.vision;
 
-},{"./DOM":2,"./lang/Lexer":12}],6:[function(require,module,exports){
-"use strict";
-var __extends = (this && this.__extends) || (function () {
-    var extendStatics = Object.setPrototypeOf ||
-        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
-    return function (d, b) {
-        extendStatics(d, b);
-        function __() { this.constructor = d; }
-        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-    };
-})();
-Object.defineProperty(exports, "__esModule", { value: true });
-var Attribute_1 = require("../Attribute");
-var Bind = /** @class */ (function (_super) {
-    __extends(Bind, _super);
-    function Bind() {
-        return _super !== null && _super.apply(this, arguments) || this;
-    }
-    Object.defineProperty(Bind.prototype, "value", {
-        get: function () {
-            if (!this.boundScope)
-                return null;
-            return this.boundScope.get(this.key);
-        },
-        set: function (v) {
-            if (this.boundScope) {
-                this.boundScope.set(this.key, v);
-            }
-        },
-        enumerable: true,
-        configurable: true
-    });
-    Bind.prototype.setup = function () {
-        var ref = this.tag.scope.getReference(this.tag.rawAttributes['v-bind']);
-        this.key = ref.key;
-        this.boundScope = ref.scope;
-        this.boundScope.bind("change:" + this.key, this.updateTo, this);
-        if (!this.value)
-            this.updateFrom();
-        else
-            this.updateTo();
-        if (this.tag.isInput)
-            this.tag.element.onkeyup = this.updateFrom.bind(this);
-    };
-    Bind.prototype.updateFrom = function () {
-        if (this.tag.isInput) {
-            this.value = this.tag.element.value;
-        }
-        else {
-            this.value = this.tag.element.innerText;
-        }
-    };
-    Bind.prototype.updateTo = function () {
-        if (this.tag.isInput) {
-            this.tag.element.value = this.value;
-        }
-        else {
-            this.tag.element.innerText = this.value;
-        }
-    };
-    return Bind;
-}(Attribute_1.Attribute));
-exports.Bind = Bind;
-
-},{"../Attribute":1}],7:[function(require,module,exports){
-"use strict";
-var __extends = (this && this.__extends) || (function () {
-    var extendStatics = Object.setPrototypeOf ||
-        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
-    return function (d, b) {
-        extendStatics(d, b);
-        function __() { this.constructor = d; }
-        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-    };
-})();
-Object.defineProperty(exports, "__esModule", { value: true });
-var Attribute_1 = require("../Attribute");
-var Click = /** @class */ (function (_super) {
-    __extends(Click, _super);
-    function Click() {
-        return _super !== null && _super.apply(this, arguments) || this;
-    }
-    Click.prototype.setup = function () {
-        var click = this.tag.rawAttributes['v-click'];
-        var ref = this.tag.scope.getReference(click);
-        this.onClickHandler = ref.value;
-        this.tag.element.onclick = this.onClick.bind(this);
-    };
-    Click.prototype.onClick = function () {
-        if (this.onClickHandler)
-            this.onClickHandler();
-    };
-    return Click;
-}(Attribute_1.Attribute));
-exports.Click = Click;
-
-},{"../Attribute":1}],8:[function(require,module,exports){
-"use strict";
-var __extends = (this && this.__extends) || (function () {
-    var extendStatics = Object.setPrototypeOf ||
-        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
-    return function (d, b) {
-        extendStatics(d, b);
-        function __() { this.constructor = d; }
-        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-    };
-})();
-Object.defineProperty(exports, "__esModule", { value: true });
-var Attribute_1 = require("../Attribute");
-var Controller = /** @class */ (function (_super) {
-    __extends(Controller, _super);
-    function Controller() {
-        return _super !== null && _super.apply(this, arguments) || this;
-    }
-    Controller.prototype.setup = function () {
-        var parentScope = this.tag.parent.scope;
-        if (!parentScope)
-            return;
-        var controllerClassName = this.tag.rawAttributes['v-class'];
-        var cls = window[controllerClassName];
-        this.tag.scope.wrap(new cls());
-    };
-    return Controller;
-}(Attribute_1.Attribute));
-exports.Controller = Controller;
-
-},{"../Attribute":1}],9:[function(require,module,exports){
-"use strict";
-var __extends = (this && this.__extends) || (function () {
-    var extendStatics = Object.setPrototypeOf ||
-        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
-    return function (d, b) {
-        extendStatics(d, b);
-        function __() { this.constructor = d; }
-        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-    };
-})();
-Object.defineProperty(exports, "__esModule", { value: true });
-var Attribute_1 = require("../Attribute");
-var List = /** @class */ (function (_super) {
-    __extends(List, _super);
-    function List() {
-        return _super !== null && _super.apply(this, arguments) || this;
-    }
-    List.prototype.setup = function () {
-        this.items = [];
-        if (this.tag.element.children.length > 0) {
-            this.template = this.tag.element.children[0].cloneNode(true);
-        }
-        for (var _i = 0, _a = Array.from(this.tag.element.querySelectorAll('[v-list-item]')); _i < _a.length; _i++) {
-            var element = _a[_i];
-            var tag = this.tag.dom.getTagForElement(element);
-            if (tag)
-                this.items.push(tag);
-        }
-        this.tag.scope.set('add', this.addItem.bind(this));
-    };
-    Object.defineProperty(List.prototype, "listItemName", {
-        get: function () {
-            return this.tag.rawAttributes['v-list-item-name'] || 'item';
-        },
-        enumerable: true,
-        configurable: true
-    });
-    List.prototype.addItem = function () {
-        var element = this.template.cloneNode(true);
-        this.tag.element.appendChild(element);
-        this.tag.dom.buildFrom(this.tag.element);
-        var tag = this.tag.dom.getTagForElement(element);
-        this.items.push(tag);
-        var item = tag.scope.get(this.listItemName);
-        item.clear();
-    };
-    return List;
-}(Attribute_1.Attribute));
-exports.List = List;
-
-},{"../Attribute":1}],10:[function(require,module,exports){
-"use strict";
-var __extends = (this && this.__extends) || (function () {
-    var extendStatics = Object.setPrototypeOf ||
-        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
-    return function (d, b) {
-        extendStatics(d, b);
-        function __() { this.constructor = d; }
-        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-    };
-})();
-Object.defineProperty(exports, "__esModule", { value: true });
-var Attribute_1 = require("../Attribute");
-var Scope_1 = require("../Scope");
-var ListItem = /** @class */ (function (_super) {
-    __extends(ListItem, _super);
-    function ListItem() {
-        return _super !== null && _super.apply(this, arguments) || this;
-    }
-    ListItem.prototype.setup = function () {
-        var parent = this.tag.parent;
-        var list = parent.getAttribute('v-list');
-        this.tag.scope.set(list.listItemName, new Scope_1.Scope(this.tag.scope));
-    };
-    ListItem.prototype.configure = function () {
-    };
-    return ListItem;
-}(Attribute_1.Attribute));
-exports.ListItem = ListItem;
-
-},{"../Attribute":1,"../Scope":3}],11:[function(require,module,exports){
-"use strict";
-var __extends = (this && this.__extends) || (function () {
-    var extendStatics = Object.setPrototypeOf ||
-        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
-    return function (d, b) {
-        extendStatics(d, b);
-        function __() { this.constructor = d; }
-        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-    };
-})();
-Object.defineProperty(exports, "__esModule", { value: true });
-var Attribute_1 = require("../Attribute");
-var Name = /** @class */ (function (_super) {
-    __extends(Name, _super);
-    function Name() {
-        return _super !== null && _super.apply(this, arguments) || this;
-    }
-    Name.prototype.setup = function () {
-        var parentScope = this.tag.scope.parent;
-        if (parentScope)
-            parentScope.set(this.tag.rawAttributes['v-name'], this.tag.scope);
-    };
-    return Name;
-}(Attribute_1.Attribute));
-exports.Name = Name;
-
-},{"../Attribute":1}],12:[function(require,module,exports){
+},{"./DOM":2,"./Scope":3,"./ast":6}],6:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 var TokenType;
@@ -676,7 +446,6 @@ function tokenize(code) {
             var tp = TOKEN_PATTERNS_1[_i];
             var match = tp.pattern.exec(code);
             if (match) {
-                console.log(match);
                 tokens.push({
                     type: tp.type,
                     value: match[match.length - 1]
@@ -690,8 +459,317 @@ function tokenize(code) {
     return tokens;
 }
 exports.tokenize = tokenize;
+var MemberExpressionNode = /** @class */ (function () {
+    function MemberExpressionNode(obj, name) {
+        this.obj = obj;
+        this.name = name;
+    }
+    MemberExpressionNode.prototype.evaluate = function (scope) {
+        return this.obj.evaluate(scope)[this.name.evaluate(scope)];
+    };
+    return MemberExpressionNode;
+}());
+var LiteralNode = /** @class */ (function () {
+    function LiteralNode(value) {
+        this.value = value;
+    }
+    LiteralNode.prototype.evaluate = function (scope) {
+        return this.value;
+    };
+    return LiteralNode;
+}());
+var StringNode = /** @class */ (function () {
+    function StringNode(node) {
+        this.node = node;
+    }
+    StringNode.prototype.evaluate = function (scope) {
+        return "" + this.node.evaluate(scope);
+    };
+    return StringNode;
+}());
+var FunctionCallNode = /** @class */ (function () {
+    function FunctionCallNode(fnc, args) {
+        this.fnc = fnc;
+        this.args = args;
+    }
+    FunctionCallNode.prototype.evaluate = function (scope) {
+        return this.fnc.evaluate(scope).apply(void 0, this.args.evaluate(scope));
+    };
+    return FunctionCallNode;
+}());
+var ScopeMemberNode = /** @class */ (function () {
+    function ScopeMemberNode(scope, name) {
+        this.scope = scope;
+        this.name = name;
+    }
+    ScopeMemberNode.prototype.evaluate = function (scope) {
+        return this.scope.evaluate(scope).get(this.name.evaluate(scope));
+    };
+    return ScopeMemberNode;
+}());
+var RootScopeMemberNode = /** @class */ (function () {
+    function RootScopeMemberNode(name) {
+        this.name = name;
+    }
+    RootScopeMemberNode.prototype.evaluate = function (scope) {
+        return scope.get(this.name.evaluate(scope));
+    };
+    return RootScopeMemberNode;
+}());
+var Tree = /** @class */ (function () {
+    function Tree(code) {
+        this.code = code;
+        this.tokens = tokenize(code);
+        this.rootNode = new MemberExpressionNode(new RootScopeMemberNode(new LiteralNode('test')), new FunctionCallNode(new RootScopeMemberNode(new LiteralNode('func')), new LiteralNode([])));
+    }
+    Tree.prototype.evaluate = function (scope) {
+        return this.rootNode.evaluate(scope);
+    };
+    return Tree;
+}());
+exports.Tree = Tree;
 
-},{}],13:[function(require,module,exports){
+},{}],7:[function(require,module,exports){
+"use strict";
+var __extends = (this && this.__extends) || (function () {
+    var extendStatics = Object.setPrototypeOf ||
+        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+    return function (d, b) {
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
+Object.defineProperty(exports, "__esModule", { value: true });
+var Attribute_1 = require("../Attribute");
+var Bind = /** @class */ (function (_super) {
+    __extends(Bind, _super);
+    function Bind() {
+        return _super !== null && _super.apply(this, arguments) || this;
+    }
+    Object.defineProperty(Bind.prototype, "value", {
+        get: function () {
+            if (!this.boundScope)
+                return null;
+            return this.boundScope.get(this.key);
+        },
+        set: function (v) {
+            if (this.boundScope) {
+                this.boundScope.set(this.key, v);
+            }
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Bind.prototype.setup = function () {
+        var ref = this.tag.scope.getReference(this.tag.rawAttributes['v-bind']);
+        this.key = ref.key;
+        this.boundScope = ref.scope;
+        this.boundScope.bind("change:" + this.key, this.updateTo, this);
+        if (!this.value)
+            this.updateFrom();
+        else
+            this.updateTo();
+        if (this.tag.isInput)
+            this.tag.element.onkeyup = this.updateFrom.bind(this);
+    };
+    Bind.prototype.updateFrom = function () {
+        if (this.tag.isInput) {
+            this.value = this.tag.element.value;
+        }
+        else {
+            this.value = this.tag.element.innerText;
+        }
+    };
+    Bind.prototype.updateTo = function () {
+        if (this.tag.isInput) {
+            this.tag.element.value = this.value;
+        }
+        else {
+            this.tag.element.innerText = this.value;
+        }
+    };
+    return Bind;
+}(Attribute_1.Attribute));
+exports.Bind = Bind;
+
+},{"../Attribute":1}],8:[function(require,module,exports){
+"use strict";
+var __extends = (this && this.__extends) || (function () {
+    var extendStatics = Object.setPrototypeOf ||
+        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+    return function (d, b) {
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
+Object.defineProperty(exports, "__esModule", { value: true });
+var Attribute_1 = require("../Attribute");
+var Click = /** @class */ (function (_super) {
+    __extends(Click, _super);
+    function Click() {
+        return _super !== null && _super.apply(this, arguments) || this;
+    }
+    Click.prototype.setup = function () {
+        var click = this.tag.rawAttributes['v-click'];
+        var ref = this.tag.scope.getReference(click);
+        this.onClickHandler = ref.value;
+        this.tag.element.onclick = this.onClick.bind(this);
+    };
+    Click.prototype.onClick = function () {
+        if (this.onClickHandler)
+            this.onClickHandler();
+    };
+    return Click;
+}(Attribute_1.Attribute));
+exports.Click = Click;
+
+},{"../Attribute":1}],9:[function(require,module,exports){
+"use strict";
+var __extends = (this && this.__extends) || (function () {
+    var extendStatics = Object.setPrototypeOf ||
+        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+    return function (d, b) {
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
+Object.defineProperty(exports, "__esModule", { value: true });
+var Attribute_1 = require("../Attribute");
+var Controller = /** @class */ (function (_super) {
+    __extends(Controller, _super);
+    function Controller() {
+        return _super !== null && _super.apply(this, arguments) || this;
+    }
+    Controller.prototype.setup = function () {
+        var parentScope = this.tag.parent.scope;
+        if (!parentScope)
+            return;
+        var controllerClassName = this.tag.rawAttributes['v-class'];
+        var cls = window[controllerClassName];
+        this.tag.scope.wrap(new cls());
+    };
+    return Controller;
+}(Attribute_1.Attribute));
+exports.Controller = Controller;
+
+},{"../Attribute":1}],10:[function(require,module,exports){
+"use strict";
+var __extends = (this && this.__extends) || (function () {
+    var extendStatics = Object.setPrototypeOf ||
+        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+    return function (d, b) {
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
+Object.defineProperty(exports, "__esModule", { value: true });
+var Attribute_1 = require("../Attribute");
+var List = /** @class */ (function (_super) {
+    __extends(List, _super);
+    function List() {
+        return _super !== null && _super.apply(this, arguments) || this;
+    }
+    List.prototype.setup = function () {
+        this.items = [];
+        if (this.tag.element.children.length > 0) {
+            this.template = this.tag.element.children[0].cloneNode(true);
+        }
+        for (var _i = 0, _a = Array.from(this.tag.element.querySelectorAll('[v-list-item]')); _i < _a.length; _i++) {
+            var element = _a[_i];
+            var tag = this.tag.dom.getTagForElement(element);
+            if (tag)
+                this.items.push(tag);
+        }
+        this.tag.scope.set('add', this.addItem.bind(this));
+    };
+    Object.defineProperty(List.prototype, "listItemName", {
+        get: function () {
+            return this.tag.rawAttributes['v-list-item-name'] || 'item';
+        },
+        enumerable: true,
+        configurable: true
+    });
+    List.prototype.addItem = function () {
+        var element = this.template.cloneNode(true);
+        this.tag.element.appendChild(element);
+        this.tag.dom.buildFrom(this.tag.element);
+        var tag = this.tag.dom.getTagForElement(element);
+        this.items.push(tag);
+        var item = tag.scope.get(this.listItemName);
+        item.clear();
+    };
+    return List;
+}(Attribute_1.Attribute));
+exports.List = List;
+
+},{"../Attribute":1}],11:[function(require,module,exports){
+"use strict";
+var __extends = (this && this.__extends) || (function () {
+    var extendStatics = Object.setPrototypeOf ||
+        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+    return function (d, b) {
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
+Object.defineProperty(exports, "__esModule", { value: true });
+var Attribute_1 = require("../Attribute");
+var Scope_1 = require("../Scope");
+var ListItem = /** @class */ (function (_super) {
+    __extends(ListItem, _super);
+    function ListItem() {
+        return _super !== null && _super.apply(this, arguments) || this;
+    }
+    ListItem.prototype.setup = function () {
+        var parent = this.tag.parent;
+        var list = parent.getAttribute('v-list');
+        this.tag.scope.set(list.listItemName, new Scope_1.Scope(this.tag.scope));
+    };
+    ListItem.prototype.configure = function () {
+    };
+    return ListItem;
+}(Attribute_1.Attribute));
+exports.ListItem = ListItem;
+
+},{"../Attribute":1,"../Scope":3}],12:[function(require,module,exports){
+"use strict";
+var __extends = (this && this.__extends) || (function () {
+    var extendStatics = Object.setPrototypeOf ||
+        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+    return function (d, b) {
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
+Object.defineProperty(exports, "__esModule", { value: true });
+var Attribute_1 = require("../Attribute");
+var Name = /** @class */ (function (_super) {
+    __extends(Name, _super);
+    function Name() {
+        return _super !== null && _super.apply(this, arguments) || this;
+    }
+    Name.prototype.setup = function () {
+        var parentScope = this.tag.scope.parent;
+        if (parentScope)
+            parentScope.set(this.tag.rawAttributes['v-name'], this.tag.scope);
+    };
+    return Name;
+}(Attribute_1.Attribute));
+exports.Name = Name;
+
+},{"../Attribute":1}],13:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 var EventCallback = /** @class */ (function () {

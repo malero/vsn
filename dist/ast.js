@@ -93,7 +93,6 @@ function tokenize(code) {
             var tp = TOKEN_PATTERNS_1[_i];
             var match = tp.pattern.exec(code);
             if (match) {
-                console.log(match);
                 tokens.push({
                     type: tp.type,
                     value: match[match.length - 1]
@@ -107,4 +106,73 @@ function tokenize(code) {
     return tokens;
 }
 exports.tokenize = tokenize;
-//# sourceMappingURL=Lexer.js.map
+var MemberExpressionNode = /** @class */ (function () {
+    function MemberExpressionNode(obj, name) {
+        this.obj = obj;
+        this.name = name;
+    }
+    MemberExpressionNode.prototype.evaluate = function (scope) {
+        return this.obj.evaluate(scope)[this.name.evaluate(scope)];
+    };
+    return MemberExpressionNode;
+}());
+var LiteralNode = /** @class */ (function () {
+    function LiteralNode(value) {
+        this.value = value;
+    }
+    LiteralNode.prototype.evaluate = function (scope) {
+        return this.value;
+    };
+    return LiteralNode;
+}());
+var StringNode = /** @class */ (function () {
+    function StringNode(node) {
+        this.node = node;
+    }
+    StringNode.prototype.evaluate = function (scope) {
+        return "" + this.node.evaluate(scope);
+    };
+    return StringNode;
+}());
+var FunctionCallNode = /** @class */ (function () {
+    function FunctionCallNode(fnc, args) {
+        this.fnc = fnc;
+        this.args = args;
+    }
+    FunctionCallNode.prototype.evaluate = function (scope) {
+        return this.fnc.evaluate(scope).apply(void 0, this.args.evaluate(scope));
+    };
+    return FunctionCallNode;
+}());
+var ScopeMemberNode = /** @class */ (function () {
+    function ScopeMemberNode(scope, name) {
+        this.scope = scope;
+        this.name = name;
+    }
+    ScopeMemberNode.prototype.evaluate = function (scope) {
+        return this.scope.evaluate(scope).get(this.name.evaluate(scope));
+    };
+    return ScopeMemberNode;
+}());
+var RootScopeMemberNode = /** @class */ (function () {
+    function RootScopeMemberNode(name) {
+        this.name = name;
+    }
+    RootScopeMemberNode.prototype.evaluate = function (scope) {
+        return scope.get(this.name.evaluate(scope));
+    };
+    return RootScopeMemberNode;
+}());
+var Tree = /** @class */ (function () {
+    function Tree(code) {
+        this.code = code;
+        this.tokens = tokenize(code);
+        this.rootNode = new MemberExpressionNode(new RootScopeMemberNode(new LiteralNode('test')), new FunctionCallNode(new RootScopeMemberNode(new LiteralNode('func')), new LiteralNode([])));
+    }
+    Tree.prototype.evaluate = function (scope) {
+        return this.rootNode.evaluate(scope);
+    };
+    return Tree;
+}());
+exports.Tree = Tree;
+//# sourceMappingURL=ast.js.map

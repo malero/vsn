@@ -1,4 +1,6 @@
 
+import {Scope} from "./Scope";
+
 interface TokenPattern {
     type: TokenType,
     pattern: RegExp
@@ -116,4 +118,102 @@ export function tokenize(code: string): Token[] {
     } while (code.length > 0 && foundToken);
 
     return tokens;
+}
+
+
+interface Node<T = any> {
+    evaluate(scope: Scope): T;
+}
+
+
+class MemberExpressionNode implements Node {
+    constructor(
+        protected obj: Node,
+        protected name: Node<string>
+    ) {}
+
+    public evaluate(scope: Scope): any {
+        return this.obj.evaluate(scope)[this.name.evaluate(scope)];
+    }
+}
+
+
+class LiteralNode<T> implements Node {
+    constructor(
+        public readonly value: T
+    ) {}
+
+    public evaluate(scope): T {
+        return this.value;
+    }
+}
+
+
+class StringNode implements Node<string> {
+    constructor(
+        public readonly node: Node
+    ) {}
+
+    public evaluate(scope: Scope): string {
+        return `${this.node.evaluate(scope)}`;
+    }
+}
+
+
+class FunctionCallNode<T = any> implements Node {
+    constructor(
+        public readonly fnc: Node<(...args: any[]) => any>,
+        public readonly args:  Node<any[]>
+    ) {}
+
+    public evaluate(scope: Scope): T {
+        return this.fnc.evaluate(scope)(...this.args.evaluate(scope));
+    }
+}
+
+
+class ScopeMemberNode implements Node {
+    constructor(
+        protected scope: Node<Scope>,
+        protected name: Node<string>
+    ) {}
+
+    evaluate(scope: Scope): Scope {
+        return this.scope.evaluate(scope).get(this.name.evaluate(scope));
+    }
+}
+
+
+class RootScopeMemberNode<T = any> implements Node {
+    constructor(
+        protected name: Node<string>
+    ) {}
+
+    evaluate(scope: Scope): T {
+        return scope.get(this.name.evaluate(scope));
+    }
+}
+
+
+export class Tree {
+    protected tokens: Token[];
+    protected rootNode: Node;
+    constructor(
+        public readonly code: string
+    ) {
+        this.tokens = tokenize(code);
+        this.rootNode = new MemberExpressionNode(
+            new RootScopeMemberNode(new LiteralNode<string>('test')),
+            new FunctionCallNode(
+                new RootScopeMemberNode(
+                    new LiteralNode<string>('func')
+                ),
+                new LiteralNode<any[]>([])
+            )
+        );
+    }
+
+    evaluate(scope: Scope) {
+        return this.rootNode.evaluate(scope);
+    }
 }

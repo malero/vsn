@@ -1,3 +1,4 @@
+import { Scope } from "./Scope";
 export interface Token {
     type: TokenType;
     value: string;
@@ -20,3 +21,14 @@ export declare enum TokenType {
     NULL_LITERAL = 14
 }
 export declare function tokenize(code: string): Token[];
+interface Node<T = any> {
+    evaluate(scope: Scope): T;
+}
+export declare class Tree {
+    readonly code: string;
+    protected tokens: Token[];
+    protected rootNode: Node;
+    constructor(code: string);
+    evaluate(scope: Scope): any;
+}
+export {};
