@@ -11,6 +11,7 @@ var __extends = (this && this.__extends) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
 var Attribute_1 = require("../Attribute");
+var ast_1 = require("../ast");
 var Click = /** @class */ (function (_super) {
     __extends(Click, _super);
     function Click() {
@@ -18,13 +19,11 @@ var Click = /** @class */ (function (_super) {
     }
     Click.prototype.setup = function () {
         var click = this.tag.rawAttributes['v-click'];
-        var ref = this.tag.scope.getReference(click);
-        this.onClickHandler = ref.value;
+        this.clickHandler = new ast_1.Tree(click);
         this.tag.element.onclick = this.onClick.bind(this);
     };
     Click.prototype.onClick = function () {
-        if (this.onClickHandler)
-            this.onClickHandler();
+        this.clickHandler.evaluate(this.tag.scope);
     };
     return Click;
 }(Attribute_1.Attribute));

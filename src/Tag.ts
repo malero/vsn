@@ -73,6 +73,10 @@ export class Tag extends EventDispatcher {
 
     }
 
+    public decompose() {
+        this.element.remove();
+    }
+
     public getAttribute(key: string) {
         const cls: any = Tag.attributeMap[key];
         if (!cls) return;

@@ -1,18 +1,16 @@
-import {ScopeReference} from "../Scope";
 import {Attribute} from "../Attribute";
+import {Tree} from "../ast";
 
 export class Click extends Attribute {
-    protected onClickHandler: any;
+    protected clickHandler: Tree;
 
     public setup(): void {
         const click: string = this.tag.rawAttributes['v-click'];
-        const ref: ScopeReference = this.tag.scope.getReference(click);
-        this.onClickHandler = ref.value;
+        this.clickHandler = new Tree(click);
         this.tag.element.onclick = this.onClick.bind(this);
     }
 
     onClick() {
-        if (this.onClickHandler)
-            this.onClickHandler();
+        this.clickHandler.evaluate(this.tag.scope);
     }
 }

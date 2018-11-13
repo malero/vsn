@@ -27,7 +27,8 @@ var List = /** @class */ (function (_super) {
             if (tag)
                 this.items.push(tag);
         }
-        this.tag.scope.set('add', this.addItem.bind(this));
+        this.tag.scope.set('add', this.add.bind(this));
+        this.tag.scope.set('remove', this.remove.bind(this));
     };
     Object.defineProperty(List.prototype, "listItemName", {
         get: function () {
@@ -36,7 +37,17 @@ var List = /** @class */ (function (_super) {
         enumerable: true,
         configurable: true
     });
-    List.prototype.addItem = function () {
+    List.prototype.remove = function (item) {
+        for (var i = 0; i < this.items.length; i++) {
+            var tag = this.items[i];
+            if (tag.scope.get(this.listItemName) == item) {
+                tag.decompose();
+                this.items.splice(i, 1);
+                return;
+            }
+        }
+    };
+    List.prototype.add = function () {
         var element = this.template.cloneNode(true);
         this.tag.element.appendChild(element);
         this.tag.dom.buildFrom(this.tag.element);

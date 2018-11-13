@@ -70,6 +70,9 @@ var Tag = /** @class */ (function (_super) {
     });
     Tag.prototype.wrapScope = function (cls) {
     };
+    Tag.prototype.decompose = function () {
+        this.element.remove();
+    };
     Tag.prototype.getAttribute = function (key) {
         var cls = Tag.attributeMap[key];
         if (!cls)

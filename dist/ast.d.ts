@@ -13,12 +13,13 @@ export declare enum TokenType {
     L_PAREN = 6,
     R_PAREN = 7,
     PERIOD = 8,
-    COLON = 9,
-    SEMI_COLON = 10,
-    STRING_LITERAL = 11,
-    NUMBER_LITERAL = 12,
-    BOOLEAN_LITERAL = 13,
-    NULL_LITERAL = 14
+    COMMA = 9,
+    COLON = 10,
+    SEMI_COLON = 11,
+    STRING_LITERAL = 12,
+    NUMBER_LITERAL = 13,
+    BOOLEAN_LITERAL = 14,
+    NULL_LITERAL = 15
 }
 export declare function tokenize(code: string): Token[];
 interface Node<T = any> {
@@ -26,9 +27,10 @@ interface Node<T = any> {
 }
 export declare class Tree {
     readonly code: string;
-    protected tokens: Token[];
     protected rootNode: Node;
     constructor(code: string);
     evaluate(scope: Scope): any;
+    static processTokens(tokens: Token[]): Node;
+    static getFunctionArgumentTokens(tokens: Token[]): Token[];
 }
 export {};

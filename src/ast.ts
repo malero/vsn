@@ -21,6 +21,7 @@ export enum TokenType {
     L_PAREN,
     R_PAREN,
     PERIOD,
+    COMMA,
     COLON,
     SEMI_COLON,
     STRING_LITERAL,
@@ -65,6 +66,10 @@ const TOKEN_PATTERNS: TokenPattern[] = [
     {
         type: TokenType.PERIOD,
         pattern: /^\./
+    },
+    {
+        type: TokenType.COMMA,
+        pattern: /^,/
     },
     {
         type: TokenType.COLON,
@@ -172,6 +177,21 @@ class FunctionCallNode<T = any> implements Node {
 }
 
 
+class FunctionArgumentNode<T = any> implements Node {
+    constructor(
+        protected args: Node<any>[]
+    ) {}
+
+    evaluate(scope: Scope): any[] {
+        const values: any[] = [];
+        for (const arg of this.args) {
+            values.push(arg.evaluate(scope));
+        }
+        return values;
+    }
+}
+
+
 class ScopeMemberNode implements Node {
     constructor(
         protected scope: Node<Scope>,
@@ -196,24 +216,83 @@ class RootScopeMemberNode<T = any> implements Node {
 
 
 export class Tree {
-    protected tokens: Token[];
     protected rootNode: Node;
     constructor(
         public readonly code: string
     ) {
-        this.tokens = tokenize(code);
-        this.rootNode = new MemberExpressionNode(
-            new RootScopeMemberNode(new LiteralNode<string>('test')),
-            new FunctionCallNode(
-                new RootScopeMemberNode(
-                    new LiteralNode<string>('func')
-                ),
-                new LiteralNode<any[]>([])
-            )
-        );
+        const tokens = tokenize(code);
+        this.rootNode = Tree.processTokens(tokens);
     }
 
     evaluate(scope: Scope) {
         return this.rootNode.evaluate(scope);
+    }
+
+    public static processTokens(tokens: Token[]): Node {
+        let current: number = 0;
+        let node: Node = null;
+        let count: number = 0;
+
+        while (tokens.length > 0) {
+            count++;
+            if (count > 1000) break;
+            const token: Token = tokens[current];
+            if (token.type === TokenType.NAME) {
+                node = new RootScopeMemberNode<string>(
+                    new LiteralNode<string>(token.value)
+                );
+                tokens.splice(0, 1);
+            } else if ([TokenType.STRING_LITERAL, TokenType.NUMBER_LITERAL].indexOf(token.type) > -1) {
+                node = new LiteralNode(token.value);
+            } else if (token.type === TokenType.PERIOD && tokens[current + 1].type === TokenType.NAME) {
+                node = new ScopeMemberNode(
+                    node,
+                    new LiteralNode<string>(tokens[current + 1].value)
+                );
+                tokens.splice(0, 2);
+            } else if (tokens[0].type === TokenType.L_PAREN) {
+                const funcArgs: Token[] = Tree.getFunctionArgumentTokens(tokens);
+                const nodes: Node[] = [];
+                for (const arg of funcArgs) {
+                    nodes.push(Tree.processTokens([arg]));
+
+                }
+                node = new FunctionCallNode(
+                    node,
+                    new FunctionArgumentNode(nodes)
+                );
+            }
+        }
+
+        return node;
+    }
+
+    public static getFunctionArgumentTokens(tokens: Token[]): Token[] {
+        let leftParens: number = 0;
+        const argumentTokens: Token[] = [];
+        for (let i: number = 0; i < tokens.length; i++) {
+            const token: Token = tokens[i];
+            if (token.type === TokenType.L_PAREN) {
+                leftParens += 1;
+                if (leftParens > 1)
+                    argumentTokens.push(token);
+            } else if (token.type === TokenType.R_PAREN) {
+                leftParens -= 1;
+                if (leftParens > 0)
+                    argumentTokens.push(token);
+            } else if (token.type === TokenType.COMMA) {
+
+            } else {
+                argumentTokens.push(token);
+            }
+
+            // Consume token
+            tokens.splice(0, 1);
+            i--;
+
+            if (leftParens === 0)
+                return argumentTokens;
+        }
+        throw Error('Invalid Syntax, missing )');
     }
 }

@@ -66,7 +66,7 @@ var Scope = /** @class */ (function (_super) {
         return new ScopeReference(scope, key, val);
     };
     Scope.prototype.get = function (key, searchParents) {
-        if (searchParents === void 0) { searchParents = false; }
+        if (searchParents === void 0) { searchParents = true; }
         var value = this.data[key];
         if (value === undefined || value === null) {
             if (searchParents && this.parent)

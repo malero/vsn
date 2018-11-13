@@ -11,12 +11,13 @@ var TokenType;
     TokenType[TokenType["L_PAREN"] = 6] = "L_PAREN";
     TokenType[TokenType["R_PAREN"] = 7] = "R_PAREN";
     TokenType[TokenType["PERIOD"] = 8] = "PERIOD";
-    TokenType[TokenType["COLON"] = 9] = "COLON";
-    TokenType[TokenType["SEMI_COLON"] = 10] = "SEMI_COLON";
-    TokenType[TokenType["STRING_LITERAL"] = 11] = "STRING_LITERAL";
-    TokenType[TokenType["NUMBER_LITERAL"] = 12] = "NUMBER_LITERAL";
-    TokenType[TokenType["BOOLEAN_LITERAL"] = 13] = "BOOLEAN_LITERAL";
-    TokenType[TokenType["NULL_LITERAL"] = 14] = "NULL_LITERAL";
+    TokenType[TokenType["COMMA"] = 9] = "COMMA";
+    TokenType[TokenType["COLON"] = 10] = "COLON";
+    TokenType[TokenType["SEMI_COLON"] = 11] = "SEMI_COLON";
+    TokenType[TokenType["STRING_LITERAL"] = 12] = "STRING_LITERAL";
+    TokenType[TokenType["NUMBER_LITERAL"] = 13] = "NUMBER_LITERAL";
+    TokenType[TokenType["BOOLEAN_LITERAL"] = 14] = "BOOLEAN_LITERAL";
+    TokenType[TokenType["NULL_LITERAL"] = 15] = "NULL_LITERAL";
 })(TokenType = exports.TokenType || (exports.TokenType = {}));
 var TOKEN_PATTERNS = [
     {
@@ -54,6 +55,10 @@ var TOKEN_PATTERNS = [
     {
         type: TokenType.PERIOD,
         pattern: /^\./
+    },
+    {
+        type: TokenType.COMMA,
+        pattern: /^,/
     },
     {
         type: TokenType.COLON,
@@ -144,6 +149,20 @@ var FunctionCallNode = /** @class */ (function () {
     };
     return FunctionCallNode;
 }());
+var FunctionArgumentNode = /** @class */ (function () {
+    function FunctionArgumentNode(args) {
+        this.args = args;
+    }
+    FunctionArgumentNode.prototype.evaluate = function (scope) {
+        var values = [];
+        for (var _i = 0, _a = this.args; _i < _a.length; _i++) {
+            var arg = _a[_i];
+            values.push(arg.evaluate(scope));
+        }
+        return values;
+    };
+    return FunctionArgumentNode;
+}());
 var ScopeMemberNode = /** @class */ (function () {
     function ScopeMemberNode(scope, name) {
         this.scope = scope;
@@ -166,11 +185,71 @@ var RootScopeMemberNode = /** @class */ (function () {
 var Tree = /** @class */ (function () {
     function Tree(code) {
         this.code = code;
-        this.tokens = tokenize(code);
-        this.rootNode = new MemberExpressionNode(new RootScopeMemberNode(new LiteralNode('test')), new FunctionCallNode(new RootScopeMemberNode(new LiteralNode('func')), new LiteralNode([])));
+        var tokens = tokenize(code);
+        this.rootNode = Tree.processTokens(tokens);
     }
     Tree.prototype.evaluate = function (scope) {
         return this.rootNode.evaluate(scope);
+    };
+    Tree.processTokens = function (tokens) {
+        var current = 0;
+        var node = null;
+        var count = 0;
+        while (tokens.length > 0) {
+            count++;
+            if (count > 1000)
+                break;
+            var token = tokens[current];
+            if (token.type === TokenType.NAME) {
+                node = new RootScopeMemberNode(new LiteralNode(token.value));
+                tokens.splice(0, 1);
+            }
+            else if ([TokenType.STRING_LITERAL, TokenType.NUMBER_LITERAL].indexOf(token.type) > -1) {
+                node = new LiteralNode(token.value);
+            }
+            else if (token.type === TokenType.PERIOD && tokens[current + 1].type === TokenType.NAME) {
+                node = new ScopeMemberNode(node, new LiteralNode(tokens[current + 1].value));
+                tokens.splice(0, 2);
+            }
+            else if (tokens[0].type === TokenType.L_PAREN) {
+                var funcArgs = Tree.getFunctionArgumentTokens(tokens);
+                var nodes = [];
+                for (var _i = 0, funcArgs_1 = funcArgs; _i < funcArgs_1.length; _i++) {
+                    var arg = funcArgs_1[_i];
+                    nodes.push(Tree.processTokens([arg]));
+                }
+                node = new FunctionCallNode(node, new FunctionArgumentNode(nodes));
+            }
+        }
+        return node;
+    };
+    Tree.getFunctionArgumentTokens = function (tokens) {
+        var leftParens = 0;
+        var argumentTokens = [];
+        for (var i = 0; i < tokens.length; i++) {
+            var token = tokens[i];
+            if (token.type === TokenType.L_PAREN) {
+                leftParens += 1;
+                if (leftParens > 1)
+                    argumentTokens.push(token);
+            }
+            else if (token.type === TokenType.R_PAREN) {
+                leftParens -= 1;
+                if (leftParens > 0)
+                    argumentTokens.push(token);
+            }
+            else if (token.type === TokenType.COMMA) {
+            }
+            else {
+                argumentTokens.push(token);
+            }
+            // Consume token
+            tokens.splice(0, 1);
+            i--;
+            if (leftParens === 0)
+                return argumentTokens;
+        }
+        throw Error('Invalid Syntax, missing )');
     };
     return Tree;
 }());

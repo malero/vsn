@@ -20,6 +20,7 @@ export declare class Tag extends EventDispatcher {
     parent: Tag;
     scope: Scope;
     wrapScope(cls: any): void;
+    decompose(): void;
     getAttribute(key: string): Attribute;
     buildAttributes(): void;
     setupAttributes(): void;

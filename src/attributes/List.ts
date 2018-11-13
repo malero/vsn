@@ -18,14 +18,27 @@ export class List extends Attribute {
                 this.items.push(tag);
         }
 
-        this.tag.scope.set('add', this.addItem.bind(this));
+        this.tag.scope.set('add', this.add.bind(this));
+        this.tag.scope.set('remove', this.remove.bind(this));
     }
 
     public get listItemName(): string {
         return this.tag.rawAttributes['v-list-item-name'] || 'item';
     }
 
-    protected addItem() {
+    public remove(item: any) {
+        for (let i: number = 0; i < this.items.length; i++) {
+            const tag: Tag = this.items[i];
+            if (tag.scope.get(this.listItemName) == item) {
+                tag.decompose();
+                this.items.splice(i, 1);
+
+                return;
+            }
+        }
+    }
+
+    protected add() {
         const element: HTMLElement = this.template.cloneNode(true) as HTMLElement;
         this.tag.element.appendChild(element);
 

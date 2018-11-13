@@ -64,7 +64,7 @@ export class Scope extends EventDispatcher {
         return new ScopeReference(scope, key, val);
     }
 
-    get(key: string, searchParents: boolean = false): any {
+    get(key: string, searchParents: boolean = true): any {
         const value: any = this.data[key];
         if (value === undefined || value === null) {
             if (searchParents && this.parent)
