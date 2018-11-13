@@ -137,7 +137,7 @@ var Scope = /** @class */ (function (_super) {
         for (var i = 0; i < len; i++) {
             key = scopePath[i];
             val = scope.get(key, i === 0);
-            if (val === undefined && i + 1 < len) {
+            if ([null, undefined].indexOf(val) > -1 && i + 1 < len) {
                 val = new Scope(scope);
                 scope.set(key, val);
             }
@@ -171,6 +171,8 @@ var Scope = /** @class */ (function (_super) {
     Scope.prototype.clear = function () {
         for (var _i = 0, _a = this.keys; _i < _a.length; _i++) {
             var key = _a[_i];
+            if (['function', 'object'].indexOf(typeof this.get(key)) > -1)
+                continue;
             this.set(key, null);
         }
     };
@@ -620,7 +622,7 @@ var Bind = /** @class */ (function (_super) {
         get: function () {
             if (!this.boundScope)
                 return null;
-            return this.boundScope.get(this.key);
+            return this.boundScope.get(this.key, false);
         },
         set: function (v) {
             if (this.boundScope) {
@@ -802,7 +804,6 @@ var __extends = (this && this.__extends) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
 var Attribute_1 = require("../Attribute");
-var Scope_1 = require("../Scope");
 var ListItem = /** @class */ (function (_super) {
     __extends(ListItem, _super);
     function ListItem() {
@@ -811,7 +812,7 @@ var ListItem = /** @class */ (function (_super) {
     ListItem.prototype.setup = function () {
         var parent = this.tag.parent;
         var list = parent.getAttribute('v-list');
-        this.tag.scope.set(list.listItemName, new Scope_1.Scope(this.tag.scope));
+        this.tag.scope.set(list.listItemName, this.tag.scope);
     };
     ListItem.prototype.configure = function () {
     };
@@ -819,7 +820,7 @@ var ListItem = /** @class */ (function (_super) {
 }(Attribute_1.Attribute));
 exports.ListItem = ListItem;
 
-},{"../Attribute":1,"../Scope":3}],12:[function(require,module,exports){
+},{"../Attribute":1}],12:[function(require,module,exports){
 "use strict";
 var __extends = (this && this.__extends) || (function () {
     var extendStatics = Object.setPrototypeOf ||

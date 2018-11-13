@@ -13,7 +13,7 @@ export class Bind extends Attribute {
 
     public get value(): any {
         if (!this.boundScope) return null;
-        return this.boundScope.get(this.key);
+        return this.boundScope.get(this.key, false);
     }
 
     public setup(): void {

@@ -11,7 +11,6 @@ var __extends = (this && this.__extends) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
 var Attribute_1 = require("../Attribute");
-var Scope_1 = require("../Scope");
 var ListItem = /** @class */ (function (_super) {
     __extends(ListItem, _super);
     function ListItem() {
@@ -20,7 +19,7 @@ var ListItem = /** @class */ (function (_super) {
     ListItem.prototype.setup = function () {
         var parent = this.tag.parent;
         var list = parent.getAttribute('v-list');
-        this.tag.scope.set(list.listItemName, new Scope_1.Scope(this.tag.scope));
+        this.tag.scope.set(list.listItemName, this.tag.scope);
     };
     ListItem.prototype.configure = function () {
     };

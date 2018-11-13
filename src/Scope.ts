@@ -51,7 +51,7 @@ export class Scope extends EventDispatcher {
             key = scopePath[i];
 
             val = scope.get(key, i === 0);
-            if (val === undefined && i + 1 < len) {
+            if ([null, undefined].indexOf(val) > -1 && i + 1 < len) {
                 val = new Scope(scope);
                 scope.set(key, val);
             }
@@ -92,6 +92,7 @@ export class Scope extends EventDispatcher {
 
     clear() {
         for (const key of this.keys) {
+            if (['function', 'object'].indexOf(typeof this.get(key)) > -1) continue;
             this.set(key, null);
         }
     }

@@ -20,7 +20,7 @@ var Bind = /** @class */ (function (_super) {
         get: function () {
             if (!this.boundScope)
                 return null;
-            return this.boundScope.get(this.key);
+            return this.boundScope.get(this.key, false);
         },
         set: function (v) {
             if (this.boundScope) {

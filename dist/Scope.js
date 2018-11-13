@@ -55,7 +55,7 @@ var Scope = /** @class */ (function (_super) {
         for (var i = 0; i < len; i++) {
             key = scopePath[i];
             val = scope.get(key, i === 0);
-            if (val === undefined && i + 1 < len) {
+            if ([null, undefined].indexOf(val) > -1 && i + 1 < len) {
                 val = new Scope(scope);
                 scope.set(key, val);
             }
@@ -89,6 +89,8 @@ var Scope = /** @class */ (function (_super) {
     Scope.prototype.clear = function () {
         for (var _i = 0, _a = this.keys; _i < _a.length; _i++) {
             var key = _a[_i];
+            if (['function', 'object'].indexOf(typeof this.get(key)) > -1)
+                continue;
             this.set(key, null);
         }
     };
