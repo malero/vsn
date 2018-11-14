@@ -560,7 +560,7 @@ var Tree = /** @class */ (function () {
                 var nodes = [];
                 for (var _i = 0, funcArgs_1 = funcArgs; _i < funcArgs_1.length; _i++) {
                     var arg = funcArgs_1[_i];
-                    nodes.push(Tree.processTokens([arg]));
+                    nodes.push(Tree.processTokens(arg));
                 }
                 node = new FunctionCallNode(node, new FunctionArgumentNode(nodes));
             }
@@ -570,28 +570,35 @@ var Tree = /** @class */ (function () {
     Tree.getFunctionArgumentTokens = function (tokens) {
         var leftParens = 0;
         var argumentTokens = [];
+        var tokenSet = [];
         for (var i = 0; i < tokens.length; i++) {
             var token = tokens[i];
             if (token.type === TokenType.L_PAREN) {
                 leftParens += 1;
                 if (leftParens > 1)
-                    argumentTokens.push(token);
+                    tokenSet.push(token);
             }
             else if (token.type === TokenType.R_PAREN) {
                 leftParens -= 1;
                 if (leftParens > 0)
-                    argumentTokens.push(token);
+                    tokenSet.push(token);
             }
-            else if (token.type === TokenType.COMMA) {
+            else if (token.type === TokenType.COMMA && leftParens == 1) {
+                argumentTokens.push(tokenSet);
+                tokenSet = [];
+            }
+            else if (token.type === TokenType.WHITESPACE) {
             }
             else {
-                argumentTokens.push(token);
+                tokenSet.push(token);
             }
             // Consume token
             tokens.splice(0, 1);
             i--;
-            if (leftParens === 0)
+            if (leftParens === 0) {
+                argumentTokens.push(tokenSet);
                 return argumentTokens;
+            }
         }
         throw Error('Invalid Syntax, missing )');
     };

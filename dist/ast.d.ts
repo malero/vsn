@@ -31,6 +31,6 @@ export declare class Tree {
     constructor(code: string);
     evaluate(scope: Scope): any;
     static processTokens(tokens: Token[]): Node;
-    static getFunctionArgumentTokens(tokens: Token[]): Token[];
+    static getFunctionArgumentTokens(tokens: Token[]): Token[][];
 }
 export {};

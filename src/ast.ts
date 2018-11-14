@@ -251,10 +251,10 @@ export class Tree {
                 );
                 tokens.splice(0, 2);
             } else if (tokens[0].type === TokenType.L_PAREN) {
-                const funcArgs: Token[] = Tree.getFunctionArgumentTokens(tokens);
+                const funcArgs: Token[][] = Tree.getFunctionArgumentTokens(tokens);
                 const nodes: Node[] = [];
                 for (const arg of funcArgs) {
-                    nodes.push(Tree.processTokens([arg]));
+                    nodes.push(Tree.processTokens(arg));
 
                 }
                 node = new FunctionCallNode(
@@ -267,31 +267,37 @@ export class Tree {
         return node;
     }
 
-    public static getFunctionArgumentTokens(tokens: Token[]): Token[] {
+    public static getFunctionArgumentTokens(tokens: Token[]): Token[][] {
         let leftParens: number = 0;
-        const argumentTokens: Token[] = [];
+        const argumentTokens: Token[][] = [];
+        let tokenSet: Token[] = [];
         for (let i: number = 0; i < tokens.length; i++) {
             const token: Token = tokens[i];
             if (token.type === TokenType.L_PAREN) {
                 leftParens += 1;
                 if (leftParens > 1)
-                    argumentTokens.push(token);
+                    tokenSet.push(token);
             } else if (token.type === TokenType.R_PAREN) {
                 leftParens -= 1;
                 if (leftParens > 0)
-                    argumentTokens.push(token);
-            } else if (token.type === TokenType.COMMA) {
-
+                    tokenSet.push(token);
+            } else if (token.type === TokenType.COMMA && leftParens == 1) {
+                argumentTokens.push(tokenSet);
+                tokenSet = [];
+            } else if (token.type === TokenType.WHITESPACE) {
             } else {
-                argumentTokens.push(token);
+                tokenSet.push(token);
             }
 
             // Consume token
             tokens.splice(0, 1);
             i--;
 
-            if (leftParens === 0)
+            if (leftParens === 0) {
+                argumentTokens.push(tokenSet);
+
                 return argumentTokens;
+            }
         }
         throw Error('Invalid Syntax, missing )');
     }
