@@ -36,6 +36,17 @@ describe('Tree', () => {
         expect(tree.evaluate(scope)).toBe(48);
     });
 
+    it("should be able to call functions with literals", () => {
+        let tree: Tree = new Tree('baz.add(foo, 5)');
+        expect(tree.evaluate(scope)).toBe(7);
+
+        scope.set('foo', 15);
+        expect(tree.evaluate(scope)).toBe(20);
+
+        tree = new Tree('baz.add(100, 5)');
+        expect(tree.evaluate(scope)).toBe(105);
+    });
+
     it("should be able to call nested functions within the scope", () => {
         const tree: Tree = new Tree('baz.add(baz.add(foo, foo), baz.add(bar, bar))');
         expect(tree.evaluate(scope)).toBe(10);

@@ -224,36 +224,34 @@ var Tree = /** @class */ (function () {
         return node;
     };
     Tree.getFunctionArgumentTokens = function (tokens) {
-        var leftParens = 0;
-        var argumentTokens = [];
-        var tokenSet = [];
+        var openParens = 0;
+        var args = [];
+        var arg = [];
         for (var i = 0; i < tokens.length; i++) {
             var token = tokens[i];
             if (token.type === TokenType.L_PAREN) {
-                leftParens += 1;
-                if (leftParens > 1)
-                    tokenSet.push(token);
+                openParens += 1;
+                if (openParens > 1)
+                    arg.push(token);
             }
             else if (token.type === TokenType.R_PAREN) {
-                leftParens -= 1;
-                if (leftParens > 0)
-                    tokenSet.push(token);
+                openParens -= 1;
+                if (openParens > 0)
+                    arg.push(token);
             }
-            else if (token.type === TokenType.COMMA && leftParens == 1) {
-                argumentTokens.push(tokenSet);
-                tokenSet = [];
+            else if (token.type === TokenType.COMMA && openParens == 1) {
+                args.push(arg);
+                arg = [];
             }
-            else if (token.type === TokenType.WHITESPACE) {
-            }
-            else {
-                tokenSet.push(token);
+            else if (token.type !== TokenType.WHITESPACE) {
+                arg.push(token);
             }
             // Consume token
             tokens.splice(0, 1);
             i--;
-            if (leftParens === 0) {
-                argumentTokens.push(tokenSet);
-                return argumentTokens;
+            if (openParens === 0) {
+                args.push(arg);
+                return args;
             }
         }
         throw Error('Invalid Syntax, missing )');
