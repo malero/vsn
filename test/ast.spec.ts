@@ -16,6 +16,12 @@ describe('Tree', () => {
         scope2.set('add', (a, b) => {
             return a + b;
         });
+
+        scope2.set('generate', (a, b) => {
+            const _scope: Scope = new Scope();
+            _scope.set(a, b);
+            return _scope;
+        });
     });
 
 
@@ -45,6 +51,13 @@ describe('Tree', () => {
 
         tree = new Tree('baz.add(100, 5)');
         expect(tree.evaluate(scope)).toBe(105);
+    });
+
+    it("should be able to call member variable of value returned from function call", () => {
+        const tree: Tree = new Tree('baz.generate("test", foo).test');
+        expect(tree.evaluate(scope)).toBe(2);
+        scope.set('foo', 15);
+        expect(tree.evaluate(scope)).toBe(15);
     });
 
     it("should be able to call nested functions within the scope", () => {

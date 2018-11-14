@@ -250,7 +250,7 @@ export class Tree {
 
         while (tokens.length > 0) {
             count++;
-            if (count > 1000) break;
+            if (count > 1000) break; // Limit to 1000 iterations while in development
             const token: Token = tokens[current];
             if (token.type === TokenType.NAME) {
                 node = new RootScopeMemberNode<string>(
