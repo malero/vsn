@@ -1,4 +1,14 @@
 "use strict";
+var __extends = (this && this.__extends) || (function () {
+    var extendStatics = Object.setPrototypeOf ||
+        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+    return function (d, b) {
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
 Object.defineProperty(exports, "__esModule", { value: true });
 var TokenType;
 (function (TokenType) {
@@ -130,6 +140,21 @@ var LiteralNode = /** @class */ (function () {
     };
     return LiteralNode;
 }());
+var NumberLiteralNode = /** @class */ (function (_super) {
+    __extends(NumberLiteralNode, _super);
+    function NumberLiteralNode(value) {
+        var _this = _super.call(this, value) || this;
+        _this.value = value;
+        if (_this.value.indexOf('.') > -1) {
+            _this.value = parseFloat(_this.value);
+        }
+        else {
+            _this.value = parseInt(_this.value);
+        }
+        return _this;
+    }
+    return NumberLiteralNode;
+}(LiteralNode));
 var StringNode = /** @class */ (function () {
     function StringNode(node) {
         this.node = node;
@@ -198,14 +223,17 @@ var Tree = /** @class */ (function () {
         while (tokens.length > 0) {
             count++;
             if (count > 1000)
-                break;
+                break; // Limit to 1000 iterations while in development
             var token = tokens[current];
             if (token.type === TokenType.NAME) {
                 node = new RootScopeMemberNode(new LiteralNode(token.value));
                 tokens.splice(0, 1);
             }
-            else if ([TokenType.STRING_LITERAL, TokenType.NUMBER_LITERAL].indexOf(token.type) > -1) {
+            else if (token.type === TokenType.STRING_LITERAL) {
                 node = new LiteralNode(token.value);
+            }
+            else if (token.type === TokenType.NUMBER_LITERAL) {
+                node = new NumberLiteralNode(token.value);
             }
             else if (token.type === TokenType.PERIOD && tokens[current + 1].type === TokenType.NAME) {
                 node = new ScopeMemberNode(node, new LiteralNode(tokens[current + 1].value));
@@ -250,7 +278,8 @@ var Tree = /** @class */ (function () {
             tokens.splice(0, 1);
             i--;
             if (openParens === 0) {
-                args.push(arg);
+                if (arg.length > 0)
+                    args.push(arg);
                 return args;
             }
         }

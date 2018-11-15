@@ -310,7 +310,8 @@ export class Tree {
             i--;
 
             if (openParens === 0) {
-                args.push(arg);
+                if (arg.length > 0)
+                    args.push(arg);
 
                 return args;
             }
