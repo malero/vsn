@@ -1,5 +1,5 @@
 import {DataModel} from "simple-ts-models";
-import {EventDispatcher} from "simple-ts-event-dispatcher";
+import {EventCallback, EventCallbackList, EventDispatcher, EventDispatcherCallback} from "simple-ts-event-dispatcher";
 
 export class ScopeReference {
     constructor(
@@ -8,6 +8,101 @@ export class ScopeReference {
         public readonly value: any
     ) {}
 }
+
+export class WrappedArray<T> extends Array<T> {
+    private _listeners: EventCallbackList;
+    private _lastKey: number;
+    public readonly __wrapped__: boolean = true;
+
+    constructor(...items: T[]) {
+        super(...items);
+        Object.setPrototypeOf(this, WrappedArray.prototype);
+        this._lastKey = 0;
+        this._listeners = {};
+    }
+
+    push(...items: T[]): number {
+        const num: number = super.push(...items);
+
+        this.trigger('push', ...items);
+        for (const item of items) {
+            this.trigger('add', item);
+        }
+        return num;
+    }
+
+    bind(event: string, fct: EventDispatcherCallback, context?: any, once?: boolean): number {
+        once = once || false;
+        this._lastKey++;
+        this._listeners[event] = this._listeners[event] || [];
+        this._listeners[event].push(new EventCallback(fct, this._lastKey, once, context));
+        return this._lastKey;
+    }
+
+    once(event: string, fct: EventDispatcherCallback, context?: any): number {
+        return this.bind(event, fct, context, true);
+    }
+
+    unbind(event: string, key?: number): boolean {
+        if(event in this._listeners === false) return false;
+        if(key) {
+            for(const cb of this._listeners[event]) {
+                if(key == cb.key) {
+                    this._listeners[event].splice(this._listeners[event].indexOf(cb), 1);
+                    return true;
+                }
+            }
+        } else {
+            this._listeners[event] = [];
+            return true;
+        }
+        return false;
+    }
+
+    unbindWithContext(event: string, context: any): number {
+        if(event in this._listeners === false) return 0;
+        let toRemove: EventCallback[] = [],
+            cnt = 0;
+
+        for(const cb of this._listeners[event]) {
+            if(context == cb.context) {
+                toRemove.push(cb);
+            }
+        }
+
+        for(const cb of toRemove) {
+            this._listeners[event].splice(this._listeners[event].indexOf(cb), 1);
+            cnt++;
+        }
+        return cnt;
+    }
+
+    getListener(event: string, key: number): EventCallback | undefined {
+        for(const cb of this._listeners[event]) {
+            if(key == cb.key)
+                return cb;
+        }
+    }
+
+    trigger(event: string, ...args: any[]): void {
+        if(event in this._listeners === false) return;
+
+        for(let i = 0; i < this._listeners[event].length; i++) {
+            const cb: EventCallback = this._listeners[event][i];
+
+            // We need to unbind callbacks before they're called to prevent
+            // infinite loops if the event is somehow triggered within the
+            // callback
+            if(cb.once) {
+                this.unbind(event, cb.key);
+                i--;
+            }
+
+            cb.call(args);
+        }
+    }
+}
+
 
 export class Scope extends EventDispatcher {
     protected wrapped: any;
@@ -66,7 +161,7 @@ export class Scope extends EventDispatcher {
 
     get(key: string, searchParents: boolean = true): any {
         const value: any = this.data[key];
-        if (value === undefined || value === null) {
+        if (value === undefined) {
             if (searchParents && this.parent)
                 return this.parent.get(key, searchParents);
 
@@ -90,6 +185,12 @@ export class Scope extends EventDispatcher {
             this.keys.push(key);
     }
 
+    extend(data) {
+        for (const key of data) {
+            this.set(key, data[key]);
+        }
+    }
+
     clear() {
         for (const key of this.keys) {
             if (['function', 'object'].indexOf(typeof this.get(key)) > -1) continue;
@@ -102,12 +203,23 @@ export class Scope extends EventDispatcher {
         this.parent = null;
     }
 
-    public wrap(wrapped: any) {
+    public wrap(wrapped: any, triggerUpdates: boolean = false) {
         if (this.wrapped !== undefined)
             throw Error("A scope can only wrap a single object");
 
+        if (wrapped['__wrapped__'])
+            throw Error("An object should only be wrapped once.")
+
         this.wrapped = wrapped;
+        this.wrapped['__wrapped__'] = true;
         for (const field in wrapped) {
+            if (['constructor'].indexOf(field) > -1)
+                continue;
+
+            if (this.wrapped[field] instanceof Array) {
+                this.wrapped[field] = new WrappedArray(...wrapped[field]);
+            }
+
             const getter = () => {
                 let val = this.wrapped[field];
                 if (typeof val === 'function')
@@ -127,6 +239,9 @@ export class Scope extends EventDispatcher {
                 enumerable: true,
                 configurable: true
             });
+
+            if (triggerUpdates)
+                this.trigger(`change:${field}`);
         }
     }
 }

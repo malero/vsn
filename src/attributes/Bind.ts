@@ -28,8 +28,10 @@ export class Bind extends Attribute {
         else
             this.updateTo();
 
-        if (this.tag.isInput)
+        if (this.tag.isInput) {
+            this.tag.element.onkeydown = this.updateFrom.bind(this);
             this.tag.element.onkeyup = this.updateFrom.bind(this);
+        }
     }
 
     updateFrom() {
