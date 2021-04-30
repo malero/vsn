@@ -3,8 +3,6 @@ import {Tag} from "../Tag";
 import {List} from "./List";
 
 export class ListItem extends Attribute {
-
-
     public setup(): void {
         const parent: Tag = this.tag.parent;
         const list: List = parent.getAttribute('v-list') as List;
