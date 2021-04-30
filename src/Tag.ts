@@ -8,6 +8,7 @@ import {ListItem} from "./attributes/ListItem";
 import {EventDispatcher} from "simple-ts-event-dispatcher";
 import {DOM} from "./DOM";
 import {Name} from "./attributes/Name";
+import {If} from "./attributes/If";
 
 export class Tag extends EventDispatcher {
     public readonly rawAttributes: { [key: string]: string; };
@@ -22,6 +23,7 @@ export class Tag extends EventDispatcher {
         'v-list-item': ListItem,
         'v-bind': Bind,
         'v-click': Click,
+        'v-if': If,
     };
 
     protected inputTags: string[] = [
@@ -69,12 +71,35 @@ export class Tag extends EventDispatcher {
         this._scope = scope;
     }
 
-    public wrapScope(cls: any) {
+    isConstructor(obj): boolean {
+      return Object.hasOwnProperty("prototype") &&
+          !!obj.prototype &&
+          !!obj.prototype.constructor &&
+          !!obj.prototype.constructor.name;
+    }
 
+    public wrap(obj: any, triggerUpdates: boolean = false) {
+        if (this.isConstructor(obj))
+            obj = new obj();
+
+        this.scope.wrap(obj, triggerUpdates);
+        return obj;
     }
 
     public decompose() {
         this.element.remove();
+    }
+
+    public recompose() {
+        this._parent.element.appendChild(this.element)
+    }
+
+    public hide() {
+        this.element.hidden = true;
+    }
+
+    public show() {
+        this.element.hidden = false;
     }
 
     public getAttribute(key: string) {
