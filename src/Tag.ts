@@ -2,27 +2,36 @@ import {Scope} from "./Scope";
 import {Attribute} from "./Attribute";
 import {Bind} from "./attributes/Bind";
 import {Click} from "./attributes/Click";
-import {Controller} from "./attributes/Controller";
 import {List} from "./attributes/List";
 import {ListItem} from "./attributes/ListItem";
 import {EventDispatcher} from "simple-ts-event-dispatcher";
 import {DOM} from "./DOM";
 import {Name} from "./attributes/Name";
 import {If} from "./attributes/If";
+import {ClickToggleClass} from "./attributes/ClickToggleClass";
+import {ClickRemoveClass} from "./attributes/ClickRemoveClass";
+import {ControllerAttribute} from "./attributes/ControllerAttribute";
+import {ModelAttribute} from "./attributes/ModelAttribute";
+import {Controller} from "./Controller";
 
 export class Tag extends EventDispatcher {
-    public readonly rawAttributes: { [key: string]: string; };
+    public readonly rawAttributes: { [key: string]: string[]; };
     protected attributes: Attribute[];
     protected _parent: Tag;
+    protected _children: Tag[] = [];
     protected _scope: Scope;
+    protected _controller: Controller;
 
     public static readonly attributeMap: { [attr: string]: any; } = {
         'v-name': Name,
-        'v-class': Controller,
+        'v-controller': ControllerAttribute,
+        'v-model': ModelAttribute,
         'v-list': List,
         'v-list-item': ListItem,
         'v-bind': Bind,
         'v-click': Click,
+        'v-click-toggle-class': ClickToggleClass,
+        'v-click-remove-class': ClickRemoveClass,
         'v-if': If,
     };
 
@@ -32,6 +41,8 @@ export class Tag extends EventDispatcher {
         'textarea'
     ];
 
+    protected onclickHandlers: any[];
+
     constructor(
         public readonly element: HTMLElement,
         public readonly dom: DOM
@@ -40,19 +51,32 @@ export class Tag extends EventDispatcher {
         this.scope = new Scope();
         this.rawAttributes = {};
         this.attributes = [];
+        this.onclickHandlers = [];
 
         for (let i: number = 0; i < this.element.attributes.length; i++) {
             const a = this.element.attributes[i];
             if (a.name.substr(0, 2) == 'v-') {
-                this.rawAttributes[a.name] = a.value;
+                if (a.name.indexOf(':') > -1) {
+                    const nameParts: string[] = a.name.split(':');
+                    const values = nameParts.slice(1);
+                    values.push(a.value);
+                    this.rawAttributes[nameParts[0]] = values;
+                } else {
+                    this.rawAttributes[a.name] = [null, a.value];
+                }
             }
         }
+
+        this.element.onclick = this.onclick.bind(this);
     }
 
     get isInput(): boolean {
         return this.inputTags.indexOf(this.element.tagName.toLowerCase()) > -1;
     }
 
+    public addChild(tag: Tag) {
+        this._children.push(tag);
+    }
 
     public get parent(): Tag {
         return this._parent;
@@ -60,6 +84,7 @@ export class Tag extends EventDispatcher {
 
     public set parent(tag: Tag) {
         this._parent = tag;
+        tag.addChild(this);
         this.scope.parent = tag.scope;
     }
 
@@ -71,16 +96,26 @@ export class Tag extends EventDispatcher {
         this._scope = scope;
     }
 
+    public get controller(): Controller {
+        return this._controller;
+    }
+
+    public set controller(controller: Controller) {
+        this._controller = controller;
+    }
+
     isConstructor(obj): boolean {
-      return Object.hasOwnProperty("prototype") &&
+      return obj &&
+          obj.hasOwnProperty("prototype") &&
           !!obj.prototype &&
           !!obj.prototype.constructor &&
           !!obj.prototype.constructor.name;
     }
 
     public wrap(obj: any, triggerUpdates: boolean = false) {
-        if (this.isConstructor(obj))
+        if (this.isConstructor(obj)) {
             obj = new obj();
+        }
 
         this.scope.wrap(obj, triggerUpdates);
         return obj;
@@ -102,6 +137,17 @@ export class Tag extends EventDispatcher {
         this.element.hidden = false;
     }
 
+    public findAncestorByAttribute(attr: string): Tag {
+        if (this.hasAttribute(attr))
+            return this;
+
+        return this.parent.findAncestorByAttribute(attr);
+    }
+
+    public hasAttribute(attr: string): boolean {
+        return !!this.rawAttributes[attr];
+    }
+
     public getAttribute(key: string) {
         const cls: any = Tag.attributeMap[key];
         if (!cls) return;
@@ -111,7 +157,11 @@ export class Tag extends EventDispatcher {
 
     }
 
-    public buildAttributes() {
+    public getRawAttributeValue(key: string, index: number = 0, fallback: any = null) {
+        return this.rawAttributes[key] && this.rawAttributes[key][index] || fallback;
+    }
+
+    public async buildAttributes() {
         this.attributes.length = 0;
 
         for (const attr in this.rawAttributes) {
@@ -120,9 +170,27 @@ export class Tag extends EventDispatcher {
         }
     }
 
-    public setupAttributes() {
+    public async setupAttributes() {
         for (const attr of this.attributes) {
-            attr.setup();
+            await attr.setup();
         }
+    }
+
+    public async executeAttributes() {
+        for (const attr of this.attributes) {
+            await attr.execute();
+        }
+    }
+
+    protected onclick(e) {
+        this.scope.set('$event', e);
+        for (const handler of this.onclickHandlers)
+        {
+            handler(e);
+        }
+    }
+
+    public addClickHandler(handler) {
+        this.onclickHandlers.push(handler);
     }
 }
