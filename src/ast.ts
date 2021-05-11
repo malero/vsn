@@ -104,7 +104,7 @@ const TOKEN_PATTERNS: TokenPattern[] = [
     },
     {
         type: TokenType.NAME,
-        pattern: /^[_a-zA-Z][_a-zA-Z0-9]*/
+        pattern: /^[\$_a-zA-Z][_a-zA-Z0-9]*/
     },
     {
         type: TokenType.NUMBER_LITERAL,
@@ -524,9 +524,10 @@ class ScopeMemberNode implements TreeNode {
     ) {}
 
     async evaluate(scope: Scope) {
+        console.log('evaluate scope name: ', this.name, this.scope, scope);
         const parent: Scope = await this.scope.evaluate(scope);
         if (!parent)
-            throw Error(`Cannot access ${this.name.evaluate(scope)} of undefined.`);
+            throw Error(`Cannot access "${await this.name.evaluate(scope)}" of undefined.`);
         return parent.get(await this.name.evaluate(scope));
     }
 }
