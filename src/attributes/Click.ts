@@ -4,13 +4,13 @@ import {Tree} from "../ast";
 export class Click extends Attribute {
     protected clickHandler: Tree;
 
-    public setup(): void {
-        const click: string = this.tag.rawAttributes['v-click'];
+    public async setup() {
+        const click: string = this.getAttributeValue('v-click', 1);
         this.clickHandler = new Tree(click);
-        this.tag.element.onclick = this.onClick.bind(this);
+        this.tag.addClickHandler(this.onClick.bind(this));
     }
 
-    onClick() {
+    onClick(e) {
         this.clickHandler.evaluate(this.tag.scope);
     }
 }
