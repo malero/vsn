@@ -1,4 +1,5 @@
 import {Tag} from "./Tag";
+import {ElementHelper} from "./helpers/ElementHelper";
 
 export class DOM {
     protected tags: Tag[];
@@ -11,7 +12,7 @@ export class DOM {
         this.buildFrom(document);
     }
 
-    buildFrom(ele: any) {
+    async buildFrom(ele: any) {
         // Assign parents to each tag
         const allElements: HTMLElement[] = [];
         for (const tag of this.tags)
@@ -19,10 +20,10 @@ export class DOM {
 
         // Create tags for each html element with a v-attribute
         const newTags: Tag[] = [];
-        for (const selector in Tag.attributeMap) {
-            for (const element of Array.from(ele.querySelectorAll(`[${selector}]`))) {
-                if (allElements.indexOf(element as HTMLElement) > -1) continue;
-
+        for (const _e of Array.from(ele.querySelectorAll(`*`))) {
+            const element: HTMLElement = _e as HTMLElement;
+            if (allElements.indexOf(element) > -1) continue;
+            if (ElementHelper.hasVisionAttribute(element)) {
                 const tag: Tag = new Tag(element as HTMLElement, this);
                 this.tags.push(tag);
                 newTags.push(tag);
@@ -43,12 +44,15 @@ export class DOM {
             }
         }
 
-        // Configure & setup attributes
+        // Configure, setup & execute attributes
         for (const tag of newTags)
-            tag.buildAttributes();
+            await tag.buildAttributes();
 
         for (const tag of newTags)
-            tag.setupAttributes();
+            await tag.setupAttributes();
+
+        for (const tag of newTags)
+            await tag.executeAttributes();
     }
 
     getTagForElement(element: Element): Tag {
