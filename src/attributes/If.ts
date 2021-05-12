@@ -4,15 +4,17 @@ import {Tree} from "../ast";
 export class If extends Attribute {
     protected tree: Tree;
 
-    public setup(): void {
-        const statement: string = this.tag.rawAttributes['v-if'];
+    public async setup() {
+        const statement: string = this.getAttributeValue('v-if', 1);
         this.tree = new Tree(statement);
+    }
+
+    public async execute() {
         this.onChange();
     }
 
     onChange() {
         this.tree.evaluate(this.tag.scope).then((result) => {
-            console.log('onChange', result);
             if (result) {
                 this.tag.show();
             } else {

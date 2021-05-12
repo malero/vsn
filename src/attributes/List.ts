@@ -2,38 +2,44 @@ import {Attribute} from "../Attribute";
 import {Tag} from "../Tag";
 import {Scope, WrappedArray} from "../Scope";
 import {Tree} from "../ast";
+import {Vision} from "../Vision";
+import {ElementHelper} from "../helpers/ElementHelper";
 
 export class List extends Attribute {
     protected items: any[];
     protected tags: Tag[];
     protected template: Node;
 
-    public setup(): void {
-        const listAttr: string = this.tag.rawAttributes['v-list'];
+    public async setup() {
+        const listAttr: string = this.tag.rawAttributes['v-list'][0];
         (new Tree(listAttr)).evaluate(this.tag.scope).then(this.addExistingItems.bind(this));
     }
 
-    protected addExistingItems(defaultList: any[] | null) {
-        const controllerClassName: string = this.tag.rawAttributes['v-item-class'];
-        const cls: any = window[controllerClassName];
-
-        this.items = defaultList || [];
+    protected async addExistingItems(defaultList: any[] | null) {
+        this.items = new WrappedArray();
         this.tags = [];
+
+        for (const existingItem of defaultList) {
+            this.add(existingItem);
+        }
 
         if (this.tag.element.children.length > 0) {
             this.template = this.tag.element.children[0].cloneNode(true);
         }
 
-        for (const element of Array.from(this.tag.element.querySelectorAll('[v-list-item]'))) {
+        for (const element of Array.from(this.tag.element.querySelectorAll('*'))) {
+            if (!ElementHelper.hasVisionAttribute(element, 'v-list-item'))
+                continue;
+
             const tag: Tag = this.tag.dom.getTagForElement(element);
             if (tag) {
                 this.tags.push(tag);
-                this.items.push(tag.wrap(cls));
+                //this.items.push(tag.);
             }
         }
 
         if (!(this.items instanceof WrappedArray)) {
-
+            this.items = new WrappedArray(this.items);
         }
 
         (this.items as WrappedArray<any>).bind('add', (item) => {
@@ -45,7 +51,11 @@ export class List extends Attribute {
     }
 
     public get listItemName(): string {
-        return this.tag.rawAttributes['v-list-item-name'] || 'item';
+        return this.getAttributeValue('v-list-item', 0, 'item');
+    }
+
+    public get listItemModel(): string {
+        return this.getAttributeValue('v-list-item', 1, 'DataModel');
     }
 
     public remove(item: any) {
