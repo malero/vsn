@@ -2,7 +2,8 @@ import {Tag} from "./Tag";
 
 export abstract class Attribute {
     protected constructor(
-        public readonly tag: Tag
+        public readonly tag: Tag,
+        public readonly attributeName: string
     ) {
         this.configure();
     }
@@ -11,11 +12,13 @@ export abstract class Attribute {
     public async setup() {};
     public async execute() {};
 
-    public getAttributeValue(key: string, index: number = 0, fallback: any = null) {
-        return this.tag.getRawAttributeValue(key, index, fallback);
+    public getAttributeValue(fallback: any = null) {
+        return this.tag.getRawAttributeValue(this.attributeName, fallback);
     }
 
-    public getAttributeValues(key: string, fallback: any = null) {
-        return this.tag.rawAttributes[key] || fallback;
+    public getAttributeBinding(fallback: any = null): string {
+        return this.tag.getAttributeBinding(this.attributeName) || fallback;
     }
+
+    public mutate(mutation: MutationRecord): void {}
 }

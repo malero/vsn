@@ -5,7 +5,7 @@ export class Click extends Attribute {
     protected clickHandler: Tree;
 
     public async setup() {
-        const click: string = this.getAttributeValue('v-click', 1);
+        const click: string = this.getAttributeValue();
         this.clickHandler = new Tree(click);
         this.tag.addClickHandler(this.onClick.bind(this));
     }

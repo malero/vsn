@@ -5,7 +5,7 @@ export class If extends Attribute {
     protected tree: Tree;
 
     public async setup() {
-        const statement: string = this.getAttributeValue('v-if', 1);
+        const statement: string = this.getAttributeValue();
         this.tree = new Tree(statement);
     }
 

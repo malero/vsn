@@ -18,10 +18,9 @@ export class Bind extends Attribute {
     }
 
     public async setup() {
-        this.property = this.getAttributeValue('v-bind');
-        let scopeKey: string = this.getAttributeValue('v-bind', 1);
+        this.property = this.getAttributeBinding();
+        let scopeKey: string = this.getAttributeValue();
         let ref: ScopeReference;
-
         try {
             ref = this.tag.scope.getReference(scopeKey);
         } catch (e) {
@@ -30,31 +29,55 @@ export class Bind extends Attribute {
         }
         this.key = ref.key;
         this.boundScope = ref.scope;
+    }
+
+    public async execute() {
+        if (!!this.valueFromElement)
+            this.updateFrom();
+        else
+            this.updateTo();
+
         this.boundScope.bind(`change:${this.key}`, this.updateTo, this);
 
         if (this.tag.isInput) {
+            //this.tag.element.onchange = this.updateFrom.bind(this);
             this.tag.element.onkeydown = this.updateFrom.bind(this);
             this.tag.element.onkeyup = this.updateFrom.bind(this);
         }
     }
 
-    public async execute() {
-        if (!this.value)
+    get valueFromElement(): string {
+        if (this.property) {
+            return this.tag.element.getAttribute(this.property);
+        } else {
+            if (this.tag.isInput) {
+                return (this.tag.element as any).value;
+            } else {
+                return this.tag.element.innerText;
+            }
+        }
+    }
+
+    public mutate(mutation: MutationRecord) {
+        super.mutate(mutation);
+        console.log('mutate', mutation.type, mutation.attributeName, this.tag.element);
+
+        // Element innerText binding
+        if (!this.property && [
+            'characterData',
+            'childList'
+        ].indexOf(mutation.type) > -1)
             this.updateFrom();
-        else
-            this.updateTo();
+        // Input value binding
+        else if (!this.property && mutation.type == 'attributes' && mutation.attributeName === 'value')
+            this.updateFrom();
+        // Attribute binding
+        else if (mutation.type === 'attributes' && mutation.attributeName == this.property)
+            this.updateFrom();
     }
 
     updateFrom() {
-        if (this.property) {
-            this.value = this.tag.element.getAttribute(this.property);
-        } else {
-            if (this.tag.isInput) {
-                this.value = (this.tag.element as any).value;
-            } else {
-                this.value = this.tag.element.innerText;
-            }
-        }
+        this.value = this.valueFromElement;
     }
 
     updateTo() {
@@ -62,6 +85,7 @@ export class Bind extends Attribute {
             this.tag.element.setAttribute(this.property, this.value);
         } else {
             if (this.tag.isInput) {
+                this.tag.element.setAttribute('value', this.value);
                 (this.tag.element as any).value = this.value;
             } else {
                 this.tag.element.innerText = this.value;

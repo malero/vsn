@@ -3,7 +3,6 @@ import {Attribute} from "../Attribute";
 import {IPromise} from "simple-ts-promise";
 
 export class ClassConstructor extends Attribute {
-    protected attributeName: string = 'v-class';
     protected attributeKey: string;
     protected className: string;
 
@@ -12,8 +11,8 @@ export class ClassConstructor extends Attribute {
         if (!parentScope)
             return;
 
-        this.attributeKey = this.getAttributeValue(this.attributeName, 0);
-        this.className = this.getAttributeValue(this.attributeName, 1);
+        this.attributeKey = this.getAttributeBinding();
+        this.className = this.getAttributeValue();
 
         if (this.attributeKey && parentScope)
             parentScope.set(this.attributeKey, this.tag.scope);

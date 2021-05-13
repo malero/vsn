@@ -208,12 +208,10 @@ export class Scope extends EventDispatcher {
             throw Error("A scope can only wrap a single object");
 
         if (!wrapped) {
-            console.log(wrapped);
             throw Error("Can only wrap objects.");
         }
 
         if (wrapped['__wrapped__'] && false) {
-            console.log(wrapped);
             throw Error("An object should only be wrapped once.");
         }
 

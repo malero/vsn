@@ -2,7 +2,6 @@ import {Attribute} from "../Attribute";
 import {Tag} from "../Tag";
 import {Scope, WrappedArray} from "../Scope";
 import {Tree} from "../ast";
-import {Vision} from "../Vision";
 import {ElementHelper} from "../helpers/ElementHelper";
 
 export class List extends Attribute {
@@ -11,7 +10,7 @@ export class List extends Attribute {
     protected template: Node;
 
     public async setup() {
-        const listAttr: string = this.tag.rawAttributes['v-list'][0];
+        const listAttr: string = this.tag.parsedAttributes['v-list'][0];
         (new Tree(listAttr)).evaluate(this.tag.scope).then(this.addExistingItems.bind(this));
     }
 
@@ -51,11 +50,11 @@ export class List extends Attribute {
     }
 
     public get listItemName(): string {
-        return this.getAttributeValue('v-list-item', 0, 'item');
+        return this.getAttributeBinding('item');
     }
 
     public get listItemModel(): string {
-        return this.getAttributeValue('v-list-item', 1, 'DataModel');
+        return this.getAttributeValue('DataModel');
     }
 
     public remove(item: any) {

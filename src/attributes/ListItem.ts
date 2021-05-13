@@ -12,11 +12,11 @@ export class ListItem extends Attribute {
     }
 
     public get listItemName(): string {
-        return this.getAttributeValue('v-list-item', 0, 'item');
+        return this.getAttributeBinding('item');
     }
 
     public get modelClassName(): string {
-        return this.getAttributeValue('v-list-item', 1);
+        return this.getAttributeValue();
     }
 
     protected async configure() {
