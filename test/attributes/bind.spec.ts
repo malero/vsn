@@ -1,7 +1,7 @@
 import {DOM} from "../../src/DOM";
 
 describe('Bind', () => {
-    it("v-bind to work with inner text", async (done) => {
+    it("v-bind to work with inner text", (done) => {
         document.body.innerHTML = `
             <span id="test" v-name="test" v-bind="test.value">testing</span>
         `;
@@ -15,7 +15,7 @@ describe('Bind', () => {
         });
     });
 
-    it("v-bind order of execution to be left to right and top to bottom", async (done) => {
+    it("v-bind order of execution to be left to right and top to bottom", (done) => {
         document.body.innerHTML = `
             <span id="test" v-name="test" v-bind:id="test.id" v-bind="test.id">testing</span>
             <span id="test2" v-bind="test.id">arg</span>
@@ -34,7 +34,7 @@ describe('Bind', () => {
         });
     });
 
-    it("v-bind attribute changes trigger updating scope with new value", async (done) => {
+    it("v-bind attribute changes trigger updating scope with new value", (done) => {
         document.body.innerHTML = `
             <span id="test" v-name="test" v-bind:id="test.id"></span>
         `;
@@ -54,7 +54,7 @@ describe('Bind', () => {
         });
     });
 
-    it("v-bind innerText changes trigger updating scope with new value", async (done) => {
+    it("v-bind innerText changes trigger updating scope with new value", (done) => {
         document.body.innerHTML = `
             <span id="test" v-name="test" v-bind="test.val">testing</span>
         `;
@@ -74,7 +74,7 @@ describe('Bind', () => {
         });
     });
 
-    it("v-bind input value changes trigger updating scope with new value", async (done) => {
+    it("v-bind input value changes trigger updating scope with new value", (done) => {
         document.body.innerHTML = `
             <input id="test" value="testing" v-name="test" v-bind="test.val"/>
         `;
@@ -95,7 +95,7 @@ describe('Bind', () => {
         });
     });
 
-    it("v-bind elemenet inner text should change when scope value is changed", async (done) => {
+    it("v-bind elemenet inner text should change when scope value is changed", (done) => {
         document.body.innerHTML = `
             <span id="test" v-name="test" v-bind="test.val">testing</span>
         `;
@@ -115,7 +115,7 @@ describe('Bind', () => {
         });
     });
 
-    it("v-bind input value should change when scope value is changed", async (done) => {
+    it("v-bind input value should change when scope value is changed", (done) => {
         document.body.innerHTML = `
             <input id="test" value="testing" v-name="test" v-bind="test.val" />
         `;

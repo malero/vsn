@@ -337,9 +337,7 @@ class ConditionalNode implements TreeNode {
 class IfStatementNode implements TreeNode {
     constructor(
         protected nodes: ConditionalNode[]
-    ) {
-        console.warn('IF STATEMENT;');
-    }
+    ) {}
 
     public async evaluate(scope: Scope) {
         for (const condition of this.nodes) {

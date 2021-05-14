@@ -60,7 +60,6 @@ export class Bind extends Attribute {
 
     public mutate(mutation: MutationRecord) {
         super.mutate(mutation);
-        console.log('mutate', mutation.type, mutation.attributeName, this.tag.element);
 
         // Element innerText binding
         if (!this.property && [

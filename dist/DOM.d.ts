@@ -1,8 +1,11 @@
 import { Tag } from "./Tag";
-export declare class DOM {
+import { EventDispatcher } from "simple-ts-event-dispatcher";
+export declare class DOM extends EventDispatcher {
     protected document: Document;
     protected tags: Tag[];
+    protected observer: MutationObserver;
     constructor(document: Document);
-    buildFrom(ele: any): void;
+    mutation(mutations: MutationRecord[]): void;
+    buildFrom(ele: any): Promise<void>;
     getTagForElement(element: Element): Tag;
 }
