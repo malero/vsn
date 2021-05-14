@@ -64,6 +64,7 @@ var ClickToggleClass_1 = require("./attributes/ClickToggleClass");
 var ClickRemoveClass_1 = require("./attributes/ClickRemoveClass");
 var ControllerAttribute_1 = require("./attributes/ControllerAttribute");
 var ModelAttribute_1 = require("./attributes/ModelAttribute");
+var VisionHelper_1 = require("./helpers/VisionHelper");
 var Tag = /** @class */ (function (_super) {
     __extends(Tag, _super);
     function Tag(element, dom) {
@@ -81,6 +82,7 @@ var Tag = /** @class */ (function (_super) {
         _this.parsedAttributes = {};
         _this.attributes = [];
         _this.onclickHandlers = [];
+        // Build element Attributes
         for (var i = 0; i < _this.element.attributes.length; i++) {
             var a = _this.element.attributes[i];
             if (a.name.substr(0, 2) == 'v-') {
@@ -166,25 +168,18 @@ var Tag = /** @class */ (function (_super) {
         enumerable: false,
         configurable: true
     });
-    Tag.prototype.isConstructor = function (obj) {
-        return obj &&
-            obj.hasOwnProperty("prototype") &&
-            !!obj.prototype &&
-            !!obj.prototype.constructor &&
-            !!obj.prototype.constructor.name;
-    };
     Tag.prototype.wrap = function (obj, triggerUpdates) {
         if (triggerUpdates === void 0) { triggerUpdates = false; }
-        if (this.isConstructor(obj)) {
+        if (VisionHelper_1.VisionHelper.isConstructor(obj)) {
             obj = new obj();
         }
         this.scope.wrap(obj, triggerUpdates);
         return obj;
     };
-    Tag.prototype.decompose = function () {
+    Tag.prototype.removeFromDOM = function () {
         this.element.remove();
     };
-    Tag.prototype.recompose = function () {
+    Tag.prototype.addToParentElement = function () {
         this._parent.element.appendChild(this.element);
     };
     Tag.prototype.hide = function () {
@@ -196,7 +191,7 @@ var Tag = /** @class */ (function (_super) {
     Tag.prototype.findAncestorByAttribute = function (attr) {
         if (this.hasAttribute(attr))
             return this;
-        return this.parent.findAncestorByAttribute(attr);
+        return this.parent ? this.parent.findAncestorByAttribute(attr) : null;
     };
     Tag.prototype.hasAttribute = function (attr) {
         return !!this.parsedAttributes[attr];

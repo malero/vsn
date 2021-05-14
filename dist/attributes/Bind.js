@@ -127,7 +127,6 @@ var Bind = /** @class */ (function (_super) {
     });
     Bind.prototype.mutate = function (mutation) {
         _super.prototype.mutate.call(this, mutation);
-        console.log('mutate', mutation.type, mutation.attributeName, this.tag.element);
         // Element innerText binding
         if (!this.property && [
             'characterData',

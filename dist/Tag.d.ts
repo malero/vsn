@@ -35,10 +35,9 @@ export declare class Tag extends EventDispatcher {
     set scope(scope: Scope);
     get controller(): Controller;
     set controller(controller: Controller);
-    isConstructor(obj: any): boolean;
     wrap(obj: any, triggerUpdates?: boolean): any;
-    decompose(): void;
-    recompose(): void;
+    removeFromDOM(): void;
+    addToParentElement(): void;
     hide(): void;
     show(): void;
     findAncestorByAttribute(attr: string): Tag;

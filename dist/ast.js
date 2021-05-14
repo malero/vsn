@@ -399,7 +399,6 @@ var ConditionalNode = /** @class */ (function () {
 var IfStatementNode = /** @class */ (function () {
     function IfStatementNode(nodes) {
         this.nodes = nodes;
-        console.warn('IF STATEMENT;');
     }
     IfStatementNode.prototype.evaluate = function (scope) {
         return __awaiter(this, void 0, void 0, function () {

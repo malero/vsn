@@ -13,6 +13,7 @@ import {ClickRemoveClass} from "./attributes/ClickRemoveClass";
 import {ControllerAttribute} from "./attributes/ControllerAttribute";
 import {ModelAttribute} from "./attributes/ModelAttribute";
 import {Controller} from "./Controller";
+import {VisionHelper} from "./helpers/VisionHelper";
 
 export class Tag extends EventDispatcher {
     public readonly rawAttributes: { [key: string]: string; };
@@ -55,6 +56,7 @@ export class Tag extends EventDispatcher {
         this.attributes = [];
         this.onclickHandlers = [];
 
+        // Build element Attributes
         for (let i: number = 0; i < this.element.attributes.length; i++) {
             const a = this.element.attributes[i];
             if (a.name.substr(0, 2) == 'v-') {
@@ -138,16 +140,8 @@ export class Tag extends EventDispatcher {
         this._controller = controller;
     }
 
-    isConstructor(obj): boolean {
-      return obj &&
-          obj.hasOwnProperty("prototype") &&
-          !!obj.prototype &&
-          !!obj.prototype.constructor &&
-          !!obj.prototype.constructor.name;
-    }
-
     public wrap(obj: any, triggerUpdates: boolean = false) {
-        if (this.isConstructor(obj)) {
+        if (VisionHelper.isConstructor(obj)) {
             obj = new obj();
         }
 
@@ -155,11 +149,11 @@ export class Tag extends EventDispatcher {
         return obj;
     }
 
-    public decompose() {
+    public removeFromDOM() {
         this.element.remove();
     }
 
-    public recompose() {
+    public addToParentElement() {
         this._parent.element.appendChild(this.element)
     }
 
@@ -175,7 +169,7 @@ export class Tag extends EventDispatcher {
         if (this.hasAttribute(attr))
             return this;
 
-        return this.parent.findAncestorByAttribute(attr);
+        return this.parent ? this.parent.findAncestorByAttribute(attr) : null;
     }
 
     public hasAttribute(attr: string): boolean {

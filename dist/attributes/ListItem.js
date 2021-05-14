@@ -58,6 +58,13 @@ var ListItem = /** @class */ (function (_super) {
     function ListItem() {
         return _super !== null && _super.apply(this, arguments) || this;
     }
+    Object.defineProperty(ListItem.prototype, "list", {
+        get: function () {
+            return this._list;
+        },
+        enumerable: false,
+        configurable: true
+    });
     ListItem.prototype.setup = function () {
         return __awaiter(this, void 0, void 0, function () {
             var modelName, promise;
@@ -69,6 +76,9 @@ var ListItem = /** @class */ (function (_super) {
                 promise.then(function (cls) {
                     _this.instantiateModel(cls);
                 });
+                this._list = this.tag.findAncestorByAttribute('v-list');
+                if (!this._list)
+                    throw Error(ListItem.ERROR_NO_PARENT);
                 return [2 /*return*/];
             });
         });
@@ -97,6 +107,7 @@ var ListItem = /** @class */ (function (_super) {
     ListItem.prototype.instantiateModel = function (model) {
         this.tag.wrap(model);
     };
+    ListItem.ERROR_NO_PARENT = "Cannot find list parent.";
     return ListItem;
 }(Attribute_1.Attribute));
 exports.ListItem = ListItem;

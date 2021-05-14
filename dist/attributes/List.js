@@ -125,7 +125,7 @@ var List = /** @class */ (function (_super) {
         for (var i = 0; i < this.tags.length; i++) {
             var tag = this.tags[i];
             if (tag.scope.get(this.listItemName) == item) {
-                tag.decompose();
+                tag.removeFromDOM();
                 this.tags.splice(i, 1);
                 return;
             }

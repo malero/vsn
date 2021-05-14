@@ -61,7 +61,7 @@ export class List extends Attribute {
         for (let i: number = 0; i < this.tags.length; i++) {
             const tag: Tag = this.tags[i];
             if (tag.scope.get(this.listItemName) == item) {
-                tag.decompose();
+                tag.removeFromDOM();
                 this.tags.splice(i, 1);
 
                 return;

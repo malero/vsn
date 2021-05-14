@@ -57,13 +57,15 @@ var ElementHelper_1 = require("./helpers/ElementHelper");
 var simple_ts_event_dispatcher_1 = require("simple-ts-event-dispatcher");
 var DOM = /** @class */ (function (_super) {
     __extends(DOM, _super);
-    function DOM(document) {
+    function DOM(document, build) {
+        if (build === void 0) { build = true; }
         var _this = _super.call(this) || this;
         _this.document = document;
         _this.observer = new MutationObserver(_this.mutation.bind(_this));
         _this.tags = [];
         _this.tags.push(new Tag_1.Tag(Array.from(document.getElementsByTagName('body'))[0], _this));
-        _this.buildFrom(document);
+        if (build)
+            _this.buildFrom(document);
         return _this;
     }
     DOM.prototype.mutation = function (mutations) {

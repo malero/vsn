@@ -7,13 +7,15 @@ export class DOM extends EventDispatcher {
     protected observer: MutationObserver;
 
     constructor(
-        protected document: Document
+        protected document: Document,
+        build: boolean = true
     ) {
         super();
         this.observer = new MutationObserver(this.mutation.bind(this));
         this.tags = [];
         this.tags.push(new Tag(Array.from(document.getElementsByTagName('body'))[0], this));
-        this.buildFrom(document);
+        if (build)
+            this.buildFrom(document);
     }
 
     public mutation(mutations: MutationRecord[]) {
