@@ -95,7 +95,7 @@ describe('Bind', () => {
         });
     });
 
-    it("v-bind elemenet inner text should change when scope value is changed", (done) => {
+    it("v-bind element innerText should change when scope value is changed", (done) => {
         document.body.innerHTML = `
             <span id="test" v-name="test" v-bind="test.val">testing</span>
         `;
