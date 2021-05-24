@@ -1,7 +1,7 @@
 
 import {Promise as SimplePromise, IDeferred} from 'simple-ts-promise';
 import {Scope} from "../src/Scope";
-import {Tree} from "../src/ast";
+import {Tree} from "../src/AST";
 
 describe('Tree', () => {
     let scope: Scope = null,

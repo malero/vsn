@@ -231,6 +231,9 @@ const TOKEN_PATTERNS: TokenPattern[] = [
 
 export function tokenize(code: string): Token[] {
     const tokens: Token[] = [];
+    if (!code || code.length === 0)
+        return tokens;
+
     let foundToken: boolean;
     do {
         foundToken = false;

@@ -54,7 +54,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.List = void 0;
 var Attribute_1 = require("../Attribute");
 var Scope_1 = require("../Scope");
-var ast_1 = require("../ast");
+var AST_1 = require("../AST");
 var ElementHelper_1 = require("../helpers/ElementHelper");
 var List = /** @class */ (function (_super) {
     __extends(List, _super);
@@ -66,7 +66,7 @@ var List = /** @class */ (function (_super) {
             var listAttr;
             return __generator(this, function (_a) {
                 listAttr = this.tag.parsedAttributes['v-list'][0];
-                (new ast_1.Tree(listAttr)).evaluate(this.tag.scope).then(this.addExistingItems.bind(this));
+                (new AST_1.Tree(listAttr)).evaluate(this.tag.scope).then(this.addExistingItems.bind(this));
                 return [2 /*return*/];
             });
         });
@@ -78,10 +78,11 @@ var List = /** @class */ (function (_super) {
             return __generator(this, function (_c) {
                 this.items = new Scope_1.WrappedArray();
                 this.tags = [];
-                for (_i = 0, defaultList_1 = defaultList; _i < defaultList_1.length; _i++) {
-                    existingItem = defaultList_1[_i];
-                    this.add(existingItem);
-                }
+                if (defaultList)
+                    for (_i = 0, defaultList_1 = defaultList; _i < defaultList_1.length; _i++) {
+                        existingItem = defaultList_1[_i];
+                        this.add(existingItem);
+                    }
                 if (this.tag.element.children.length > 0) {
                     this.template = this.tag.element.children[0].cloneNode(true);
                 }

@@ -14,6 +14,7 @@ import {ControllerAttribute} from "./attributes/ControllerAttribute";
 import {ModelAttribute} from "./attributes/ModelAttribute";
 import {Controller} from "./Controller";
 import {VisionHelper} from "./helpers/VisionHelper";
+import {SetAttribute} from "./attributes/SetAttribute";
 
 export class Tag extends EventDispatcher {
     public readonly rawAttributes: { [key: string]: string; };
@@ -30,6 +31,7 @@ export class Tag extends EventDispatcher {
         'v-model': ModelAttribute,
         'v-list': List,
         'v-list-item': ListItem,
+        'v-set': SetAttribute,
         'v-bind': Bind,
         'v-click': Click,
         'v-click-toggle-class': ClickToggleClass,
@@ -159,6 +161,7 @@ export class Tag extends EventDispatcher {
 
     public hide() {
         this.element.hidden = true;
+        this.element.className = this.element.className + ' hidemehidedme';
     }
 
     public show() {

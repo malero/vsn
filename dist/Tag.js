@@ -65,6 +65,7 @@ var ClickRemoveClass_1 = require("./attributes/ClickRemoveClass");
 var ControllerAttribute_1 = require("./attributes/ControllerAttribute");
 var ModelAttribute_1 = require("./attributes/ModelAttribute");
 var VisionHelper_1 = require("./helpers/VisionHelper");
+var SetAttribute_1 = require("./attributes/SetAttribute");
 var Tag = /** @class */ (function (_super) {
     __extends(Tag, _super);
     function Tag(element, dom) {
@@ -184,6 +185,7 @@ var Tag = /** @class */ (function (_super) {
     };
     Tag.prototype.hide = function () {
         this.element.hidden = true;
+        this.element.className = this.element.className + ' hidemehidedme';
     };
     Tag.prototype.show = function () {
         this.element.hidden = false;
@@ -291,6 +293,7 @@ var Tag = /** @class */ (function (_super) {
         'v-model': ModelAttribute_1.ModelAttribute,
         'v-list': List_1.List,
         'v-list-item': ListItem_1.ListItem,
+        'v-set': SetAttribute_1.SetAttribute,
         'v-bind': Bind_1.Bind,
         'v-click': Click_1.Click,
         'v-click-toggle-class': ClickToggleClass_1.ClickToggleClass,

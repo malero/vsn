@@ -1,5 +1,5 @@
 import { Attribute } from "../Attribute";
-import { Tree } from "../ast";
+import { Tree } from "../AST";
 export declare class If extends Attribute {
     protected tree: Tree;
     setup(): Promise<void>;

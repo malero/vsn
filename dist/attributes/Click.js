@@ -53,7 +53,7 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Click = void 0;
 var Attribute_1 = require("../Attribute");
-var ast_1 = require("../ast");
+var AST_1 = require("../AST");
 var Click = /** @class */ (function (_super) {
     __extends(Click, _super);
     function Click() {
@@ -64,7 +64,7 @@ var Click = /** @class */ (function (_super) {
             var click;
             return __generator(this, function (_a) {
                 click = this.getAttributeValue();
-                this.clickHandler = new ast_1.Tree(click);
+                this.clickHandler = new AST_1.Tree(click);
                 this.tag.addClickHandler(this.onClick.bind(this));
                 return [2 /*return*/];
             });

@@ -11,6 +11,7 @@ export abstract class Attribute {
     protected async configure() {};
     public async setup() {};
     public async execute() {};
+    public async evaluate() {};
 
     public getAttributeValue(fallback: any = null) {
         return this.tag.getRawAttributeValue(this.attributeName, fallback);

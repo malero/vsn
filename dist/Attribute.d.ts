@@ -6,6 +6,7 @@ export declare abstract class Attribute {
     protected configure(): Promise<void>;
     setup(): Promise<void>;
     execute(): Promise<void>;
+    evaluate(): Promise<void>;
     getAttributeValue(fallback?: any): any;
     getAttributeBinding(fallback?: any): string;
     mutate(mutation: MutationRecord): void;

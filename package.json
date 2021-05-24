@@ -8,7 +8,7 @@
   ],
   "main": "./dist/Vision.js",
   "scripts": {
-    "build": "rm -rf ./dist/ && tsc",
+    "build": "rm -rf ./dist/ && tsc && webpack",
     "demo": "rm -rf ./dist/ && tsc && webpack && cp ./dist/vision.min.js ./demo/vision.js",
     "clean": "rm -rf ./dist/",
     "test": "karma start --single-run",

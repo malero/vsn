@@ -1,5 +1,5 @@
 import { Attribute } from "../Attribute";
-import { Tree } from "../ast";
+import { Tree } from "../AST";
 export declare class Click extends Attribute {
     protected clickHandler: Tree;
     setup(): Promise<void>;

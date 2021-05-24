@@ -51,46 +51,56 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
     }
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.If = void 0;
+exports.SetAttribute = void 0;
 var Attribute_1 = require("../Attribute");
-var AST_1 = require("../AST");
-var If = /** @class */ (function (_super) {
-    __extends(If, _super);
-    function If() {
+var SetAttribute = /** @class */ (function (_super) {
+    __extends(SetAttribute, _super);
+    function SetAttribute() {
         return _super !== null && _super.apply(this, arguments) || this;
     }
-    If.prototype.setup = function () {
+    Object.defineProperty(SetAttribute.prototype, "value", {
+        get: function () {
+            if (!this.boundScope)
+                return null;
+            return this.boundScope.get(this.key, false);
+        },
+        set: function (v) {
+            if (this.boundScope) {
+                this.boundScope.set(this.key, v);
+            }
+        },
+        enumerable: false,
+        configurable: true
+    });
+    SetAttribute.prototype.setup = function () {
         return __awaiter(this, void 0, void 0, function () {
-            var statement;
+            var ref;
             return __generator(this, function (_a) {
-                statement = this.getAttributeValue();
-                this.tree = new AST_1.Tree(statement);
-                console.log('if statement setup', statement, this.tag.element);
+                this.property = this.getAttributeBinding();
+                try {
+                    ref = this.tag.scope.getReference(this.property);
+                }
+                catch (e) {
+                    console.log('error', e);
+                    return [2 /*return*/];
+                }
+                this.key = ref.key;
+                this.boundScope = ref.scope;
+                console.log('v-set setup, ', this.key, this.boundScope, this.getAttributeValue(null));
+                this.boundScope.set(this.key, this.getAttributeValue(null));
                 return [2 /*return*/];
             });
         });
     };
-    If.prototype.execute = function () {
+    SetAttribute.prototype.execute = function () {
         return __awaiter(this, void 0, void 0, function () {
             return __generator(this, function (_a) {
-                this.onChange();
+                this.boundScope.set(this.key, this.getAttributeValue(null));
                 return [2 /*return*/];
             });
         });
     };
-    If.prototype.onChange = function () {
-        var _this = this;
-        this.tree.evaluate(this.tag.scope).then(function (result) {
-            console.log('if if if!', result);
-            if (result) {
-                _this.tag.show();
-            }
-            else {
-                _this.tag.hide();
-            }
-        });
-    };
-    return If;
+    return SetAttribute;
 }(Attribute_1.Attribute));
-exports.If = If;
-//# sourceMappingURL=If.js.map
+exports.SetAttribute = SetAttribute;
+//# sourceMappingURL=SetAttribute.js.map

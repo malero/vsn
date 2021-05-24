@@ -1,7 +1,7 @@
 import {Attribute} from "../Attribute";
 import {Tag} from "../Tag";
 import {Scope, WrappedArray} from "../Scope";
-import {Tree} from "../ast";
+import {Tree} from "../AST";
 import {ElementHelper} from "../helpers/ElementHelper";
 
 export class List extends Attribute {
@@ -18,9 +18,10 @@ export class List extends Attribute {
         this.items = new WrappedArray();
         this.tags = [];
 
-        for (const existingItem of defaultList) {
-            this.add(existingItem);
-        }
+        if (defaultList)
+            for (const existingItem of defaultList) {
+                this.add(existingItem);
+            }
 
         if (this.tag.element.children.length > 0) {
             this.template = this.tag.element.children[0].cloneNode(true);
