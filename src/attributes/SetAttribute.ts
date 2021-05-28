@@ -28,7 +28,6 @@ export class SetAttribute extends Attribute {
         }
         this.key = ref.key;
         this.boundScope = ref.scope;
-        console.log('v-set setup, ', this.key, this.boundScope, this.getAttributeValue(null));
         this.boundScope.set(this.key, this.getAttributeValue(null));
     }
 

@@ -5,7 +5,7 @@ import {IDeferred, IPromise, Promise} from "simple-ts-promise";
 
 export class Vision extends EventDispatcher {
     protected static _instance: Vision;
-    protected dom?: DOM;
+    protected _dom?: DOM;
     protected controllers: {[key: string]: any} = {};
 
     constructor() {
@@ -17,8 +17,14 @@ export class Vision extends EventDispatcher {
         this.registerClass(WrappedArray, 'WrappedArray');
     }
 
+    public get dom(): DOM {
+        return this._dom;
+    }
+
     setup(): void {
-        this.dom = new DOM(document);
+        const body: HTMLElement = document.body;
+        body.setAttribute('v-root', '');
+        this._dom = new DOM(document);
     }
 
     registerClass(cls: any, constructorName: string = null) {

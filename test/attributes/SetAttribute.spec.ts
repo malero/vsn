@@ -17,8 +17,8 @@ describe('Bind', () => {
     it("v-set to work with nested scopes", (done) => {
         document.body.innerHTML = `
             <span id="test" v-name="test">
-                <span id="test-inner-0" v-name="test-inner-0" v-set:test.val="hello world"></span>
-                <span id="test-inner-1" v-name="test-inner-1" v-set:val="hi mom"></span>
+                <span id="test-inner-0" v-name="testInner0" v-set:test.val="hello world"></span>
+                <span id="test-inner-1" v-name="testInner1" v-set:val="hi mom"></span>
             </span>
         `;
         const dom = new DOM(document);

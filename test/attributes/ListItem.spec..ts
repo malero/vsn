@@ -1,6 +1,8 @@
 import {DOM} from "../../src/DOM";
 import {ListItem} from "../../src/attributes/ListItem";
+import {vision} from "../../src/Vision";
 
+class TestItem {}
 
 describe('ListItem', () => {
     it("v-list-item should find it's parent list or complain", async () => {
@@ -22,6 +24,7 @@ describe('ListItem', () => {
         document.body.innerHTML = `
             <ul v-list:list id="test"><li v-list-item:item="TestItem" id="test-item"></li></ul>
         `;
+        vision.registerClass(TestItem, 'TestItem');
 
         const dom = new DOM(document);
         dom.once('built', () => {

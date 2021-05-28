@@ -3,8 +3,10 @@ import {ElementHelper} from "./helpers/ElementHelper";
 import {EventDispatcher} from "simple-ts-event-dispatcher";
 
 export class DOM extends EventDispatcher {
+    protected root: Tag;
     protected tags: Tag[];
     protected observer: MutationObserver;
+    protected evaluateTimeout: any;
 
     constructor(
         protected document: Document,
@@ -13,9 +15,25 @@ export class DOM extends EventDispatcher {
         super();
         this.observer = new MutationObserver(this.mutation.bind(this));
         this.tags = [];
-        this.tags.push(new Tag(Array.from(document.getElementsByTagName('body'))[0], this));
-        if (build)
+
+        if (build) {
             this.buildFrom(document);
+        }
+        this.evaluate();
+    }
+
+    public registerElementInRoot(tag: Tag): void {
+        const id: string = ElementHelper.normalizeElementID(tag.element.getAttribute('id'));
+        if (!!id)
+            this.root.scope.set(`#${id}`, tag.scope);
+    }
+
+    public evaluate() {
+        clearTimeout(this.evaluateTimeout);
+        for (const tag of this.tags) {
+            tag.evaluate();
+        }
+        this.evaluateTimeout = setTimeout(this.evaluate.bind(this), 1000);
     }
 
     public mutation(mutations: MutationRecord[]) {
@@ -30,6 +48,9 @@ export class DOM extends EventDispatcher {
     async buildFrom(ele: any) {
         // Assign parents to each tag
         const allElements: HTMLElement[] = [];
+
+        document.body.setAttribute('v-root', '');
+
         for (const tag of this.tags)
             allElements.push(tag.element);
 
@@ -51,28 +72,48 @@ export class DOM extends EventDispatcher {
             }
         }
 
+        this.root = this.getTagForElement(document.body);
+
+        // Configure, setup & execute attributes
+        console.warn('Building attributes.');
+        for (const tag of newTags)
+            await tag.buildAttributes();
+
+        console.warn('Setting parents.');
         for (const tag of newTags) {
+            if (tag === this.root)
+                continue;
+
             // Find closest ancestor
             let parentElement: HTMLElement = tag.element.parentElement as HTMLElement;
+            let foundParent = false;
             while (parentElement) {
                 if (allElements.indexOf(parentElement) > -1) {
+                    foundParent = true;
                     tag.parent = this.getTagForElement(parentElement);
                     break;
                 }
 
                 parentElement = parentElement.parentElement as HTMLElement;
             }
+            if (!foundParent)
+                console.log('Could not find parent for ', tag);
         }
 
-        // Configure, setup & execute attributes
-        for (const tag of newTags)
-            await tag.buildAttributes();
-
+        console.warn('Setting up attributes.');
         for (const tag of newTags)
             await tag.setupAttributes();
 
+        console.warn('Executing attributes.');
         for (const tag of newTags)
             await tag.executeAttributes();
+
+        for (const tag of newTags)
+            this.registerElementInRoot(tag);
+
+        for (const tag of newTags)
+            tag.finalize();
+
         this.trigger('built');
     }
 

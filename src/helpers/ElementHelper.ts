@@ -11,4 +11,8 @@ export class ElementHelper {
 
         return false;
     }
+
+    public static normalizeElementID(id: string) {
+        return id ? id.replace(/-([a-zA-Z0-9])/g, function (g) { return g[1].toUpperCase(); }) : null;
+    }
 }

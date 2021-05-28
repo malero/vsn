@@ -1,8 +1,9 @@
 import {Attribute} from "../Attribute";
-import {IPromise} from "simple-ts-promise";
 import {Tag} from "../Tag";
+import {List} from "./List";
 
 export class ListItem extends Attribute {
+    public static readonly scoped: boolean = true;
     public static readonly ERROR_NO_PARENT = "Cannot find list parent.";
     protected _list: Tag;
 
@@ -11,15 +12,14 @@ export class ListItem extends Attribute {
     }
 
     public async setup() {
-        this.tag.scope.set(this.listItemName, this.tag.scope);
-        const modelName: string = this.modelClassName;
-        const promise: IPromise<any> = window['Vision'].instance.getClass(modelName);
-        promise.then((cls) => {
-            this.instantiateModel(cls);
-        });
         this._list = this.tag.findAncestorByAttribute('v-list');
         if (!this._list)
             throw Error(ListItem.ERROR_NO_PARENT);
+
+        this.tag.scope.set(this.listItemName, this.tag.scope);
+        const modelName: string = this.modelClassName;
+        const cls = await window['Vision'].instance.getClass(modelName);
+        this.instantiateModel(cls);
     }
 
     public get listItemName(): string {
@@ -27,7 +27,7 @@ export class ListItem extends Attribute {
     }
 
     public get modelClassName(): string {
-        return this.getAttributeValue();
+        return this.getAttributeValue(this._list.getAttribute<List>('v-list').listItemModel);
     }
 
     protected async configure() {

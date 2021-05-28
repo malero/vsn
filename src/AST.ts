@@ -1,5 +1,4 @@
 import {Scope} from "./Scope";
-import {Promise as SimplePromise, IDeferred} from 'simple-ts-promise';
 
 function lower(str: string): string {
     return str ? str.toLowerCase() : null;
@@ -104,7 +103,7 @@ const TOKEN_PATTERNS: TokenPattern[] = [
     },
     {
         type: TokenType.NAME,
-        pattern: /^[\$_a-zA-Z][_a-zA-Z0-9]*/
+        pattern: /^[\$#_a-zA-Z][_a-zA-Z0-9]*/
     },
     {
         type: TokenType.NUMBER_LITERAL,
@@ -498,7 +497,7 @@ class FunctionCallNode<T = any> implements TreeNode {
 
     public async evaluate(scope: Scope) {
         const values = await this.args.evaluate(scope);
-        return (await this.fnc.evaluate(scope))(...values);
+        return (await this.fnc.evaluate(scope)).call(scope.wrapped || scope, ...values);
     }
 }
 
@@ -526,9 +525,11 @@ class ScopeMemberNode implements TreeNode {
 
     async evaluate(scope: Scope) {
         const parent: Scope = await this.scope.evaluate(scope);
-        if (!parent)
+        if (!parent) {
+            console.log('failure, scope: ', scope, 'parent scope', await this.scope.evaluate(scope), 'member', await this.name.evaluate(scope));
             throw Error(`Cannot access "${await this.name.evaluate(scope)}" of undefined.`);
-        return parent.get(await this.name.evaluate(scope));
+        }
+        return parent.get(await this.name.evaluate(scope), false);
     }
 }
 

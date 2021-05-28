@@ -29,21 +29,23 @@ export class Bind extends Attribute {
         }
         this.key = ref.key;
         this.boundScope = ref.scope;
+
+
     }
 
     public async execute() {
-        if (!!this.valueFromElement)
+        const elementValue = this.valueFromElement;
+        if (!!elementValue)
             this.updateFrom();
         else
             this.updateTo();
-
-        this.boundScope.bind(`change:${this.key}`, this.updateTo, this);
 
         if (this.tag.isInput) {
             //this.tag.element.onchange = this.updateFrom.bind(this);
             this.tag.element.onkeydown = this.updateFrom.bind(this);
             this.tag.element.onkeyup = this.updateFrom.bind(this);
         }
+        this.boundScope.bind(`change:${this.key}`, this.updateTo, this);
     }
 
     get valueFromElement(): string {

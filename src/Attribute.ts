@@ -1,6 +1,8 @@
 import {Tag} from "./Tag";
 
 export abstract class Attribute {
+    public static readonly scoped: boolean = false;
+
     protected constructor(
         public readonly tag: Tag,
         public readonly attributeName: string

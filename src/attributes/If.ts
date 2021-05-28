@@ -7,7 +7,6 @@ export class If extends Attribute {
     public async setup() {
         const statement: string = this.getAttributeValue();
         this.tree = new Tree(statement);
-        console.log('if statement setup', statement, this.tag.element);
     }
 
     public async execute() {
@@ -20,7 +19,6 @@ export class If extends Attribute {
 
     onChange() {
         this.tree.evaluate(this.tag.scope).then((result) => {
-            console.log('if if if!', result);
             if (result) {
                 this.tag.show();
             } else {

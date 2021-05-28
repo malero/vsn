@@ -15,10 +15,20 @@ import {ModelAttribute} from "./attributes/ModelAttribute";
 import {Controller} from "./Controller";
 import {VisionHelper} from "./helpers/VisionHelper";
 import {SetAttribute} from "./attributes/SetAttribute";
+import {RootAttribute} from "./attributes/RootAttribute";
+
+export enum TagState {
+    Instantiated,
+    AttributesBuilt,
+    AttributesSetup,
+    AttributesExecuted,
+    Built
+}
 
 export class Tag extends EventDispatcher {
     public readonly rawAttributes: { [key: string]: string; };
     public readonly parsedAttributes: { [key: string]: string[]; };
+    protected _state: TagState;
     protected attributes: Attribute[];
     protected _parent: Tag;
     protected _children: Tag[] = [];
@@ -26,6 +36,7 @@ export class Tag extends EventDispatcher {
     protected _controller: Controller;
 
     public static readonly attributeMap: { [attr: string]: any; } = {
+        'v-root': RootAttribute,
         'v-name': Name,
         'v-controller': ControllerAttribute,
         'v-model': ModelAttribute,
@@ -52,7 +63,6 @@ export class Tag extends EventDispatcher {
         public readonly dom: DOM
     ) {
         super();
-        this.scope = new Scope();
         this.rawAttributes = {};
         this.parsedAttributes = {};
         this.attributes = [];
@@ -74,7 +84,13 @@ export class Tag extends EventDispatcher {
             }
         }
 
-        this.element.onclick = this.onclick.bind(this);
+        this._state = TagState.Instantiated;
+    }
+
+    public evaluate(): void {
+        for (const attr of this.attributes) {
+            attr.evaluate();
+        }
     }
 
     mutate(mutation: MutationRecord): void {
@@ -121,13 +137,24 @@ export class Tag extends EventDispatcher {
     }
 
     public set parent(tag: Tag) {
+        if (this.element === document.body)
+            return;
+
         this._parent = tag;
         tag.addChild(this);
-        this.scope.parent = tag.scope;
+
+        if (this.scope !== tag.scope)
+            this.scope.parent = tag.scope;
     }
 
     public get scope(): Scope {
-        return this._scope;
+        if (!!this._scope)
+            return this._scope;
+
+        if (!!this._parent)
+            return this._parent.scope;
+
+        return null;
     }
 
     public set scope(scope: Scope) {
@@ -148,6 +175,7 @@ export class Tag extends EventDispatcher {
         }
 
         this.scope.wrap(obj, triggerUpdates);
+        obj['$scope'] = this.scope;
         return obj;
     }
 
@@ -161,7 +189,6 @@ export class Tag extends EventDispatcher {
 
     public hide() {
         this.element.hidden = true;
-        this.element.className = this.element.className + ' hidemehidedme';
     }
 
     public show() {
@@ -179,12 +206,12 @@ export class Tag extends EventDispatcher {
         return !!this.parsedAttributes[attr];
     }
 
-    public getAttribute(key: string) {
+    public getAttribute<T = Attribute>(key: string): T {
         const cls: any = Tag.attributeMap[key];
         if (!cls) return;
         for (const attr of this.attributes)
             if (attr instanceof cls)
-                return attr;
+                return attr as any as T;
 
     }
 
@@ -197,25 +224,43 @@ export class Tag extends EventDispatcher {
     }
 
     public async buildAttributes() {
+        let requiresScope = false;
         this.attributes.length = 0;
 
         for (const attr in this.rawAttributes) {
             const attrClass = this.getAttributeClass(attr);
-            if (attrClass)
-                this.attributes.push(new attrClass(this, attr));
+            if (attrClass) {
+                if (attrClass.scoped)
+                    requiresScope = true;
+
+                const attrObj = new attrClass(this, attr)
+                this.attributes.push(attrObj);
+            }
         }
+
+        if (requiresScope) {
+            this._scope = new Scope();
+        }
+
+        this._state = TagState.AttributesBuilt;
     }
 
     public async setupAttributes() {
         for (const attr of this.attributes) {
             await attr.setup();
         }
+        this._state = TagState.AttributesSetup;
     }
 
     public async executeAttributes() {
         for (const attr of this.attributes) {
             await attr.execute();
         }
+        this._state = TagState.AttributesExecuted;
+    }
+
+    public finalize(): void {
+        this._state = TagState.Built;
     }
 
     protected onclick(e) {
@@ -227,6 +272,13 @@ export class Tag extends EventDispatcher {
     }
 
     public addClickHandler(handler) {
+        if (!this.element.onclick !== this.onclick.bind(this)) {
+            if ([undefined, null].indexOf(this.element.onclick) === -1)
+                this.onclickHandlers.push(this.element.onclick)
+
+            this.element.onclick = this.onclick.bind(this);
+        }
+
         this.onclickHandlers.push(handler);
     }
 }
