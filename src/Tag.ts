@@ -30,7 +30,7 @@ export class Tag extends EventDispatcher {
     public readonly parsedAttributes: { [key: string]: string[]; };
     protected _state: TagState;
     protected attributes: Attribute[];
-    protected _parent: Tag;
+    protected _parentTag: Tag;
     protected _children: Tag[] = [];
     protected _scope: Scope;
     protected _controller: Controller;
@@ -67,6 +67,7 @@ export class Tag extends EventDispatcher {
         this.parsedAttributes = {};
         this.attributes = [];
         this.onclickHandlers = [];
+        this.element.onclick = this.onclick.bind(this);
 
         // Build element Attributes
         for (let i: number = 0; i < this.element.attributes.length; i++) {
@@ -132,27 +133,27 @@ export class Tag extends EventDispatcher {
         this._children.push(tag);
     }
 
-    public get parent(): Tag {
-        return this._parent;
+    public get parentTag(): Tag {
+        return this._parentTag;
     }
 
-    public set parent(tag: Tag) {
+    public set parentTag(tag: Tag) {
         if (this.element === document.body)
             return;
 
-        this._parent = tag;
+        this._parentTag = tag;
         tag.addChild(this);
 
         if (this.scope !== tag.scope)
-            this.scope.parent = tag.scope;
+            this.scope.parentScope = tag.scope;
     }
 
     public get scope(): Scope {
         if (!!this._scope)
             return this._scope;
 
-        if (!!this._parent)
-            return this._parent.scope;
+        if (!!this._parentTag)
+            return this._parentTag.scope;
 
         return null;
     }
@@ -188,7 +189,7 @@ export class Tag extends EventDispatcher {
     }
 
     public addToParentElement() {
-        this._parent.element.appendChild(this.element)
+        this._parentTag.element.appendChild(this.element)
     }
 
     public hide() {
@@ -203,7 +204,7 @@ export class Tag extends EventDispatcher {
         if (this.hasAttribute(attr))
             return this;
 
-        return this.parent ? this.parent.findAncestorByAttribute(attr) : null;
+        return this.parentTag ? this.parentTag.findAncestorByAttribute(attr) : null;
     }
 
     public hasAttribute(attr: string): boolean {
@@ -243,7 +244,6 @@ export class Tag extends EventDispatcher {
         }
 
         if (requiresScope) {
-            console.log('Making new scope');
             this._scope = new Scope();
         }
 
@@ -277,13 +277,6 @@ export class Tag extends EventDispatcher {
     }
 
     public addClickHandler(handler) {
-        if (!this.element.onclick !== this.onclick.bind(this)) {
-            if ([undefined, null].indexOf(this.element.onclick) === -1)
-                this.onclickHandlers.push(this.element.onclick)
-
-            this.element.onclick = this.onclick.bind(this);
-        }
-
         this.onclickHandlers.push(handler);
     }
 }

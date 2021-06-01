@@ -260,11 +260,36 @@ export interface TreeNode<T = any> {
 }
 
 
-export class BlockNode implements TreeNode {
-    constructor(
-        public readonly statements:  TreeNode[]
-    ) {
+export abstract class Node implements TreeNode {
+    abstract evaluate(scope: Scope);
 
+    getChildNodes(): Node[] {
+        return [];
+    }
+
+    findChildrenByType<T = Node>(t: any): T[] {
+        const nodes: T[] = [];
+        for (const child of this.getChildNodes()) {
+            if (child instanceof t)
+                nodes.push(child as any as T);
+                const childNodes: T[] = child.findChildrenByType<T>(t);
+                nodes.push(...childNodes);
+        }
+
+        return nodes;
+    }
+}
+
+
+export class BlockNode extends Node implements TreeNode {
+    constructor(
+        public readonly statements: Node[]
+    ) {
+        super();
+    }
+
+    getChildNodes(): Node[] {
+        return [...(this.statements as Node[])];
     }
 
     public async evaluate(scope) {
@@ -276,17 +301,25 @@ export class BlockNode implements TreeNode {
     }
 }
 
-class ComparisonNode implements TreeNode {
+class ComparisonNode extends Node implements TreeNode {
     constructor(
-        public readonly left: TreeNode,
-        public readonly right: TreeNode,
+        public readonly left: Node,
+        public readonly right: Node,
         public readonly type: TokenType
-    ) {}
+    ) {
+        super();
+    }
+
+    getChildNodes(): Node[] {
+        return [
+            this.left as Node,
+            this.right as Node
+        ];
+    }
 
     public async evaluate(scope) {
         const left: any = await this.left.evaluate(scope);
         const right: any = await this.right.evaluate(scope);
-
         switch (this.type) {
             case TokenType.EQUALS:
                 return left === right;
@@ -320,33 +353,48 @@ class ComparisonNode implements TreeNode {
     }
 }
 
-class ConditionalNode implements TreeNode {
+class ConditionalNode extends Node implements TreeNode {
     constructor(
-        public readonly condition: TreeNode,
+        public readonly condition: Node,
         public readonly block: BlockNode
-    ) {}
+    ) {
+        super();
+    }
+
+    getChildNodes(): Node[] {
+        return [
+            this.condition as Node,
+            this.block as Node
+        ];
+    }
 
     public async evaluate(scope) {
         const one = await this.condition.evaluate(scope);
         if (one) {
-            const two = await this.block.evaluate(scope);
-            return two;
+            return await this.block.evaluate(scope);
         }
         return null;
     }
 }
 
-class IfStatementNode implements TreeNode {
+class IfStatementNode extends Node implements TreeNode {
     constructor(
         protected nodes: ConditionalNode[]
-    ) {}
+    ) {
+        super();
+    }
+
+    getChildNodes(): Node[] {
+        return [
+            ...(this.nodes as Node[])
+        ]
+    }
 
     public async evaluate(scope: Scope) {
         for (const condition of this.nodes) {
             const uno = await condition.condition.evaluate(scope);
             if (uno) {
-                const dose = await condition.block.evaluate(scope);
-                return dose;
+                return await condition.block.evaluate(scope);
             }
         }
     }
@@ -391,12 +439,22 @@ class IfStatementNode implements TreeNode {
     }
 }
 
-class ForStatementNode implements TreeNode {
+class ForStatementNode extends Node implements TreeNode {
     constructor(
         public readonly variable: LiteralNode<string>,
         public readonly list: RootScopeMemberNode | ScopeMemberNode,
         public readonly block: RootScopeMemberNode | ScopeMemberNode,
-    ) {}
+    ) {
+        super();
+    }
+
+    getChildNodes(): Node[] {
+        return [
+            this.variable,
+            this.list,
+            this.block
+        ];
+    }
 
     public async evaluate(scope: Scope) {
         const variable: string = await this.variable.evaluate(scope);
@@ -434,21 +492,32 @@ class ForStatementNode implements TreeNode {
     }
 }
 
-class MemberExpressionNode implements TreeNode {
+class MemberExpressionNode extends Node implements TreeNode {
     constructor(
-        protected obj: TreeNode,
+        protected obj: Node,
         protected name: TreeNode<string>
-    ) {}
+    ) {
+        super();
+    }
+
+    getChildNodes(): Node[] {
+        return [
+            this.obj as Node,
+            this.name as Node
+        ]
+    }
 
     public async evaluate(scope: Scope) {
         return await this.obj.evaluate(scope)[await this.name.evaluate(scope)];
     }
 }
 
-class LiteralNode<T = any> implements TreeNode {
+class LiteralNode<T = any> extends Node implements TreeNode {
     constructor(
         public readonly value: T
-    ) {}
+    ) {
+        super();
+    }
 
     public async evaluate(scope) {
         return this.value;
@@ -478,10 +547,18 @@ class NumberLiteralNode extends LiteralNode<number> {
 }
 
 
-class StringNode implements TreeNode<string> {
+class StringNode extends Node implements TreeNode<string> {
     constructor(
-        public readonly node: TreeNode
-    ) {}
+        public readonly node: Node
+    ) {
+        super();
+    }
+
+    getChildNodes(): Node[] {
+        return [
+            this.node as Node
+        ]
+    }
 
     public async evaluate(scope: Scope) {
         return `${await this.node.evaluate(scope)}`;
@@ -489,23 +566,44 @@ class StringNode implements TreeNode<string> {
 }
 
 
-class FunctionCallNode<T = any> implements TreeNode {
+class FunctionCallNode<T = any> extends Node implements TreeNode {
     constructor(
         public readonly fnc: TreeNode<(...args: any[]) => any>,
-        public readonly args:  TreeNode<any[]>
-    ) {}
+        public readonly args: FunctionArgumentNode<any[]>
+    ) {
+        super();
+    }
+
+    getChildNodes(): Node[] {
+        return [
+            this.fnc as Node,
+            this.args as Node
+        ]
+    }
 
     public async evaluate(scope: Scope) {
+        let functionScope: Scope = scope;
+        if (this.fnc instanceof ScopeMemberNode) {
+            functionScope = await this.fnc.scope.evaluate(scope);
+        }
         const values = await this.args.evaluate(scope);
-        return (await this.fnc.evaluate(scope)).call(scope.wrapped || scope, ...values);
+        return (await this.fnc.evaluate(scope)).call(functionScope.wrapped || functionScope, ...values);
     }
 }
 
 
-class FunctionArgumentNode<T = any> implements TreeNode {
+class FunctionArgumentNode<T = any> extends Node implements TreeNode {
     constructor(
-        protected args: TreeNode<any>[]
-    ) {}
+        protected args: Node[]
+    ) {
+        super();
+    }
+
+    getChildNodes(): Node[] {
+        return [
+            ...(this.args as Node[])
+        ]
+    }
 
     async evaluate(scope: Scope) {
         const values: any[] = [];
@@ -517,11 +615,20 @@ class FunctionArgumentNode<T = any> implements TreeNode {
 }
 
 
-class ScopeMemberNode implements TreeNode {
+class ScopeMemberNode extends Node implements TreeNode {
     constructor(
-        protected scope: TreeNode<Scope>,
+        public readonly scope: TreeNode<Scope>,
         public readonly name: TreeNode<string>
-    ) {}
+    ) {
+        super();
+    }
+
+    getChildNodes(): Node[] {
+        return [
+            this.scope as Node,
+            this.name as Node
+        ]
+    }
 
     async evaluate(scope: Scope) {
         const parent: Scope = await this.scope.evaluate(scope);
@@ -534,21 +641,38 @@ class ScopeMemberNode implements TreeNode {
 }
 
 
-class RootScopeMemberNode<T = any> implements TreeNode {
+class RootScopeMemberNode<T = any> extends Node implements TreeNode {
     constructor(
         public readonly name: TreeNode<string>
-    ) {}
+    ) {
+        super();
+    }
+
+    getChildNodes(): Node[] {
+        return [
+            this.name as Node
+        ]
+    }
 
     async evaluate(scope: Scope) {
         return scope.get(await this.name.evaluate(scope));
     }
 }
 
-class AssignmentNode implements TreeNode {
+class AssignmentNode extends Node implements TreeNode {
     constructor(
         public readonly rootNode: RootScopeMemberNode | ScopeMemberNode,
         public readonly toAssign: TreeNode,
-    ) {}
+    ) {
+        super();
+    }
+
+    getChildNodes(): Node[] {
+        return [
+            this.rootNode as Node,
+            this.toAssign as Node
+        ]
+    }
 
     async evaluate(scope: Scope) {
         const name: string = await this.rootNode.name.evaluate(scope);
@@ -573,12 +697,21 @@ class AssignmentNode implements TreeNode {
     }
 }
 
-class ArithmeticNode implements TreeNode {
+class ArithmeticNode extends Node implements TreeNode {
     constructor(
         public readonly left: TreeNode,
         public readonly right: TreeNode,
         public readonly type: TokenType
-    ) {}
+    ) {
+        super();
+    }
+
+    getChildNodes(): Node[] {
+        return [
+            this.left as Node,
+            this.right as Node
+        ]
+    }
 
     public async evaluate(scope) {
         const left: any = await this.left.evaluate(scope);
@@ -611,12 +744,21 @@ class ArithmeticNode implements TreeNode {
     }
 }
 
-class ArithmeticAssignmentNode implements TreeNode {
+class ArithmeticAssignmentNode extends Node implements TreeNode {
     constructor(
         public readonly left: RootScopeMemberNode,
         public readonly right: TreeNode,
         public readonly type: TokenType
-    ) {}
+    ) {
+        super();
+    }
+
+    getChildNodes(): Node[] {
+        return [
+            this.left as Node,
+            this.right as Node
+        ]
+    }
 
     async evaluate(scope: Scope) {
         const name: string = await this.left.name.evaluate(scope);
@@ -670,8 +812,7 @@ class ArithmeticAssignmentNode implements TreeNode {
 }
 
 export class Tree {
-    protected rootNode: TreeNode;
-    protected scopeMemberNodes: ScopeMemberNode[];
+    protected rootNode: Node;
 
     constructor(
         public readonly code: string
@@ -681,12 +822,20 @@ export class Tree {
 
     public parse() {
         const tokens = tokenize(this.code);
-        this.scopeMemberNodes = [];
         this.rootNode = Tree.processTokens(tokens);
     }
 
     async evaluate(scope: Scope) {
         return await this.rootNode.evaluate(scope);
+    }
+
+    async bindToScopeChanges(scope, fnc) {
+        for (const node of this.rootNode.findChildrenByType<ScopeMemberNode>(ScopeMemberNode)) {
+            const _scope: Scope = await node.scope.evaluate(scope);
+            const name = await node.name.evaluate(scope);
+            console.log('binding', `change:${name}`);
+            _scope.bind(`change:${name}`, fnc);
+        }
     }
 
     public static stripWhiteSpace(tokens: Token[]): Token[] {
@@ -700,8 +849,8 @@ export class Tree {
     }
 
     public static processTokens(tokens: Token[]): BlockNode {
-        let blockNodes: TreeNode[] = [];
-        let node: TreeNode = null;
+        let blockNodes: Node[] = [];
+        let node: Node = null;
         let count: number = 0;
 
         Tree.stripWhiteSpace(tokens);
@@ -743,7 +892,7 @@ export class Tree {
                 tokens.splice(0, 2);
             } else if (tokens[0].type === TokenType.L_PAREN) {
                 const funcArgs: Token[][] = Tree.getBlockTokens(tokens);
-                const nodes: TreeNode[] = [];
+                const nodes: Node[] = [];
                 for (const arg of funcArgs) {
                     nodes.push(Tree.processTokens(arg));
                 }

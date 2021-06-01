@@ -89,6 +89,7 @@ export class List extends Attribute {
         scope.clear();
 
         if (obj) {
+            // Scope has already wrapped a new v-list-item-model, so we need to unwrap and wrap the passed object
             tag.unwrap();
             tag.wrap(obj, true);
         }

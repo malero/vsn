@@ -8,7 +8,7 @@ export class ClassConstructor extends Attribute {
     protected className: string;
 
     public async setup() {
-        const parentScope: Scope = this.tag.parent.scope;
+        const parentScope: Scope = this.tag.parentTag.scope;
         if (!parentScope)
             return;
 

@@ -33,7 +33,6 @@ export class DOM extends EventDispatcher {
         for (const tag of this.tags) {
             tag.evaluate();
         }
-        this.evaluateTimeout = setTimeout(this.evaluate.bind(this), 1000);
     }
 
     public mutation(mutations: MutationRecord[]) {
@@ -60,7 +59,6 @@ export class DOM extends EventDispatcher {
             const element: HTMLElement = _e as HTMLElement;
             if (allElements.indexOf(element) > -1) continue;
             if (ElementHelper.hasVisionAttribute(element)) {
-                console.log('found element', element);
                 this.observer.observe(element, {
                     attributes: true,
                     characterData: true,
@@ -91,7 +89,7 @@ export class DOM extends EventDispatcher {
             while (parentElement) {
                 if (allElements.indexOf(parentElement) > -1) {
                     foundParent = true;
-                    tag.parent = this.getTagForElement(parentElement);
+                    tag.parentTag = this.getTagForElement(parentElement);
                     break;
                 }
 

@@ -11,19 +11,19 @@ export class If extends Attribute {
 
     public async execute() {
         await this.evaluate();
+        await this.tree.bindToScopeChanges(this.tag.scope, this.onChange.bind(this));
     }
 
     public async evaluate() {
-        this.onChange();
+        await this.onChange();
     }
 
-    onChange() {
-        this.tree.evaluate(this.tag.scope).then((result) => {
-            if (result) {
-                this.tag.show();
-            } else {
-                this.tag.hide();
-            }
-        });
+    async onChange() {
+        const result: boolean = await this.tree.evaluate(this.tag.scope);
+        if (result) {
+            this.tag.show();
+        } else {
+            this.tag.hide();
+        }
     }
 }

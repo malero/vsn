@@ -109,25 +109,25 @@ export class Scope extends EventDispatcher {
     protected data: DataModel;
     protected children: Scope[];
     protected keys: string[];
-    protected _parent: Scope;
+    protected _parentScope: Scope;
 
     constructor(
         parent?: Scope
     ) {
         super();
         if (parent)
-            this.parent = parent;
+            this.parentScope = parent;
         this.children = [];
         this.data = new DataModel({});
         this.keys = [];
     }
 
-    public get parent(): Scope {
-        return this._parent;
+    public get parentScope(): Scope {
+        return this._parentScope;
     }
 
-    public set parent(scope: Scope) {
-        this._parent = scope;
+    public set parentScope(scope: Scope) {
+        this._parentScope = scope;
         scope.addChild(this);
     }
 
@@ -165,8 +165,8 @@ export class Scope extends EventDispatcher {
 
         const value: any = this.data[key];
         if (value === undefined) {
-            if (searchParents && this.parent)
-                return this.parent.get(key, searchParents);
+            if (searchParents && this.parentScope)
+                return this.parentScope.get(key, searchParents);
 
             return '';
         }
@@ -206,7 +206,7 @@ export class Scope extends EventDispatcher {
 
     cleanup() {
         this.children.length = 0;
-        this.parent = null;
+        this.parentScope = null;
     }
 
     public wrap(wrapped: any, triggerUpdates: boolean = false) {
@@ -258,6 +258,14 @@ export class Scope extends EventDispatcher {
     }
 
     public unwrap(): void {
+        for (const field in this.wrapped) {
+            Object.defineProperty(this.wrapped, field, {
+                get: () => null,
+                set: (_) => null,
+                enumerable: true,
+                configurable: true
+            });
+        }
         this.wrapped = null;
     }
 }
