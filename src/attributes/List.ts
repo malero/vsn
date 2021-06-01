@@ -22,6 +22,7 @@ export class List extends Attribute {
         this.items = defaultList || new WrappedArray();
         this.tags = [];
 
+
         if (defaultList)
             for (const existingItem of defaultList) {
                 this.add(existingItem);
@@ -77,17 +78,18 @@ export class List extends Attribute {
         }
     }
 
-    protected add(obj) {
+    protected async add(obj) {
         const element: HTMLElement = this.template.cloneNode(true) as HTMLElement;
         this.tag.element.appendChild(element);
 
-        this.tag.dom.buildFrom(this.tag.element);
+        await this.tag.dom.buildFrom(this.tag.element);
         const tag: Tag = this.tag.dom.getTagForElement(element);
         this.tags.push(tag);
         const scope: Scope = tag.scope.get(this.listItemName);
         scope.clear();
 
         if (obj) {
+            tag.unwrap();
             tag.wrap(obj, true);
         }
     }

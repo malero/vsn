@@ -210,7 +210,7 @@ export class Scope extends EventDispatcher {
     }
 
     public wrap(wrapped: any, triggerUpdates: boolean = false) {
-        if (this.wrapped !== undefined)
+        if ([null, undefined].indexOf(this.wrapped) === -1)
             throw Error("A scope can only wrap a single object");
 
         if (!wrapped) {
@@ -255,5 +255,9 @@ export class Scope extends EventDispatcher {
             if (triggerUpdates)
                 this.trigger(`change:${field}`);
         }
+    }
+
+    public unwrap(): void {
+        this.wrapped = null;
     }
 }

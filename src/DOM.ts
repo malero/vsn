@@ -60,6 +60,7 @@ export class DOM extends EventDispatcher {
             const element: HTMLElement = _e as HTMLElement;
             if (allElements.indexOf(element) > -1) continue;
             if (ElementHelper.hasVisionAttribute(element)) {
+                console.log('found element', element);
                 this.observer.observe(element, {
                     attributes: true,
                     characterData: true,

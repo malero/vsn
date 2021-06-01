@@ -179,6 +179,10 @@ export class Tag extends EventDispatcher {
         return obj;
     }
 
+    public unwrap(): void {
+        this.scope.unwrap();
+    }
+
     public removeFromDOM() {
         this.element.remove();
     }
@@ -239,6 +243,7 @@ export class Tag extends EventDispatcher {
         }
 
         if (requiresScope) {
+            console.log('Making new scope');
             this._scope = new Scope();
         }
 
