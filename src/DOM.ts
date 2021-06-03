@@ -111,7 +111,8 @@ export class DOM extends EventDispatcher {
             this.observer.observe(tag.element, {
                 attributes: true,
                 characterData: true,
-                childList: true
+                childList: true,
+                subtree: true
             });
 
         this.trigger('built');
