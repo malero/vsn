@@ -37,18 +37,18 @@ export class Tag extends EventDispatcher {
     protected _controller: Controller;
 
     public static readonly attributeMap: { [attr: string]: any; } = {
-        'v-root': RootAttribute,
-        'v-name': Name,
-        'v-controller': ControllerAttribute,
-        'v-model': ModelAttribute,
-        'v-list': List,
-        'v-list-item': ListItem,
-        'v-set': SetAttribute,
-        'v-bind': Bind,
-        'v-click': Click,
-        'v-click-toggle-class': ClickToggleClass,
-        'v-click-remove-class': ClickRemoveClass,
-        'v-if': If,
+        'vsn-root': RootAttribute,
+        'vsn-name': Name,
+        'vsn-controller': ControllerAttribute,
+        'vsn-model': ModelAttribute,
+        'vsn-list': List,
+        'vsn-list-item': ListItem,
+        'vsn-set': SetAttribute,
+        'vsn-bind': Bind,
+        'vsn-click': Click,
+        'vsn-click-toggle-class': ClickToggleClass,
+        'vsn-click-remove-class': ClickRemoveClass,
+        'vsn-if': If,
     };
 
     protected inputTags: string[] = [
@@ -73,7 +73,7 @@ export class Tag extends EventDispatcher {
         // Build element Attributes
         for (let i: number = 0; i < this.element.attributes.length; i++) {
             const a = this.element.attributes[i];
-            if (a.name.substr(0, 2) == 'v-') {
+            if (a.name.substr(0, 4) == 'vsn-') {
                 this.rawAttributes[a.name] = a.value;
                 if (a.name.indexOf(':') > -1) {
                     const nameParts: string[] = a.name.split(':');
@@ -243,6 +243,9 @@ export class Tag extends EventDispatcher {
                 this.attributes.push(attrObj);
             }
         }
+
+        if (this.element.getAttribute('id'))
+            requiresScope = true;
 
         if (requiresScope) {
             this._scope = new Scope();

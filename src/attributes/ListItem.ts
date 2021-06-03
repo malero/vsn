@@ -12,7 +12,7 @@ export class ListItem extends Attribute {
     }
 
     public async setup() {
-        this._list = this.tag.findAncestorByAttribute('v-list');
+        this._list = this.tag.findAncestorByAttribute('vsn-list');
         if (!this._list)
             throw Error(ListItem.ERROR_NO_PARENT);
 
@@ -27,7 +27,7 @@ export class ListItem extends Attribute {
     }
 
     public get modelClassName(): string {
-        return this.getAttributeValue(this._list.getAttribute<List>('v-list').listItemModel);
+        return this.getAttributeValue(this._list.getAttribute<List>('vsn-list').listItemModel);
     }
 
     protected async configure() {

@@ -1,9 +1,9 @@
 import {DOM} from "../../src/DOM";
 
 describe('Bind', () => {
-    it("v-set to work with a value", (done) => {
+    it("vsn-set to work with a value", (done) => {
         document.body.innerHTML = `
-            <span id="test" v-name="test" v-set:val="hello world">testing</span>
+            <span id="test" vsn-name="test" vsn-set:val="hello world">testing</span>
         `;
         const dom = new DOM(document);
         dom.once('built', () => {
@@ -14,11 +14,11 @@ describe('Bind', () => {
         });
     });
 
-    it("v-set to work with nested scopes", (done) => {
+    it("vsn-set to work with nested scopes", (done) => {
         document.body.innerHTML = `
-            <span id="test" v-name="test">
-                <span id="test-inner-0" v-name="testInner0" v-set:test.val="hello world"></span>
-                <span id="test-inner-1" v-name="testInner1" v-set:val="hi mom"></span>
+            <span id="test" vsn-name="test">
+                <span id="test-inner-0" vsn-name="testInner0" vsn-set:test.val="hello world"></span>
+                <span id="test-inner-1" vsn-name="testInner1" vsn-set:val="hi mom"></span>
             </span>
         `;
         const dom = new DOM(document);

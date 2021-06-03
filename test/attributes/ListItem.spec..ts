@@ -5,9 +5,9 @@ import {vision} from "../../src/Vision";
 class TestItem {}
 
 describe('ListItem', () => {
-    it("v-list-item should find it's parent list or complain", async () => {
+    it("vsn-list-item should find it's parent list or complain", async () => {
         document.body.innerHTML = `
-            <ul id="test"><li v-list-item:item="TestItem" id="test-item"></li></ul>
+            <ul id="test"><li vsn-list-item:item="TestItem" id="test-item"></li></ul>
         `;
         let errorThrown: boolean = false;
         try {
@@ -20,9 +20,9 @@ describe('ListItem', () => {
         expect(errorThrown).toBeTrue();
     });
 
-    it("v-list-item should find it's parent list", (done) => {
+    it("vsn-list-item should find it's parent list", (done) => {
         document.body.innerHTML = `
-            <ul v-list:list id="test"><li v-list-item:item="TestItem" id="test-item"></li></ul>
+            <ul vsn-list:list id="test"><li vsn-list-item:item="TestItem" id="test-item"></li></ul>
         `;
         vision.registerClass(TestItem, 'TestItem');
 
@@ -30,7 +30,7 @@ describe('ListItem', () => {
         dom.once('built', () => {
             const list = dom.getTagForElement(document.getElementById('test'));
             const listItem = dom.getTagForElement(document.getElementById('test-item'));
-            const listItemAttr: ListItem = listItem.getAttribute('v-list-item') as ListItem;
+            const listItemAttr: ListItem = listItem.getAttribute('vsn-list-item') as ListItem;
 
             expect(listItemAttr.list).toBe(list);
             done();

@@ -48,7 +48,7 @@ export class DOM extends EventDispatcher {
         // Assign parents to each tag
         const allElements: HTMLElement[] = [];
 
-        document.body.setAttribute('v-root', '');
+        document.body.setAttribute('vsn-root', '');
 
         for (const tag of this.tags)
             allElements.push(tag.element);
@@ -89,7 +89,7 @@ export class DOM extends EventDispatcher {
                 parentElement = parentElement.parentElement as HTMLElement;
             }
             if (!foundParent)
-                console.log('Could not find parent for ', tag);
+                console.error('Could not find parent for ', tag);
         }
 
         for (const tag of newTags)

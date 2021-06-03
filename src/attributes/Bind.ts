@@ -19,19 +19,21 @@ export class Bind extends Attribute {
 
     public async setup() {
         this.property = this.getAttributeBinding();
+    }
+
+    public async extract() {
         let scopeKey: string = this.getAttributeValue();
         let ref: ScopeReference;
         try {
             ref = this.tag.scope.getReference(scopeKey);
         } catch (e) {
-            console.log('error', e);
+            console.error('error', e);
             return;
         }
+
         this.key = ref.key;
         this.boundScope = ref.scope;
-    }
 
-    public async extract() {
         const elementValue = this.valueFromElement;
         if (!!elementValue)
             this.updateFrom();
@@ -62,7 +64,7 @@ export class Bind extends Attribute {
             if (this.tag.isInput) {
                 return (this.tag.element as any).value;
             } else {
-                return this.tag.element.innerHTML;
+                return this.tag.element.innerText;
             }
         }
     }

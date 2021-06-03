@@ -1,24 +1,24 @@
 import {DOM} from "../../src/DOM";
 
 describe('Bind', () => {
-    it("v-bind to work with inner text", (done) => {
+    it("vsn-bind to work with inner text", (done) => {
         document.body.innerHTML = `
-            <span id="test" v-name="test" v-bind="test.value">testing</span>
+            <span id="test" vsn-name="test" vsn-bind="test.value">testing</span>
         `;
         const dom = new DOM(document);
         dom.once('built', () => {
             const tag = dom.getTagForElement(document.getElementById('test'));
             expect(tag).toBeTruthy();
-            expect(tag.getParsedAttributeValue('v-name', 1)).toBe('test');
+            expect(tag.getParsedAttributeValue('vsn-name', 1)).toBe('test');
             expect(tag.scope.get('value')).toBe('testing');
             done();
         });
     });
 
-    it("v-bind order of execution to be left to right and top to bottom", (done) => {
+    it("vsn-bind order of execution to be left to right and top to bottom", (done) => {
         document.body.innerHTML = `
-            <span id="test" v-name="test" v-bind:id="test.id" v-bind="test.id">testing</span>
-            <span id="test2" v-bind="test.id">arg</span>
+            <span id="test" vsn-name="test" vsn-bind:id="test.id" vsn-bind="test.id">testing</span>
+            <span id="test2" vsn-bind="test.id">arg</span>
         `;
 
         const dom = new DOM(document);
@@ -34,9 +34,9 @@ describe('Bind', () => {
         });
     });
 
-    it("v-bind attribute changes trigger updating scope with new value", (done) => {
+    it("vsn-bind attribute changes trigger updating scope with new value", (done) => {
         document.body.innerHTML = `
-            <span id="test" v-name="test" v-bind:id="test.id"></span>
+            <span id="test" vsn-name="test" vsn-bind:id="test.id"></span>
         `;
 
         const dom = new DOM(document);
@@ -54,9 +54,9 @@ describe('Bind', () => {
         });
     });
 
-    it("v-bind innerHTML changes trigger updating scope with new value", (done) => {
+    it("vsn-bind innerHTML changes trigger updating scope with new value", (done) => {
         document.body.innerHTML = `
-            <span id="test" v-name="test" v-bind="test.val">testing</span>
+            <span id="test" vsn-name="test" vsn-bind="test.val">testing</span>
         `;
 
         const dom = new DOM(document, false);
@@ -75,9 +75,9 @@ describe('Bind', () => {
         dom.buildFrom(document);
     });
 
-    it("v-bind input value changes trigger updating scope with new value", (done) => {
+    it("vsn-bind input value changes trigger updating scope with new value", (done) => {
         document.body.innerHTML = `
-            <input id="test" value="testing" v-name="test" v-bind="test.val"/>
+            <input id="test" value="testing" vsn-name="test" vsn-bind="test.val"/>
         `;
 
         const dom = new DOM(document, false);
@@ -100,9 +100,9 @@ describe('Bind', () => {
         dom.buildFrom(document);
     });
 
-    it("v-bind element innerHTML should change when scope value is changed", (done) => {
+    it("vsn-bind element innerHTML should change when scope value is changed", (done) => {
         document.body.innerHTML = `
-            <span id="test" v-name="test" v-bind="test.val">testing</span>
+            <span id="test" vsn-name="test" vsn-bind="test.val">testing</span>
         `;
 
         const dom = new DOM(document, false);
@@ -121,9 +121,9 @@ describe('Bind', () => {
         dom.buildFrom(document);
     });
 
-    it("v-bind input value should change when scope value is changed", (done) => {
+    it("vsn-bind input value should change when scope value is changed", (done) => {
         document.body.innerHTML = `
-            <input id="test" value="testing" v-name="test" v-bind="test.val" />
+            <input id="test" value="testing" vsn-name="test" vsn-bind="test.val" />
         `;
 
         const dom = new DOM(document);
