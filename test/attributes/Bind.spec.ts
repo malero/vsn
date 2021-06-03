@@ -65,12 +65,12 @@ describe('Bind', () => {
             const tag = dom.getTagForElement(test);
             expect(tag.scope.get('val')).toBe('testing');
 
-            tag.scope.bind('change:val', () => {
+            tag.scope.get('test').bind('change:val', () => {
                 expect(tag.scope.get('val')).toBe('new-val');
                 done();
             });
 
-            test.innerText = 'new-val';
+            test.innerHTML = 'new-val';
         });
         dom.buildFrom(document);
     });
