@@ -61,7 +61,8 @@ export enum TokenType {
     ADD_ASSIGN,
     SUBTRACT_ASSIGN,
     MULTIPLY_ASSIGN,
-    DIVIDE_ASSIGN
+    DIVIDE_ASSIGN,
+    EXCLAMATION_POINT
 }
 
 const TOKEN_PATTERNS: TokenPattern[] = [
@@ -225,6 +226,10 @@ const TOKEN_PATTERNS: TokenPattern[] = [
         type: TokenType.ASSIGN,
         pattern: /^=/
     },
+    {
+        type: TokenType.EXCLAMATION_POINT,
+        pattern: /^!/
+    },
 ];
 
 
@@ -268,12 +273,18 @@ export abstract class Node implements TreeNode {
     }
 
     findChildrenByType<T = Node>(t: any): T[] {
+        return this.findChildrenByTypes([t]);
+    }
+
+    findChildrenByTypes<T = Node>(types: any[]): T[] {
         const nodes: T[] = [];
         for (const child of this.getChildNodes()) {
-            if (child instanceof t)
-                nodes.push(child as any as T);
+            for (const t of types) {
+                if (child instanceof t)
+                    nodes.push(child as any as T);
                 const childNodes: T[] = child.findChildrenByType<T>(t);
                 nodes.push(...childNodes);
+            }
         }
 
         return nodes;
@@ -512,6 +523,42 @@ class MemberExpressionNode extends Node implements TreeNode {
     }
 }
 
+class NotNode extends Node implements TreeNode {
+    constructor(
+        public readonly toFlip: Node
+    ) {
+        super();
+    }
+
+    public async evaluate(scope) {
+        const flipping = await this.toFlip.evaluate(scope);
+        return !flipping;
+    }
+
+    getChildNodes(): Node[] {
+        return [
+            this.toFlip
+        ];
+    }
+
+    public static parse(lastNode, token, tokens: Token[]) {
+        tokens.splice(0, 1); // Remove not operator
+        let containedTokens;
+        if (tokens[0].type === TokenType.L_PAREN) {
+            containedTokens = Tree.getNextStatmentTokens(tokens);
+        } else {
+            containedTokens = Tree.consumeTypes(tokens, [
+                TokenType.BOOLEAN_LITERAL,
+                TokenType.NUMBER_LITERAL,
+                TokenType.STRING_LITERAL,
+                TokenType.NAME,
+                TokenType.PERIOD
+            ]);
+        }
+        return new NotNode(Tree.processTokens(containedTokens));
+    }
+}
+
 class LiteralNode<T = any> extends Node implements TreeNode {
     constructor(
         public readonly value: T
@@ -677,10 +724,15 @@ class AssignmentNode extends Node implements TreeNode {
     }
 
     async evaluate(scope: Scope) {
+        let localScope = scope;
         const name: string = await this.rootNode.name.evaluate(scope);
         const value: any = await this.toAssign.evaluate(scope);
-        scope.set(name, value);
-        if (scope.get(name) !== value)
+
+        if (this.rootNode instanceof ScopeMemberNode)
+            localScope = await this.rootNode.scope.evaluate(scope);
+
+        localScope.set(name, value);
+        if (localScope.get(name) !== value)
             throw Error(`System Error: Failed to assign ${name} to ${value}`);
         return value;
     }
@@ -832,8 +884,11 @@ export class Tree {
     }
 
     async bindToScopeChanges(scope, fnc) {
-        for (const node of this.rootNode.findChildrenByType<ScopeMemberNode>(ScopeMemberNode)) {
-            const _scope: Scope = await node.scope.evaluate(scope);
+        for (const node of this.rootNode.findChildrenByTypes<ScopeMemberNode>([RootScopeMemberNode, ScopeMemberNode])) {
+            let _scope: Scope = scope;
+            if (node instanceof ScopeMemberNode)
+                _scope = await node.scope.evaluate(scope);
+
             const name = await node.name.evaluate(scope);
             _scope.bind(`change:${name}`, fnc);
         }
@@ -922,6 +977,8 @@ export class Tree {
             } else if (tokens[0].type === TokenType.NULL_LITERAL) {
                 node = new LiteralNode(null);
                 tokens.splice(0, 1);
+            } else if (tokens[0].type === TokenType.EXCLAMATION_POINT) {
+                node = NotNode.parse(node, tokens[0], tokens);
             } else {
                 let code: string = Tree.toCode(tokens, 10);
                 console.log(`Syntax Error. Near ${code}`);
@@ -1036,5 +1093,19 @@ export class Tree {
         }
         console.log(`Invalid Syntax, missing ${closeSymbol}`);
         throw Error(`Invalid Syntax, missing ${closeSymbol}`);
+    }
+
+    static consumeTypes(tokens: Token[], types: TokenType[]): Token[] {
+        const matching: Token[] = [];
+
+        for (const token of tokens) {
+            if (types.indexOf(token.type) > -1) {
+                matching.push(token);
+            } else {
+                break;
+            }
+        }
+        tokens.splice(0, matching.length);
+        return matching;
     }
 }

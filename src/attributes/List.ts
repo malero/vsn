@@ -31,7 +31,7 @@ export class List extends Attribute {
         }
 
         for (const element of Array.from(this.tag.element.querySelectorAll('*'))) {
-            if (!ElementHelper.hasVisionAttribute(element, 'v-list-item'))
+            if (!ElementHelper.hasVisionAttribute(element, 'vsn-list-item'))
                 continue;
 
             const tag: Tag = this.tag.dom.getTagForElement(element);
@@ -54,11 +54,11 @@ export class List extends Attribute {
     }
 
     public get listItemName(): string {
-        return this.tag.getRawAttributeValue('v-list-item-name', 'item');
+        return this.tag.getRawAttributeValue('vsn-list-item-name', 'item');
     }
 
     public get listItemModel(): string {
-        return this.tag.getRawAttributeValue('v-list-item-model', 'DataModel');
+        return this.tag.getRawAttributeValue('vsn-list-item-model', 'DataModel');
     }
 
     public remove(item: any) {

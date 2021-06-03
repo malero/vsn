@@ -6,7 +6,8 @@ export class Name extends Attribute {
 
     public async setup() {
         const parentScope: Scope = this.tag.scope.parentScope;
-        if (parentScope)
-            parentScope.set(this.tag.parsedAttributes['v-name'][1], this.tag.scope);
+        if (parentScope) {
+            parentScope.set(this.tag.parsedAttributes['vsn-name'][1], this.tag.scope);
+        }
     }
 }

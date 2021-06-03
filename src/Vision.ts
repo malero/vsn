@@ -23,7 +23,7 @@ export class Vision extends EventDispatcher {
 
     setup(): void {
         const body: HTMLElement = document.body;
-        body.setAttribute('v-root', '');
+        body.setAttribute('vsn-root', '');
         this._dom = new DOM(document);
     }
 

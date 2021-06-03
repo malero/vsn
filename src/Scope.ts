@@ -135,7 +135,7 @@ export class Scope extends EventDispatcher {
         this.children.push(scope);
     }
 
-    getReference(path: string): ScopeReference {
+    getReference(path: string, createIfNotFound: boolean = true): ScopeReference {
         const scopePath: string[] = path.split('.');
         let key: string = scopePath[0];
         let scope: Scope = this;
@@ -146,9 +146,12 @@ export class Scope extends EventDispatcher {
             key = scopePath[i];
 
             val = scope.get(key, i === 0);
-            if ([null, undefined].indexOf(val) > -1 && i + 1 < len) {
+            const isNull: boolean = [null, undefined].indexOf(val) > -1;
+            if (createIfNotFound && isNull && i + 1 < len) {
                 val = new Scope(scope);
                 scope.set(key, val);
+            } else if (!createIfNotFound && isNull) {
+                return null;
             }
 
             if (val && val instanceof Scope) {
