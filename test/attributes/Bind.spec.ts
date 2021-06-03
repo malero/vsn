@@ -59,7 +59,7 @@ describe('Bind', () => {
             <span id="test" v-name="test" v-bind="test.val">testing</span>
         `;
 
-        const dom = new DOM(document);
+        const dom = new DOM(document, false);
         dom.once('built', () => {
             const test = document.getElementById('test');
             const tag = dom.getTagForElement(test);
@@ -72,6 +72,7 @@ describe('Bind', () => {
 
             test.innerText = 'new-val';
         });
+        dom.buildFrom(document);
     });
 
     it("v-bind input value changes trigger updating scope with new value", (done) => {
@@ -104,7 +105,7 @@ describe('Bind', () => {
             <span id="test" v-name="test" v-bind="test.val">testing</span>
         `;
 
-        const dom = new DOM(document);
+        const dom = new DOM(document, false);
         dom.once('built', () => {
             const test = document.getElementById('test');
             const tag = dom.getTagForElement(test);
@@ -117,6 +118,7 @@ describe('Bind', () => {
 
             tag.scope.set('val', 'new-val');
         });
+        dom.buildFrom(document);
     });
 
     it("v-bind input value should change when scope value is changed", (done) => {
