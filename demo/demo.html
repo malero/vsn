@@ -9,17 +9,19 @@
         var TestController = (function () {
             function TestController() {
                 this.items = [];
-                this.reset();
+                this.name = null;
+                this.age = null;
             }
 
             TestController.prototype.reset = function () {
+                console.log('reset', this);
                 this.name = '';
                 this.age = '';
-                //console.log('tag', this.tag);
             };
 
             TestController.prototype.add = function () {
                 this.items.push(new TestItem(this.name, this.age));
+                this.reset();
             };
 
             return TestController;
@@ -42,23 +44,23 @@
 </head>
 
 <body>
-    <div v-controller:test="TestController">
+    <div v-controller:test="TestController" id="testing">
         <h1>Value: <span v-bind="test.name">Testing</span> <span v-bind="test.age">32</span></h1>
-        <input type="text" v-bind:value="test.name" v-bind="test.name" />
-        <input type="text" v-bind:value="test.age" v-bind="test.age" />
+        <input type="text" v-bind="test.name" />
+        <input type="text" v-bind="test.age" />
         <button v-click="test.reset()" v-if="test.name">Reset</button>
         <button v-click="test.add();">Add New List Item</button>
-        <ul v-list:list>
-            <li v-list-item:item="TestItem">
+        <ul v-list:test.items v-list-item-model="TestItem" v-name="list">
+            <li v-list-item>
                 <span v-bind="item.name">Tom</span>, <span v-bind="item.age">22</span> Years Old <input type="text" v-bind="item.name" /> <input type="text" v-bind="item.age" /> <button v-click="item.reset()">R</button> <button v-click="list.remove(item)">X</button>
             </li>
-            <li v-list-item:item="TestItem">
+            <li v-list-item>
                 <span v-bind="item.name">Steve</span>, <span v-bind="item.age">46</span> Years Old  <input type="text" v-bind="item.name" /> <input type="text" v-bind="item.age" /> <button v-click="item.reset()">R</button> <button v-click="list.remove(item)">X</button>
             </li>
-            <li v-list-item:item="TestItem">
+            <li v-list-item>
                 <span v-bind="item.name">Frank</span>, <span v-bind="item.age">31</span> Years Old  <input type="text" v-bind="item.name" /> <input type="text" v-bind="item.age" /> <button v-click="item.reset()">R</button> <button v-click="list.remove(item)">X</button>
             </li>
-            <li v-list-item:item="TestItem">
+            <li v-list-item>
                 <span v-bind="item.name">Joe</span>, <span v-bind="item.age">91</span> Years Old  <input type="text" v-bind="item.name" /> <input type="text" v-bind="item.age" /> <button v-click="item.reset()">R</button> <button v-click="list.remove(item)">X</button>
             </li>
         </ul>
