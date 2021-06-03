@@ -54,7 +54,7 @@ describe('Bind', () => {
         });
     });
 
-    it("v-bind innerText changes trigger updating scope with new value", (done) => {
+    it("v-bind innerHTML changes trigger updating scope with new value", (done) => {
         document.body.innerHTML = `
             <span id="test" v-name="test" v-bind="test.val">testing</span>
         `;
@@ -100,7 +100,7 @@ describe('Bind', () => {
         dom.buildFrom(document);
     });
 
-    it("v-bind element innerText should change when scope value is changed", (done) => {
+    it("v-bind element innerHTML should change when scope value is changed", (done) => {
         document.body.innerHTML = `
             <span id="test" v-name="test" v-bind="test.val">testing</span>
         `;
@@ -112,11 +112,11 @@ describe('Bind', () => {
             expect(tag.scope.get('val')).toBe('testing');
 
             tag.bind('mutate', () => {
-                expect(test.innerText).toBe('new-val');
+                expect(test.innerHTML).toBe('new-val');
                 done();
             });
 
-            tag.scope.set('val', 'new-val');
+            tag.scope.get('test').set('val', 'new-val');
         });
         dom.buildFrom(document);
     });

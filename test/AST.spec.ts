@@ -173,7 +173,7 @@ describe('Tree', () => {
         expect(scope.get('something')).toBe(1);
     });
 
-    it("should be able to block properly with promises", async (done) => {
+    it("should be able to block properly with promises", async () => {
         scope.set('blockingFunction', async (num, toAdd, fin: boolean = false) => {
             const deferred: IDeferred<number> = SimplePromise.defer();
             expect(scope.get('test')).toBe(num);
@@ -181,9 +181,6 @@ describe('Tree', () => {
             setTimeout(() => {
                 deferred.resolve(num + toAdd);
             }, 1);
-
-            if (fin)
-                done();
 
             return deferred.promise;
         });
