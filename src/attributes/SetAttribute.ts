@@ -23,15 +23,13 @@ export class SetAttribute extends Attribute {
         try {
             ref = this.tag.scope.getReference(this.property);
         } catch (e) {
-            console.log('error', e);
             return;
         }
         this.key = ref.key;
         this.boundScope = ref.scope;
-        this.boundScope.set(this.key, this.getAttributeValue(null));
     }
 
-    public async execute() {
+    public async extract() {
         this.boundScope.set(this.key, this.getAttributeValue(null));
     }
 }

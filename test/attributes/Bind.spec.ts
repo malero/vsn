@@ -79,20 +79,24 @@ describe('Bind', () => {
             <input id="test" value="testing" v-name="test" v-bind="test.val"/>
         `;
 
-        const dom = new DOM(document);
+        const dom = new DOM(document, false);
         dom.once('built', () => {
             const test = document.getElementById('test');
             const tag = dom.getTagForElement(test);
             expect(tag.scope.get('val')).toBe('testing');
 
-            tag.scope.bind('change:val', () => {
+            tag.scope.get('test').bind('change:val', () => {
                 expect(tag.scope.get('val')).toBe('new-val');
                 done();
             });
 
             test.setAttribute('value', 'new-val');
-            test.dispatchEvent(new Event('input'));
+            (test as any).value = 'new-val';
+            test.dispatchEvent(new Event('focus'));
+            test.dispatchEvent(new KeyboardEvent('keyup', {key: 'w'}));
         });
+
+        dom.buildFrom(document);
     });
 
     it("v-bind element innerText should change when scope value is changed", (done) => {

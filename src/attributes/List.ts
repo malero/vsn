@@ -10,7 +10,7 @@ export class List extends Attribute {
     protected tags: Tag[];
     protected template: Node;
 
-    public async execute() {
+    public async extract() {
         const listAttr: string = this.getAttributeBinding();
         const tree = new Tree(listAttr);
         const items = await tree.evaluate(this.tag.scope);
@@ -18,14 +18,12 @@ export class List extends Attribute {
     }
 
     protected async addExistingItems(defaultList: any[] | null) {
-        console.log('defaultList', defaultList);
         this.items = defaultList || new WrappedArray();
         this.tags = [];
 
-
         if (defaultList)
             for (const existingItem of defaultList) {
-                this.add(existingItem);
+                await this.add(existingItem);
             }
 
         if (this.tag.element.children.length > 0) {
@@ -39,7 +37,7 @@ export class List extends Attribute {
             const tag: Tag = this.tag.dom.getTagForElement(element);
             if (tag) {
                 this.tags.push(tag);
-                this.items.push(tag.scope);
+                this.items.push(tag.scope.wrapped || tag.scope);
             }
         }
 
@@ -64,12 +62,10 @@ export class List extends Attribute {
     }
 
     public remove(item: any) {
-        console.log('removing', item);
-        console.log('binding', this.listItemName);
         for (let i: number = 0; i < this.tags.length; i++) {
             const tag: Tag = this.tags[i];
-            console.log('tag scope', tag.scope, 'item from scope', tag.scope.get(this.listItemName), 'arg item', item);
-            if (tag.scope.get(this.listItemName) == item) {
+            const listItem = tag.scope.get(this.listItemName);
+            if ([listItem, listItem.wrapped].indexOf(item) > -1) {
                 tag.removeFromDOM();
                 this.tags.splice(i, 1);
 

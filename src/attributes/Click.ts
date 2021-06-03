@@ -8,6 +8,9 @@ export class Click extends Attribute {
     public async setup() {
         const click: string = ElementHelper.normalizeElementID(this.getAttributeValue());
         this.clickHandler = new Tree(click);
+    }
+
+    public async connect() {
         this.tag.addClickHandler(this.onClick.bind(this));
     }
 

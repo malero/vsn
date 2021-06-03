@@ -21,8 +21,9 @@ export enum TagState {
     Instantiated,
     AttributesBuilt,
     AttributesSetup,
-    AttributesExecuted,
-    Built
+    AttributesExtracted,
+    AttributesConnected,
+    Built,
 }
 
 export class Tag extends EventDispatcher {
@@ -257,11 +258,18 @@ export class Tag extends EventDispatcher {
         this._state = TagState.AttributesSetup;
     }
 
-    public async executeAttributes() {
+    public async extractAttributes() {
         for (const attr of this.attributes) {
-            await attr.execute();
+            await attr.extract();
         }
-        this._state = TagState.AttributesExecuted;
+        this._state = TagState.AttributesExtracted;
+    }
+
+    public async connectAttributes() {
+        for (const attr of this.attributes) {
+            await attr.connect();
+        }
+        this._state = TagState.AttributesConnected;
     }
 
     public finalize(): void {

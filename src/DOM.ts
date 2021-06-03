@@ -59,11 +59,6 @@ export class DOM extends EventDispatcher {
             const element: HTMLElement = _e as HTMLElement;
             if (allElements.indexOf(element) > -1) continue;
             if (ElementHelper.hasVisionAttribute(element)) {
-                this.observer.observe(element, {
-                    attributes: true,
-                    characterData: true,
-                    childList: true
-                });
                 const tag: Tag = new Tag(element as HTMLElement, this);
                 this.tags.push(tag);
                 newTags.push(tag);
@@ -74,11 +69,9 @@ export class DOM extends EventDispatcher {
         this.root = this.getTagForElement(document.body);
 
         // Configure, setup & execute attributes
-        console.warn('Building attributes.');
         for (const tag of newTags)
             await tag.buildAttributes();
 
-        console.warn('Setting parents.');
         for (const tag of newTags) {
             if (tag === this.root)
                 continue;
@@ -99,19 +92,27 @@ export class DOM extends EventDispatcher {
                 console.log('Could not find parent for ', tag);
         }
 
-        console.warn('Setting up attributes.');
         for (const tag of newTags)
             await tag.setupAttributes();
 
-        console.warn('Executing attributes.');
         for (const tag of newTags)
-            await tag.executeAttributes();
+            await tag.extractAttributes();
+
+        for (const tag of newTags)
+            await tag.connectAttributes();
 
         for (const tag of newTags)
             this.registerElementInRoot(tag);
 
         for (const tag of newTags)
             tag.finalize();
+
+        for (const tag of newTags)
+            this.observer.observe(tag.element, {
+                attributes: true,
+                characterData: true,
+                childList: true
+            });
 
         this.trigger('built');
     }

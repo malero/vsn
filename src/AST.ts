@@ -636,7 +636,8 @@ class ScopeMemberNode extends Node implements TreeNode {
             console.log('failure, scope: ', scope, 'parent scope', await this.scope.evaluate(scope), 'member', await this.name.evaluate(scope));
             throw Error(`Cannot access "${await this.name.evaluate(scope)}" of undefined.`);
         }
-        return parent.get(await this.name.evaluate(scope), false);
+        const value: any = parent.get(await this.name.evaluate(scope), false);
+        return value instanceof Scope && value.wrapped || value;
     }
 }
 
@@ -655,7 +656,8 @@ class RootScopeMemberNode<T = any> extends Node implements TreeNode {
     }
 
     async evaluate(scope: Scope) {
-        return scope.get(await this.name.evaluate(scope));
+        const value = scope.get(await this.name.evaluate(scope));
+        return value instanceof Scope && value.wrapped || value;
     }
 }
 
@@ -833,7 +835,6 @@ export class Tree {
         for (const node of this.rootNode.findChildrenByType<ScopeMemberNode>(ScopeMemberNode)) {
             const _scope: Scope = await node.scope.evaluate(scope);
             const name = await node.name.evaluate(scope);
-            console.log('binding', `change:${name}`);
             _scope.bind(`change:${name}`, fnc);
         }
     }

@@ -7,6 +7,9 @@ export class ClickToggleClass extends Attribute {
     public async setup() {
         this.cssClass = this.getAttributeBinding( 'active');
         this.target = this.getAttributeValue();
+    }
+
+    public async connect() {
         this.tag.addClickHandler(this.onClick.bind(this));
     }
 

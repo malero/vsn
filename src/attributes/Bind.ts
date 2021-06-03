@@ -29,23 +29,30 @@ export class Bind extends Attribute {
         }
         this.key = ref.key;
         this.boundScope = ref.scope;
-
-
     }
 
-    public async execute() {
+    public async extract() {
         const elementValue = this.valueFromElement;
         if (!!elementValue)
             this.updateFrom();
-        else
-            this.updateTo();
+    }
 
+    public async connect() {
         if (this.tag.isInput) {
             //this.tag.element.onchange = this.updateFrom.bind(this);
             this.tag.element.onkeydown = this.updateFrom.bind(this);
             this.tag.element.onkeyup = this.updateFrom.bind(this);
         }
+        this.updateTo();
         this.boundScope.bind(`change:${this.key}`, this.updateTo, this);
+    }
+
+    public async evaluate() {
+        const elementValue = this.valueFromElement;
+        if (!!elementValue)
+            this.updateFrom();
+        else
+            this.updateTo();
     }
 
     get valueFromElement(): string {
@@ -55,7 +62,7 @@ export class Bind extends Attribute {
             if (this.tag.isInput) {
                 return (this.tag.element as any).value;
             } else {
-                return this.tag.element.innerText;
+                return this.tag.element.innerHTML;
             }
         }
     }

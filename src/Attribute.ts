@@ -12,7 +12,8 @@ export abstract class Attribute {
 
     protected async configure() {};
     public async setup() {};
-    public async execute() {};
+    public async extract() {};
+    public async connect() {}
     public async evaluate() {};
 
     public getAttributeValue(fallback: any = null) {

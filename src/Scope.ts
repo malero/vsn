@@ -182,9 +182,16 @@ export class Scope extends EventDispatcher {
             this.data.createField(key);
 
         if (this.data[key] !== value) {
+            const previousValue = this.data[key];
             this.data[key] = value;
-            this.trigger(`change:${key}`, value);
-            this.trigger('change', key, value);
+            const event = {
+                value: value,
+                previousValue: previousValue,
+                key: key
+            };
+
+            this.trigger(`change:${key}`, event);
+            this.trigger('change', key, event);
         }
 
         if (this.keys.indexOf(key) === -1)
@@ -224,9 +231,6 @@ export class Scope extends EventDispatcher {
         this.wrapped = wrapped;
         this.wrapped['$wrapped'] = true;
         for (const field in wrapped) {
-            if (field === 'items') {
-                console.log('adding items to scope');
-            }
             if (['constructor'].indexOf(field) > -1 || field.startsWith('$'))
                 continue;
 
@@ -235,7 +239,8 @@ export class Scope extends EventDispatcher {
             }
 
             // Populate scope data from wrapped object before we update the getter
-            this.set(field, this.wrapped[field]);
+            if (this.wrapped[field] !== undefined)
+                this.set(field, this.wrapped[field]);
 
             const getter = () => {
                 return this.get(field);
@@ -255,6 +260,12 @@ export class Scope extends EventDispatcher {
             if (triggerUpdates)
                 this.trigger(`change:${field}`);
         }
+
+        this.wrapped.get = this.get.bind(this);
+        this.wrapped.set = this.set.bind(this);
+        this.wrapped.bind = this.bind.bind(this);
+        this.wrapped.once = this.once.bind(this);
+        this.wrapped.unbind = this.unbind.bind(this);
     }
 
     public unwrap(): void {

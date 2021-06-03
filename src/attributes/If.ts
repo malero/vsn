@@ -9,8 +9,11 @@ export class If extends Attribute {
         this.tree = new Tree(statement);
     }
 
-    public async execute() {
+    public async extract() {
         await this.evaluate();
+    }
+
+    public async connect() {
         await this.tree.bindToScopeChanges(this.tag.scope, this.onChange.bind(this));
     }
 
