@@ -54,6 +54,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.Click = void 0;
 var Attribute_1 = require("../Attribute");
 var AST_1 = require("../AST");
+var ElementHelper_1 = require("../helpers/ElementHelper");
 var Click = /** @class */ (function (_super) {
     __extends(Click, _super);
     function Click() {
@@ -63,8 +64,15 @@ var Click = /** @class */ (function (_super) {
         return __awaiter(this, void 0, void 0, function () {
             var click;
             return __generator(this, function (_a) {
-                click = this.getAttributeValue();
+                click = ElementHelper_1.ElementHelper.normalizeElementID(this.getAttributeValue());
                 this.clickHandler = new AST_1.Tree(click);
+                return [2 /*return*/];
+            });
+        });
+    };
+    Click.prototype.connect = function () {
+        return __awaiter(this, void 0, void 0, function () {
+            return __generator(this, function (_a) {
                 this.tag.addClickHandler(this.onClick.bind(this));
                 return [2 /*return*/];
             });

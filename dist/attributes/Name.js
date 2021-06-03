@@ -62,13 +62,14 @@ var Name = /** @class */ (function (_super) {
         return __awaiter(this, void 0, void 0, function () {
             var parentScope;
             return __generator(this, function (_a) {
-                parentScope = this.tag.scope.parent;
+                parentScope = this.tag.scope.parentScope;
                 if (parentScope)
                     parentScope.set(this.tag.parsedAttributes['v-name'][1], this.tag.scope);
                 return [2 /*return*/];
             });
         });
     };
+    Name.scoped = true;
     return Name;
 }(Attribute_1.Attribute));
 exports.Name = Name;

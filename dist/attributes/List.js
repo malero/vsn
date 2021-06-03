@@ -61,13 +61,22 @@ var List = /** @class */ (function (_super) {
     function List() {
         return _super !== null && _super.apply(this, arguments) || this;
     }
-    List.prototype.setup = function () {
+    List.prototype.extract = function () {
         return __awaiter(this, void 0, void 0, function () {
-            var listAttr;
+            var listAttr, tree, items;
             return __generator(this, function (_a) {
-                listAttr = this.tag.parsedAttributes['v-list'][0];
-                (new AST_1.Tree(listAttr)).evaluate(this.tag.scope).then(this.addExistingItems.bind(this));
-                return [2 /*return*/];
+                switch (_a.label) {
+                    case 0:
+                        listAttr = this.getAttributeBinding();
+                        tree = new AST_1.Tree(listAttr);
+                        return [4 /*yield*/, tree.evaluate(this.tag.scope)];
+                    case 1:
+                        items = _a.sent();
+                        return [4 /*yield*/, this.addExistingItems(items)];
+                    case 2:
+                        _a.sent();
+                        return [2 /*return*/];
+                }
             });
         });
     };
@@ -76,48 +85,60 @@ var List = /** @class */ (function (_super) {
             var _i, defaultList_1, existingItem, _a, _b, element, tag;
             var _this = this;
             return __generator(this, function (_c) {
-                this.items = new Scope_1.WrappedArray();
-                this.tags = [];
-                if (defaultList)
-                    for (_i = 0, defaultList_1 = defaultList; _i < defaultList_1.length; _i++) {
+                switch (_c.label) {
+                    case 0:
+                        this.items = defaultList || new Scope_1.WrappedArray();
+                        this.tags = [];
+                        if (!defaultList) return [3 /*break*/, 4];
+                        _i = 0, defaultList_1 = defaultList;
+                        _c.label = 1;
+                    case 1:
+                        if (!(_i < defaultList_1.length)) return [3 /*break*/, 4];
                         existingItem = defaultList_1[_i];
-                        this.add(existingItem);
-                    }
-                if (this.tag.element.children.length > 0) {
-                    this.template = this.tag.element.children[0].cloneNode(true);
+                        return [4 /*yield*/, this.add(existingItem)];
+                    case 2:
+                        _c.sent();
+                        _c.label = 3;
+                    case 3:
+                        _i++;
+                        return [3 /*break*/, 1];
+                    case 4:
+                        if (this.tag.element.children.length > 0) {
+                            this.template = this.tag.element.children[0].cloneNode(true);
+                        }
+                        for (_a = 0, _b = Array.from(this.tag.element.querySelectorAll('*')); _a < _b.length; _a++) {
+                            element = _b[_a];
+                            if (!ElementHelper_1.ElementHelper.hasVisionAttribute(element, 'v-list-item'))
+                                continue;
+                            tag = this.tag.dom.getTagForElement(element);
+                            if (tag) {
+                                this.tags.push(tag);
+                                this.items.push(tag.scope.wrapped || tag.scope);
+                            }
+                        }
+                        if (!(this.items instanceof Scope_1.WrappedArray)) {
+                            this.items = new Scope_1.WrappedArray(this.items);
+                        }
+                        this.items.bind('add', function (item) {
+                            _this.add(item);
+                        });
+                        this.tag.scope.set('add', this.add.bind(this));
+                        this.tag.scope.set('remove', this.remove.bind(this));
+                        return [2 /*return*/];
                 }
-                for (_a = 0, _b = Array.from(this.tag.element.querySelectorAll('*')); _a < _b.length; _a++) {
-                    element = _b[_a];
-                    if (!ElementHelper_1.ElementHelper.hasVisionAttribute(element, 'v-list-item'))
-                        continue;
-                    tag = this.tag.dom.getTagForElement(element);
-                    if (tag) {
-                        this.tags.push(tag);
-                        //this.items.push(tag.);
-                    }
-                }
-                if (!(this.items instanceof Scope_1.WrappedArray)) {
-                    this.items = new Scope_1.WrappedArray(this.items);
-                }
-                this.items.bind('add', function (item) {
-                    _this.add(item);
-                });
-                this.tag.scope.set('add', this.add.bind(this));
-                this.tag.scope.set('remove', this.remove.bind(this));
-                return [2 /*return*/];
             });
         });
     };
     Object.defineProperty(List.prototype, "listItemName", {
         get: function () {
-            return this.getAttributeBinding('item');
+            return this.tag.getRawAttributeValue('v-list-item-name', 'item');
         },
         enumerable: false,
         configurable: true
     });
     Object.defineProperty(List.prototype, "listItemModel", {
         get: function () {
-            return this.getAttributeValue('DataModel');
+            return this.tag.getRawAttributeValue('v-list-item-model', 'DataModel');
         },
         enumerable: false,
         configurable: true
@@ -125,7 +146,8 @@ var List = /** @class */ (function (_super) {
     List.prototype.remove = function (item) {
         for (var i = 0; i < this.tags.length; i++) {
             var tag = this.tags[i];
-            if (tag.scope.get(this.listItemName) == item) {
+            var listItem = tag.scope.get(this.listItemName);
+            if ([listItem, listItem.wrapped].indexOf(item) > -1) {
                 tag.removeFromDOM();
                 this.tags.splice(i, 1);
                 return;
@@ -133,17 +155,31 @@ var List = /** @class */ (function (_super) {
         }
     };
     List.prototype.add = function (obj) {
-        var element = this.template.cloneNode(true);
-        this.tag.element.appendChild(element);
-        this.tag.dom.buildFrom(this.tag.element);
-        var tag = this.tag.dom.getTagForElement(element);
-        this.tags.push(tag);
-        var scope = tag.scope.get(this.listItemName);
-        scope.clear();
-        if (obj) {
-            tag.wrap(obj, true);
-        }
+        return __awaiter(this, void 0, void 0, function () {
+            var element, tag, scope;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0:
+                        element = this.template.cloneNode(true);
+                        this.tag.element.appendChild(element);
+                        return [4 /*yield*/, this.tag.dom.buildFrom(this.tag.element)];
+                    case 1:
+                        _a.sent();
+                        tag = this.tag.dom.getTagForElement(element);
+                        this.tags.push(tag);
+                        scope = tag.scope.get(this.listItemName);
+                        scope.clear();
+                        if (obj) {
+                            // Scope has already wrapped a new v-list-item-model, so we need to unwrap and wrap the passed object
+                            tag.unwrap();
+                            tag.wrap(obj, true);
+                        }
+                        return [2 /*return*/];
+                }
+            });
+        });
     };
+    List.scoped = true;
     return List;
 }(Attribute_1.Attribute));
 exports.List = List;

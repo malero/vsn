@@ -81,18 +81,15 @@ var SetAttribute = /** @class */ (function (_super) {
                     ref = this.tag.scope.getReference(this.property);
                 }
                 catch (e) {
-                    console.log('error', e);
                     return [2 /*return*/];
                 }
                 this.key = ref.key;
                 this.boundScope = ref.scope;
-                console.log('v-set setup, ', this.key, this.boundScope, this.getAttributeValue(null));
-                this.boundScope.set(this.key, this.getAttributeValue(null));
                 return [2 /*return*/];
             });
         });
     };
-    SetAttribute.prototype.execute = function () {
+    SetAttribute.prototype.extract = function () {
         return __awaiter(this, void 0, void 0, function () {
             return __generator(this, function (_a) {
                 this.boundScope.set(this.key, this.getAttributeValue(null));

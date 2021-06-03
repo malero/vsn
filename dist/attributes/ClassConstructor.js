@@ -60,28 +60,29 @@ var ClassConstructor = /** @class */ (function (_super) {
     }
     ClassConstructor.prototype.setup = function () {
         return __awaiter(this, void 0, void 0, function () {
-            var parentScope;
+            var parentScope, cls;
             return __generator(this, function (_a) {
-                parentScope = this.tag.parent.scope;
-                if (!parentScope)
-                    return [2 /*return*/];
-                this.attributeKey = this.getAttributeBinding();
-                this.className = this.getAttributeValue();
-                if (this.attributeKey && parentScope)
-                    parentScope.set(this.attributeKey, this.tag.scope);
-                return [2 /*return*/];
+                switch (_a.label) {
+                    case 0:
+                        parentScope = this.tag.parentTag.scope;
+                        if (!parentScope)
+                            return [2 /*return*/];
+                        this.attributeKey = this.getAttributeBinding();
+                        this.className = this.getAttributeValue();
+                        return [4 /*yield*/, window['Vision'].instance.getClass(this.className)];
+                    case 1:
+                        cls = _a.sent();
+                        this.instantiateClass(cls);
+                        if (this.attributeKey && parentScope)
+                            parentScope.set(this.attributeKey, this.tag.scope);
+                        return [2 /*return*/];
+                }
             });
         });
     };
-    ClassConstructor.prototype.execute = function () {
+    ClassConstructor.prototype.extract = function () {
         return __awaiter(this, void 0, void 0, function () {
-            var promise;
-            var _this = this;
             return __generator(this, function (_a) {
-                promise = window['Vision'].instance.getClass(this.className);
-                promise.then(function (cls) {
-                    _this.instantiateClass(cls);
-                });
                 return [2 /*return*/];
             });
         });
@@ -89,6 +90,7 @@ var ClassConstructor = /** @class */ (function (_super) {
     ClassConstructor.prototype.instantiateClass = function (cls) {
         this.tag.wrap(cls);
     };
+    ClassConstructor.scoped = true;
     return ClassConstructor;
 }(Attribute_1.Attribute));
 exports.ClassConstructor = ClassConstructor;

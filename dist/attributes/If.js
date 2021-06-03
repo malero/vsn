@@ -65,29 +65,63 @@ var If = /** @class */ (function (_super) {
             return __generator(this, function (_a) {
                 statement = this.getAttributeValue();
                 this.tree = new AST_1.Tree(statement);
-                console.log('if statement setup', statement, this.tag.element);
                 return [2 /*return*/];
             });
         });
     };
-    If.prototype.execute = function () {
+    If.prototype.extract = function () {
         return __awaiter(this, void 0, void 0, function () {
             return __generator(this, function (_a) {
-                this.onChange();
-                return [2 /*return*/];
+                switch (_a.label) {
+                    case 0: return [4 /*yield*/, this.evaluate()];
+                    case 1:
+                        _a.sent();
+                        return [2 /*return*/];
+                }
+            });
+        });
+    };
+    If.prototype.connect = function () {
+        return __awaiter(this, void 0, void 0, function () {
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0: return [4 /*yield*/, this.tree.bindToScopeChanges(this.tag.scope, this.onChange.bind(this))];
+                    case 1:
+                        _a.sent();
+                        return [2 /*return*/];
+                }
+            });
+        });
+    };
+    If.prototype.evaluate = function () {
+        return __awaiter(this, void 0, void 0, function () {
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0: return [4 /*yield*/, this.onChange()];
+                    case 1:
+                        _a.sent();
+                        return [2 /*return*/];
+                }
             });
         });
     };
     If.prototype.onChange = function () {
-        var _this = this;
-        this.tree.evaluate(this.tag.scope).then(function (result) {
-            console.log('if if if!', result);
-            if (result) {
-                _this.tag.show();
-            }
-            else {
-                _this.tag.hide();
-            }
+        return __awaiter(this, void 0, void 0, function () {
+            var result;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0: return [4 /*yield*/, this.tree.evaluate(this.tag.scope)];
+                    case 1:
+                        result = _a.sent();
+                        if (result) {
+                            this.tag.show();
+                        }
+                        else {
+                            this.tag.hide();
+                        }
+                        return [2 /*return*/];
+                }
+            });
         });
     };
     return If;

@@ -7,5 +7,5 @@ export declare class SetAttribute extends Attribute {
     set value(v: any);
     get value(): any;
     setup(): Promise<void>;
-    execute(): Promise<void>;
+    extract(): Promise<void>;
 }

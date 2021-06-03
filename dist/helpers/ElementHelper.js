@@ -14,6 +14,9 @@ var ElementHelper = /** @class */ (function () {
         }
         return false;
     };
+    ElementHelper.normalizeElementID = function (id) {
+        return id ? id.replace(/-([a-zA-Z0-9])/g, function (g) { return g[1].toUpperCase(); }) : null;
+    };
     return ElementHelper;
 }());
 exports.ElementHelper = ElementHelper;

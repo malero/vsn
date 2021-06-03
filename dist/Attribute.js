@@ -55,7 +55,18 @@ var Attribute = /** @class */ (function () {
         }); });
     };
     ;
-    Attribute.prototype.execute = function () {
+    Attribute.prototype.extract = function () {
+        return __awaiter(this, void 0, void 0, function () { return __generator(this, function (_a) {
+            return [2 /*return*/];
+        }); });
+    };
+    ;
+    Attribute.prototype.connect = function () {
+        return __awaiter(this, void 0, void 0, function () { return __generator(this, function (_a) {
+            return [2 /*return*/];
+        }); });
+    };
+    Attribute.prototype.evaluate = function () {
         return __awaiter(this, void 0, void 0, function () { return __generator(this, function (_a) {
             return [2 /*return*/];
         }); });
@@ -70,6 +81,7 @@ var Attribute = /** @class */ (function () {
         return this.tag.getAttributeBinding(this.attributeName) || fallback;
     };
     Attribute.prototype.mutate = function (mutation) { };
+    Attribute.scoped = false;
     return Attribute;
 }());
 exports.Attribute = Attribute;

@@ -51,7 +51,7 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
     }
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.Tag = void 0;
+exports.Tag = exports.TagState = void 0;
 var Scope_1 = require("./Scope");
 var Bind_1 = require("./attributes/Bind");
 var Click_1 = require("./attributes/Click");
@@ -66,6 +66,16 @@ var ControllerAttribute_1 = require("./attributes/ControllerAttribute");
 var ModelAttribute_1 = require("./attributes/ModelAttribute");
 var VisionHelper_1 = require("./helpers/VisionHelper");
 var SetAttribute_1 = require("./attributes/SetAttribute");
+var RootAttribute_1 = require("./attributes/RootAttribute");
+var TagState;
+(function (TagState) {
+    TagState[TagState["Instantiated"] = 0] = "Instantiated";
+    TagState[TagState["AttributesBuilt"] = 1] = "AttributesBuilt";
+    TagState[TagState["AttributesSetup"] = 2] = "AttributesSetup";
+    TagState[TagState["AttributesExtracted"] = 3] = "AttributesExtracted";
+    TagState[TagState["AttributesConnected"] = 4] = "AttributesConnected";
+    TagState[TagState["Built"] = 5] = "Built";
+})(TagState = exports.TagState || (exports.TagState = {}));
 var Tag = /** @class */ (function (_super) {
     __extends(Tag, _super);
     function Tag(element, dom) {
@@ -78,11 +88,11 @@ var Tag = /** @class */ (function (_super) {
             'select',
             'textarea'
         ];
-        _this.scope = new Scope_1.Scope();
         _this.rawAttributes = {};
         _this.parsedAttributes = {};
         _this.attributes = [];
         _this.onclickHandlers = [];
+        _this.element.onclick = _this.onclick.bind(_this);
         // Build element Attributes
         for (var i = 0; i < _this.element.attributes.length; i++) {
             var a = _this.element.attributes[i];
@@ -99,9 +109,15 @@ var Tag = /** @class */ (function (_super) {
                 }
             }
         }
-        _this.element.onclick = _this.onclick.bind(_this);
+        _this._state = TagState.Instantiated;
         return _this;
     }
+    Tag.prototype.evaluate = function () {
+        for (var _i = 0, _a = this.attributes; _i < _a.length; _i++) {
+            var attr = _a[_i];
+            attr.evaluate();
+        }
+    };
     Tag.prototype.mutate = function (mutation) {
         for (var _i = 0, _a = this.attributes; _i < _a.length; _i++) {
             var attr = _a[_i];
@@ -137,21 +153,28 @@ var Tag = /** @class */ (function (_super) {
     Tag.prototype.addChild = function (tag) {
         this._children.push(tag);
     };
-    Object.defineProperty(Tag.prototype, "parent", {
+    Object.defineProperty(Tag.prototype, "parentTag", {
         get: function () {
-            return this._parent;
+            return this._parentTag;
         },
         set: function (tag) {
-            this._parent = tag;
+            if (this.element === document.body)
+                return;
+            this._parentTag = tag;
             tag.addChild(this);
-            this.scope.parent = tag.scope;
+            if (this.scope !== tag.scope)
+                this.scope.parentScope = tag.scope;
         },
         enumerable: false,
         configurable: true
     });
     Object.defineProperty(Tag.prototype, "scope", {
         get: function () {
-            return this._scope;
+            if (!!this._scope)
+                return this._scope;
+            if (!!this._parentTag)
+                return this._parentTag.scope;
+            return null;
         },
         set: function (scope) {
             this._scope = scope;
@@ -175,17 +198,20 @@ var Tag = /** @class */ (function (_super) {
             obj = new obj();
         }
         this.scope.wrap(obj, triggerUpdates);
+        obj['$scope'] = this.scope;
         return obj;
+    };
+    Tag.prototype.unwrap = function () {
+        this.scope.unwrap();
     };
     Tag.prototype.removeFromDOM = function () {
         this.element.remove();
     };
     Tag.prototype.addToParentElement = function () {
-        this._parent.element.appendChild(this.element);
+        this._parentTag.element.appendChild(this.element);
     };
     Tag.prototype.hide = function () {
         this.element.hidden = true;
-        this.element.className = this.element.className + ' hidemehidedme';
     };
     Tag.prototype.show = function () {
         this.element.hidden = false;
@@ -193,7 +219,7 @@ var Tag = /** @class */ (function (_super) {
     Tag.prototype.findAncestorByAttribute = function (attr) {
         if (this.hasAttribute(attr))
             return this;
-        return this.parent ? this.parent.findAncestorByAttribute(attr) : null;
+        return this.parentTag ? this.parentTag.findAncestorByAttribute(attr) : null;
     };
     Tag.prototype.hasAttribute = function (attr) {
         return !!this.parsedAttributes[attr];
@@ -219,14 +245,23 @@ var Tag = /** @class */ (function (_super) {
     };
     Tag.prototype.buildAttributes = function () {
         return __awaiter(this, void 0, void 0, function () {
-            var attr, attrClass;
+            var requiresScope, attr, attrClass, attrObj;
             return __generator(this, function (_a) {
+                requiresScope = false;
                 this.attributes.length = 0;
                 for (attr in this.rawAttributes) {
                     attrClass = this.getAttributeClass(attr);
-                    if (attrClass)
-                        this.attributes.push(new attrClass(this, attr));
+                    if (attrClass) {
+                        if (attrClass.scoped)
+                            requiresScope = true;
+                        attrObj = new attrClass(this, attr);
+                        this.attributes.push(attrObj);
+                    }
                 }
+                if (requiresScope) {
+                    this._scope = new Scope_1.Scope();
+                }
+                this._state = TagState.AttributesBuilt;
                 return [2 /*return*/];
             });
         });
@@ -249,12 +284,14 @@ var Tag = /** @class */ (function (_super) {
                     case 3:
                         _i++;
                         return [3 /*break*/, 1];
-                    case 4: return [2 /*return*/];
+                    case 4:
+                        this._state = TagState.AttributesSetup;
+                        return [2 /*return*/];
                 }
             });
         });
     };
-    Tag.prototype.executeAttributes = function () {
+    Tag.prototype.extractAttributes = function () {
         return __awaiter(this, void 0, void 0, function () {
             var _i, _a, attr;
             return __generator(this, function (_b) {
@@ -265,17 +302,47 @@ var Tag = /** @class */ (function (_super) {
                     case 1:
                         if (!(_i < _a.length)) return [3 /*break*/, 4];
                         attr = _a[_i];
-                        return [4 /*yield*/, attr.execute()];
+                        return [4 /*yield*/, attr.extract()];
                     case 2:
                         _b.sent();
                         _b.label = 3;
                     case 3:
                         _i++;
                         return [3 /*break*/, 1];
-                    case 4: return [2 /*return*/];
+                    case 4:
+                        this._state = TagState.AttributesExtracted;
+                        return [2 /*return*/];
                 }
             });
         });
+    };
+    Tag.prototype.connectAttributes = function () {
+        return __awaiter(this, void 0, void 0, function () {
+            var _i, _a, attr;
+            return __generator(this, function (_b) {
+                switch (_b.label) {
+                    case 0:
+                        _i = 0, _a = this.attributes;
+                        _b.label = 1;
+                    case 1:
+                        if (!(_i < _a.length)) return [3 /*break*/, 4];
+                        attr = _a[_i];
+                        return [4 /*yield*/, attr.connect()];
+                    case 2:
+                        _b.sent();
+                        _b.label = 3;
+                    case 3:
+                        _i++;
+                        return [3 /*break*/, 1];
+                    case 4:
+                        this._state = TagState.AttributesConnected;
+                        return [2 /*return*/];
+                }
+            });
+        });
+    };
+    Tag.prototype.finalize = function () {
+        this._state = TagState.Built;
     };
     Tag.prototype.onclick = function (e) {
         this.scope.set('$event', e);
@@ -288,6 +355,7 @@ var Tag = /** @class */ (function (_super) {
         this.onclickHandlers.push(handler);
     };
     Tag.attributeMap = {
+        'v-root': RootAttribute_1.RootAttribute,
         'v-name': Name_1.Name,
         'v-controller': ControllerAttribute_1.ControllerAttribute,
         'v-model': ModelAttribute_1.ModelAttribute,

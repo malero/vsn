@@ -91,19 +91,40 @@ var Bind = /** @class */ (function (_super) {
             });
         });
     };
-    Bind.prototype.execute = function () {
+    Bind.prototype.extract = function () {
+        return __awaiter(this, void 0, void 0, function () {
+            var elementValue;
+            return __generator(this, function (_a) {
+                elementValue = this.valueFromElement;
+                if (!!elementValue)
+                    this.updateFrom();
+                return [2 /*return*/];
+            });
+        });
+    };
+    Bind.prototype.connect = function () {
         return __awaiter(this, void 0, void 0, function () {
             return __generator(this, function (_a) {
-                if (!!this.valueFromElement)
-                    this.updateFrom();
-                else
-                    this.updateTo();
-                this.boundScope.bind("change:" + this.key, this.updateTo, this);
                 if (this.tag.isInput) {
                     //this.tag.element.onchange = this.updateFrom.bind(this);
                     this.tag.element.onkeydown = this.updateFrom.bind(this);
                     this.tag.element.onkeyup = this.updateFrom.bind(this);
                 }
+                this.updateTo();
+                this.boundScope.bind("change:" + this.key, this.updateTo, this);
+                return [2 /*return*/];
+            });
+        });
+    };
+    Bind.prototype.evaluate = function () {
+        return __awaiter(this, void 0, void 0, function () {
+            var elementValue;
+            return __generator(this, function (_a) {
+                elementValue = this.valueFromElement;
+                if (!!elementValue)
+                    this.updateFrom();
+                else
+                    this.updateTo();
                 return [2 /*return*/];
             });
         });
@@ -118,7 +139,7 @@ var Bind = /** @class */ (function (_super) {
                     return this.tag.element.value;
                 }
                 else {
-                    return this.tag.element.innerText;
+                    return this.tag.element.innerHTML;
                 }
             }
         },

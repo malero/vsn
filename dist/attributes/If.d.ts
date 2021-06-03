@@ -3,6 +3,8 @@ import { Tree } from "../AST";
 export declare class If extends Attribute {
     protected tree: Tree;
     setup(): Promise<void>;
-    execute(): Promise<void>;
-    onChange(): void;
+    extract(): Promise<void>;
+    connect(): Promise<void>;
+    evaluate(): Promise<void>;
+    onChange(): Promise<void>;
 }

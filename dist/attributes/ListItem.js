@@ -67,19 +67,21 @@ var ListItem = /** @class */ (function (_super) {
     });
     ListItem.prototype.setup = function () {
         return __awaiter(this, void 0, void 0, function () {
-            var modelName, promise;
-            var _this = this;
+            var modelName, cls;
             return __generator(this, function (_a) {
-                this.tag.scope.set(this.listItemName, this.tag.scope);
-                modelName = this.modelClassName;
-                promise = window['Vision'].instance.getClass(modelName);
-                promise.then(function (cls) {
-                    _this.instantiateModel(cls);
-                });
-                this._list = this.tag.findAncestorByAttribute('v-list');
-                if (!this._list)
-                    throw Error(ListItem.ERROR_NO_PARENT);
-                return [2 /*return*/];
+                switch (_a.label) {
+                    case 0:
+                        this._list = this.tag.findAncestorByAttribute('v-list');
+                        if (!this._list)
+                            throw Error(ListItem.ERROR_NO_PARENT);
+                        this.tag.scope.set(this.listItemName, this.tag.scope);
+                        modelName = this.modelClassName;
+                        return [4 /*yield*/, window['Vision'].instance.getClass(modelName)];
+                    case 1:
+                        cls = _a.sent();
+                        this.instantiateModel(cls);
+                        return [2 /*return*/];
+                }
             });
         });
     };
@@ -92,7 +94,7 @@ var ListItem = /** @class */ (function (_super) {
     });
     Object.defineProperty(ListItem.prototype, "modelClassName", {
         get: function () {
-            return this.getAttributeValue();
+            return this.getAttributeValue(this._list.getAttribute('v-list').listItemModel);
         },
         enumerable: false,
         configurable: true
@@ -107,6 +109,7 @@ var ListItem = /** @class */ (function (_super) {
     ListItem.prototype.instantiateModel = function (model) {
         this.tag.wrap(model);
     };
+    ListItem.scoped = true;
     ListItem.ERROR_NO_PARENT = "Cannot find list parent.";
     return ListItem;
 }(Attribute_1.Attribute));

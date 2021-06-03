@@ -29,8 +29,17 @@ var Vision = /** @class */ (function (_super) {
         _this.registerClass(Scope_1.WrappedArray, 'WrappedArray');
         return _this;
     }
+    Object.defineProperty(Vision.prototype, "dom", {
+        get: function () {
+            return this._dom;
+        },
+        enumerable: false,
+        configurable: true
+    });
     Vision.prototype.setup = function () {
-        this.dom = new DOM_1.DOM(document);
+        var body = document.body;
+        body.setAttribute('v-root', '');
+        this._dom = new DOM_1.DOM(document);
     };
     Vision.prototype.registerClass = function (cls, constructorName) {
         if (constructorName === void 0) { constructorName = null; }

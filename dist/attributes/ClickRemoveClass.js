@@ -66,6 +66,13 @@ var ClickRemoveClass = /** @class */ (function (_super) {
             return __generator(this, function (_a) {
                 this.cssClass = this.getAttributeBinding('active');
                 this.target = this.getAttributeValue();
+                return [2 /*return*/];
+            });
+        });
+    };
+    ClickRemoveClass.prototype.connect = function () {
+        return __awaiter(this, void 0, void 0, function () {
+            return __generator(this, function (_a) {
                 this.tag.addClickHandler(this.onClick.bind(this));
                 return [2 /*return*/];
             });

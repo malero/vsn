@@ -3,11 +3,12 @@ import { EventDispatcher } from "simple-ts-event-dispatcher";
 import { IPromise } from "simple-ts-promise";
 export declare class Vision extends EventDispatcher {
     protected static _instance: Vision;
-    protected dom?: DOM;
+    protected _dom?: DOM;
     protected controllers: {
         [key: string]: any;
     };
     constructor();
+    get dom(): DOM;
     setup(): void;
     registerClass(cls: any, constructorName?: string): void;
     getClass(key: string): IPromise<any>;

@@ -9,7 +9,7 @@ export declare class ScopeReference {
 export declare class WrappedArray<T> extends Array<T> {
     private _listeners;
     private _lastKey;
-    readonly __wrapped__: boolean;
+    readonly $wrapped: boolean;
     constructor(...items: T[]);
     push(...items: T[]): number;
     bind(event: string, fct: EventDispatcherCallback, context?: any, once?: boolean): number;
@@ -20,14 +20,14 @@ export declare class WrappedArray<T> extends Array<T> {
     trigger(event: string, ...args: any[]): void;
 }
 export declare class Scope extends EventDispatcher {
-    protected wrapped: any;
+    wrapped: any;
     protected data: DataModel;
     protected children: Scope[];
     protected keys: string[];
-    protected _parent: Scope;
+    protected _parentScope: Scope;
     constructor(parent?: Scope);
-    get parent(): Scope;
-    set parent(scope: Scope);
+    get parentScope(): Scope;
+    set parentScope(scope: Scope);
     addChild(scope: Scope): void;
     getReference(path: string): ScopeReference;
     get(key: string, searchParents?: boolean): any;
@@ -36,4 +36,5 @@ export declare class Scope extends EventDispatcher {
     clear(): void;
     cleanup(): void;
     wrap(wrapped: any, triggerUpdates?: boolean): void;
+    unwrap(): void;
 }

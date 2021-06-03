@@ -40,7 +40,7 @@ var WrappedArray = /** @class */ (function (_super) {
             items[_i] = arguments[_i];
         }
         var _this = _super.apply(this, items) || this;
-        _this.__wrapped__ = true;
+        _this.$wrapped = true;
         Object.setPrototypeOf(_this, WrappedArray.prototype);
         _this._lastKey = 0;
         _this._listeners = {};
@@ -138,18 +138,18 @@ var Scope = /** @class */ (function (_super) {
     function Scope(parent) {
         var _this = _super.call(this) || this;
         if (parent)
-            _this.parent = parent;
+            _this.parentScope = parent;
         _this.children = [];
         _this.data = new simple_ts_models_1.DataModel({});
         _this.keys = [];
         return _this;
     }
-    Object.defineProperty(Scope.prototype, "parent", {
+    Object.defineProperty(Scope.prototype, "parentScope", {
         get: function () {
-            return this._parent;
+            return this._parentScope;
         },
         set: function (scope) {
-            this._parent = scope;
+            this._parentScope = scope;
             scope.addChild(this);
         },
         enumerable: false,
@@ -179,21 +179,31 @@ var Scope = /** @class */ (function (_super) {
     };
     Scope.prototype.get = function (key, searchParents) {
         if (searchParents === void 0) { searchParents = true; }
+        if (key.indexOf('-') > -1)
+            throw Error('Cannot have hyphens in variable names.');
         var value = this.data[key];
         if (value === undefined) {
-            if (searchParents && this.parent)
-                return this.parent.get(key, searchParents);
+            if (searchParents && this.parentScope)
+                return this.parentScope.get(key, searchParents);
             return '';
         }
         return this.data[key];
     };
     Scope.prototype.set = function (key, value) {
+        if (key.indexOf('-') > -1)
+            throw Error('Cannot have hyphens in variable names.');
         if (this.data[key] === undefined)
             this.data.createField(key);
         if (this.data[key] !== value) {
+            var previousValue = this.data[key];
             this.data[key] = value;
-            this.trigger("change:" + key, value);
-            this.trigger('change', key, value);
+            var event_1 = {
+                value: value,
+                previousValue: previousValue,
+                key: key
+            };
+            this.trigger("change:" + key, event_1);
+            this.trigger('change', key, event_1);
         }
         if (this.keys.indexOf(key) === -1)
             this.keys.push(key);
@@ -214,39 +224,37 @@ var Scope = /** @class */ (function (_super) {
     };
     Scope.prototype.cleanup = function () {
         this.children.length = 0;
-        this.parent = null;
+        this.parentScope = null;
     };
     Scope.prototype.wrap = function (wrapped, triggerUpdates) {
         var _this = this;
         if (triggerUpdates === void 0) { triggerUpdates = false; }
-        if (this.wrapped !== undefined)
+        if ([null, undefined].indexOf(this.wrapped) === -1)
             throw Error("A scope can only wrap a single object");
         if (!wrapped) {
             throw Error("Can only wrap objects.");
         }
-        if (wrapped['__wrapped__'] && false) {
+        if (wrapped['$wrapped']) {
             throw Error("An object should only be wrapped once.");
         }
         this.wrapped = wrapped;
-        this.wrapped['__wrapped__'] = true;
+        this.wrapped['$wrapped'] = true;
         var _loop_1 = function (field) {
-            if (['constructor'].indexOf(field) > -1)
+            if (['constructor'].indexOf(field) > -1 || field.startsWith('$'))
                 return "continue";
             if (this_1.wrapped[field] instanceof Array) {
                 this_1.wrapped[field] = new (WrappedArray.bind.apply(WrappedArray, __spreadArray([void 0], wrapped[field])))();
             }
+            // Populate scope data from wrapped object before we update the getter
+            if (this_1.wrapped[field] !== undefined)
+                this_1.set(field, this_1.wrapped[field]);
             var getter = function () {
-                var val = _this.wrapped[field];
-                if (typeof val === 'function')
-                    val = val.bind(_this.data);
-                return val;
+                return _this.get(field);
             };
             var setter = function (value) {
-                _this.wrapped[field] = value;
-                _this.trigger("change:" + field, value);
-                _this.trigger('change', field, value);
+                _this.set(field, value);
             };
-            Object.defineProperty(this_1.data, field, {
+            Object.defineProperty(this_1.wrapped, field, {
                 get: getter,
                 set: setter,
                 enumerable: true,
@@ -259,6 +267,22 @@ var Scope = /** @class */ (function (_super) {
         for (var field in wrapped) {
             _loop_1(field);
         }
+        this.wrapped.get = this.get.bind(this);
+        this.wrapped.set = this.set.bind(this);
+        this.wrapped.bind = this.bind.bind(this);
+        this.wrapped.once = this.once.bind(this);
+        this.wrapped.unbind = this.unbind.bind(this);
+    };
+    Scope.prototype.unwrap = function () {
+        for (var field in this.wrapped) {
+            Object.defineProperty(this.wrapped, field, {
+                get: function () { return null; },
+                set: function (_) { return null; },
+                enumerable: true,
+                configurable: true
+            });
+        }
+        this.wrapped = null;
     };
     return Scope;
 }(simple_ts_event_dispatcher_1.EventDispatcher));

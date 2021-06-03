@@ -50,8 +50,14 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
+var __spreadArray = (this && this.__spreadArray) || function (to, from) {
+    for (var i = 0, il = from.length, j = to.length; i < il; i++, j++)
+        to[j] = from[i];
+    return to;
+};
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.Tree = exports.BlockNode = exports.tokenize = exports.TokenType = exports.BlockType = void 0;
+exports.Tree = exports.BlockNode = exports.Node = exports.tokenize = exports.TokenType = exports.BlockType = void 0;
+var Scope_1 = require("./Scope");
 function lower(str) {
     return str ? str.toLowerCase() : null;
 }
@@ -144,7 +150,7 @@ var TOKEN_PATTERNS = [
     },
     {
         type: TokenType.NAME,
-        pattern: /^[\$_a-zA-Z][_a-zA-Z0-9]*/
+        pattern: /^[\$#_a-zA-Z][_a-zA-Z0-9]*/
     },
     {
         type: TokenType.NUMBER_LITERAL,
@@ -291,10 +297,36 @@ function tokenize(code) {
     return tokens;
 }
 exports.tokenize = tokenize;
-var BlockNode = /** @class */ (function () {
-    function BlockNode(statements) {
-        this.statements = statements;
+var Node = /** @class */ (function () {
+    function Node() {
     }
+    Node.prototype.getChildNodes = function () {
+        return [];
+    };
+    Node.prototype.findChildrenByType = function (t) {
+        var nodes = [];
+        for (var _i = 0, _a = this.getChildNodes(); _i < _a.length; _i++) {
+            var child = _a[_i];
+            if (child instanceof t)
+                nodes.push(child);
+            var childNodes = child.findChildrenByType(t);
+            nodes.push.apply(nodes, childNodes);
+        }
+        return nodes;
+    };
+    return Node;
+}());
+exports.Node = Node;
+var BlockNode = /** @class */ (function (_super) {
+    __extends(BlockNode, _super);
+    function BlockNode(statements) {
+        var _this = _super.call(this) || this;
+        _this.statements = statements;
+        return _this;
+    }
+    BlockNode.prototype.getChildNodes = function () {
+        return __spreadArray([], this.statements);
+    };
     BlockNode.prototype.evaluate = function (scope) {
         return __awaiter(this, void 0, void 0, function () {
             var returnValue, i;
@@ -319,14 +351,23 @@ var BlockNode = /** @class */ (function () {
         });
     };
     return BlockNode;
-}());
+}(Node));
 exports.BlockNode = BlockNode;
-var ComparisonNode = /** @class */ (function () {
+var ComparisonNode = /** @class */ (function (_super) {
+    __extends(ComparisonNode, _super);
     function ComparisonNode(left, right, type) {
-        this.left = left;
-        this.right = right;
-        this.type = type;
+        var _this = _super.call(this) || this;
+        _this.left = left;
+        _this.right = right;
+        _this.type = type;
+        return _this;
     }
+    ComparisonNode.prototype.getChildNodes = function () {
+        return [
+            this.left,
+            this.right
+        ];
+    };
     ComparisonNode.prototype.evaluate = function (scope) {
         return __awaiter(this, void 0, void 0, function () {
             var left, right;
@@ -372,15 +413,24 @@ var ComparisonNode = /** @class */ (function () {
         return new ComparisonNode(lastNode, Tree.processTokens(Tree.getNextStatmentTokens(tokens)), token.type);
     };
     return ComparisonNode;
-}());
-var ConditionalNode = /** @class */ (function () {
+}(Node));
+var ConditionalNode = /** @class */ (function (_super) {
+    __extends(ConditionalNode, _super);
     function ConditionalNode(condition, block) {
-        this.condition = condition;
-        this.block = block;
+        var _this = _super.call(this) || this;
+        _this.condition = condition;
+        _this.block = block;
+        return _this;
     }
+    ConditionalNode.prototype.getChildNodes = function () {
+        return [
+            this.condition,
+            this.block
+        ];
+    };
     ConditionalNode.prototype.evaluate = function (scope) {
         return __awaiter(this, void 0, void 0, function () {
-            var one, two;
+            var one;
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0: return [4 /*yield*/, this.condition.evaluate(scope)];
@@ -388,23 +438,27 @@ var ConditionalNode = /** @class */ (function () {
                         one = _a.sent();
                         if (!one) return [3 /*break*/, 3];
                         return [4 /*yield*/, this.block.evaluate(scope)];
-                    case 2:
-                        two = _a.sent();
-                        return [2 /*return*/, two];
+                    case 2: return [2 /*return*/, _a.sent()];
                     case 3: return [2 /*return*/, null];
                 }
             });
         });
     };
     return ConditionalNode;
-}());
-var IfStatementNode = /** @class */ (function () {
+}(Node));
+var IfStatementNode = /** @class */ (function (_super) {
+    __extends(IfStatementNode, _super);
     function IfStatementNode(nodes) {
-        this.nodes = nodes;
+        var _this = _super.call(this) || this;
+        _this.nodes = nodes;
+        return _this;
     }
+    IfStatementNode.prototype.getChildNodes = function () {
+        return __spreadArray([], this.nodes);
+    };
     IfStatementNode.prototype.evaluate = function (scope) {
         return __awaiter(this, void 0, void 0, function () {
-            var _i, _a, condition, uno, dose;
+            var _i, _a, condition, uno;
             return __generator(this, function (_b) {
                 switch (_b.label) {
                     case 0:
@@ -418,9 +472,7 @@ var IfStatementNode = /** @class */ (function () {
                         uno = _b.sent();
                         if (!uno) return [3 /*break*/, 4];
                         return [4 /*yield*/, condition.block.evaluate(scope)];
-                    case 3:
-                        dose = _b.sent();
-                        return [2 /*return*/, dose];
+                    case 3: return [2 /*return*/, _b.sent()];
                     case 4:
                         _i++;
                         return [3 /*break*/, 1];
@@ -457,13 +509,23 @@ var IfStatementNode = /** @class */ (function () {
         return new IfStatementNode(nodes);
     };
     return IfStatementNode;
-}());
-var ForStatementNode = /** @class */ (function () {
+}(Node));
+var ForStatementNode = /** @class */ (function (_super) {
+    __extends(ForStatementNode, _super);
     function ForStatementNode(variable, list, block) {
-        this.variable = variable;
-        this.list = list;
-        this.block = block;
+        var _this = _super.call(this) || this;
+        _this.variable = variable;
+        _this.list = list;
+        _this.block = block;
+        return _this;
     }
+    ForStatementNode.prototype.getChildNodes = function () {
+        return [
+            this.variable,
+            this.list,
+            this.block
+        ];
+    };
     ForStatementNode.prototype.evaluate = function (scope) {
         return __awaiter(this, void 0, void 0, function () {
             var variable, list, i;
@@ -510,12 +572,21 @@ var ForStatementNode = /** @class */ (function () {
         return new ForStatementNode(new LiteralNode(variableName.value), list, block);
     };
     return ForStatementNode;
-}());
-var MemberExpressionNode = /** @class */ (function () {
+}(Node));
+var MemberExpressionNode = /** @class */ (function (_super) {
+    __extends(MemberExpressionNode, _super);
     function MemberExpressionNode(obj, name) {
-        this.obj = obj;
-        this.name = name;
+        var _this = _super.call(this) || this;
+        _this.obj = obj;
+        _this.name = name;
+        return _this;
     }
+    MemberExpressionNode.prototype.getChildNodes = function () {
+        return [
+            this.obj,
+            this.name
+        ];
+    };
     MemberExpressionNode.prototype.evaluate = function (scope) {
         return __awaiter(this, void 0, void 0, function () {
             var _a;
@@ -531,10 +602,13 @@ var MemberExpressionNode = /** @class */ (function () {
         });
     };
     return MemberExpressionNode;
-}());
-var LiteralNode = /** @class */ (function () {
+}(Node));
+var LiteralNode = /** @class */ (function (_super) {
+    __extends(LiteralNode, _super);
     function LiteralNode(value) {
-        this.value = value;
+        var _this = _super.call(this) || this;
+        _this.value = value;
+        return _this;
     }
     LiteralNode.prototype.evaluate = function (scope) {
         return __awaiter(this, void 0, void 0, function () {
@@ -544,7 +618,7 @@ var LiteralNode = /** @class */ (function () {
         });
     };
     return LiteralNode;
-}());
+}(Node));
 var BooleanLiteralNode = /** @class */ (function (_super) {
     __extends(BooleanLiteralNode, _super);
     function BooleanLiteralNode(value) {
@@ -570,10 +644,18 @@ var NumberLiteralNode = /** @class */ (function (_super) {
     }
     return NumberLiteralNode;
 }(LiteralNode));
-var StringNode = /** @class */ (function () {
+var StringNode = /** @class */ (function (_super) {
+    __extends(StringNode, _super);
     function StringNode(node) {
-        this.node = node;
+        var _this = _super.call(this) || this;
+        _this.node = node;
+        return _this;
     }
+    StringNode.prototype.getChildNodes = function () {
+        return [
+            this.node
+        ];
+    };
     StringNode.prototype.evaluate = function (scope) {
         return __awaiter(this, void 0, void 0, function () {
             var _a;
@@ -588,32 +670,55 @@ var StringNode = /** @class */ (function () {
         });
     };
     return StringNode;
-}());
-var FunctionCallNode = /** @class */ (function () {
+}(Node));
+var FunctionCallNode = /** @class */ (function (_super) {
+    __extends(FunctionCallNode, _super);
     function FunctionCallNode(fnc, args) {
-        this.fnc = fnc;
-        this.args = args;
+        var _this = _super.call(this) || this;
+        _this.fnc = fnc;
+        _this.args = args;
+        return _this;
     }
+    FunctionCallNode.prototype.getChildNodes = function () {
+        return [
+            this.fnc,
+            this.args
+        ];
+    };
     FunctionCallNode.prototype.evaluate = function (scope) {
         return __awaiter(this, void 0, void 0, function () {
-            var values;
-            return __generator(this, function (_a) {
-                switch (_a.label) {
-                    case 0: return [4 /*yield*/, this.args.evaluate(scope)];
+            var functionScope, values;
+            var _a;
+            return __generator(this, function (_b) {
+                switch (_b.label) {
+                    case 0:
+                        functionScope = scope;
+                        if (!(this.fnc instanceof ScopeMemberNode)) return [3 /*break*/, 2];
+                        return [4 /*yield*/, this.fnc.scope.evaluate(scope)];
                     case 1:
-                        values = _a.sent();
+                        functionScope = _b.sent();
+                        _b.label = 2;
+                    case 2: return [4 /*yield*/, this.args.evaluate(scope)];
+                    case 3:
+                        values = _b.sent();
                         return [4 /*yield*/, this.fnc.evaluate(scope)];
-                    case 2: return [2 /*return*/, (_a.sent()).apply(void 0, values)];
+                    case 4: return [2 /*return*/, (_a = (_b.sent())).call.apply(_a, __spreadArray([functionScope.wrapped || functionScope], values))];
                 }
             });
         });
     };
     return FunctionCallNode;
-}());
-var FunctionArgumentNode = /** @class */ (function () {
+}(Node));
+var FunctionArgumentNode = /** @class */ (function (_super) {
+    __extends(FunctionArgumentNode, _super);
     function FunctionArgumentNode(args) {
-        this.args = args;
+        var _this = _super.call(this) || this;
+        _this.args = args;
+        return _this;
     }
+    FunctionArgumentNode.prototype.getChildNodes = function () {
+        return __spreadArray([], this.args);
+    };
     FunctionArgumentNode.prototype.evaluate = function (scope) {
         return __awaiter(this, void 0, void 0, function () {
             var values, _i, _a, arg, _b, _c;
@@ -640,59 +745,97 @@ var FunctionArgumentNode = /** @class */ (function () {
         });
     };
     return FunctionArgumentNode;
-}());
-var ScopeMemberNode = /** @class */ (function () {
+}(Node));
+var ScopeMemberNode = /** @class */ (function (_super) {
+    __extends(ScopeMemberNode, _super);
     function ScopeMemberNode(scope, name) {
-        this.scope = scope;
-        this.name = name;
+        var _this = _super.call(this) || this;
+        _this.scope = scope;
+        _this.name = name;
+        return _this;
     }
+    ScopeMemberNode.prototype.getChildNodes = function () {
+        return [
+            this.scope,
+            this.name
+        ];
+    };
     ScopeMemberNode.prototype.evaluate = function (scope) {
         return __awaiter(this, void 0, void 0, function () {
-            var parent, _a, _b, _c, _d;
-            return __generator(this, function (_e) {
-                switch (_e.label) {
+            var parent, _a, _b, _c, _d, _e, value, _f, _g;
+            return __generator(this, function (_h) {
+                switch (_h.label) {
                     case 0: return [4 /*yield*/, this.scope.evaluate(scope)];
                     case 1:
-                        parent = _e.sent();
-                        if (!!parent) return [3 /*break*/, 3];
-                        _a = Error;
-                        _b = "Cannot access \"";
+                        parent = _h.sent();
+                        if (!!parent) return [3 /*break*/, 5];
+                        _b = (_a = console).log;
+                        _c = ['failure, scope: ', scope, 'parent scope'];
+                        return [4 /*yield*/, this.scope.evaluate(scope)];
+                    case 2:
+                        _c = _c.concat([_h.sent(), 'member']);
                         return [4 /*yield*/, this.name.evaluate(scope)];
-                    case 2: throw _a.apply(void 0, [_b + (_e.sent()) + "\" of undefined."]);
                     case 3:
-                        _d = (_c = parent).get;
+                        _b.apply(_a, _c.concat([_h.sent()]));
+                        _d = Error;
+                        _e = "Cannot access \"";
                         return [4 /*yield*/, this.name.evaluate(scope)];
-                    case 4: return [2 /*return*/, _d.apply(_c, [_e.sent()])];
+                    case 4: throw _d.apply(void 0, [_e + (_h.sent()) + "\" of undefined."]);
+                    case 5:
+                        _g = (_f = parent).get;
+                        return [4 /*yield*/, this.name.evaluate(scope)];
+                    case 6:
+                        value = _g.apply(_f, [_h.sent(), false]);
+                        return [2 /*return*/, value instanceof Scope_1.Scope && value.wrapped || value];
                 }
             });
         });
     };
     return ScopeMemberNode;
-}());
-var RootScopeMemberNode = /** @class */ (function () {
+}(Node));
+var RootScopeMemberNode = /** @class */ (function (_super) {
+    __extends(RootScopeMemberNode, _super);
     function RootScopeMemberNode(name) {
-        this.name = name;
+        var _this = _super.call(this) || this;
+        _this.name = name;
+        return _this;
     }
+    RootScopeMemberNode.prototype.getChildNodes = function () {
+        return [
+            this.name
+        ];
+    };
     RootScopeMemberNode.prototype.evaluate = function (scope) {
         return __awaiter(this, void 0, void 0, function () {
-            var _a, _b;
+            var value, _a, _b;
             return __generator(this, function (_c) {
                 switch (_c.label) {
                     case 0:
                         _b = (_a = scope).get;
                         return [4 /*yield*/, this.name.evaluate(scope)];
-                    case 1: return [2 /*return*/, _b.apply(_a, [_c.sent()])];
+                    case 1:
+                        value = _b.apply(_a, [_c.sent()]);
+                        return [2 /*return*/, value instanceof Scope_1.Scope && value.wrapped || value];
                 }
             });
         });
     };
     return RootScopeMemberNode;
-}());
-var AssignmentNode = /** @class */ (function () {
+}(Node));
+var AssignmentNode = /** @class */ (function (_super) {
+    __extends(AssignmentNode, _super);
     function AssignmentNode(rootNode, toAssign) {
-        this.rootNode = rootNode;
-        this.toAssign = toAssign;
+        var _this = _super.call(this) || this;
+        _this.rootNode = rootNode;
+        _this.toAssign = toAssign;
+        return _this;
     }
+    AssignmentNode.prototype.getChildNodes = function () {
+        return [
+            this.rootNode,
+            this.toAssign
+        ];
+    };
     AssignmentNode.prototype.evaluate = function (scope) {
         return __awaiter(this, void 0, void 0, function () {
             var name, value;
@@ -722,13 +865,22 @@ var AssignmentNode = /** @class */ (function () {
         return new AssignmentNode(lastNode, Tree.processTokens(assignmentTokens));
     };
     return AssignmentNode;
-}());
-var ArithmeticNode = /** @class */ (function () {
+}(Node));
+var ArithmeticNode = /** @class */ (function (_super) {
+    __extends(ArithmeticNode, _super);
     function ArithmeticNode(left, right, type) {
-        this.left = left;
-        this.right = right;
-        this.type = type;
+        var _this = _super.call(this) || this;
+        _this.left = left;
+        _this.right = right;
+        _this.type = type;
+        return _this;
     }
+    ArithmeticNode.prototype.getChildNodes = function () {
+        return [
+            this.left,
+            this.right
+        ];
+    };
     ArithmeticNode.prototype.evaluate = function (scope) {
         return __awaiter(this, void 0, void 0, function () {
             var left, right;
@@ -768,13 +920,22 @@ var ArithmeticNode = /** @class */ (function () {
         return new ArithmeticNode(lastNode, Tree.processTokens(Tree.getNextStatmentTokens(tokens)), token.type);
     };
     return ArithmeticNode;
-}());
-var ArithmeticAssignmentNode = /** @class */ (function () {
+}(Node));
+var ArithmeticAssignmentNode = /** @class */ (function (_super) {
+    __extends(ArithmeticAssignmentNode, _super);
     function ArithmeticAssignmentNode(left, right, type) {
-        this.left = left;
-        this.right = right;
-        this.type = type;
+        var _this = _super.call(this) || this;
+        _this.left = left;
+        _this.right = right;
+        _this.type = type;
+        return _this;
     }
+    ArithmeticAssignmentNode.prototype.getChildNodes = function () {
+        return [
+            this.left,
+            this.right
+        ];
+    };
     ArithmeticAssignmentNode.prototype.evaluate = function (scope) {
         return __awaiter(this, void 0, void 0, function () {
             var name, left, right;
@@ -829,7 +990,7 @@ var ArithmeticAssignmentNode = /** @class */ (function () {
         return new ArithmeticAssignmentNode(lastNode, Tree.processTokens(assignmentTokens), token.type);
     };
     return ArithmeticAssignmentNode;
-}());
+}(Node));
 var Tree = /** @class */ (function () {
     function Tree(code) {
         this.code = code;
@@ -837,7 +998,6 @@ var Tree = /** @class */ (function () {
     }
     Tree.prototype.parse = function () {
         var tokens = tokenize(this.code);
-        this.scopeMemberNodes = [];
         this.rootNode = Tree.processTokens(tokens);
     };
     Tree.prototype.evaluate = function (scope) {
@@ -846,6 +1006,33 @@ var Tree = /** @class */ (function () {
                 switch (_a.label) {
                     case 0: return [4 /*yield*/, this.rootNode.evaluate(scope)];
                     case 1: return [2 /*return*/, _a.sent()];
+                }
+            });
+        });
+    };
+    Tree.prototype.bindToScopeChanges = function (scope, fnc) {
+        return __awaiter(this, void 0, void 0, function () {
+            var _i, _a, node, _scope, name_1;
+            return __generator(this, function (_b) {
+                switch (_b.label) {
+                    case 0:
+                        _i = 0, _a = this.rootNode.findChildrenByType(ScopeMemberNode);
+                        _b.label = 1;
+                    case 1:
+                        if (!(_i < _a.length)) return [3 /*break*/, 5];
+                        node = _a[_i];
+                        return [4 /*yield*/, node.scope.evaluate(scope)];
+                    case 2:
+                        _scope = _b.sent();
+                        return [4 /*yield*/, node.name.evaluate(scope)];
+                    case 3:
+                        name_1 = _b.sent();
+                        _scope.bind("change:" + name_1, fnc);
+                        _b.label = 4;
+                    case 4:
+                        _i++;
+                        return [3 /*break*/, 1];
+                    case 5: return [2 /*return*/];
                 }
             });
         });
