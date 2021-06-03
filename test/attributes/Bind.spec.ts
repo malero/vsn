@@ -111,7 +111,7 @@ describe('Bind', () => {
             const tag = dom.getTagForElement(test);
             expect(tag.scope.get('val')).toBe('testing');
 
-            tag.bind('mutate', () => {
+             tag.scope.get('test').bind('change:val', () => {
                 expect(test.innerHTML).toBe('new-val');
                 done();
             });
