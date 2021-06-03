@@ -1,39 +1,48 @@
 import {Attribute} from "../Attribute";
 import {Tag} from "../Tag";
 import {Scope, WrappedArray} from "../Scope";
-import {Tree} from "../ast";
+import {Tree} from "../AST";
+import {ElementHelper} from "../helpers/ElementHelper";
 
 export class List extends Attribute {
+    public static readonly scoped: boolean = true;
     protected items: any[];
     protected tags: Tag[];
     protected template: Node;
 
-    public setup(): void {
-        const listAttr: string = this.tag.rawAttributes['v-list'];
-        (new Tree(listAttr)).evaluate(this.tag.scope).then(this.addExistingItems.bind(this));
+    public async extract() {
+        const listAttr: string = this.getAttributeBinding();
+        const tree = new Tree(listAttr);
+        const items = await tree.evaluate(this.tag.scope);
+        await this.addExistingItems(items)
     }
 
-    protected addExistingItems(defaultList: any[] | null) {
-        const controllerClassName: string = this.tag.rawAttributes['v-item-class'];
-        const cls: any = window[controllerClassName];
-
-        this.items = defaultList || [];
+    protected async addExistingItems(defaultList: any[] | null) {
+        this.items = defaultList || new WrappedArray();
         this.tags = [];
+
+        if (defaultList)
+            for (const existingItem of defaultList) {
+                await this.add(existingItem);
+            }
 
         if (this.tag.element.children.length > 0) {
             this.template = this.tag.element.children[0].cloneNode(true);
         }
 
-        for (const element of Array.from(this.tag.element.querySelectorAll('[v-list-item]'))) {
+        for (const element of Array.from(this.tag.element.querySelectorAll('*'))) {
+            if (!ElementHelper.hasVisionAttribute(element, 'v-list-item'))
+                continue;
+
             const tag: Tag = this.tag.dom.getTagForElement(element);
             if (tag) {
                 this.tags.push(tag);
-                this.items.push(tag.wrap(cls));
+                this.items.push(tag.scope.wrapped || tag.scope);
             }
         }
 
         if (!(this.items instanceof WrappedArray)) {
-
+            this.items = new WrappedArray(this.items);
         }
 
         (this.items as WrappedArray<any>).bind('add', (item) => {
@@ -45,14 +54,19 @@ export class List extends Attribute {
     }
 
     public get listItemName(): string {
-        return this.tag.rawAttributes['v-list-item-name'] || 'item';
+        return this.tag.getRawAttributeValue('v-list-item-name', 'item');
+    }
+
+    public get listItemModel(): string {
+        return this.tag.getRawAttributeValue('v-list-item-model', 'DataModel');
     }
 
     public remove(item: any) {
         for (let i: number = 0; i < this.tags.length; i++) {
             const tag: Tag = this.tags[i];
-            if (tag.scope.get(this.listItemName) == item) {
-                tag.decompose();
+            const listItem = tag.scope.get(this.listItemName);
+            if ([listItem, listItem.wrapped].indexOf(item) > -1) {
+                tag.removeFromDOM();
                 this.tags.splice(i, 1);
 
                 return;
@@ -60,17 +74,19 @@ export class List extends Attribute {
         }
     }
 
-    protected add(obj) {
+    protected async add(obj) {
         const element: HTMLElement = this.template.cloneNode(true) as HTMLElement;
         this.tag.element.appendChild(element);
 
-        this.tag.dom.buildFrom(this.tag.element);
+        await this.tag.dom.buildFrom(this.tag.element);
         const tag: Tag = this.tag.dom.getTagForElement(element);
         this.tags.push(tag);
         const scope: Scope = tag.scope.get(this.listItemName);
         scope.clear();
 
         if (obj) {
+            // Scope has already wrapped a new v-list-item-model, so we need to unwrap and wrap the passed object
+            tag.unwrap();
             tag.wrap(obj, true);
         }
     }

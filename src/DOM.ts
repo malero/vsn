@@ -1,28 +1,64 @@
 import {Tag} from "./Tag";
+import {ElementHelper} from "./helpers/ElementHelper";
+import {EventDispatcher} from "simple-ts-event-dispatcher";
 
-export class DOM {
+export class DOM extends EventDispatcher {
+    protected root: Tag;
     protected tags: Tag[];
+    protected observer: MutationObserver;
+    protected evaluateTimeout: any;
 
     constructor(
-        protected document: Document
+        protected document: Document,
+        build: boolean = true
     ) {
+        super();
+        this.observer = new MutationObserver(this.mutation.bind(this));
         this.tags = [];
-        this.tags.push(new Tag(Array.from(document.getElementsByTagName('body'))[0], this));
-        this.buildFrom(document);
+
+        if (build) {
+            this.buildFrom(document);
+        }
+        this.evaluate();
     }
 
-    buildFrom(ele: any) {
+    public registerElementInRoot(tag: Tag): void {
+        const id: string = ElementHelper.normalizeElementID(tag.element.getAttribute('id'));
+        if (!!id)
+            this.root.scope.set(`#${id}`, tag.scope);
+    }
+
+    public evaluate() {
+        clearTimeout(this.evaluateTimeout);
+        for (const tag of this.tags) {
+            tag.evaluate();
+        }
+    }
+
+    public mutation(mutations: MutationRecord[]) {
+        for (const mutation of mutations) {
+            const tag: Tag = this.getTagForElement(mutation.target as HTMLElement);
+            if (tag) {
+                tag.mutate(mutation);
+            }
+        }
+    }
+
+    async buildFrom(ele: any) {
         // Assign parents to each tag
         const allElements: HTMLElement[] = [];
+
+        document.body.setAttribute('v-root', '');
+
         for (const tag of this.tags)
             allElements.push(tag.element);
 
         // Create tags for each html element with a v-attribute
         const newTags: Tag[] = [];
-        for (const selector in Tag.attributeMap) {
-            for (const element of Array.from(ele.querySelectorAll(`[${selector}]`))) {
-                if (allElements.indexOf(element as HTMLElement) > -1) continue;
-
+        for (const _e of Array.from(ele.querySelectorAll(`*`))) {
+            const element: HTMLElement = _e as HTMLElement;
+            if (allElements.indexOf(element) > -1) continue;
+            if (ElementHelper.hasVisionAttribute(element)) {
                 const tag: Tag = new Tag(element as HTMLElement, this);
                 this.tags.push(tag);
                 newTags.push(tag);
@@ -30,25 +66,56 @@ export class DOM {
             }
         }
 
+        this.root = this.getTagForElement(document.body);
+
+        // Configure, setup & execute attributes
+        for (const tag of newTags)
+            await tag.buildAttributes();
+
         for (const tag of newTags) {
+            if (tag === this.root)
+                continue;
+
             // Find closest ancestor
             let parentElement: HTMLElement = tag.element.parentElement as HTMLElement;
+            let foundParent = false;
             while (parentElement) {
                 if (allElements.indexOf(parentElement) > -1) {
-                    tag.parent = this.getTagForElement(parentElement);
+                    foundParent = true;
+                    tag.parentTag = this.getTagForElement(parentElement);
                     break;
                 }
 
                 parentElement = parentElement.parentElement as HTMLElement;
             }
+            if (!foundParent)
+                console.log('Could not find parent for ', tag);
         }
 
-        // Configure & setup attributes
         for (const tag of newTags)
-            tag.buildAttributes();
+            await tag.setupAttributes();
 
         for (const tag of newTags)
-            tag.setupAttributes();
+            await tag.extractAttributes();
+
+        for (const tag of newTags)
+            await tag.connectAttributes();
+
+        for (const tag of newTags)
+            this.registerElementInRoot(tag);
+
+        for (const tag of newTags)
+            tag.finalize();
+
+        for (const tag of newTags)
+            this.observer.observe(tag.element, {
+                attributes: true,
+                characterData: true,
+                childList: true,
+                subtree: true
+            });
+
+        this.trigger('built');
     }
 
     getTagForElement(element: Element): Tag {

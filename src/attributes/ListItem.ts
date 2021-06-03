@@ -3,13 +3,38 @@ import {Tag} from "../Tag";
 import {List} from "./List";
 
 export class ListItem extends Attribute {
-    public setup(): void {
-        const parent: Tag = this.tag.parent;
-        const list: List = parent.getAttribute('v-list') as List;
-        this.tag.scope.set(list.listItemName, this.tag.scope);
+    public static readonly scoped: boolean = true;
+    public static readonly ERROR_NO_PARENT = "Cannot find list parent.";
+    protected _list: Tag;
+
+    public get list(): Tag {
+        return this._list;
     }
 
-    protected configure(): void {
+    public async setup() {
+        this._list = this.tag.findAncestorByAttribute('v-list');
+        if (!this._list)
+            throw Error(ListItem.ERROR_NO_PARENT);
 
+        this.tag.scope.set(this.listItemName, this.tag.scope);
+        const modelName: string = this.modelClassName;
+        const cls = await window['Vision'].instance.getClass(modelName);
+        this.instantiateModel(cls);
+    }
+
+    public get listItemName(): string {
+        return this.getAttributeBinding('item');
+    }
+
+    public get modelClassName(): string {
+        return this.getAttributeValue(this._list.getAttribute<List>('v-list').listItemModel);
+    }
+
+    protected async configure() {
+
+    }
+
+    private instantiateModel(model: any) {
+        this.tag.wrap(model);
     }
 }

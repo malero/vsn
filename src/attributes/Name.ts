@@ -2,9 +2,11 @@ import {Attribute} from "../Attribute";
 import {Scope} from "../Scope";
 
 export class Name extends Attribute {
-    public setup(): void {
-        const parentScope: Scope = this.tag.scope.parent;
+    public static readonly scoped: boolean = true;
+
+    public async setup() {
+        const parentScope: Scope = this.tag.scope.parentScope;
         if (parentScope)
-            parentScope.set(this.tag.rawAttributes['v-name'], this.tag.scope);
+            parentScope.set(this.tag.parsedAttributes['v-name'][1], this.tag.scope);
     }
 }

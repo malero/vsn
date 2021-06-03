@@ -1,31 +1,39 @@
 <!doctype html>
-
 <html lang="en">
 <head>
   <meta charset="utf-8">
+  <title>SEO Javascript Test</title>
 
-  <title>VisionJS Demo</title>
-
-  <style type="text/css">
-
-  </style>
+  <style type="text/css"></style>
     <script type="text/javascript">
         var TestController = (function () {
             function TestController() {
-                this.reset();
-            }
-            TestController.prototype.reset = function () {
-                this.name = '';
                 this.items = [];
+                this.name = null;
+                this.age = null;
+            }
+
+            TestController.prototype.reset = function () {
+                console.log('reset', this);
+                this.name = '';
+                this.age = '';
             };
+
+            TestController.prototype.add = function () {
+                this.items.push(new TestItem(this.name, this.age));
+                this.reset();
+            };
+
             return TestController;
         }());
 
         var TestItem = (function () {
-            function TestItem() {
-                this.name = null;
-                this.age = null;
+            function TestItem(name = null, age = null) {
+                this.name = name;
+                this.age = age;
+                console.log('Constructing additional pylons');
             }
+
             TestItem.prototype.reset = function () {
                 this.name = '';
                 this.age = '';
@@ -36,23 +44,34 @@
 </head>
 
 <body>
-    <div v-class="TestController" v-name="test">
-        <h1>Hello, this is a VisionJS Demo! Value: <span v-bind="test.name">Testing</span></h1>
+    <div v-controller:test="TestController" id="testing">
+        <h1>Value: <span v-bind="test.name">Testing</span> <span v-bind="test.age">32</span></h1>
         <input type="text" v-bind="test.name" />
-        <button v-click="test.reset()">Reset</button>
-        <button v-click="list.add()">Add New List Item</button>
-        <ul v-list="test.items" v-name="list">
-            <li v-class="TestItem" v-list-item>
+        <input type="text" v-bind="test.age" />
+        <button v-click="test.reset()" v-if="test.name">Reset</button>
+        <button v-click="test.add();">Add New List Item</button>
+        <ul v-list:test.items v-list-item-model="TestItem" v-name="list">
+            <li v-list-item>
                 <span v-bind="item.name">Tom</span>, <span v-bind="item.age">22</span> Years Old <input type="text" v-bind="item.name" /> <input type="text" v-bind="item.age" /> <button v-click="item.reset()">R</button> <button v-click="list.remove(item)">X</button>
             </li>
-            <li v-list-item v-class="TestItem">
+            <li v-list-item>
                 <span v-bind="item.name">Steve</span>, <span v-bind="item.age">46</span> Years Old  <input type="text" v-bind="item.name" /> <input type="text" v-bind="item.age" /> <button v-click="item.reset()">R</button> <button v-click="list.remove(item)">X</button>
             </li>
-            <li v-list-item v-class="TestItem">
+            <li v-list-item>
                 <span v-bind="item.name">Frank</span>, <span v-bind="item.age">31</span> Years Old  <input type="text" v-bind="item.name" /> <input type="text" v-bind="item.age" /> <button v-click="item.reset()">R</button> <button v-click="list.remove(item)">X</button>
+            </li>
+            <li v-list-item>
+                <span v-bind="item.name">Joe</span>, <span v-bind="item.age">91</span> Years Old  <input type="text" v-bind="item.name" /> <input type="text" v-bind="item.age" /> <button v-click="item.reset()">R</button> <button v-click="list.remove(item)">X</button>
             </li>
         </ul>
     </div>
+
     <script type="text/javascript" src="vision.js"></script>
+    <script type="text/javascript">
+        window.addEventListener('load', function () {
+            vision.registerClass(TestController, 'TestController');
+            vision.registerClass(TestItem, 'TestItem');
+        });
+    </script>
 </body>
 </html>

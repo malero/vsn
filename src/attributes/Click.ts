@@ -1,16 +1,20 @@
 import {Attribute} from "../Attribute";
-import {Tree} from "../ast";
+import {Tree} from "../AST";
+import {ElementHelper} from "../helpers/ElementHelper";
 
 export class Click extends Attribute {
     protected clickHandler: Tree;
 
-    public setup(): void {
-        const click: string = this.tag.rawAttributes['v-click'];
+    public async setup() {
+        const click: string = ElementHelper.normalizeElementID(this.getAttributeValue());
         this.clickHandler = new Tree(click);
-        this.tag.element.onclick = this.onClick.bind(this);
     }
 
-    onClick() {
+    public async connect() {
+        this.tag.addClickHandler(this.onClick.bind(this));
+    }
+
+    onClick(e) {
         this.clickHandler.evaluate(this.tag.scope);
     }
 }

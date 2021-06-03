@@ -12,7 +12,7 @@ export class ScopeReference {
 export class WrappedArray<T> extends Array<T> {
     private _listeners: EventCallbackList;
     private _lastKey: number;
-    public readonly __wrapped__: boolean = true;
+    public readonly $wrapped: boolean = true;
 
     constructor(...items: T[]) {
         super(...items);
@@ -105,29 +105,29 @@ export class WrappedArray<T> extends Array<T> {
 
 
 export class Scope extends EventDispatcher {
-    protected wrapped: any;
+    public wrapped: any;
     protected data: DataModel;
     protected children: Scope[];
     protected keys: string[];
-    protected _parent: Scope;
+    protected _parentScope: Scope;
 
     constructor(
         parent?: Scope
     ) {
         super();
         if (parent)
-            this.parent = parent;
+            this.parentScope = parent;
         this.children = [];
         this.data = new DataModel({});
         this.keys = [];
     }
 
-    public get parent(): Scope {
-        return this._parent;
+    public get parentScope(): Scope {
+        return this._parentScope;
     }
 
-    public set parent(scope: Scope) {
-        this._parent = scope;
+    public set parentScope(scope: Scope) {
+        this._parentScope = scope;
         scope.addChild(this);
     }
 
@@ -160,10 +160,13 @@ export class Scope extends EventDispatcher {
     }
 
     get(key: string, searchParents: boolean = true): any {
+        if (key.indexOf('-') > -1)
+            throw Error('Cannot have hyphens in variable names.');
+
         const value: any = this.data[key];
         if (value === undefined) {
-            if (searchParents && this.parent)
-                return this.parent.get(key, searchParents);
+            if (searchParents && this.parentScope)
+                return this.parentScope.get(key, searchParents);
 
             return '';
         }
@@ -172,13 +175,23 @@ export class Scope extends EventDispatcher {
     }
 
     set(key: string, value: any) {
+        if (key.indexOf('-') > -1)
+            throw Error('Cannot have hyphens in variable names.');
+
         if (this.data[key] === undefined)
             this.data.createField(key);
 
         if (this.data[key] !== value) {
+            const previousValue = this.data[key];
             this.data[key] = value;
-            this.trigger(`change:${key}`, value);
-            this.trigger('change', key, value);
+            const event = {
+                value: value,
+                previousValue: previousValue,
+                key: key
+            };
+
+            this.trigger(`change:${key}`, event);
+            this.trigger('change', key, event);
         }
 
         if (this.keys.indexOf(key) === -1)
@@ -200,40 +213,44 @@ export class Scope extends EventDispatcher {
 
     cleanup() {
         this.children.length = 0;
-        this.parent = null;
+        this.parentScope = null;
     }
 
     public wrap(wrapped: any, triggerUpdates: boolean = false) {
-        if (this.wrapped !== undefined)
+        if ([null, undefined].indexOf(this.wrapped) === -1)
             throw Error("A scope can only wrap a single object");
 
-        if (wrapped['__wrapped__'])
-            throw Error("An object should only be wrapped once.")
+        if (!wrapped) {
+            throw Error("Can only wrap objects.");
+        }
+
+        if (wrapped['$wrapped']) {
+            throw Error("An object should only be wrapped once.");
+        }
 
         this.wrapped = wrapped;
-        this.wrapped['__wrapped__'] = true;
+        this.wrapped['$wrapped'] = true;
         for (const field in wrapped) {
-            if (['constructor'].indexOf(field) > -1)
+            if (['constructor'].indexOf(field) > -1 || field.startsWith('$'))
                 continue;
 
             if (this.wrapped[field] instanceof Array) {
                 this.wrapped[field] = new WrappedArray(...wrapped[field]);
             }
 
+            // Populate scope data from wrapped object before we update the getter
+            if (this.wrapped[field] !== undefined)
+                this.set(field, this.wrapped[field]);
+
             const getter = () => {
-                let val = this.wrapped[field];
-                if (typeof val === 'function')
-                    val = val.bind(this.data);
-                return val;
+                return this.get(field);
             };
 
             const setter = (value: any) => {
-                this.wrapped[field] = value;
-                this.trigger(`change:${field}`, value);
-                this.trigger('change', field, value);
+                this.set(field, value);
             };
 
-            Object.defineProperty(this.data, field, {
+            Object.defineProperty(this.wrapped, field, {
                 get: getter,
                 set: setter,
                 enumerable: true,
@@ -243,5 +260,23 @@ export class Scope extends EventDispatcher {
             if (triggerUpdates)
                 this.trigger(`change:${field}`);
         }
+
+        this.wrapped.get = this.get.bind(this);
+        this.wrapped.set = this.set.bind(this);
+        this.wrapped.bind = this.bind.bind(this);
+        this.wrapped.once = this.once.bind(this);
+        this.wrapped.unbind = this.unbind.bind(this);
+    }
+
+    public unwrap(): void {
+        for (const field in this.wrapped) {
+            Object.defineProperty(this.wrapped, field, {
+                get: () => null,
+                set: (_) => null,
+                enumerable: true,
+                configurable: true
+            });
+        }
+        this.wrapped = null;
     }
 }
