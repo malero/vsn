@@ -178,6 +178,7 @@ export class Tag extends EventDispatcher {
 
         this.scope.wrap(obj, triggerUpdates);
         obj['$scope'] = this.scope;
+        obj['$tag'] = this;
         return obj;
     }
 
@@ -218,7 +219,6 @@ export class Tag extends EventDispatcher {
         for (const attr of this.attributes)
             if (attr instanceof cls)
                 return attr as any as T;
-
     }
 
     public getRawAttributeValue(key: string, fallback: any = null) {
@@ -259,6 +259,7 @@ export class Tag extends EventDispatcher {
             await attr.setup();
         }
         this._state = TagState.AttributesSetup;
+        this.callOnWrapped('$onAttributesSetup');
     }
 
     public async extractAttributes() {
@@ -266,6 +267,7 @@ export class Tag extends EventDispatcher {
             await attr.extract();
         }
         this._state = TagState.AttributesExtracted;
+        this.callOnWrapped('$onAttributesExtracted');
     }
 
     public async connectAttributes() {
@@ -273,10 +275,20 @@ export class Tag extends EventDispatcher {
             await attr.connect();
         }
         this._state = TagState.AttributesConnected;
+        this.callOnWrapped('$onAttributesConnected');
     }
 
     public finalize(): void {
         this._state = TagState.Built;
+        this.callOnWrapped('$onBuilt');
+    }
+
+    public callOnWrapped(method, ...args: any[]): boolean {
+        if (this.scope && this.scope.wrapped && this.scope.wrapped[method]) {
+            this.scope.wrapped[method](...args);
+            return true;
+        }
+        return false;
     }
 
     protected onclick(e) {
