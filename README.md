@@ -27,7 +27,7 @@ Use `vsn-if` if you would only like to show an element if a certain condition is
 
 
 ### Controllers
-Use `vsn-controller="ClassName"` to bind an element to a controller class.
+Use `vsn-controller:variable="ClassName"` to bind an element to a controller class.
 
 Typescript class controller:
 

@@ -30,6 +30,12 @@ export class SetAttribute extends Attribute {
     }
 
     public async extract() {
-        this.boundScope.set(this.key, this.getAttributeValue(null));
+        let value = this.getAttributeValue(null);
+        const typeIndex: number = value.indexOf('|');
+        if (typeIndex > -1) {
+            this.boundScope.setType(this.key, this.boundScope.stringToType(value.substr(typeIndex + 1)));
+            value = value.substr(0, typeIndex);
+        }
+        this.boundScope.set(this.key, value);
     }
 }

@@ -9,6 +9,13 @@ export class ScopeReference {
     ) {}
 }
 
+export enum ScopeVariableType {
+    String,
+    Integer,
+    Float,
+    Boolean
+}
+
 export class WrappedArray<T> extends Array<T> {
     private _listeners: EventCallbackList;
     private _lastKey: number;
@@ -107,6 +114,7 @@ export class WrappedArray<T> extends Array<T> {
 export class Scope extends EventDispatcher {
     public wrapped: any;
     protected data: DataModel;
+    protected types: {[key: string]: ScopeVariableType;} = {};
     protected children: Scope[];
     protected keys: string[];
     protected _parentScope: Scope;
@@ -184,6 +192,20 @@ export class Scope extends EventDispatcher {
         if (this.data[key] === undefined)
             this.data.createField(key);
 
+        if (typeof value === 'string') {
+            switch (this.getType(key)) {
+                case ScopeVariableType.Integer:
+                    value = parseInt(value);
+                    break;
+                case ScopeVariableType.Float:
+                    value = parseFloat(value);
+                    break;
+                case ScopeVariableType.Boolean:
+                    value = [0, '0', 'false', ''].indexOf(value) === -1;
+                    break;
+            }
+        }
+
         if (this.data[key] !== value) {
             const previousValue = this.data[key];
             this.data[key] = value;
@@ -199,6 +221,35 @@ export class Scope extends EventDispatcher {
 
         if (this.keys.indexOf(key) === -1)
             this.keys.push(key);
+    }
+
+    has(key: string): boolean {
+        return this.keys.indexOf(key) > -1;
+    }
+
+    setType(key: string, type: ScopeVariableType) {
+        this.types[key] = type;
+        if (this.has(key))
+            this.set(key, this.get(key));
+    }
+
+    getType(key: string): ScopeVariableType {
+        return this.types[key] || ScopeVariableType.String;
+    }
+
+    stringToType(str: string): ScopeVariableType {
+        switch(str.toLowerCase()) {
+            case 'int':
+            case 'integer':
+                return ScopeVariableType.Integer;
+            case 'float':
+                return ScopeVariableType.Float;
+            case 'boolean':
+            case 'bool':
+                return ScopeVariableType.Boolean;
+            default:
+                return ScopeVariableType.String;
+        }
     }
 
     extend(data) {
