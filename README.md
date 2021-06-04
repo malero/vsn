@@ -4,7 +4,7 @@ Simple Javascript Framework built from the ground up with eCommerce and SEO in m
 
 ## Examples
 ### Set A Scope Variable
-Use `vsn-set` to set a variable in the scope. `vsn-set` is only used to initialize a value and will only be evaluated once.
+Use `vsn-set:variableName="value|type"` to set a variable in the scope. `vsn-set` is only used to initialize a value and will only be evaluated once.
 
     <div vsn-set:myInt="42|int"></div>
     <div vsn-set:myFloat="42.3|float"></div>
