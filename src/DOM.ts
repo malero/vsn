@@ -73,7 +73,6 @@ export class DOM extends EventDispatcher {
         }
 
         this.root = await this.getTagForElement(document.body);
-        console.log('newTags', newTags);
 
         // Configure, setup & execute attributes
         for (const tag of newTags)
