@@ -1,4 +1,7 @@
 import {Scope} from "./Scope";
+import {DOM} from "./DOM";
+import {Tag} from "./Tag";
+import {StandardAttribute} from "./attributes/StandardAttribute";
 
 function lower(str: string): string {
     return str ? str.toLowerCase() : null;
@@ -63,7 +66,7 @@ export enum TokenType {
     MULTIPLY_ASSIGN,
     DIVIDE_ASSIGN,
     EXCLAMATION_POINT,
-    ELEMENT_ID,
+    ELEMENT_REFERENCE,
     ELEMENT_ATTRIBUTE,
 }
 
@@ -106,10 +109,10 @@ const TOKEN_PATTERNS: TokenPattern[] = [
     },
     {
         type: TokenType.ELEMENT_ATTRIBUTE,
-        pattern: /@[_a-zA-Z0-9]*/
+        pattern: /^\.?@[_a-zA-Z0-9]*/
     },
     {
-        type: TokenType.ELEMENT_ID,
+        type: TokenType.ELEMENT_REFERENCE,
         pattern: /^#[-_a-zA-Z0-9]*/
     },
     {
@@ -271,12 +274,18 @@ export function tokenize(code: string): Token[] {
 
 
 export interface TreeNode<T = any> {
-    evaluate(scope: Scope);
+    evaluate(scope: Scope, dom: DOM);
+    prepare(scope: Scope, dom: DOM);
 }
 
 
 export abstract class Node implements TreeNode {
-    abstract evaluate(scope: Scope);
+    abstract evaluate(scope: Scope, dom: DOM);
+    async prepare(scope: Scope, dom: DOM) {
+        for (const node of this.getChildNodes()) {
+            await node.prepare(scope, dom);
+        }
+    }
 
     getChildNodes(): Node[] {
         return [];
@@ -313,12 +322,18 @@ export class BlockNode extends Node implements TreeNode {
         return [...(this.statements as Node[])];
     }
 
-    public async evaluate(scope) {
+    public async evaluate(scope: Scope, dom: DOM) {
         let returnValue: any = null;
         for (let i = 0; i < this.statements.length; i++) {
-            returnValue = await this.statements[i].evaluate(scope);
+            returnValue = await this.statements[i].evaluate(scope, dom);
         }
         return returnValue;
+    }
+
+    public async prepare(scope: Scope, dom: DOM) {
+        for (let i = 0; i < this.statements.length; i++) {
+            await this.statements[i].prepare(scope, dom);
+        }
     }
 }
 
@@ -338,9 +353,9 @@ class ComparisonNode extends Node implements TreeNode {
         ];
     }
 
-    public async evaluate(scope) {
-        const left: any = await this.left.evaluate(scope);
-        const right: any = await this.right.evaluate(scope);
+    public async evaluate(scope: Scope, dom: DOM) {
+        const left: any = await this.left.evaluate(scope, dom);
+        const right: any = await this.right.evaluate(scope, dom);
         switch (this.type) {
             case TokenType.EQUALS:
                 return left === right;
@@ -389,10 +404,10 @@ class ConditionalNode extends Node implements TreeNode {
         ];
     }
 
-    public async evaluate(scope) {
-        const one = await this.condition.evaluate(scope);
+    public async evaluate(scope: Scope, dom: DOM) {
+        const one = await this.condition.evaluate(scope, dom);
         if (one) {
-            return await this.block.evaluate(scope);
+            return await this.block.evaluate(scope, dom);
         }
         return null;
     }
@@ -411,11 +426,11 @@ class IfStatementNode extends Node implements TreeNode {
         ]
     }
 
-    public async evaluate(scope: Scope) {
+    public async evaluate(scope: Scope, dom: DOM) {
         for (const condition of this.nodes) {
-            const uno = await condition.condition.evaluate(scope);
+            const uno = await condition.condition.evaluate(scope, dom);
             if (uno) {
-                return await condition.block.evaluate(scope);
+                return await condition.block.evaluate(scope, dom);
             }
         }
     }
@@ -477,12 +492,12 @@ class ForStatementNode extends Node implements TreeNode {
         ];
     }
 
-    public async evaluate(scope: Scope) {
-        const variable: string = await this.variable.evaluate(scope);
-        const list: any[] = await this.list.evaluate(scope);
+    public async evaluate(scope: Scope, dom: DOM) {
+        const variable: string = await this.variable.evaluate(scope, dom);
+        const list: any[] = await this.list.evaluate(scope, dom);
         for (let i = 0;i < list.length; i++) {
             scope.set(variable, list[i]);
-            await this.block.evaluate(scope);
+            await this.block.evaluate(scope, dom);
         }
 
         return null;
@@ -528,8 +543,8 @@ class MemberExpressionNode extends Node implements TreeNode {
         ]
     }
 
-    public async evaluate(scope: Scope) {
-        return await this.obj.evaluate(scope)[await this.name.evaluate(scope)];
+    public async evaluate(scope: Scope, dom: DOM) {
+        return await this.obj.evaluate(scope, dom)[await this.name.evaluate(scope, dom)];
     }
 }
 
@@ -540,8 +555,8 @@ class NotNode extends Node implements TreeNode {
         super();
     }
 
-    public async evaluate(scope) {
-        const flipping = await this.toFlip.evaluate(scope);
+    public async evaluate(scope: Scope, dom: DOM) {
+        const flipping = await this.toFlip.evaluate(scope, dom);
         return !flipping;
     }
 
@@ -576,7 +591,7 @@ class LiteralNode<T = any> extends Node implements TreeNode {
         super();
     }
 
-    public async evaluate(scope) {
+    public async evaluate(scope: Scope, dom: DOM) {
         return this.value;
     }
 }
@@ -617,8 +632,8 @@ class StringNode extends Node implements TreeNode<string> {
         ]
     }
 
-    public async evaluate(scope: Scope) {
-        return `${await this.node.evaluate(scope)}`;
+    public async evaluate(scope: Scope, dom: DOM) {
+        return `${await this.node.evaluate(scope, dom)}`;
     }
 }
 
@@ -638,13 +653,13 @@ class FunctionCallNode<T = any> extends Node implements TreeNode {
         ]
     }
 
-    public async evaluate(scope: Scope) {
+    public async evaluate(scope: Scope, dom: DOM) {
         let functionScope: Scope = scope;
         if (this.fnc instanceof ScopeMemberNode) {
-            functionScope = await this.fnc.scope.evaluate(scope);
+            functionScope = await this.fnc.scope.evaluate(scope, dom);
         }
-        const values = await this.args.evaluate(scope);
-        return (await this.fnc.evaluate(scope)).call(functionScope.wrapped || functionScope, ...values);
+        const values = await this.args.evaluate(scope, dom);
+        return (await this.fnc.evaluate(scope, dom)).call(functionScope.wrapped || functionScope, ...values);
     }
 }
 
@@ -662,10 +677,10 @@ class FunctionArgumentNode<T = any> extends Node implements TreeNode {
         ]
     }
 
-    async evaluate(scope: Scope) {
+    async evaluate(scope: Scope, dom: DOM) {
         const values: any[] = [];
         for (const arg of this.args) {
-            values.push(await arg.evaluate(scope));
+            values.push(await arg.evaluate(scope, dom));
         }
         return values;
     }
@@ -687,13 +702,13 @@ class ScopeMemberNode extends Node implements TreeNode {
         ]
     }
 
-    async evaluate(scope: Scope) {
-        const parent: Scope = await this.scope.evaluate(scope);
+    async evaluate(scope: Scope, dom: DOM) {
+        const parent: Scope = await this.scope.evaluate(scope, dom);
         if (!parent) {
-            console.log('failure, scope: ', scope, 'parent scope', await this.scope.evaluate(scope), 'member', await this.name.evaluate(scope));
-            throw Error(`Cannot access "${await this.name.evaluate(scope)}" of undefined.`);
+            console.log('failure, scope: ', scope, 'parent scope', await this.scope.evaluate(scope, dom), 'member', await this.name.evaluate(scope, dom));
+            throw Error(`Cannot access "${await this.name.evaluate(scope, dom)}" of undefined.`);
         }
-        const value: any = parent.get(await this.name.evaluate(scope), false);
+        const value: any = parent.get(await this.name.evaluate(scope, dom), false);
         return value instanceof Scope && value.wrapped || value;
     }
 }
@@ -712,8 +727,8 @@ class RootScopeMemberNode<T = any> extends Node implements TreeNode {
         ]
     }
 
-    async evaluate(scope: Scope) {
-        const value = scope.get(await this.name.evaluate(scope));
+    async evaluate(scope: Scope, dom: DOM) {
+        const value = scope.get(await this.name.evaluate(scope, dom));
         return value instanceof Scope && value.wrapped || value;
     }
 }
@@ -733,13 +748,13 @@ class AssignmentNode extends Node implements TreeNode {
         ]
     }
 
-    async evaluate(scope: Scope) {
+    async evaluate(scope: Scope, dom: DOM) {
         let localScope = scope;
-        const name: string = await this.rootNode.name.evaluate(scope);
-        const value: any = await this.toAssign.evaluate(scope);
+        const name: string = await this.rootNode.name.evaluate(scope, dom);
+        const value: any = await this.toAssign.evaluate(scope, dom);
 
         if (this.rootNode instanceof ScopeMemberNode)
-            localScope = await this.rootNode.scope.evaluate(scope);
+            localScope = await this.rootNode.scope.evaluate(scope, dom);
 
         localScope.set(name, value);
         if (localScope.get(name) !== value)
@@ -777,9 +792,9 @@ class ArithmeticNode extends Node implements TreeNode {
         ]
     }
 
-    public async evaluate(scope) {
-        const left: any = await this.left.evaluate(scope);
-        const right: any = await this.right.evaluate(scope);
+    public async evaluate(scope: Scope, dom: DOM) {
+        const left: any = await this.left.evaluate(scope, dom);
+        const right: any = await this.right.evaluate(scope, dom);
 
         switch (this.type) {
             case TokenType.ADD:
@@ -824,10 +839,10 @@ class ArithmeticAssignmentNode extends Node implements TreeNode {
         ]
     }
 
-    async evaluate(scope: Scope) {
-        const name: string = await this.left.name.evaluate(scope);
-        let left: number = await this.left.evaluate(scope);
-        const right: number = await this.right.evaluate(scope);
+    async evaluate(scope: Scope, dom: DOM) {
+        const name: string = await this.left.name.evaluate(scope, dom);
+        let left: number = await this.left.evaluate(scope, dom);
+        const right: number = await this.right.evaluate(scope, dom);
 
         switch (this.type) {
             case TokenType.ADD_ASSIGN:
@@ -875,6 +890,54 @@ class ArithmeticAssignmentNode extends Node implements TreeNode {
     }
 }
 
+class ElementReferenceNode extends Node implements TreeNode {
+    constructor(
+        public readonly id: string
+    ) {
+        super();
+    }
+
+    async evaluate(scope: Scope, dom: DOM) {
+        return await dom.get(this.id);
+    }
+
+    async prepare(scope: Scope, dom: DOM) {
+        const tag = await dom.get(this.id, true);
+    }
+}
+
+class ElementAttributeNode extends Node implements TreeNode {
+    constructor(
+        public readonly elementRef: ElementReferenceNode,
+        public readonly attr: string
+    ) {
+        super();
+    }
+
+    getChildNodes(): Node[] {
+        return [
+            this.elementRef
+        ]
+    }
+
+    get attributeName(): string {
+        if (this.attr.startsWith('.'))
+            return this.attr.substring(2);
+        return this.attr.substring(1);
+    }
+
+    async evaluate(scope: Scope, dom: DOM) {
+        const tag: Tag = await this.elementRef.evaluate(scope, dom);
+        return tag.scope.get(`@${this.attributeName}`);
+    }
+
+    async prepare(scope: Scope, dom: DOM) {
+        await this.elementRef.prepare(scope, dom);
+        const tag: Tag = await this.elementRef.evaluate(scope, dom);
+        await tag.watchAttribute(this.attributeName);
+    }
+}
+
 export class Tree {
     protected rootNode: Node;
 
@@ -889,17 +952,21 @@ export class Tree {
         this.rootNode = Tree.processTokens(tokens);
     }
 
-    async evaluate(scope: Scope) {
-        return await this.rootNode.evaluate(scope);
+    async evaluate(scope: Scope, dom: DOM) {
+        return await this.rootNode.evaluate(scope, dom);
+    }
+
+    async prepare(scope: Scope, dom: DOM) {
+        return await this.rootNode.prepare(scope, dom);
     }
 
     async bindToScopeChanges(scope, fnc) {
         for (const node of this.rootNode.findChildrenByTypes<ScopeMemberNode>([RootScopeMemberNode, ScopeMemberNode])) {
             let _scope: Scope = scope;
             if (node instanceof ScopeMemberNode)
-                _scope = await node.scope.evaluate(scope);
+                _scope = await node.scope.evaluate(scope, null);
 
-            const name = await node.name.evaluate(scope);
+            const name = await node.name.evaluate(scope, null);
             _scope.bind(`change:${name}`, fnc);
         }
     }
@@ -950,6 +1017,12 @@ export class Tree {
             } else if (token.type === TokenType.NUMBER_LITERAL) {
                 node = new NumberLiteralNode(token.value);
                 tokens.splice(0, 1);
+            } else if (tokens[0].type === TokenType.ELEMENT_REFERENCE) {
+                node = new ElementReferenceNode(tokens[0].value);
+                tokens.splice(0, 1);
+            } else if (tokens[0].type === TokenType.ELEMENT_ATTRIBUTE && node instanceof ElementReferenceNode) {
+                node = new ElementAttributeNode(node, tokens[0].value);
+                tokens.splice(0, 1);
             } else if (token.type === TokenType.PERIOD && tokens[1].type === TokenType.NAME) {
                 node = new ScopeMemberNode(
                     node,
@@ -989,10 +1062,6 @@ export class Tree {
                 tokens.splice(0, 1);
             } else if (tokens[0].type === TokenType.EXCLAMATION_POINT) {
                 node = NotNode.parse(node, tokens[0], tokens);
-            } else if (tokens[0].type === TokenType.ELEMENT_ID) {
-                tokens.splice(0, 1);
-            } else if (tokens[0].type === TokenType.ELEMENT_ATTRIBUTE) {
-                tokens.splice(0, 1);
             } else {
                 let code: string = Tree.toCode(tokens, 10);
                 console.log(`Syntax Error. Near ${code}`);

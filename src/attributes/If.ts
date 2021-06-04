@@ -22,7 +22,7 @@ export class If extends Attribute {
     }
 
     async onChange() {
-        const result: boolean = await this.tree.evaluate(this.tag.scope);
+        const result: boolean = await this.tree.evaluate(this.tag.scope, this.tag.dom);
         if (result) {
             this.tag.show();
         } else {

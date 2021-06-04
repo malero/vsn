@@ -9,8 +9,8 @@ describe('DOM', () => {
             <div vsn-controller:test="TestController"></div>
         `;
         const dom = new DOM(document);
-        dom.once('built', () => {
-            const bodyTag = dom.getTagForElement(document.body);
+        dom.once('built', async () => {
+            const bodyTag = await dom.getTagForElement(document.body);
             expect(bodyTag.hasAttribute('vsn-root')).toBe(true)
             done();
         });

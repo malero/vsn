@@ -3,7 +3,7 @@ import {Tag} from "./Tag";
 export abstract class Attribute {
     public static readonly scoped: boolean = false;
 
-    protected constructor(
+    constructor(
         public readonly tag: Tag,
         public readonly attributeName: string
     ) {
@@ -26,4 +26,12 @@ export abstract class Attribute {
     }
 
     public mutate(mutation: MutationRecord): void {}
+
+    public set value(value: string) {
+        this.tag.element.setAttribute(this.attributeName, value);
+    }
+
+    public get value(): string {
+        return this.tag.element.getAttribute(this.attributeName) || '';
+    }
 }

@@ -15,6 +15,6 @@ export class Click extends Attribute {
     }
 
     async onClick(e) {
-        await this.clickHandler.evaluate(this.tag.scope);
+        await this.clickHandler.evaluate(this.tag.scope, this.tag.dom);
     }
 }
