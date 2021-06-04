@@ -199,6 +199,7 @@ var Tag = /** @class */ (function (_super) {
         }
         this.scope.wrap(obj, triggerUpdates);
         obj['$scope'] = this.scope;
+        obj['$tag'] = this;
         return obj;
     };
     Tag.prototype.unwrap = function () {
@@ -268,6 +269,29 @@ var Tag = /** @class */ (function (_super) {
             });
         });
     };
+    Tag.prototype.compileAttributes = function () {
+        return __awaiter(this, void 0, void 0, function () {
+            var _i, _a, attr;
+            return __generator(this, function (_b) {
+                switch (_b.label) {
+                    case 0:
+                        _i = 0, _a = this.attributes;
+                        _b.label = 1;
+                    case 1:
+                        if (!(_i < _a.length)) return [3 /*break*/, 4];
+                        attr = _a[_i];
+                        return [4 /*yield*/, attr.compile()];
+                    case 2:
+                        _b.sent();
+                        _b.label = 3;
+                    case 3:
+                        _i++;
+                        return [3 /*break*/, 1];
+                    case 4: return [2 /*return*/];
+                }
+            });
+        });
+    };
     Tag.prototype.setupAttributes = function () {
         return __awaiter(this, void 0, void 0, function () {
             var _i, _a, attr;
@@ -287,7 +311,9 @@ var Tag = /** @class */ (function (_super) {
                         _i++;
                         return [3 /*break*/, 1];
                     case 4:
+                        this.dom.registerElementInRoot(this);
                         this._state = TagState.AttributesSetup;
+                        this.callOnWrapped('$onAttributesSetup');
                         return [2 /*return*/];
                 }
             });
@@ -313,6 +339,7 @@ var Tag = /** @class */ (function (_super) {
                         return [3 /*break*/, 1];
                     case 4:
                         this._state = TagState.AttributesExtracted;
+                        this.callOnWrapped('$onAttributesExtracted');
                         return [2 /*return*/];
                 }
             });
@@ -338,6 +365,7 @@ var Tag = /** @class */ (function (_super) {
                         return [3 /*break*/, 1];
                     case 4:
                         this._state = TagState.AttributesConnected;
+                        this.callOnWrapped('$onAttributesConnected');
                         return [2 /*return*/];
                 }
             });
@@ -345,6 +373,19 @@ var Tag = /** @class */ (function (_super) {
     };
     Tag.prototype.finalize = function () {
         this._state = TagState.Built;
+        this.callOnWrapped('$onBuilt');
+    };
+    Tag.prototype.callOnWrapped = function (method) {
+        var _a;
+        var args = [];
+        for (var _i = 1; _i < arguments.length; _i++) {
+            args[_i - 1] = arguments[_i];
+        }
+        if (this.scope && this.scope.wrapped && this.scope.wrapped[method]) {
+            (_a = this.scope.wrapped)[method].apply(_a, args);
+            return true;
+        }
+        return false;
     };
     Tag.prototype.onclick = function (e) {
         this.scope.set('$event', e);

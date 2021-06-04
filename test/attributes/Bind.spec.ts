@@ -6,8 +6,8 @@ describe('Bind', () => {
             <span id="test" vsn-name="test" vsn-bind="test.value">testing</span>
         `;
         const dom = new DOM(document);
-        dom.once('built', () => {
-            const tag = dom.getTagForElement(document.getElementById('test'));
+        dom.once('built', async () => {
+            const tag = await dom.getTagForElement(document.getElementById('test'));
             expect(tag).toBeTruthy();
             expect(tag.getParsedAttributeValue('vsn-name', 1)).toBe('test');
             expect(tag.scope.get('value')).toBe('testing');
@@ -22,9 +22,9 @@ describe('Bind', () => {
         `;
 
         const dom = new DOM(document);
-        dom.once('built', () => {
+        dom.once('built', async () => {
             const test = document.getElementById('arg');
-            const tag = dom.getTagForElement(test);
+            const tag = await dom.getTagForElement(test);
             const test2 = document.getElementById('test2');
             expect(tag).toBeTruthy();
             expect(tag.scope.get('id')).toBe('arg');
@@ -40,9 +40,9 @@ describe('Bind', () => {
         `;
 
         const dom = new DOM(document);
-        dom.once('built', () => {
+        dom.once('built', async () => {
             const test = document.getElementById('test');
-            const tag = dom.getTagForElement(test);
+            const tag = await dom.getTagForElement(test);
 
             tag.scope.bind('change:id', () => {
                 expect(test.getAttribute('id')).toBe('new-id');
@@ -60,9 +60,9 @@ describe('Bind', () => {
         `;
 
         const dom = new DOM(document, false);
-        dom.once('built', () => {
+        dom.once('built', async () => {
             const test = document.getElementById('test');
-            const tag = dom.getTagForElement(test);
+            const tag = await dom.getTagForElement(test);
             expect(tag.scope.get('val')).toBe('testing');
 
             tag.scope.get('test').bind('change:val', () => {
@@ -81,9 +81,9 @@ describe('Bind', () => {
         `;
 
         const dom = new DOM(document, false);
-        dom.once('built', () => {
+        dom.once('built', async () => {
             const test = document.getElementById('test');
-            const tag = dom.getTagForElement(test);
+            const tag = await dom.getTagForElement(test);
             expect(tag.scope.get('val')).toBe('testing');
 
             tag.scope.get('test').bind('change:val', () => {
@@ -106,9 +106,9 @@ describe('Bind', () => {
         `;
 
         const dom = new DOM(document, false);
-        dom.once('built', () => {
+        dom.once('built', async () => {
             const test = document.getElementById('test');
-            const tag = dom.getTagForElement(test);
+            const tag = await dom.getTagForElement(test);
             expect(tag.scope.get('val')).toBe('testing');
 
              tag.scope.get('test').bind('change:val', () => {
@@ -127,9 +127,9 @@ describe('Bind', () => {
         `;
 
         const dom = new DOM(document);
-        dom.once('built', () => {
+        dom.once('built', async () => {
             const test = document.getElementById('test');
-            const tag = dom.getTagForElement(test);
+            const tag = await dom.getTagForElement(test);
             expect(tag.scope.get('val')).toBe('testing');
 
             tag.bind('mutate', () => {

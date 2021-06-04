@@ -16,10 +16,12 @@ import {Controller} from "./Controller";
 import {VisionHelper} from "./helpers/VisionHelper";
 import {SetAttribute} from "./attributes/SetAttribute";
 import {RootAttribute} from "./attributes/RootAttribute";
+import {StandardAttribute} from "./attributes/StandardAttribute";
 
 export enum TagState {
     Instantiated,
     AttributesBuilt,
+    AttributesCompiled,
     AttributesSetup,
     AttributesExtracted,
     AttributesConnected,
@@ -70,28 +72,29 @@ export class Tag extends EventDispatcher {
         this.onclickHandlers = [];
         this.element.onclick = this.onclick.bind(this);
 
-        // Build element Attributes
-        for (let i: number = 0; i < this.element.attributes.length; i++) {
-            const a = this.element.attributes[i];
-            if (a.name.substr(0, 4) == 'vsn-') {
-                this.rawAttributes[a.name] = a.value;
-                if (a.name.indexOf(':') > -1) {
-                    const nameParts: string[] = a.name.split(':');
-                    const values = nameParts.slice(1);
-                    values.push(a.value);
-                    this.parsedAttributes[nameParts[0]] = values;
-                } else {
-                    this.parsedAttributes[a.name] = [null, a.value];
-                }
-            }
-        }
+        this.analyzeElementAttributes();
 
         this._state = TagState.Instantiated;
     }
 
-    public evaluate(): void {
+    public analyzeElementAttributes() {
+        for (let i: number = 0; i < this.element.attributes.length; i++) {
+            const a = this.element.attributes[i];
+            this.rawAttributes[a.name] = a.value;
+            if (a.name.indexOf(':') > -1) {
+                const nameParts: string[] = a.name.split(':');
+                const values = nameParts.slice(1);
+                values.push(a.value);
+                this.parsedAttributes[nameParts[0]] = values;
+            } else {
+                this.parsedAttributes[a.name] = [null, a.value];
+            }
+        }
+    }
+
+    public async evaluate() {
         for (const attr of this.attributes) {
-            attr.evaluate();
+            await attr.evaluate();
         }
     }
 
@@ -100,6 +103,14 @@ export class Tag extends EventDispatcher {
             attr.mutate(mutation);
         }
         this.trigger('mutate', mutation);
+    }
+
+    public get(attr: string) {
+        this.element.getAttribute(attr);
+    }
+
+    public set(attr: string, value) {
+        this.element.setAttribute(attr, value);
     }
 
     getAttributeClass(attr: string): any {
@@ -178,6 +189,7 @@ export class Tag extends EventDispatcher {
 
         this.scope.wrap(obj, triggerUpdates);
         obj['$scope'] = this.scope;
+        obj['$tag'] = this;
         return obj;
     }
 
@@ -218,7 +230,6 @@ export class Tag extends EventDispatcher {
         for (const attr of this.attributes)
             if (attr instanceof cls)
                 return attr as any as T;
-
     }
 
     public getRawAttributeValue(key: string, fallback: any = null) {
@@ -254,11 +265,22 @@ export class Tag extends EventDispatcher {
         this._state = TagState.AttributesBuilt;
     }
 
+    public async compileAttributes() {
+        for (const attr of this.attributes) {
+            await attr.compile();
+        }
+
+        this._state = TagState.AttributesCompiled;
+    }
+
     public async setupAttributes() {
         for (const attr of this.attributes) {
             await attr.setup();
         }
+        this.dom.registerElementInRoot(this);
+
         this._state = TagState.AttributesSetup;
+        this.callOnWrapped('$onAttributesSetup');
     }
 
     public async extractAttributes() {
@@ -266,6 +288,7 @@ export class Tag extends EventDispatcher {
             await attr.extract();
         }
         this._state = TagState.AttributesExtracted;
+        this.callOnWrapped('$onAttributesExtracted');
     }
 
     public async connectAttributes() {
@@ -273,10 +296,20 @@ export class Tag extends EventDispatcher {
             await attr.connect();
         }
         this._state = TagState.AttributesConnected;
+        this.callOnWrapped('$onAttributesConnected');
     }
 
     public finalize(): void {
         this._state = TagState.Built;
+        this.callOnWrapped('$onBuilt');
+    }
+
+    public callOnWrapped(method, ...args: any[]): boolean {
+        if (this.scope && this.scope.wrapped && this.scope.wrapped[method]) {
+            this.scope.wrapped[method](...args);
+            return true;
+        }
+        return false;
     }
 
     protected onclick(e) {
@@ -289,5 +322,22 @@ export class Tag extends EventDispatcher {
 
     public addClickHandler(handler) {
         this.onclickHandlers.push(handler);
+    }
+
+    async watchAttribute(attributeName: string) {
+        for (const attribute of this.attributes) {
+            if (attribute instanceof StandardAttribute && attribute.attributeName == attributeName) {
+                return attribute;
+            }
+        }
+
+        const standardAttribute = new StandardAttribute(this, attributeName);
+        this.attributes.push(standardAttribute);
+        await standardAttribute.compile();
+        await standardAttribute.setup();
+        await standardAttribute.extract();
+        await standardAttribute.connect();
+
+        return standardAttribute;
     }
 }

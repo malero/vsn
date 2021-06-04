@@ -22,6 +22,12 @@ export class DOM extends EventDispatcher {
         this.evaluate();
     }
 
+    public async get(selector: string, create: boolean = false) {
+        if (selector.startsWith('#')) {
+            return await this.getTagForElement(document.getElementById(selector.substring(1)), create);
+        }
+    }
+
     public registerElementInRoot(tag: Tag): void {
         const id: string = ElementHelper.normalizeElementID(tag.element.getAttribute('id'));
         if (!!id)
@@ -35,9 +41,9 @@ export class DOM extends EventDispatcher {
         }
     }
 
-    public mutation(mutations: MutationRecord[]) {
+    public async mutation(mutations: MutationRecord[]) {
         for (const mutation of mutations) {
-            const tag: Tag = this.getTagForElement(mutation.target as HTMLElement);
+            const tag: Tag = await this.getTagForElement(mutation.target as HTMLElement);
             if (tag) {
                 tag.mutate(mutation);
             }
@@ -66,11 +72,14 @@ export class DOM extends EventDispatcher {
             }
         }
 
-        this.root = this.getTagForElement(document.body);
+        this.root = await this.getTagForElement(document.body);
 
         // Configure, setup & execute attributes
         for (const tag of newTags)
             await tag.buildAttributes();
+
+        for (const tag of newTags)
+            await tag.compileAttributes();
 
         for (const tag of newTags) {
             if (tag === this.root)
@@ -82,7 +91,7 @@ export class DOM extends EventDispatcher {
             while (parentElement) {
                 if (allElements.indexOf(parentElement) > -1) {
                     foundParent = true;
-                    tag.parentTag = this.getTagForElement(parentElement);
+                    tag.parentTag = await this.getTagForElement(parentElement);
                     break;
                 }
 
@@ -102,9 +111,6 @@ export class DOM extends EventDispatcher {
             await tag.connectAttributes();
 
         for (const tag of newTags)
-            this.registerElementInRoot(tag);
-
-        for (const tag of newTags)
             tag.finalize();
 
         for (const tag of newTags)
@@ -118,10 +124,16 @@ export class DOM extends EventDispatcher {
         this.trigger('built');
     }
 
-    getTagForElement(element: Element): Tag {
+    async getTagForElement(element: Element, create: boolean = false) {
         for (const tag of this.tags) {
             if (tag.element === element)
                 return tag;
+        }
+
+        if (create) {
+            element.setAttribute('vsn-referenced', '');
+            await this.buildFrom(element.parentElement);
+            return await this.getTagForElement(element, false);
         }
 
         return null;

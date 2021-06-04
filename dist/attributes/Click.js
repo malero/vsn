@@ -60,7 +60,7 @@ var Click = /** @class */ (function (_super) {
     function Click() {
         return _super !== null && _super.apply(this, arguments) || this;
     }
-    Click.prototype.setup = function () {
+    Click.prototype.compile = function () {
         return __awaiter(this, void 0, void 0, function () {
             var click;
             return __generator(this, function (_a) {
@@ -79,7 +79,16 @@ var Click = /** @class */ (function (_super) {
         });
     };
     Click.prototype.onClick = function (e) {
-        this.clickHandler.evaluate(this.tag.scope);
+        return __awaiter(this, void 0, void 0, function () {
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0: return [4 /*yield*/, this.clickHandler.evaluate(this.tag.scope)];
+                    case 1:
+                        _a.sent();
+                        return [2 /*return*/];
+                }
+            });
+        });
     };
     return Click;
 }(Attribute_1.Attribute));

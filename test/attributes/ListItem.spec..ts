@@ -27,9 +27,9 @@ describe('ListItem', () => {
         vision.registerClass(TestItem, 'TestItem');
 
         const dom = new DOM(document);
-        dom.once('built', () => {
-            const list = dom.getTagForElement(document.getElementById('test'));
-            const listItem = dom.getTagForElement(document.getElementById('test-item'));
+        dom.once('built', async () => {
+            const list = await dom.getTagForElement(document.getElementById('test'));
+            const listItem = await dom.getTagForElement(document.getElementById('test-item'));
             const listItemAttr: ListItem = listItem.getAttribute('vsn-list-item') as ListItem;
 
             expect(listItemAttr.list).toBe(list);

@@ -1,6 +1,6 @@
 {
   "name": "vsn",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "SEO Friendly Javascript/Typescript Framework",
   "keywords": [
     "framework",
@@ -35,12 +35,16 @@
     "webpack": "^5.36.1",
     "webpack-cli": "^4.6.0"
   },
-  "homepage": "https://www.visionjs.io",
+  "homepage": "https://www.vsnjs.com",
   "git": "https://github.com/malero/visionjs",
   "typings": "./dist/Vision.d.ts",
-  "author": "Malero <contact@maleero.com> (http://www.maleero.com/)",
+  "author": "Malero <contact@vsnjs.com> (https://www.vsnjs.com/)",
   "bugs": {
     "url": "https://github.com/malero/visionjs/issues",
-    "email": "contact@maleero.com"
+    "email": "contact@vsnjs.com"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/malero/visionjs.git"
   }
 }

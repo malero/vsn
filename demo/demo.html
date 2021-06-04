@@ -41,26 +41,9 @@
     </script>
 </head>
 <body>
-    <div>
-        <a href="/index.html" vsn-name="link" vsn-bind:href="link.url" vsn-bind="link.text">Home</a>
-    </div>
-    <div>URL: <span vsn-bind="link.url"></span>, Text: <span vsn-bind="link.text"></span></div>
-    <div>
-        <button id="button-help" vsn-click="link.url='/help.html';link.text='Help';">Change to Help</button>
-        <button id="button-info" vsn-click="link.url='/info.html';link.text='Info';">Change to Info</button>
-    </div>
-
-    <div>
-        <label>
-            Link Text:
-            <input type="text" vsn-bind="link.text" />
-        </label>
-
-        <label>
-            Link URL:
-            <input type="text" vsn-bind="link.url" />
-        </label>
-    </div>
+    <a href="/index.html" id="link">Home</a>
+    <input type="text" vsn-bind="#link.@text" />
+    <input type="text" vsn-bind="#link.@href" />
 
     <div vsn-controller:test="TestController" id="testing">
         <h1>Value: <span vsn-bind="test.name">Testing</span> <span vsn-bind="test.age">32</span></h1>

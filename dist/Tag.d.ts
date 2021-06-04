@@ -57,10 +57,12 @@ export declare class Tag extends EventDispatcher {
     getRawAttributeValue(key: string, fallback?: any): any;
     getParsedAttributeValue(key: string, index?: number, fallback?: any): any;
     buildAttributes(): Promise<void>;
+    compileAttributes(): Promise<void>;
     setupAttributes(): Promise<void>;
     extractAttributes(): Promise<void>;
     connectAttributes(): Promise<void>;
     finalize(): void;
+    callOnWrapped(method: any, ...args: any[]): boolean;
     protected onclick(e: any): void;
     addClickHandler(handler: any): void;
 }

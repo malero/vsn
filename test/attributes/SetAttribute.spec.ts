@@ -6,8 +6,8 @@ describe('Bind', () => {
             <span id="test" vsn-name="test" vsn-set:val="hello world">testing</span>
         `;
         const dom = new DOM(document);
-        dom.once('built', () => {
-            const tag = dom.getTagForElement(document.getElementById('test'));
+        dom.once('built', async () => {
+            const tag = await dom.getTagForElement(document.getElementById('test'));
             expect(tag).toBeTruthy();
             expect(tag.scope.get('val')).toBe('hello world');
             done();
@@ -22,9 +22,9 @@ describe('Bind', () => {
             </span>
         `;
         const dom = new DOM(document);
-        dom.once('built', () => {
-            const tag = dom.getTagForElement(document.getElementById('test'));
-            const inner1 = dom.getTagForElement(document.getElementById('test-inner-1'));
+        dom.once('built', async () => {
+            const tag = await dom.getTagForElement(document.getElementById('test'));
+            const inner1 = await dom.getTagForElement(document.getElementById('test-inner-1'));
             expect(tag).toBeTruthy();
             expect(tag.scope.get('val')).toBe('hello world');
             expect(inner1.scope.get('val')).toBe('hi mom');

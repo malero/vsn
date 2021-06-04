@@ -1,19 +1,50 @@
 # VisionJS Framework
 
-Simple Javascript Framework built from the ground up with eCommerce and SEO in mind.
+Simple Javascript Framework built from the ground up with eCommerce and SEO in mind. VisionJS is meant to be used with server side rendered websites. Rather than dynamically rendering component templates like most javascript frameworks, VisionJS uses the html rendered by your server to add functionality to your website.
 
 ## Examples
-### On Click & Conditional Elements
+### On Click
 Use `vsn-click` on an element to execute some code. Here we have a button that toggles the root scope variable `show` between false and true. 
 
     <button vsn-click="show = !show">Toggle</button>
-    <span vsn-if="show">On</span>
-    <span vsn-if="!show">Off</span>
+    <span vsn-bind="show"></span>
 
 
 ### Attribute Binding
 Use `vsn-bind:attribute` to bind a scope variable to the element's attribute. Using `vsn-bind` on an input will bind the input's value to the scope variable. 
 
-    <a href="/index.html" vsn-name="link" vsn-bind:href="link.url" vsn-bind="link.text">Home</a>
-    <input type="text" vsn-bind="link.text" />
-    <input type="text" vsn-bind="link.url" />
+    <a href="/index.html" id="link">Home</a>
+    <input type="text" vsn-bind="#link.@text" />
+    <input type="text" vsn-bind="#link.@href" />
+
+
+### Conditional Elements
+Use `vsn-if` if you would only like to show an element if a certain condition is met.
+
+    <button vsn-click="show = !show">Toggle</button>
+    <span vsn-if="show">Show is true</span>
+    <span vsn-if="!show">Show is false</span>
+
+
+### Controllers
+Use `vsn-controller="ClassName"` to bind an element to a controller class.
+
+Typescript class controller:
+
+    class Controller {
+        public on: boolean = false;
+
+        doSomething($event, value) {
+            $event.preventDefault();
+            this.on = value;            
+        }
+    }
+    vision.registerClass(Controller, 'Controller');
+
+HTML to use the above controller:
+
+    <div vsn-controller:controller="Controller">
+        <span vsn-if="controller.on">It's on!</span>
+        <span vsn-if="!controller.on">It's off...</span>
+        <a href="/" vsn-click="controller.doSomething($event, !controller.on)">Click Me</a>
+    </div>

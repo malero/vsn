@@ -13,7 +13,7 @@ export class List extends Attribute {
     public async extract() {
         const listAttr: string = this.getAttributeBinding();
         const tree = new Tree(listAttr);
-        const items = await tree.evaluate(this.tag.scope);
+        const items = await tree.evaluate(this.tag.scope, this.tag.dom);
         await this.addExistingItems(items)
     }
 
@@ -34,7 +34,7 @@ export class List extends Attribute {
             if (!ElementHelper.hasVisionAttribute(element, 'vsn-list-item'))
                 continue;
 
-            const tag: Tag = this.tag.dom.getTagForElement(element);
+            const tag: Tag = await this.tag.dom.getTagForElement(element);
             if (tag) {
                 this.tags.push(tag);
                 this.items.push(tag.scope.wrapped || tag.scope);
@@ -79,7 +79,7 @@ export class List extends Attribute {
         this.tag.element.appendChild(element);
 
         await this.tag.dom.buildFrom(this.tag.element);
-        const tag: Tag = this.tag.dom.getTagForElement(element);
+        const tag: Tag = await this.tag.dom.getTagForElement(element);
         this.tags.push(tag);
         const scope: Scope = tag.scope.get(this.listItemName);
         scope.clear();

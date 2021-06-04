@@ -111,6 +111,8 @@ var TokenType;
     TokenType[TokenType["MULTIPLY_ASSIGN"] = 39] = "MULTIPLY_ASSIGN";
     TokenType[TokenType["DIVIDE_ASSIGN"] = 40] = "DIVIDE_ASSIGN";
     TokenType[TokenType["EXCLAMATION_POINT"] = 41] = "EXCLAMATION_POINT";
+    TokenType[TokenType["ELEMENT_ID"] = 42] = "ELEMENT_ID";
+    TokenType[TokenType["ELEMENT_ATTRIBUTE"] = 43] = "ELEMENT_ATTRIBUTE";
 })(TokenType = exports.TokenType || (exports.TokenType = {}));
 var TOKEN_PATTERNS = [
     {
@@ -150,8 +152,16 @@ var TOKEN_PATTERNS = [
         pattern: /^else\s/
     },
     {
+        type: TokenType.ELEMENT_ATTRIBUTE,
+        pattern: /@[_a-zA-Z0-9]*/
+    },
+    {
+        type: TokenType.ELEMENT_ID,
+        pattern: /^#[-_a-zA-Z0-9]*/
+    },
+    {
         type: TokenType.NAME,
-        pattern: /^[\$#_a-zA-Z][_a-zA-Z0-9]*/
+        pattern: /^[$_a-zA-Z][_a-zA-Z0-9]*/
     },
     {
         type: TokenType.NUMBER_LITERAL,
@@ -1192,6 +1202,12 @@ var Tree = /** @class */ (function () {
             }
             else if (tokens[0].type === TokenType.EXCLAMATION_POINT) {
                 node = NotNode.parse(node, tokens[0], tokens);
+            }
+            else if (tokens[0].type === TokenType.ELEMENT_ID) {
+                tokens.splice(0, 1);
+            }
+            else if (tokens[0].type === TokenType.ELEMENT_ATTRIBUTE) {
+                tokens.splice(0, 1);
             }
             else {
                 var code = Tree.toCode(tokens, 10);
