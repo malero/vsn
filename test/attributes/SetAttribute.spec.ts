@@ -31,4 +31,22 @@ describe('Bind', () => {
             done();
         });
     })
+
+    it("vsn-set to work with a typed value", (done) => {
+        document.body.innerHTML = `
+            <span id="test-int" vsn-set:int="142.3|int">testing</span>
+            <span id="test-float" vsn-set:float="142.3|float">testing</span>
+            <span id="test-bool" vsn-set:bool="false|bool">testing</span>
+        `;
+        const dom = new DOM(document);
+        dom.once('built', async () => {
+            const intTag = await dom.getTagForElement(document.getElementById('test-int'));
+            const floatTag = await dom.getTagForElement(document.getElementById('test-float'));
+            const boolTag = await dom.getTagForElement(document.getElementById('test-bool'));
+            expect(intTag.scope.get('int')).toBe(142);
+            expect(floatTag.scope.get('float')).toBe(142.3);
+            expect(boolTag.scope.get('bool')).toBe(false);
+            done();
+        });
+    });
 });

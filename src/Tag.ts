@@ -17,6 +17,7 @@ import {VisionHelper} from "./helpers/VisionHelper";
 import {SetAttribute} from "./attributes/SetAttribute";
 import {RootAttribute} from "./attributes/RootAttribute";
 import {StandardAttribute} from "./attributes/StandardAttribute";
+import {TypeAttribute} from "./attributes/TypeAttribute";
 
 export enum TagState {
     Instantiated,
@@ -51,6 +52,7 @@ export class Tag extends EventDispatcher {
         'vsn-click-toggle-class': ClickToggleClass,
         'vsn-click-remove-class': ClickRemoveClass,
         'vsn-if': If,
+        'vsn-type': TypeAttribute,
     };
 
     protected inputTags: string[] = [

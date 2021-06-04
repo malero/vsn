@@ -64,15 +64,18 @@ export class Bind extends Attribute {
     }
 
     get valueFromElement(): string {
+        let value;
         if (this.property) {
-            return this.tag.element.getAttribute(this.property);
+            value = this.tag.element.getAttribute(this.property);
         } else {
             if (this.tag.isInput) {
-                return (this.tag.element as any).value;
+                value = (this.tag.element as any).value;
             } else {
-                return this.tag.element.innerText;
+                value = this.tag.element.innerText;
             }
         }
+
+        return value;
     }
 
     public mutate(mutation: MutationRecord) {
@@ -93,9 +96,11 @@ export class Bind extends Attribute {
     }
 
     updateFrom() {
-        const value = this.valueFromElement;
-        if (!this.value || value.trim() !== this.value.trim())
-            this.value = value;
+        const valueFromElement = typeof this.valueFromElement === 'string' && this.valueFromElement.trim() || this.valueFromElement;
+        const valueFromScope = typeof this.value === 'string' && this.value.trim() || this.value;
+
+        if (!this.value || valueFromElement != valueFromScope)
+            this.value = valueFromElement;
     }
 
     updateTo() {

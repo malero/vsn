@@ -38,15 +38,45 @@
             };
             return TestItem;
         }());
+
+        var Controller = (function () {
+            function Controller(name = null, age = null) {
+                this.on = false;
+            }
+
+            Controller.prototype.doSomething = function ($event, value) {
+                $event.preventDefault();
+                this.on = value;
+            };
+            return Controller;
+        }());
     </script>
 </head>
 <body>
+    <h2>On Click</h2>
+    <button vsn-click="show = !show" vsn-set:show="false|boolean">Toggle</button>
+    <span vsn-bind="show"></span>
+
+    <h2>Attribute Binding</h2>
     <a href="/index.html" id="link">Home</a>
     <input type="text" vsn-bind="#link.@text" />
     <input type="text" vsn-bind="#link.@href" />
 
+    <h2>Conditional Elements</h2>
+    <button vsn-click="show = !show">Toggle</button>
+    <span vsn-if="show">Show is true</span>
+    <span vsn-if="!show">Show is false</span>
+
+    <h2>Controllers</h2>
+    <div vsn-controller:controller="Controller">
+        <span vsn-if="controller.on">It's on!</span>
+        <span vsn-if="!controller.on">It's off...</span>
+        <a href="/" vsn-click="controller.doSomething($event, !controller.on)">Click Me</a>
+    </div>
+
+    <h2>Lists</h2>
     <div vsn-controller:test="TestController" id="testing">
-        <h1>Value: <span vsn-bind="test.name">Testing</span> <span vsn-bind="test.age">32</span></h1>
+        <h3>Value: <span vsn-bind="test.name">Testing</span> <span vsn-bind="test.age">32</span></h3>
         <input type="text" vsn-bind="test.name" />
         <input type="text" vsn-bind="test.age" />
         <button vsn-click="test.reset()" vsn-if="test.name">Reset</button>
@@ -72,6 +102,7 @@
         window.addEventListener('load', function () {
             vision.registerClass(TestController, 'TestController');
             vision.registerClass(TestItem, 'TestItem');
+            vision.registerClass(Controller, 'Controller');
         });
     </script>
 </body>
