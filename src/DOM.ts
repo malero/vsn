@@ -72,6 +72,9 @@ export class DOM extends EventDispatcher {
         for (const tag of newTags)
             await tag.buildAttributes();
 
+        for (const tag of newTags)
+            await tag.compileAttributes();
+
         for (const tag of newTags) {
             if (tag === this.root)
                 continue;
@@ -100,9 +103,6 @@ export class DOM extends EventDispatcher {
 
         for (const tag of newTags)
             await tag.connectAttributes();
-
-        for (const tag of newTags)
-            this.registerElementInRoot(tag);
 
         for (const tag of newTags)
             tag.finalize();

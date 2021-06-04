@@ -53,25 +53,21 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Bind = void 0;
 var Attribute_1 = require("../Attribute");
+var AST_1 = require("../AST");
 var Bind = /** @class */ (function (_super) {
     __extends(Bind, _super);
     function Bind() {
         return _super !== null && _super.apply(this, arguments) || this;
     }
-    Object.defineProperty(Bind.prototype, "value", {
-        get: function () {
-            if (!this.boundScope)
-                return null;
-            return this.boundScope.get(this.key, false);
-        },
-        set: function (v) {
-            if (this.boundScope) {
-                this.boundScope.set(this.key, v);
-            }
-        },
-        enumerable: false,
-        configurable: true
-    });
+    Bind.prototype.compile = function () {
+        return __awaiter(this, void 0, void 0, function () {
+            var tree;
+            return __generator(this, function (_a) {
+                tree = new AST_1.Tree(this.getAttributeValue());
+                return [2 /*return*/];
+            });
+        });
+    };
     Bind.prototype.setup = function () {
         return __awaiter(this, void 0, void 0, function () {
             return __generator(this, function (_a) {
@@ -128,6 +124,20 @@ var Bind = /** @class */ (function (_super) {
             });
         });
     };
+    Object.defineProperty(Bind.prototype, "value", {
+        get: function () {
+            if (!this.boundScope)
+                return null;
+            return this.boundScope.get(this.key, false);
+        },
+        set: function (v) {
+            if (this.boundScope) {
+                this.boundScope.set(this.key, v);
+            }
+        },
+        enumerable: false,
+        configurable: true
+    });
     Object.defineProperty(Bind.prototype, "valueFromElement", {
         get: function () {
             if (this.property) {
@@ -161,7 +171,9 @@ var Bind = /** @class */ (function (_super) {
             this.updateFrom();
     };
     Bind.prototype.updateFrom = function () {
-        this.value = this.valueFromElement;
+        var value = this.valueFromElement;
+        if (!this.value || value.trim() !== this.value.trim())
+            this.value = value;
     };
     Bind.prototype.updateTo = function () {
         if (this.property) {

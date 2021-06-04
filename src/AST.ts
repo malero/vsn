@@ -62,7 +62,9 @@ export enum TokenType {
     SUBTRACT_ASSIGN,
     MULTIPLY_ASSIGN,
     DIVIDE_ASSIGN,
-    EXCLAMATION_POINT
+    EXCLAMATION_POINT,
+    ELEMENT_ID,
+    ELEMENT_ATTRIBUTE,
 }
 
 const TOKEN_PATTERNS: TokenPattern[] = [
@@ -103,8 +105,16 @@ const TOKEN_PATTERNS: TokenPattern[] = [
         pattern: /^else\s/
     },
     {
+        type: TokenType.ELEMENT_ATTRIBUTE,
+        pattern: /@[_a-zA-Z0-9]*/
+    },
+    {
+        type: TokenType.ELEMENT_ID,
+        pattern: /^#[-_a-zA-Z0-9]*/
+    },
+    {
         type: TokenType.NAME,
-        pattern: /^[\$#_a-zA-Z][_a-zA-Z0-9]*/
+        pattern: /^[$_a-zA-Z][_a-zA-Z0-9]*/
     },
     {
         type: TokenType.NUMBER_LITERAL,
@@ -979,6 +989,10 @@ export class Tree {
                 tokens.splice(0, 1);
             } else if (tokens[0].type === TokenType.EXCLAMATION_POINT) {
                 node = NotNode.parse(node, tokens[0], tokens);
+            } else if (tokens[0].type === TokenType.ELEMENT_ID) {
+                tokens.splice(0, 1);
+            } else if (tokens[0].type === TokenType.ELEMENT_ATTRIBUTE) {
+                tokens.splice(0, 1);
             } else {
                 let code: string = Tree.toCode(tokens, 10);
                 console.log(`Syntax Error. Near ${code}`);

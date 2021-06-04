@@ -5,6 +5,7 @@ export declare abstract class Attribute {
     static readonly scoped: boolean;
     protected constructor(tag: Tag, attributeName: string);
     protected configure(): Promise<void>;
+    compile(): Promise<void>;
     setup(): Promise<void>;
     extract(): Promise<void>;
     connect(): Promise<void>;

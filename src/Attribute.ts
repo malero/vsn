@@ -11,6 +11,7 @@ export abstract class Attribute {
     }
 
     protected async configure() {};
+    public async compile() {};
     public async setup() {};
     public async extract() {};
     public async connect() {}

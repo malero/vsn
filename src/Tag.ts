@@ -254,10 +254,18 @@ export class Tag extends EventDispatcher {
         this._state = TagState.AttributesBuilt;
     }
 
+    public async compileAttributes() {
+        for (const attr of this.attributes) {
+            await attr.compile();
+        }
+    }
+
     public async setupAttributes() {
         for (const attr of this.attributes) {
             await attr.setup();
         }
+        this.dom.registerElementInRoot(this);
+
         this._state = TagState.AttributesSetup;
         this.callOnWrapped('$onAttributesSetup');
     }

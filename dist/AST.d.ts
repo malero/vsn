@@ -50,7 +50,9 @@ export declare enum TokenType {
     SUBTRACT_ASSIGN = 38,
     MULTIPLY_ASSIGN = 39,
     DIVIDE_ASSIGN = 40,
-    EXCLAMATION_POINT = 41
+    EXCLAMATION_POINT = 41,
+    ELEMENT_ID = 42,
+    ELEMENT_ATTRIBUTE = 43
 }
 export declare function tokenize(code: string): Token[];
 export interface TreeNode<T = any> {

@@ -1,20 +1,14 @@
 import {Scope, ScopeReference} from "../Scope";
 import {Attribute} from "../Attribute";
+import {Tree} from "../AST";
 
 export class Bind extends Attribute {
     protected key?: string;
     protected property?: string;
     protected boundScope?: Scope;
 
-    public set value(v: any) {
-        if (this.boundScope) {
-            this.boundScope.set(this.key, v);
-        }
-    }
-
-    public get value(): any {
-        if (!this.boundScope) return null;
-        return this.boundScope.get(this.key, false);
+    public async compile() {
+        const tree: Tree = new Tree(this.getAttributeValue());
     }
 
     public async setup() {
@@ -57,6 +51,17 @@ export class Bind extends Attribute {
             this.updateTo();
     }
 
+    public set value(v: any) {
+        if (this.boundScope) {
+            this.boundScope.set(this.key, v);
+        }
+    }
+
+    public get value(): any {
+        if (!this.boundScope) return null;
+        return this.boundScope.get(this.key, false);
+    }
+
     get valueFromElement(): string {
         if (this.property) {
             return this.tag.element.getAttribute(this.property);
@@ -87,7 +92,9 @@ export class Bind extends Attribute {
     }
 
     updateFrom() {
-        this.value = this.valueFromElement;
+        const value = this.valueFromElement;
+        if (!this.value || value.trim() !== this.value.trim())
+            this.value = value;
     }
 
     updateTo() {
