@@ -31,7 +31,7 @@ export class SetAttribute extends Attribute {
 
     public async extract() {
         let value = this.getAttributeValue(null);
-        const typeIndex: number = value.indexOf('|');
+        const typeIndex: number = value && value.indexOf('|') || -1;
         if (typeIndex > -1) {
             this.boundScope.setType(this.key, this.boundScope.stringToType(value.substr(typeIndex + 1)));
             value = value.substr(0, typeIndex);

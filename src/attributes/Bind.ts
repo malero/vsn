@@ -71,7 +71,7 @@ export class Bind extends Attribute {
             if (this.tag.isInput) {
                 value = (this.tag.element as any).value;
             } else {
-                value = this.tag.element.innerText;
+                value = this.tag.element.textContent;
             }
         }
 
