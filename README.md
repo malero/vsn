@@ -4,18 +4,11 @@ Simple Javascript Framework built from the ground up with eCommerce and SEO in m
 
 ## Examples
 ### Set A Scope Variable
-Use `vsn-set:variableName="value|type"` to set a variable in the scope. `vsn-set` is only used to initialize a value and will only be evaluated once.
+Use `vsn-set:variableName="value|type"` to set a variable in the scope. `vsn-set` is only used to initialize a value and will only be evaluated once. Use `vsn-bind` if you would like to bind the element to the scope variable.
 
     <div vsn-set:myInt="42|int"></div>
     <div vsn-set:myFloat="42.3|float"></div>
     <div vsn-set:myBool="false|bool"></div>
-
-
-### On Click
-Use `vsn-click` on an element to execute some code. Here we have a button that toggles the root scope variable `show` between false and true. 
-
-    <button vsn-click="show = !show" vsn-set:show="false|bool">Toggle</button>
-    <span vsn-bind="show"></span>
 
 
 ### Attribute Binding
@@ -24,6 +17,13 @@ Use `vsn-bind:attribute` to bind a scope variable to the element's attribute. Us
     <a href="/index.html" id="link">Home</a>
     <input type="text" vsn-bind="#link.@text" />
     <input type="text" vsn-bind="#link.@href" />
+
+
+### On Click
+Use `vsn-click` on an element to execute some code. Here we have a button that toggles the root scope variable `show` between false and true. 
+
+    <button vsn-click="show = !show" vsn-set:show="false|bool">Toggle</button>
+    <span vsn-bind="show"></span>
 
 
 ### Conditional Elements

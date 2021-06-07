@@ -3,7 +3,7 @@ export declare abstract class Attribute {
     readonly tag: Tag;
     readonly attributeName: string;
     static readonly scoped: boolean;
-    protected constructor(tag: Tag, attributeName: string);
+    constructor(tag: Tag, attributeName: string);
     protected configure(): Promise<void>;
     compile(): Promise<void>;
     setup(): Promise<void>;
@@ -13,4 +13,6 @@ export declare abstract class Attribute {
     getAttributeValue(fallback?: any): any;
     getAttributeBinding(fallback?: any): string;
     mutate(mutation: MutationRecord): void;
+    set value(value: string);
+    get value(): string;
 }

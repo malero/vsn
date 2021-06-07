@@ -171,9 +171,6 @@ export class Scope extends EventDispatcher {
     }
 
     get(key: string, searchParents: boolean = true): any {
-        if (key.indexOf('-') > -1)
-            throw Error('Cannot have hyphens in variable names.');
-
         const value: any = this.data[key];
         if (value === undefined) {
             if (searchParents && this.parentScope)
@@ -186,9 +183,6 @@ export class Scope extends EventDispatcher {
     }
 
     set(key: string, value: any) {
-        if (key.indexOf('-') > -1)
-            throw Error('Cannot have hyphens in variable names.');
-
         if (this.data[key] === undefined)
             this.data.createField(key);
 
@@ -293,8 +287,9 @@ export class Scope extends EventDispatcher {
             }
 
             // Populate scope data from wrapped object before we update the getter
-            if (this.wrapped[field] !== undefined)
+            if (['', null, undefined].indexOf(this.wrapped[field]) === -1) {
                 this.set(field, this.wrapped[field]);
+            }
 
             const getter = () => {
                 return this.get(field);

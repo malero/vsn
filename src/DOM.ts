@@ -29,7 +29,7 @@ export class DOM extends EventDispatcher {
     }
 
     public registerElementInRoot(tag: Tag): void {
-        const id: string = ElementHelper.normalizeElementID(tag.element.getAttribute('id'));
+        const id: string = tag.element.getAttribute('id');
         if (!!id)
             this.root.scope.set(`#${id}`, tag.scope);
     }

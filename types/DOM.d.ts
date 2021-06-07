@@ -7,9 +7,10 @@ export declare class DOM extends EventDispatcher {
     protected observer: MutationObserver;
     protected evaluateTimeout: any;
     constructor(document: Document, build?: boolean);
+    get(selector: string, create?: boolean): Promise<any>;
     registerElementInRoot(tag: Tag): void;
     evaluate(): void;
-    mutation(mutations: MutationRecord[]): void;
+    mutation(mutations: MutationRecord[]): Promise<void>;
     buildFrom(ele: any): Promise<void>;
-    getTagForElement(element: Element): Tag;
+    getTagForElement(element: Element, create?: boolean): any;
 }

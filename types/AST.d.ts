@@ -1,4 +1,5 @@
 import { Scope } from "./Scope";
+import { DOM } from "./DOM";
 export interface Token {
     type: TokenType;
     value: string;
@@ -51,15 +52,17 @@ export declare enum TokenType {
     MULTIPLY_ASSIGN = 39,
     DIVIDE_ASSIGN = 40,
     EXCLAMATION_POINT = 41,
-    ELEMENT_ID = 42,
+    ELEMENT_REFERENCE = 42,
     ELEMENT_ATTRIBUTE = 43
 }
 export declare function tokenize(code: string): Token[];
 export interface TreeNode<T = any> {
-    evaluate(scope: Scope): any;
+    evaluate(scope: Scope, dom: DOM): any;
+    prepare(scope: Scope, dom: DOM): any;
 }
 export declare abstract class Node implements TreeNode {
-    abstract evaluate(scope: Scope): any;
+    abstract evaluate(scope: Scope, dom: DOM): any;
+    prepare(scope: Scope, dom: DOM): Promise<void>;
     getChildNodes(): Node[];
     findChildrenByType<T = Node>(t: any): T[];
     findChildrenByTypes<T = Node>(types: any[]): T[];
@@ -68,14 +71,16 @@ export declare class BlockNode extends Node implements TreeNode {
     readonly statements: Node[];
     constructor(statements: Node[]);
     getChildNodes(): Node[];
-    evaluate(scope: any): Promise<any>;
+    evaluate(scope: Scope, dom: DOM): Promise<any>;
+    prepare(scope: Scope, dom: DOM): Promise<void>;
 }
 export declare class Tree {
     readonly code: string;
     protected rootNode: Node;
     constructor(code: string);
     parse(): void;
-    evaluate(scope: Scope): Promise<any>;
+    evaluate(scope: Scope, dom: DOM): Promise<any>;
+    prepare(scope: Scope, dom: DOM): Promise<void>;
     bindToScopeChanges(scope: any, fnc: any): Promise<void>;
     static stripWhiteSpace(tokens: Token[]): Token[];
     static processTokens(tokens: Token[]): BlockNode;

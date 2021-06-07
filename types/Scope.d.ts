@@ -6,6 +6,12 @@ export declare class ScopeReference {
     readonly value: any;
     constructor(scope: Scope, key: string, value: any);
 }
+export declare enum ScopeVariableType {
+    String = 0,
+    Integer = 1,
+    Float = 2,
+    Boolean = 3
+}
 export declare class WrappedArray<T> extends Array<T> {
     private _listeners;
     private _lastKey;
@@ -22,6 +28,9 @@ export declare class WrappedArray<T> extends Array<T> {
 export declare class Scope extends EventDispatcher {
     wrapped: any;
     protected data: DataModel;
+    protected types: {
+        [key: string]: ScopeVariableType;
+    };
     protected children: Scope[];
     protected keys: string[];
     protected _parentScope: Scope;
@@ -32,6 +41,10 @@ export declare class Scope extends EventDispatcher {
     getReference(path: string, createIfNotFound?: boolean): ScopeReference;
     get(key: string, searchParents?: boolean): any;
     set(key: string, value: any): void;
+    has(key: string): boolean;
+    setType(key: string, type: ScopeVariableType): void;
+    getType(key: string): ScopeVariableType;
+    stringToType(str: string): ScopeVariableType;
     extend(data: any): void;
     clear(): void;
     cleanup(): void;

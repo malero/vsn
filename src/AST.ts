@@ -1,7 +1,6 @@
 import {Scope} from "./Scope";
 import {DOM} from "./DOM";
 import {Tag} from "./Tag";
-import {StandardAttribute} from "./attributes/StandardAttribute";
 
 function lower(str: string): string {
     return str ? str.toLowerCase() : null;
@@ -619,25 +618,6 @@ class NumberLiteralNode extends LiteralNode<number> {
 }
 
 
-class StringNode extends Node implements TreeNode<string> {
-    constructor(
-        public readonly node: Node
-    ) {
-        super();
-    }
-
-    getChildNodes(): Node[] {
-        return [
-            this.node as Node
-        ]
-    }
-
-    public async evaluate(scope: Scope, dom: DOM) {
-        return `${await this.node.evaluate(scope, dom)}`;
-    }
-}
-
-
 class FunctionCallNode<T = any> extends Node implements TreeNode {
     constructor(
         public readonly fnc: TreeNode<(...args: any[]) => any>,
@@ -703,7 +683,10 @@ class ScopeMemberNode extends Node implements TreeNode {
     }
 
     async evaluate(scope: Scope, dom: DOM) {
-        const parent: Scope = await this.scope.evaluate(scope, dom);
+        let parent = await this.scope.evaluate(scope, dom);
+        if (parent instanceof Tag)
+            parent = parent.scope;
+
         if (!parent) {
             console.log('failure, scope: ', scope, 'parent scope', await this.scope.evaluate(scope, dom), 'member', await this.name.evaluate(scope, dom));
             throw Error(`Cannot access "${await this.name.evaluate(scope, dom)}" of undefined.`);
