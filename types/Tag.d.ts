@@ -32,7 +32,9 @@ export declare class Tag extends EventDispatcher {
         [attr: string]: any;
     };
     protected inputTags: string[];
-    protected onclickHandlers: any[];
+    protected onEventHandlers: {
+        [key: string]: any[];
+    };
     constructor(element: HTMLElement, dom: DOM);
     analyzeElementAttributes(): void;
     evaluate(): Promise<void>;
@@ -50,7 +52,7 @@ export declare class Tag extends EventDispatcher {
     set scope(scope: Scope);
     get controller(): Controller;
     set controller(controller: Controller);
-    wrap(obj: any, triggerUpdates?: boolean): any;
+    wrap(obj: any, triggerUpdates?: boolean, updateFromWrapped?: boolean): any;
     unwrap(): void;
     removeFromDOM(): void;
     addToParentElement(): void;
@@ -69,6 +71,13 @@ export declare class Tag extends EventDispatcher {
     finalize(): void;
     callOnWrapped(method: any, ...args: any[]): boolean;
     protected onclick(e: any): void;
-    addClickHandler(handler: any): void;
+    protected onfocus(e: any): void;
+    protected onblur(e: any): void;
+    protected onmouseenter(e: any): void;
+    protected onmouseleave(e: any): void;
+    protected onkeyup(e: any): void;
+    protected onkeydown(e: any): void;
+    protected handleEvent(e: any, eventType: string): void;
+    addEventHandler(eventType: string, handler: any): void;
     watchAttribute(attributeName: string): Promise<StandardAttribute>;
 }

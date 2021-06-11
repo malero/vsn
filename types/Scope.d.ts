@@ -48,6 +48,9 @@ export declare class Scope extends EventDispatcher {
     extend(data: any): void;
     clear(): void;
     cleanup(): void;
-    wrap(wrapped: any, triggerUpdates?: boolean): void;
+    setData(obj: {
+        [key: string]: any;
+    }): void;
+    wrap(toWrap: any, triggerUpdates?: boolean, updateFromWrapped?: boolean): void;
     unwrap(): void;
 }

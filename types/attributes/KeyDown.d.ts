@@ -1,4 +1,4 @@
 import { On } from "./On";
-export declare class Click extends On {
+export declare class KeyDown extends On {
     connect(): Promise<void>;
 }
