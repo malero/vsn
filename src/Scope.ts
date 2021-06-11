@@ -264,30 +264,42 @@ export class Scope extends EventDispatcher {
         this.parentScope = null;
     }
 
-    public wrap(wrapped: any, triggerUpdates: boolean = false) {
+    public setData(obj: {[key: string]: any}) {
+        for (const d in obj) {
+            this.set(d, obj[d]);
+        }
+    }
+
+    public wrap(toWrap: any, triggerUpdates: boolean = false, updateFromWrapped: boolean = true) {
         if ([null, undefined].indexOf(this.wrapped) === -1)
             throw Error("A scope can only wrap a single object");
 
-        if (!wrapped) {
+        if (!toWrap) {
             throw Error("Can only wrap objects.");
         }
 
-        if (wrapped['$wrapped']) {
+        if (toWrap['$wrapped']) {
             throw Error("An object should only be wrapped once.");
         }
 
-        this.wrapped = wrapped;
+        this.wrapped = toWrap;
         this.wrapped['$wrapped'] = true;
-        for (const field in wrapped) {
+        for (const field in toWrap) {
             if (['constructor'].indexOf(field) > -1 || field.startsWith('$'))
                 continue;
 
+            if (this.wrapped[field] instanceof Function) {
+                this.set(field, this.wrapped[field]);
+                continue;
+            }
+
             if (this.wrapped[field] instanceof Array) {
-                this.wrapped[field] = new WrappedArray(...wrapped[field]);
+                this.wrapped[field] = new WrappedArray(...toWrap[field]);
             }
 
             // Populate scope data from wrapped object before we update the getter
-            if (['', null, undefined].indexOf(this.wrapped[field]) === -1) {
+            console.log('updateFromWrapped?', field, this.wrapped[field]);
+            if (updateFromWrapped && ['', null, undefined].indexOf(this.wrapped[field]) === -1) {
                 this.set(field, this.wrapped[field]);
             }
 
@@ -318,14 +330,14 @@ export class Scope extends EventDispatcher {
     }
 
     public unwrap(): void {
-        for (const field in this.wrapped) {
-            Object.defineProperty(this.wrapped, field, {
-                get: () => null,
-                set: (_) => null,
-                enumerable: true,
-                configurable: true
-            });
-        }
+        if (!this.wrapped)
+            return;
+        const toUnwrap = this.wrapped;
         this.wrapped = null;
+        console.log('unwrapping', toUnwrap);
+        toUnwrap.$wrapped = false;
+        for (const field in toUnwrap) {
+            delete toUnwrap[field];
+        }
     }
 }

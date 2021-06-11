@@ -404,8 +404,8 @@ class ConditionalNode extends Node implements TreeNode {
     }
 
     public async evaluate(scope: Scope, dom: DOM) {
-        const one = await this.condition.evaluate(scope, dom);
-        if (one) {
+        const condition = await this.condition.evaluate(scope, dom);
+        if (condition) {
             return await this.block.evaluate(scope, dom);
         }
         return null;
@@ -439,7 +439,6 @@ class IfStatementNode extends Node implements TreeNode {
             TokenType.IF,
             TokenType.ELSE_IF
         ].indexOf(tokens[0].type) === -1)  {
-            console.log('Invalid Syntax');
             throw SyntaxError('Invalid Syntax');
         }
 
@@ -452,7 +451,6 @@ class IfStatementNode extends Node implements TreeNode {
 
     public static parse(lastNode, token, tokens: Token[]): IfStatementNode {
         if (tokens[1].type !== TokenType.L_PAREN) {
-            console.log('If statement needs to be followed by a condition encased in parenthesis.');
             throw SyntaxError('If statement needs to be followed by a condition encased in parenthesis.');
         }
         const nodes: ConditionalNode[] = [];
@@ -504,11 +502,9 @@ class ForStatementNode extends Node implements TreeNode {
 
     public static parse(lastNode, token, tokens: Token[]): ForStatementNode {
         if (tokens[1].type !== TokenType.L_PAREN) {
-            console.log('Syntax error: Missing (');
             throw SyntaxError('Syntax error: Missing (');
         }
         if (tokens[3].type !== TokenType.OF) {
-            console.log('Syntax error: Missing of');
             throw SyntaxError('Syntax error: Missing of');
         }
 
@@ -524,26 +520,6 @@ class ForStatementNode extends Node implements TreeNode {
             list as any,
             block as any
         );
-    }
-}
-
-class MemberExpressionNode extends Node implements TreeNode {
-    constructor(
-        protected obj: Node,
-        protected name: TreeNode<string>
-    ) {
-        super();
-    }
-
-    getChildNodes(): Node[] {
-        return [
-            this.obj as Node,
-            this.name as Node
-        ]
-    }
-
-    public async evaluate(scope: Scope, dom: DOM) {
-        return await this.obj.evaluate(scope, dom)[await this.name.evaluate(scope, dom)];
     }
 }
 
@@ -684,11 +660,11 @@ class ScopeMemberNode extends Node implements TreeNode {
 
     async evaluate(scope: Scope, dom: DOM) {
         let parent = await this.scope.evaluate(scope, dom);
+
         if (parent instanceof Tag)
             parent = parent.scope;
 
         if (!parent) {
-            console.log('failure, scope: ', scope, 'parent scope', await this.scope.evaluate(scope, dom), 'member', await this.name.evaluate(scope, dom));
             throw Error(`Cannot access "${await this.name.evaluate(scope, dom)}" of undefined.`);
         }
         const value: any = parent.get(await this.name.evaluate(scope, dom), false);
@@ -747,7 +723,6 @@ class AssignmentNode extends Node implements TreeNode {
 
     public static parse(lastNode: any, token, tokens: Token[]): AssignmentNode {
         if (!(lastNode instanceof RootScopeMemberNode) && !(lastNode instanceof ScopeMemberNode)) {
-            console.log('Invalid assignment syntax.');
             throw SyntaxError(`Invalid assignment syntax near ${Tree.toCode(tokens.splice(0, 10))}`);
         }
         tokens.splice(0, 1); // consume =
@@ -860,7 +835,6 @@ class ArithmeticAssignmentNode extends Node implements TreeNode {
 
     public static parse(lastNode, token, tokens: Token[]): ArithmeticAssignmentNode {
         if (!(lastNode instanceof RootScopeMemberNode) && !(lastNode instanceof ScopeMemberNode)) {
-            console.log('Invalid assignment syntax.');
             throw SyntaxError('Invalid assignment syntax.');
         }
         tokens.splice(0, 1); // consume +=
@@ -1047,7 +1021,6 @@ export class Tree {
                 node = NotNode.parse(node, tokens[0], tokens);
             } else {
                 let code: string = Tree.toCode(tokens, 10);
-                console.log(`Syntax Error. Near ${code}`);
                 throw Error(`Syntax Error. Near ${code}`);
             }
         }
@@ -1157,7 +1130,6 @@ export class Tree {
                 return args;
             }
         }
-        console.log(`Invalid Syntax, missing ${closeSymbol}`);
         throw Error(`Invalid Syntax, missing ${closeSymbol}`);
     }
 

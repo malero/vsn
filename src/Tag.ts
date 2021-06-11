@@ -18,6 +18,15 @@ import {SetAttribute} from "./attributes/SetAttribute";
 import {RootAttribute} from "./attributes/RootAttribute";
 import {StandardAttribute} from "./attributes/StandardAttribute";
 import {TypeAttribute} from "./attributes/TypeAttribute";
+import {Focus} from "./attributes/Focus";
+import {Blur} from "./attributes/Blur";
+import {ScopeAttribute} from "./attributes/ScopeAttribute";
+import {MouseEnter} from "./attributes/MouseEnter";
+import {MouseLeave} from "./attributes/MouseLeave";
+import {AddClassIf} from "./attributes/AddClassIf";
+import {DisableIf} from "./attributes/DisableIf";
+import {KeyUp} from "./attributes/KeyUp";
+import {KeyDown} from "./attributes/KeyDown";
 
 export enum TagState {
     Instantiated,
@@ -41,6 +50,7 @@ export class Tag extends EventDispatcher {
 
     public static readonly attributeMap: { [attr: string]: any; } = {
         'vsn-root': RootAttribute,
+        'vsn-scope': ScopeAttribute,
         'vsn-name': Name,
         'vsn-controller': ControllerAttribute,
         'vsn-model': ModelAttribute,
@@ -49,9 +59,17 @@ export class Tag extends EventDispatcher {
         'vsn-set': SetAttribute,
         'vsn-bind': Bind,
         'vsn-click': Click,
+        'vsn-focus': Focus,
+        'vsn-blur': Blur,
+        'vsn-key-up': KeyUp,
+        'vsn-key-down': KeyDown,
+        'vsn-mouseenter': MouseEnter,
+        'vsn-mouseleave': MouseLeave,
         'vsn-click-toggle-class': ClickToggleClass,
         'vsn-click-remove-class': ClickRemoveClass,
         'vsn-if': If,
+        'vsn-disable-if': DisableIf,
+        'vsn-add-class-if': AddClassIf,
         'vsn-type': TypeAttribute,
     };
 
@@ -61,7 +79,7 @@ export class Tag extends EventDispatcher {
         'textarea'
     ];
 
-    protected onclickHandlers: any[];
+    protected onEventHandlers: {[key:string]:any[]};
 
     constructor(
         public readonly element: HTMLElement,
@@ -71,8 +89,7 @@ export class Tag extends EventDispatcher {
         this.rawAttributes = {};
         this.parsedAttributes = {};
         this.attributes = [];
-        this.onclickHandlers = [];
-        this.element.onclick = this.onclick.bind(this);
+        this.onEventHandlers = {};
 
         this.analyzeElementAttributes();
 
@@ -184,12 +201,12 @@ export class Tag extends EventDispatcher {
         this._controller = controller;
     }
 
-    public wrap(obj: any, triggerUpdates: boolean = false) {
+    public wrap(obj: any, triggerUpdates: boolean = false, updateFromWrapped: boolean = true) {
         if (VisionHelper.isConstructor(obj)) {
             obj = new obj();
         }
 
-        this.scope.wrap(obj, triggerUpdates);
+        this.scope.wrap(obj, triggerUpdates, updateFromWrapped);
         obj['$scope'] = this.scope;
         obj['$tag'] = this;
         return obj;
@@ -315,15 +332,75 @@ export class Tag extends EventDispatcher {
     }
 
     protected onclick(e) {
+        this.handleEvent(e, 'click');
+    }
+
+    protected onfocus(e) {
+        this.handleEvent(e, 'focus');
+    }
+
+    protected onblur(e) {
+        this.handleEvent(e, 'blur');
+    }
+
+    protected onmouseenter(e) {
+        this.handleEvent(e, 'mouseenter');
+    }
+
+    protected onmouseleave(e) {
+        this.handleEvent(e, 'mouseleave');
+    }
+
+    protected onkeyup(e) {
+        this.handleEvent(e, 'keyup');
+    }
+
+    protected onkeydown(e) {
+        this.handleEvent(e, 'keydown');
+    }
+
+    protected handleEvent(e, eventType: string) {
+        e.stopPropagation();
+        if (!this.onEventHandlers[eventType])
+            return;
+
         this.scope.set('$event', e);
-        for (const handler of this.onclickHandlers)
+        for (const handler of this.onEventHandlers[eventType])
         {
             handler(e);
         }
     }
 
-    public addClickHandler(handler) {
-        this.onclickHandlers.push(handler);
+    public addEventHandler(eventType: string, handler) {
+        if (!this.onEventHandlers[eventType]) {
+            this.onEventHandlers[eventType] = [];
+
+            switch (eventType) {
+                case 'click':
+                    this.element.onclick = this.onclick.bind(this);
+                    break;
+                case 'focus':
+                    this.element.onfocus = this.onfocus.bind(this);
+                    break;
+                case 'blur':
+                    this.element.onblur = this.onblur.bind(this);
+                    break;
+                case 'mouseenter':
+                    this.element.onmouseenter = this.onmouseenter.bind(this);
+                    break;
+                case 'mouseleave':
+                    this.element.onmouseleave = this.onmouseleave.bind(this);
+                    break;
+                case 'keyup':
+                    this.element.onkeyup = this.onkeyup.bind(this);
+                    break;
+                case 'keydown':
+                    this.element.onkeypress = this.onkeydown.bind(this);
+                    break;
+            }
+        }
+
+        this.onEventHandlers[eventType].push(handler);
     }
 
     async watchAttribute(attributeName: string) {

@@ -35,6 +35,6 @@ export class ListItem extends Attribute {
     }
 
     private instantiateModel(model: any) {
-        this.tag.wrap(model);
+        this.tag.wrap(model, false, true);
     }
 }

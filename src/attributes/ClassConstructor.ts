@@ -1,6 +1,5 @@
 import {Scope} from "../Scope";
 import {Attribute} from "../Attribute";
-import {IPromise} from "simple-ts-promise";
 
 export class ClassConstructor extends Attribute {
     public static readonly scoped: boolean = true;

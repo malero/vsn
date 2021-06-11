@@ -1,20 +1,7 @@
-import {Attribute} from "../Attribute";
-import {Tree} from "../AST";
+import {On} from "./On";
 
-export class Click extends Attribute {
-    protected clickHandler: Tree;
-
-    public async compile() {
-        const click: string = this.getAttributeValue();
-        this.clickHandler = new Tree(click);
-        await this.clickHandler.prepare(this.tag.scope, this.tag.dom);
-    }
-
+export class Click extends On {
     public async connect() {
-        this.tag.addClickHandler(this.onClick.bind(this));
-    }
-
-    async onClick(e) {
-        await this.clickHandler.evaluate(this.tag.scope, this.tag.dom);
+        this.tag.addEventHandler('click', this.handleEvent.bind(this));
     }
 }
