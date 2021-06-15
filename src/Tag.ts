@@ -27,6 +27,7 @@ import {AddClassIf} from "./attributes/AddClassIf";
 import {DisableIf} from "./attributes/DisableIf";
 import {KeyUp} from "./attributes/KeyUp";
 import {KeyDown} from "./attributes/KeyDown";
+import {ScopeChange} from "./attributes/ScopeChange";
 
 export enum TagState {
     Instantiated,
@@ -51,6 +52,7 @@ export class Tag extends EventDispatcher {
     public static readonly attributeMap: { [attr: string]: any; } = {
         'vsn-root': RootAttribute,
         'vsn-scope': ScopeAttribute,
+        'vsn-scope-change': ScopeChange,
         'vsn-name': Name,
         'vsn-controller': ControllerAttribute,
         'vsn-model': ModelAttribute,
@@ -320,7 +322,7 @@ export class Tag extends EventDispatcher {
 
     public finalize(): void {
         this._state = TagState.Built;
-        this.callOnWrapped('$onBuilt');
+        this.callOnWrapped('$onBuilt', this, this.scope);
     }
 
     public callOnWrapped(method, ...args: any[]): boolean {

@@ -6,7 +6,7 @@
     "framework",
     "typescript"
   ],
-  "main": "./dist/Vision.js",
+  "main": "./dist/vision.min.js",
   "scripts": {
     "build": "rm -rf ./dist/ && webpack",
     "demo": "rm -rf ./dist/ && webpack && cp ./dist/vision.min.js ./demo/vision.js",

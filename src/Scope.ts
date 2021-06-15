@@ -38,6 +38,40 @@ export class WrappedArray<T> extends Array<T> {
         return num;
     }
 
+    splice(start: number, deleteCount?: number): T[] {
+        const removed: T[] = super.splice(start, deleteCount);
+
+        for (const item of removed) {
+            this.trigger('remove', item);
+        }
+
+        return removed;
+    }
+
+    get length(): number {
+        let c: number = 0;
+        for (const item of this) {
+            c += 1;
+        }
+        return c;
+    }
+
+    set length(num: number) {
+        let c: number = 0;
+        const toRemove: T[] = [];
+        for (const item of this) {
+            c += 1;
+            if (c >= num) {
+                toRemove.push(item);
+            }
+        }
+
+        for (const item of toRemove) {
+            this.splice(this.indexOf(item), 1);
+            this.trigger('remove', item);
+        }
+    }
+
     bind(event: string, fct: EventDispatcherCallback, context?: any, once?: boolean): number {
         once = once || false;
         this._lastKey++;
@@ -293,13 +327,12 @@ export class Scope extends EventDispatcher {
                 continue;
             }
 
-            if (this.wrapped[field] instanceof Array) {
+            if (this.wrapped[field] instanceof Array && !(this.wrapped[field] instanceof WrappedArray)) {
                 this.wrapped[field] = new WrappedArray(...toWrap[field]);
             }
 
             // Populate scope data from wrapped object before we update the getter
-            console.log('updateFromWrapped?', field, this.wrapped[field]);
-            if (updateFromWrapped && ['', null, undefined].indexOf(this.wrapped[field]) === -1) {
+            if (updateFromWrapped && [null, undefined].indexOf(this.wrapped[field]) === -1) {
                 this.set(field, this.wrapped[field]);
             }
 
@@ -334,7 +367,6 @@ export class Scope extends EventDispatcher {
             return;
         const toUnwrap = this.wrapped;
         this.wrapped = null;
-        console.log('unwrapping', toUnwrap);
         toUnwrap.$wrapped = false;
         for (const field in toUnwrap) {
             delete toUnwrap[field];

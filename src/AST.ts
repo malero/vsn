@@ -924,7 +924,7 @@ export class Tree {
                 _scope = await node.scope.evaluate(scope, null);
 
             const name = await node.name.evaluate(scope, null);
-            _scope.bind(`change:${name}`, fnc);
+            _scope.bind(`change`, fnc);
         }
     }
 

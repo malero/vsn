@@ -14,7 +14,7 @@ export class List extends Attribute {
         const listAttr: string = this.getAttributeBinding();
         const tree = new Tree(listAttr);
         const items = await tree.evaluate(this.tag.scope, this.tag.dom);
-        await this.addExistingItems(items)
+        await this.addExistingItems(items);
     }
 
     protected async addExistingItems(defaultList: any[] | null) {
@@ -55,6 +55,9 @@ export class List extends Attribute {
         (this.items as WrappedArray<any>).bind('add', (item) => {
             this.add(item);
         });
+        (this.items as WrappedArray<any>).bind('remove', (item) => {
+            this.remove(item);
+        });
 
         this.tag.scope.set('add', this.add.bind(this));
         this.tag.scope.set('remove', this.remove.bind(this));
@@ -90,11 +93,11 @@ export class List extends Attribute {
         this.tags.push(tag);
         tag.scope.clear();
 
-        console.log('wrap?', obj, this.tag.scope);
         if (obj) {
-            this.tag.unwrap();
-            this.tag.wrap(obj);
-            console.log('post wrap', this.tag.scope);
+            tag.unwrap();
+            tag.wrap(obj);
         }
+
+        this.tag.trigger('add', obj);
     }
 }
