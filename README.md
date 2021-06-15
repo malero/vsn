@@ -2,13 +2,19 @@
 
 Simple Javascript Framework built from the ground up with eCommerce and SEO in mind. VisionJS is meant to be used with server side rendered websites. Rather than dynamically rendering component templates like most javascript frameworks, VisionJS uses the html rendered by your server to add functionality to your website.
 
+## Installing 
+Use NPM to install VisionJS with the following command:
+
+    npm i vsn
+
+
 ## Examples
 ### Set A Scope Variable
-Use `vsn-set:variableName="value|type"` to set a variable in the scope. `vsn-set` is only used to initialize a value and will only be evaluated once. Use `vsn-bind` if you would like to bind the element to the scope variable.
+Use `vsn-set:variable_name="value|type"` to set a variable in the scope. `vsn-set` is only used to initialize a value and will only be evaluated once. Use `vsn-bind` if you would like to bind the element to the scope variable.
 
-    <div vsn-set:myInt="42|int"></div>
-    <div vsn-set:myFloat="42.3|float"></div>
-    <div vsn-set:myBool="false|bool"></div>
+    <div vsn-set:my_int="42|int"></div>
+    <div vsn-set:my_float="42.3|float"></div>
+    <div vsn-set:my_bool="false|bool"></div>
 
 
 ### Attribute Binding
@@ -35,7 +41,7 @@ Use `vsn-if` if you would only like to show an element if a certain condition is
 
 
 ### Controllers
-Use `vsn-controller:variable="ClassName"` to bind an element to a controller class.
+Use `vsn-controller:variable_name="ClassName"` to bind an element to a controller class.
 
 Typescript class controller:
 
@@ -56,3 +62,5 @@ HTML to use the above controller:
         <span vsn-if="!controller.on">It's off...</span>
         <a href="/" vsn-click="controller.doSomething($event, !controller.on)">Click Me</a>
     </div>
+
+Note: `variable_name` cannot contain capitalized letters. Use `<tag vsn-controller="ClassName" vsn-name="variableName" />` if you need to use capitalized letters in your controller name.
