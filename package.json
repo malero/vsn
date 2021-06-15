@@ -1,15 +1,15 @@
 {
   "name": "vsn",
-  "version": "0.0.7",
+  "version": "0.0.8",
   "description": "SEO Friendly Javascript/Typescript Framework",
   "keywords": [
     "framework",
     "typescript"
   ],
-  "main": "./dist/Vision.js",
+  "main": "./dist/vision.min.js",
   "scripts": {
-    "build": "rm -rf ./dist/ && tsc && webpack",
-    "demo": "rm -rf ./dist/ && tsc && webpack && cp ./dist/vision.min.js ./demo/vision.js",
+    "build": "rm -rf ./dist/ && webpack",
+    "demo": "rm -rf ./dist/ && webpack && cp ./dist/vision.min.js ./demo/vision.js",
     "clean": "rm -rf ./dist/",
     "test": "karma start --single-run",
     "posttest": "codecov",
@@ -37,7 +37,7 @@
   },
   "homepage": "https://www.vsnjs.com",
   "git": "https://github.com/malero/visionjs",
-  "typings": "./dist/Vision.d.ts",
+  "typings": "./types/Vision.d.ts",
   "author": "Malero <contact@vsnjs.com> (https://www.vsnjs.com/)",
   "bugs": {
     "url": "https://github.com/malero/visionjs/issues",

@@ -20,6 +20,8 @@
 
             TestController.prototype.add = function () {
                 this.items.push(new TestItem(this.name, this.age));
+                console.log(this.items, this['$scope'].wrapped);
+                window['controller'] = this['$scope'].wrapped;
                 this.reset();
             };
 
@@ -40,7 +42,7 @@
         }());
 
         var Controller = (function () {
-            function Controller(name = null, age = null) {
+            function Controller() {
                 this.on = false;
             }
 

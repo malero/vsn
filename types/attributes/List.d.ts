@@ -2,8 +2,8 @@ import { Attribute } from "../Attribute";
 import { Tag } from "../Tag";
 export declare class List extends Attribute {
     static readonly scoped: boolean;
-    protected items: any[];
-    protected tags: Tag[];
+    items: any[];
+    tags: Tag[];
     protected template: Node;
     extract(): Promise<void>;
     protected addExistingItems(defaultList: any[] | null): Promise<void>;

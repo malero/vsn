@@ -4,9 +4,14 @@ import {Tree} from "../AST";
 export class If extends Attribute {
     protected tree: Tree;
 
-    public async setup() {
+    public async compile() {
         const statement: string = this.getAttributeValue();
         this.tree = new Tree(statement);
+        await this.tree.prepare(this.tag.scope, this.tag.dom);
+    }
+
+    public async setup() {
+
     }
 
     public async extract() {

@@ -1,20 +1,20 @@
 import {Attribute} from "../Attribute";
 import {Tag} from "../Tag";
-import {Scope, WrappedArray} from "../Scope";
+import {WrappedArray} from "../Scope";
 import {Tree} from "../AST";
 import {ElementHelper} from "../helpers/ElementHelper";
 
 export class List extends Attribute {
     public static readonly scoped: boolean = true;
-    protected items: any[];
-    protected tags: Tag[];
+    public items: any[];
+    public tags: Tag[];
     protected template: Node;
 
     public async extract() {
         const listAttr: string = this.getAttributeBinding();
         const tree = new Tree(listAttr);
         const items = await tree.evaluate(this.tag.scope, this.tag.dom);
-        await this.addExistingItems(items)
+        await this.addExistingItems(items);
     }
 
     protected async addExistingItems(defaultList: any[] | null) {
@@ -27,7 +27,14 @@ export class List extends Attribute {
             }
 
         if (this.tag.element.children.length > 0) {
-            this.template = this.tag.element.children[0].cloneNode(true);
+            const template = this.tag.element.children[0];
+            if (template.hasAttribute('vsn-template')) {
+                template.removeAttribute('vsn-template');
+                this.tag.element.removeChild(template);
+                this.template = template;
+            } else {
+                this.template = template.cloneNode(true);
+            }
         }
 
         for (const element of Array.from(this.tag.element.querySelectorAll('*'))) {
@@ -47,6 +54,9 @@ export class List extends Attribute {
 
         (this.items as WrappedArray<any>).bind('add', (item) => {
             this.add(item);
+        });
+        (this.items as WrappedArray<any>).bind('remove', (item) => {
+            this.remove(item);
         });
 
         this.tag.scope.set('add', this.add.bind(this));
@@ -81,13 +91,13 @@ export class List extends Attribute {
         await this.tag.dom.buildFrom(this.tag.element);
         const tag: Tag = await this.tag.dom.getTagForElement(element);
         this.tags.push(tag);
-        const scope: Scope = tag.scope.get(this.listItemName);
-        scope.clear();
+        tag.scope.clear();
 
         if (obj) {
-            // Scope has already wrapped a new v-list-item-model, so we need to unwrap and wrap the passed object
             tag.unwrap();
-            tag.wrap(obj, true);
+            tag.wrap(obj);
         }
+
+        this.tag.trigger('add', obj);
     }
 }

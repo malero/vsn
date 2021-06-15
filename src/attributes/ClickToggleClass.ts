@@ -10,7 +10,7 @@ export class ClickToggleClass extends Attribute {
     }
 
     public async connect() {
-        this.tag.addClickHandler(this.onClick.bind(this));
+        this.tag.addEventHandler('click', this.onClick.bind(this));
     }
 
     onClick(e) {

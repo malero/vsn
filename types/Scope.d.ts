@@ -18,6 +18,9 @@ export declare class WrappedArray<T> extends Array<T> {
     readonly $wrapped: boolean;
     constructor(...items: T[]);
     push(...items: T[]): number;
+    splice(start: number, deleteCount?: number): T[];
+    get length(): number;
+    set length(num: number);
     bind(event: string, fct: EventDispatcherCallback, context?: any, once?: boolean): number;
     once(event: string, fct: EventDispatcherCallback, context?: any): number;
     unbind(event: string, key?: number): boolean;
@@ -48,6 +51,9 @@ export declare class Scope extends EventDispatcher {
     extend(data: any): void;
     clear(): void;
     cleanup(): void;
-    wrap(wrapped: any, triggerUpdates?: boolean): void;
+    setData(obj: {
+        [key: string]: any;
+    }): void;
+    wrap(toWrap: any, triggerUpdates?: boolean, updateFromWrapped?: boolean): void;
     unwrap(): void;
 }
