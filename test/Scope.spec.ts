@@ -1,4 +1,4 @@
-import {Scope} from "../src/Scope";
+import {Scope, WrappedArray} from "../src/Scope";
 
 class Test {
     public testing: string = 'test';
@@ -23,5 +23,21 @@ describe('Scope', () => {
         obj.testing = 'test';
         expect(scope.get('testing')).toBe('test');
         expect(scope.get('test').call(scope.wrapped)).toBe(true);
+    });
+});
+
+describe('WrappedArray', () => {
+    it("should behave like an array", async () => {
+        const a = new WrappedArray();
+        let removes: number = 0;
+        a.bind('remove', (e) => {
+             removes += 1;
+        });
+        a.push(1);
+        a.push(2);
+        a.push(3);
+        a.splice(1, 2);
+        expect(removes).toBe(2);
+        expect(a.length).toBe(1);
     });
 });

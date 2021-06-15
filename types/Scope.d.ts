@@ -18,6 +18,9 @@ export declare class WrappedArray<T> extends Array<T> {
     readonly $wrapped: boolean;
     constructor(...items: T[]);
     push(...items: T[]): number;
+    splice(start: number, deleteCount?: number): T[];
+    get length(): number;
+    set length(num: number);
     bind(event: string, fct: EventDispatcherCallback, context?: any, once?: boolean): number;
     once(event: string, fct: EventDispatcherCallback, context?: any): number;
     unbind(event: string, key?: number): boolean;
