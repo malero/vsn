@@ -77,6 +77,10 @@ export declare class Tag extends EventDispatcher {
     protected onmouseleave(e: any): void;
     protected onkeyup(e: any): void;
     protected onkeydown(e: any): void;
+    protected ontouchstart(e: any): void;
+    protected ontouchmove(e: any): void;
+    protected ontouchend(e: any): void;
+    protected ontouchcancel(e: any): void;
     protected handleEvent(e: any, eventType: string): void;
     addEventHandler(eventType: string, handler: any): void;
     watchAttribute(attributeName: string): Promise<StandardAttribute>;

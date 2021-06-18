@@ -2,11 +2,14 @@ import {DOM} from "./DOM";
 import {EventDispatcher} from "simple-ts-event-dispatcher";
 import {WrappedArray} from "./Scope";
 import {IDeferred, IPromise, Promise} from "simple-ts-promise";
+import {DataModel} from "simple-ts-models";
+import {Tree} from "./AST";
 
 export class Vision extends EventDispatcher {
     protected static _instance: Vision;
     protected _dom?: DOM;
     protected controllers: {[key: string]: any} = {};
+    protected controllerTimeouts = {};
 
     constructor() {
         super();
@@ -15,6 +18,7 @@ export class Vision extends EventDispatcher {
             this.setup.bind(this)
         );
         this.registerClass(WrappedArray, 'WrappedArray');
+        this.registerClass(DataModel, 'DataModel');
     }
 
     public get dom(): DOM {
@@ -39,7 +43,11 @@ export class Vision extends EventDispatcher {
         if (!!this.controllers[key]) {
             deferred.resolve(this.controllers[key]);
         } else {
+            this.controllerTimeouts[key] = setTimeout(() => {
+                console.warn(`vision.getClass timed out after 5 seconds trying to find ${key}. Make sure the class is registered with vision.registerClass`);
+            }, 5000);
             this.once(`registered:${key}`, (cls) => {
+                clearTimeout(this.controllerTimeouts[key]);
                 deferred.resolve(cls);
             })
         }
@@ -57,4 +65,5 @@ export class Vision extends EventDispatcher {
 
 export const vision: Vision = Vision.instance;
 window['Vision'] = Vision;
-window['vision'] = vision;
+window['vision'] = window['vsn'] = vision;
+window['Tree'] = Tree;

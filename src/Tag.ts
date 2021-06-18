@@ -28,6 +28,11 @@ import {DisableIf} from "./attributes/DisableIf";
 import {KeyUp} from "./attributes/KeyUp";
 import {KeyDown} from "./attributes/KeyDown";
 import {ScopeChange} from "./attributes/ScopeChange";
+import {TouchStart} from "./attributes/TouchStart";
+import {TouchMove} from "./attributes/TouchMove";
+import {TouchEnd} from "./attributes/TouchEnd";
+import {TouchCancel} from "./attributes/TouchCancel";
+import {Exec} from "./attributes/Exec";
 
 export enum TagState {
     Instantiated,
@@ -51,6 +56,7 @@ export class Tag extends EventDispatcher {
 
     public static readonly attributeMap: { [attr: string]: any; } = {
         'vsn-root': RootAttribute,
+        'vsn-exec': Exec,
         'vsn-scope': ScopeAttribute,
         'vsn-scope-change': ScopeChange,
         'vsn-name': Name,
@@ -73,6 +79,10 @@ export class Tag extends EventDispatcher {
         'vsn-disable-if': DisableIf,
         'vsn-add-class-if': AddClassIf,
         'vsn-type': TypeAttribute,
+        'vsn-touch-start': TouchStart,
+        'vsn-touch-move': TouchMove,
+        'vsn-touch-end': TouchEnd,
+        'vsn-touch-cancel': TouchCancel,
     };
 
     protected inputTags: string[] = [
@@ -361,6 +371,22 @@ export class Tag extends EventDispatcher {
         this.handleEvent(e, 'keydown');
     }
 
+    protected ontouchstart(e) {
+        this.handleEvent(e, 'touchstart');
+    }
+
+    protected ontouchmove(e) {
+        this.handleEvent(e, 'touchmove');
+    }
+
+    protected ontouchend(e) {
+        this.handleEvent(e, 'touchend');
+    }
+
+    protected ontouchcancel(e) {
+        this.handleEvent(e, 'touchcancel');
+    }
+
     protected handleEvent(e, eventType: string) {
         e.stopPropagation();
         if (!this.onEventHandlers[eventType])
@@ -398,6 +424,18 @@ export class Tag extends EventDispatcher {
                     break;
                 case 'keydown':
                     this.element.onkeypress = this.onkeydown.bind(this);
+                    break;
+                case 'touchstart':
+                    this.element.ontouchstart = this.ontouchstart.bind(this);
+                    break;
+                case 'touchmove':
+                    this.element.ontouchmove = this.ontouchmove.bind(this);
+                    break;
+                case 'touchend':
+                    this.element.ontouchend = this.ontouchend.bind(this);
+                    break;
+                case 'touchcancel':
+                    this.element.ontouchcancel = this.ontouchcancel.bind(this);
                     break;
             }
         }
