@@ -7,7 +7,8 @@ export interface Token {
 export declare enum BlockType {
     BRACE = 0,
     BRACKET = 1,
-    PAREN = 2
+    PAREN = 2,
+    STATEMENT = 3
 }
 export declare enum TokenType {
     WHITESPACE = 0,
@@ -74,6 +75,13 @@ export declare class BlockNode extends Node implements TreeNode {
     evaluate(scope: Scope, dom: DOM): Promise<any>;
     prepare(scope: Scope, dom: DOM): Promise<void>;
 }
+export interface IBlockInfo {
+    type: BlockType;
+    open: TokenType;
+    close: TokenType;
+    openCharacter: string;
+    closeCharacter: string;
+}
 export declare class Tree {
     readonly code: string;
     protected rootNode: Node;
@@ -85,7 +93,9 @@ export declare class Tree {
     static stripWhiteSpace(tokens: Token[]): Token[];
     static processTokens(tokens: Token[]): BlockNode;
     static toCode(tokens: Token[], limit?: any): string;
-    static getNextStatmentTokens(tokens: Token[], consumeSemicolon?: boolean): Token[];
-    static getBlockTokens(tokens: Token[], blockType?: BlockType, groupByComma?: boolean): Token[][];
+    static getBlockInfo(tokens: Token[]): IBlockInfo;
+    static getNextStatementTokens(tokens: Token[], consumeClosingToken?: boolean, consumeOpeningToken?: boolean, includeClosingToken?: boolean): Token[];
+    static getBlockTokens(tokens: Token[], groupByComma?: boolean): Token[][];
+    static getTokensUntil(tokens: Token[], terminator?: TokenType, consumeTerminator?: boolean, includeTerminator?: boolean, validIfTerminatorNotFound?: boolean): Token[];
     static consumeTypes(tokens: Token[], types: TokenType[]): Token[];
 }

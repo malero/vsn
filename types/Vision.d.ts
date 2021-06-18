@@ -7,6 +7,7 @@ export declare class Vision extends EventDispatcher {
     protected controllers: {
         [key: string]: any;
     };
+    protected controllerTimeouts: {};
     constructor();
     get dom(): DOM;
     setup(): void;
