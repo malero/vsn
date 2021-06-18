@@ -6,14 +6,32 @@ import {ElementHelper} from "../helpers/ElementHelper";
 
 export class List extends Attribute {
     public static readonly scoped: boolean = true;
+    public tree: Tree;
     public items: any[];
     public tags: Tag[];
     protected template: Node;
 
-    public async extract() {
+    public async compile() {
         const listAttr: string = this.getAttributeBinding();
-        const tree = new Tree(listAttr);
-        const items = await tree.evaluate(this.tag.scope, this.tag.dom);
+        this.tree = new Tree(listAttr);
+        await this.tree.prepare(this.tag.scope, this.tag.dom);
+    }
+
+    public async setup() {
+        if (this.tag.element.children.length > 0) {
+            const template = this.tag.element.children[0];
+            if (template.hasAttribute('vsn-template')) {
+                template.removeAttribute('vsn-template');
+                this.tag.element.removeChild(template);
+                this.template = template;
+            } else {
+                this.template = template.cloneNode(true);
+            }
+        }
+    }
+
+    public async extract() {
+        const items = await this.tree.evaluate(this.tag.scope, this.tag.dom);
         await this.addExistingItems(items);
     }
 
@@ -25,17 +43,6 @@ export class List extends Attribute {
             for (const existingItem of defaultList) {
                 await this.add(existingItem);
             }
-
-        if (this.tag.element.children.length > 0) {
-            const template = this.tag.element.children[0];
-            if (template.hasAttribute('vsn-template')) {
-                template.removeAttribute('vsn-template');
-                this.tag.element.removeChild(template);
-                this.template = template;
-            } else {
-                this.template = template.cloneNode(true);
-            }
-        }
 
         for (const element of Array.from(this.tag.element.querySelectorAll('*'))) {
             if (!ElementHelper.hasVisionAttribute(element, 'vsn-list-item'))

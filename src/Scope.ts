@@ -305,6 +305,9 @@ export class Scope extends EventDispatcher {
     }
 
     public wrap(toWrap: any, triggerUpdates: boolean = false, updateFromWrapped: boolean = true) {
+        if (toWrap instanceof Scope)
+            toWrap = toWrap.data;
+
         if ([null, undefined].indexOf(this.wrapped) === -1)
             throw Error("A scope can only wrap a single object");
 
@@ -313,6 +316,7 @@ export class Scope extends EventDispatcher {
         }
 
         if (toWrap['$wrapped']) {
+            console.log(toWrap, this);
             throw Error("An object should only be wrapped once.");
         }
 

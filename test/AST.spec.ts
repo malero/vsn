@@ -25,6 +25,19 @@ describe('Tree', () => {
         });
     });
 
+    it("should parse number literals correctly", async () => {
+        let tree: Tree = new Tree('foo = 5;baz=-15;');
+        const dom: DOM = new DOM(document, false);
+        await tree.evaluate(scope, dom)
+        expect(scope.get('baz')).toBe(-15);
+        expect(scope.get('foo')).toBe(5);
+
+        tree = new Tree('bar = 1.5;nitch=-1.5;');
+        await tree.evaluate(scope, dom);
+        expect(scope.get('bar')).toBe(1.5);
+        expect(scope.get('nitch')).toBe(-1.5);
+    });
+
     it("should evaluate scope variables correctly", async () => {
         let tree: Tree = new Tree('foo');
         const dom: DOM = new DOM(document, false);
@@ -148,7 +161,7 @@ describe('Tree', () => {
     });
 
     it("should be able to assign variables properly", async () => {
-        let tree: Tree = new Tree(`something = 5;return something;`);
+        let tree: Tree = new Tree(`something = 5;somethingElse=6;return something;`);
         const dom: DOM = new DOM(document, false);
         expect(await tree.evaluate(scope, dom)).toBe(5);
         expect(scope.get('something')).toBe(5);
@@ -220,5 +233,34 @@ describe('Tree', () => {
         const dom: DOM = new DOM(document, false);
         await tree.evaluate(scope, dom);
         expect(scope.get('test')).toBe(46);
+    });
+
+    it("should be able parse an array of numbers", async () => {
+        let tree: Tree = new Tree(`test = [0,1,2,3,4,5];`);
+        const dom: DOM = new DOM(document, false);
+        await tree.evaluate(scope, dom);
+
+        expect(scope.get('test').length).toBe(6);
+        for (let i = 0; i<=5; i++) {
+            expect(scope.get('test')[i]).toBe(i);
+        }
+    });
+
+    it("should be able parse an object literal", async () => {
+        let tree: Tree = new Tree(`test = {"x":0,"y":1,"z":2};`);
+        const dom: DOM = new DOM(document, false);
+        await tree.evaluate(scope, dom);
+        expect(scope.get('test').get('x')).toBe(0);
+        expect(scope.get('test').get('y')).toBe(1);
+        expect(scope.get('test').get('z')).toBe(2);
+    });
+
+    it("should be able parse an object literal with a key from the scope", async () => {
+        let tree: Tree = new Tree(`xKey = 'x'; test = {xKey:120,"y":1,"z":2};`);
+        const dom: DOM = new DOM(document, false);
+        await tree.evaluate(scope, dom);
+        expect(scope.get('test').get('y')).toBe(1);
+        expect(scope.get('test').get('z')).toBe(2);
+        expect(scope.get('test').get('x')).toBe(120);
     });
 });

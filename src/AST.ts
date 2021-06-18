@@ -19,7 +19,8 @@ export interface Token {
 export enum BlockType {
     BRACE,
     BRACKET,
-    PAREN
+    PAREN,
+    STATEMENT,
 }
 
 export enum TokenType {
@@ -384,7 +385,7 @@ class ComparisonNode extends Node implements TreeNode {
 
     public static parse(lastNode, token, tokens: Token[]) {
         tokens.splice(0, 1); // Remove comparison operator
-        return new ComparisonNode(lastNode, Tree.processTokens(Tree.getNextStatmentTokens(tokens)), token.type)
+        return new ComparisonNode(lastNode, Tree.processTokens(Tree.getNextStatementTokens(tokens)), token.type)
     }
 }
 
@@ -509,7 +510,7 @@ class ForStatementNode extends Node implements TreeNode {
         }
 
         tokens.splice(0, 1); // consume for
-        const loopDef: Token[] = Tree.getNextStatmentTokens(tokens);
+        const loopDef: Token[] = Tree.getNextStatementTokens(tokens);
         const variableName: Token = loopDef.splice(0, 1)[0];
         loopDef.splice(0, 1); // consume of
         const list: TreeNode = Tree.processTokens(loopDef);
@@ -545,7 +546,7 @@ class NotNode extends Node implements TreeNode {
         tokens.splice(0, 1); // Remove not operator
         let containedTokens;
         if (tokens[0].type === TokenType.L_PAREN) {
-            containedTokens = Tree.getNextStatmentTokens(tokens);
+            containedTokens = Tree.getNextStatementTokens(tokens);
         } else {
             containedTokens = Tree.consumeTypes(tokens, [
                 TokenType.BOOLEAN_LITERAL,
@@ -715,6 +716,7 @@ class AssignmentNode extends Node implements TreeNode {
         if (this.rootNode instanceof ScopeMemberNode)
             localScope = await this.rootNode.scope.evaluate(scope, dom);
 
+        console.log('setting scope val', name, value);
         localScope.set(name, value);
         if (localScope.get(name) !== value)
             throw Error(`System Error: Failed to assign ${name} to ${value}`);
@@ -726,7 +728,9 @@ class AssignmentNode extends Node implements TreeNode {
             throw SyntaxError(`Invalid assignment syntax near ${Tree.toCode(tokens.splice(0, 10))}`);
         }
         tokens.splice(0, 1); // consume =
-        const assignmentTokens: Token[] = Tree.getNextStatmentTokens(tokens, false);
+        const assignmentTokens: Token[] = Tree.getNextStatementTokens(tokens, false, false, true);
+        console.log('assignment value', [...assignmentTokens], [...tokens]);
+
         return new AssignmentNode(
             lastNode,
             Tree.processTokens(assignmentTokens)
@@ -777,7 +781,7 @@ class ArithmeticNode extends Node implements TreeNode {
 
     public static parse(lastNode, token, tokens: Token[]) {
         tokens.splice(0, 1); // Remove arithmetic operator
-        return new ArithmeticNode(lastNode, Tree.processTokens(Tree.getNextStatmentTokens(tokens)), token.type)
+        return new ArithmeticNode(lastNode, Tree.processTokens(Tree.getNextStatementTokens(tokens)), token.type)
     }
 }
 
@@ -830,7 +834,7 @@ class ArithmeticAssignmentNode extends Node implements TreeNode {
             TokenType.SUBTRACT_ASSIGN,
             TokenType.MULTIPLY_ASSIGN,
             TokenType.DIVIDE_ASSIGN
-        ].indexOf(tokens[0].type) > -1
+        ].indexOf(tokens[0].type) > -1;
     }
 
     public static parse(lastNode, token, tokens: Token[]): ArithmeticAssignmentNode {
@@ -838,12 +842,102 @@ class ArithmeticAssignmentNode extends Node implements TreeNode {
             throw SyntaxError('Invalid assignment syntax.');
         }
         tokens.splice(0, 1); // consume +=
-        const assignmentTokens: Token[] = Tree.getNextStatmentTokens(tokens);
+        const assignmentTokens: Token[] = Tree.getNextStatementTokens(tokens);
         return new ArithmeticAssignmentNode(
             lastNode,
             Tree.processTokens(assignmentTokens),
             token.type
         );
+    }
+}
+
+class ArrayNode extends Node implements TreeNode {
+    constructor(
+        public readonly values: Node[]
+    ) {
+        super();
+    }
+
+    getChildNodes(): Node[] {
+        return new Array(...this.values);
+    }
+
+    async evaluate(scope: Scope, dom: DOM) {
+        const arr: any[] = [];
+        for (const val of this.values) {
+            arr.push(await val.evaluate(scope, dom));
+        }
+        return arr;
+    }
+
+    public static match(tokens: Token[]): boolean {
+        return tokens[0].type === TokenType.L_BRACKET;
+    }
+
+    public static parse(lastNode, token, tokens: Token[]): ArrayNode {
+        const valueTokens: Token[][] = Tree.getBlockTokens(tokens, BlockType.BRACKET);
+        const copy = [];
+        for (const v of valueTokens) {
+            const item = [];
+            for (const i of v) {
+                item.push(i);
+            }
+            copy.push(item);
+        }
+        console.log('array value tokens', [...copy], 'remaining tokens', [...tokens]);
+        const values: Node[] = [];
+        for (const arg of valueTokens) {
+            values.push(Tree.processTokens(arg));
+        }
+        return new ArrayNode(values);
+    }
+}
+
+class ObjectNode extends Node implements TreeNode {
+    constructor(
+        public readonly keys: Node[],
+        public readonly values: Node[]
+    ) {
+        super();
+    }
+
+    getChildNodes(): Node[] {
+        return new Array(...this.values);
+    }
+
+    async evaluate(scope: Scope, dom: DOM) {
+        const obj: Scope = new Scope();
+        for (let i = 0; i < this.values.length; i++) {
+            const key = this.keys[i];
+            const val = this.values[i];
+            obj.set(await key.evaluate(scope, dom), await val.evaluate(scope, dom));
+        }
+        return obj;
+    }
+
+    public static match(tokens: Token[]): boolean {
+        return tokens[0].type === TokenType.L_BRACE;
+    }
+
+    public static parse(lastNode, token, tokens: Token[]): ObjectNode {
+        const valueTokens: Token[] = Tree.getNextStatementTokens(tokens);
+        const keys: Node[] = [];
+        const values: Node[] = [];
+        console.log('object value tokens', [...valueTokens], 'remaining tokens', [...tokens]);
+
+        while (valueTokens.length > 0) {
+            const key: Token[] = Tree.getTokensUntil(valueTokens, TokenType.COLON, false);
+            console.log('key', [...key]);
+            if (valueTokens[0].type !== TokenType.COLON)
+                throw Error('Invalid object literal syntax. Expecting :');
+            valueTokens.splice(0, 1); // Consume :
+            const val: Token[] = Tree.getTokensUntil(valueTokens, TokenType.COMMA, true, false, true);
+            console.log('val', [...val]);
+            keys.push(Tree.processTokens(key));
+            values.push(Tree.processTokens(val));
+        }
+        console.log('making object node');
+        return new ObjectNode(keys, values);
     }
 }
 
@@ -893,6 +987,13 @@ class ElementAttributeNode extends Node implements TreeNode {
         const tag: Tag = await this.elementRef.evaluate(scope, dom);
         await tag.watchAttribute(this.attributeName);
     }
+}
+
+export interface IBlockInfo {
+    open: TokenType,
+    close: TokenType,
+    openCharacter: string,
+    closeCharacter: string
 }
 
 export class Tree {
@@ -977,6 +1078,10 @@ export class Tree {
             } else if (tokens[0].type === TokenType.ELEMENT_REFERENCE) {
                 node = new ElementReferenceNode(tokens[0].value);
                 tokens.splice(0, 1);
+            } else if (tokens[0].type === TokenType.L_BRACKET) {
+                node = ArrayNode.parse(node, token, tokens);
+            } else if (tokens[0].type === TokenType.L_BRACE) {
+                node = ObjectNode.parse(node, token, tokens);
             } else if (tokens[0].type === TokenType.ELEMENT_ATTRIBUTE && node instanceof ElementReferenceNode) {
                 node = new ElementAttributeNode(node, tokens[0].value);
                 tokens.splice(0, 1);
@@ -996,7 +1101,6 @@ export class Tree {
                     node, // Previous node should be a NAME
                     new FunctionArgumentNode(nodes)
                 );
-
             } else if (tokens[0].type === TokenType.SEMI_COLON) {
                 if (node) {
                     blockNodes.push(node);
@@ -1043,73 +1147,86 @@ export class Tree {
         return code;
     }
 
-    public static getNextStatmentTokens(tokens: Token[], consumeSemicolon: boolean = true): Token[] {
-        const statementTokens: Token[] = [];
+    public static getBlockInfo(tokens: Token[]): IBlockInfo {
+        let blockType: BlockType;
+        const opener = tokens[0];
 
-        // Consume opening block
-        if ([
-                TokenType.L_BRACKET,
-                TokenType.L_BRACE,
-                TokenType.L_PAREN
-            ].indexOf(tokens[0].type) > -1) {
-            tokens.splice(0, 1);
-        }
+        if (opener.type === TokenType.L_PAREN)
+            blockType = BlockType.PAREN;
+        else if (opener.type === TokenType.L_BRACE)
+            blockType = BlockType.BRACE;
+        else if (opener.type === TokenType.L_BRACKET)
+            blockType = BlockType.BRACKET;
+        else
+            blockType = BlockType.STATEMENT;
 
-        let openParens: number = 0;
-        for (let i: number = 0; i < tokens.length; i++) {
-            const token: Token = tokens[i];
-            if (token.type === TokenType.L_PAREN)
-                openParens += 1;
+        let open: TokenType;
+        let close: TokenType;
+        let openCharacter: string;
+        let closeCharacter: string;
 
-            if ([
-                TokenType.SEMI_COLON,
-                TokenType.R_BRACKET,
-                TokenType.R_BRACE,
-                TokenType.R_PAREN
-            ].indexOf(token.type) > -1) {
-                if (consumeSemicolon && token.type !== TokenType.SEMI_COLON)
-                    tokens.splice(0, 1); // Consume end of block
-
-                if (openParens > 0 && token.type === TokenType.R_PAREN) {
-                    openParens -= 1;
-                } else {
-                    break;
-                }
-            }
-
-            statementTokens.push(token);
-            tokens.splice(0, 1); // Consume part of statement
-            i--;
-        }
-        return statementTokens;
-    }
-
-    public static getBlockTokens(tokens: Token[], blockType: BlockType = BlockType.PAREN, groupByComma: boolean = true): Token[][] {
-        let open: TokenType = TokenType.L_PAREN;
-        let close: TokenType = TokenType.R_PAREN;
-        let closeSymbol: string = ')';
         switch(blockType) {
+            case BlockType.PAREN:
+                open = TokenType.L_PAREN;
+                close = TokenType.R_PAREN;
+                openCharacter = '(';
+                closeCharacter = ')';
+                break;
             case BlockType.BRACE:
                 open = TokenType.L_BRACE;
                 close = TokenType.R_BRACE;
-                closeSymbol = '}';
+                openCharacter = '{';
+                closeCharacter = '}';
                 break;
             case BlockType.BRACKET:
                 open = TokenType.L_BRACKET;
                 close = TokenType.R_BRACKET;
-                closeSymbol = ']';
+                openCharacter = '[';
+                closeCharacter = ']';
+                break;
+            default:
+                open = null;
+                close = TokenType.SEMI_COLON;
+                openCharacter = null;
+                closeCharacter = ';';
                 break;
         }
+
+        return {
+            open: open,
+            close: close,
+            openCharacter: openCharacter,
+            closeCharacter: closeCharacter
+        }
+    }
+
+    public static getNextStatementTokens(tokens: Token[], consumeClosingToken: boolean = true, consumeOpeningToken: boolean = true, includeClosingToken: boolean = false): Token[] {
+        const blockInfo: IBlockInfo = Tree.getBlockInfo(tokens);
+
+        // Consume opening block token
+        if (consumeOpeningToken && tokens[0].type === blockInfo.open) {
+            tokens.splice(0, 1);
+        }
+
+        const matchingTokens: Token[] = Tree.getTokensUntil(tokens, blockInfo.close, consumeClosingToken, includeClosingToken);
+        const last: number = matchingTokens.length - 1;
+        if (matchingTokens[last].type === TokenType.SEMI_COLON)
+            matchingTokens.splice(last, 1);
+        return matchingTokens;
+    }
+
+    public static getBlockTokens(tokens: Token[], blockType: BlockType = BlockType.PAREN, groupByComma: boolean = true): Token[][] {
+        const blockInfo: IBlockInfo = Tree.getBlockInfo(tokens);
         let openBlocks: number = 0;
         const args: Token[][] = [];
         let arg: Token[] = [];
         for (let i: number = 0; i < tokens.length; i++) {
             const token: Token = tokens[i];
-            if (token.type === open) {
+            if (token.type === blockInfo.open) {
                 openBlocks += 1;
                 if (openBlocks > 1)
                     arg.push(token);
-            } else if (token.type === close) {
+            } else if (token.type === blockInfo.close) {
                 openBlocks -= 1;
                 if (openBlocks > 0)
                     arg.push(token);
@@ -1130,7 +1247,63 @@ export class Tree {
                 return args;
             }
         }
-        throw Error(`Invalid Syntax, missing ${closeSymbol}`);
+        throw Error(`Invalid Syntax, missing ${blockInfo.closeCharacter}`);
+    }
+
+    public static getTokensUntil(tokens: Token[], terminator: TokenType = TokenType.SEMI_COLON, consumeTerminator: boolean = true, includeTerminator: boolean = false, validIfTerminatorNotFound: boolean = false): Token[] {
+        const statementTokens: Token[] = [];
+        const blockInfo: IBlockInfo = Tree.getBlockInfo(tokens);
+        console.log('getting tokens until', terminator, [...tokens]);
+
+        let openParens: number = 0;
+        let openBraces: number = 0;
+        let openBrackets: number = 0;
+
+        for (let i: number = 0; i < tokens.length; i++) {
+            const token: Token = tokens[i];
+            if (!(token.type === blockInfo.open && i === 0)) { // Skip opener
+                if (token.type === TokenType.L_PAREN)
+                    openParens += 1;
+
+                if (token.type === TokenType.L_BRACE)
+                    openBraces += 1;
+
+                if (token.type === TokenType.L_BRACKET)
+                    openBrackets += 1;
+            }
+
+            if ([
+                terminator,
+                TokenType.R_BRACKET,
+                TokenType.R_BRACE,
+                TokenType.R_PAREN
+            ].indexOf(token.type) > -1) {
+                if (openParens > 0 && token.type === TokenType.R_PAREN) {
+                    openParens -= 1;
+                } else if (openBraces > 0 && token.type === TokenType.R_BRACE) {
+                    openBraces -= 1;
+                } else if (openBrackets > 0 && token.type === TokenType.R_BRACKET) {
+                    openBrackets -= 1;
+                } else if (openParens === 0 && openBraces === 0 && openBrackets === 0 && token.type === terminator) {
+                    if (includeTerminator)
+                        statementTokens.push(token);
+
+                    if (includeTerminator || consumeTerminator)
+                        tokens.splice(0, 1); // Consume end of block
+                    break;
+                } else {
+                    if (validIfTerminatorNotFound)
+                        break;
+                    throw Error(`Invalid syntax, expecting ${terminator}.`)
+                }
+            }
+
+            statementTokens.push(token);
+            tokens.splice(0, 1); // Consume part of statement
+            i--;
+        }
+        console.log('found', [...statementTokens], 'remaining', [...tokens]);
+        return statementTokens;
     }
 
     static consumeTypes(tokens: Token[], types: TokenType[]): Token[] {
