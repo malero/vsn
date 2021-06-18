@@ -1,4 +1,3 @@
-
 import {Promise as SimplePromise, IDeferred} from 'simple-ts-promise';
 import {Scope} from "../src/Scope";
 import {Tree} from "../src/AST";
@@ -26,6 +25,7 @@ describe('Tree', () => {
     });
 
     it("should parse number literals correctly", async () => {
+        scope = new Scope();
         let tree: Tree = new Tree('foo = 5;baz=-15;');
         const dom: DOM = new DOM(document, false);
         await tree.evaluate(scope, dom)

@@ -3,6 +3,7 @@ import {EventDispatcher} from "simple-ts-event-dispatcher";
 import {WrappedArray} from "./Scope";
 import {IDeferred, IPromise, Promise} from "simple-ts-promise";
 import {DataModel} from "simple-ts-models";
+import {Tree} from "./AST";
 
 export class Vision extends EventDispatcher {
     protected static _instance: Vision;
@@ -64,4 +65,5 @@ export class Vision extends EventDispatcher {
 
 export const vision: Vision = Vision.instance;
 window['Vision'] = Vision;
-window['vision'] = vision;
+window['vision'] = window['vsn'] = vision;
+window['Tree'] = Tree;

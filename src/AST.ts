@@ -445,8 +445,8 @@ class IfStatementNode extends Node implements TreeNode {
 
         tokens.splice(0, 1); // consume if and else if
         return new ConditionalNode(
-            Tree.processTokens(Tree.getBlockTokens(tokens, BlockType.PAREN, false)[0]),
-            Tree.processTokens(Tree.getBlockTokens(tokens, BlockType.BRACE, false)[0])
+            Tree.processTokens(Tree.getBlockTokens(tokens, false)[0]),
+            Tree.processTokens(Tree.getBlockTokens(tokens, false)[0])
         );
     }
 
@@ -465,7 +465,7 @@ class IfStatementNode extends Node implements TreeNode {
             tokens.splice(0, 1); // Consume else
             nodes.push(new ConditionalNode(
                 new LiteralNode(true),
-                Tree.processTokens(Tree.getBlockTokens(tokens, BlockType.BRACE, false)[0])
+                Tree.processTokens(Tree.getBlockTokens(tokens, false)[0])
             ))
         }
 
@@ -514,7 +514,7 @@ class ForStatementNode extends Node implements TreeNode {
         const variableName: Token = loopDef.splice(0, 1)[0];
         loopDef.splice(0, 1); // consume of
         const list: TreeNode = Tree.processTokens(loopDef);
-        const block: TreeNode = Tree.processTokens(Tree.getBlockTokens(tokens, BlockType.BRACE, false)[0]);
+        const block: TreeNode = Tree.processTokens(Tree.getBlockTokens(tokens, false)[0]);
 
         return new ForStatementNode(
             new LiteralNode<string>(variableName.value),
@@ -716,7 +716,6 @@ class AssignmentNode extends Node implements TreeNode {
         if (this.rootNode instanceof ScopeMemberNode)
             localScope = await this.rootNode.scope.evaluate(scope, dom);
 
-        console.log('setting scope val', name, value);
         localScope.set(name, value);
         if (localScope.get(name) !== value)
             throw Error(`System Error: Failed to assign ${name} to ${value}`);
@@ -724,13 +723,13 @@ class AssignmentNode extends Node implements TreeNode {
     }
 
     public static parse(lastNode: any, token, tokens: Token[]): AssignmentNode {
+        console.log('pre assignment parse', [...tokens]);
         if (!(lastNode instanceof RootScopeMemberNode) && !(lastNode instanceof ScopeMemberNode)) {
             throw SyntaxError(`Invalid assignment syntax near ${Tree.toCode(tokens.splice(0, 10))}`);
         }
         tokens.splice(0, 1); // consume =
         const assignmentTokens: Token[] = Tree.getNextStatementTokens(tokens, false, false, true);
-        console.log('assignment value', [...assignmentTokens], [...tokens]);
-
+        console.log('assignment', [...assignmentTokens], [...tokens]);
         return new AssignmentNode(
             lastNode,
             Tree.processTokens(assignmentTokens)
@@ -875,7 +874,7 @@ class ArrayNode extends Node implements TreeNode {
     }
 
     public static parse(lastNode, token, tokens: Token[]): ArrayNode {
-        const valueTokens: Token[][] = Tree.getBlockTokens(tokens, BlockType.BRACKET);
+        const valueTokens: Token[][] = Tree.getBlockTokens(tokens);
         const copy = [];
         for (const v of valueTokens) {
             const item = [];
@@ -884,7 +883,6 @@ class ArrayNode extends Node implements TreeNode {
             }
             copy.push(item);
         }
-        console.log('array value tokens', [...copy], 'remaining tokens', [...tokens]);
         const values: Node[] = [];
         for (const arg of valueTokens) {
             values.push(Tree.processTokens(arg));
@@ -923,20 +921,16 @@ class ObjectNode extends Node implements TreeNode {
         const valueTokens: Token[] = Tree.getNextStatementTokens(tokens);
         const keys: Node[] = [];
         const values: Node[] = [];
-        console.log('object value tokens', [...valueTokens], 'remaining tokens', [...tokens]);
 
         while (valueTokens.length > 0) {
             const key: Token[] = Tree.getTokensUntil(valueTokens, TokenType.COLON, false);
-            console.log('key', [...key]);
             if (valueTokens[0].type !== TokenType.COLON)
                 throw Error('Invalid object literal syntax. Expecting :');
             valueTokens.splice(0, 1); // Consume :
             const val: Token[] = Tree.getTokensUntil(valueTokens, TokenType.COMMA, true, false, true);
-            console.log('val', [...val]);
             keys.push(Tree.processTokens(key));
             values.push(Tree.processTokens(val));
         }
-        console.log('making object node');
         return new ObjectNode(keys, values);
     }
 }
@@ -990,6 +984,7 @@ class ElementAttributeNode extends Node implements TreeNode {
 }
 
 export interface IBlockInfo {
+    type: BlockType,
     open: TokenType,
     close: TokenType,
     openCharacter: string,
@@ -1193,6 +1188,7 @@ export class Tree {
         }
 
         return {
+            type: blockType,
             open: open,
             close: close,
             openCharacter: openCharacter,
@@ -1208,14 +1204,10 @@ export class Tree {
             tokens.splice(0, 1);
         }
 
-        const matchingTokens: Token[] = Tree.getTokensUntil(tokens, blockInfo.close, consumeClosingToken, includeClosingToken);
-        const last: number = matchingTokens.length - 1;
-        if (matchingTokens[last].type === TokenType.SEMI_COLON)
-            matchingTokens.splice(last, 1);
-        return matchingTokens;
+        return Tree.getTokensUntil(tokens, blockInfo.close, consumeClosingToken, includeClosingToken);
     }
 
-    public static getBlockTokens(tokens: Token[], blockType: BlockType = BlockType.PAREN, groupByComma: boolean = true): Token[][] {
+    public static getBlockTokens(tokens: Token[], groupByComma: boolean = true): Token[][] {
         const blockInfo: IBlockInfo = Tree.getBlockInfo(tokens);
         let openBlocks: number = 0;
         const args: Token[][] = [];
@@ -1253,7 +1245,6 @@ export class Tree {
     public static getTokensUntil(tokens: Token[], terminator: TokenType = TokenType.SEMI_COLON, consumeTerminator: boolean = true, includeTerminator: boolean = false, validIfTerminatorNotFound: boolean = false): Token[] {
         const statementTokens: Token[] = [];
         const blockInfo: IBlockInfo = Tree.getBlockInfo(tokens);
-        console.log('getting tokens until', terminator, [...tokens]);
 
         let openParens: number = 0;
         let openBraces: number = 0;
@@ -1288,7 +1279,7 @@ export class Tree {
                     if (includeTerminator)
                         statementTokens.push(token);
 
-                    if (includeTerminator || consumeTerminator)
+                    if ((includeTerminator || consumeTerminator) && token.type !== TokenType.SEMI_COLON)
                         tokens.splice(0, 1); // Consume end of block
                     break;
                 } else {
@@ -1302,7 +1293,6 @@ export class Tree {
             tokens.splice(0, 1); // Consume part of statement
             i--;
         }
-        console.log('found', [...statementTokens], 'remaining', [...tokens]);
         return statementTokens;
     }
 
