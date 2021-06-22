@@ -28,6 +28,9 @@ export declare class Tag extends EventDispatcher {
     protected _children: Tag[];
     protected _scope: Scope;
     protected _controller: Controller;
+    readonly flags: {
+        [key: string]: boolean;
+    };
     static readonly attributeMap: {
         [attr: string]: any;
     };
@@ -36,6 +39,8 @@ export declare class Tag extends EventDispatcher {
         [key: string]: any[];
     };
     constructor(element: HTMLElement, dom: DOM);
+    get style(): CSSStyleDeclaration;
+    get computedStyle(): CSSStyleDeclaration;
     analyzeElementAttributes(): void;
     evaluate(): Promise<void>;
     mutate(mutation: MutationRecord): void;
@@ -46,6 +51,7 @@ export declare class Tag extends EventDispatcher {
     getAttributeBinding(attr: string): string;
     get isInput(): boolean;
     addChild(tag: Tag): void;
+    get children(): Tag[];
     get parentTag(): Tag;
     set parentTag(tag: Tag);
     get scope(): Scope;
@@ -70,18 +76,7 @@ export declare class Tag extends EventDispatcher {
     connectAttributes(): Promise<void>;
     finalize(): void;
     callOnWrapped(method: any, ...args: any[]): boolean;
-    protected onclick(e: any): void;
-    protected onfocus(e: any): void;
-    protected onblur(e: any): void;
-    protected onmouseenter(e: any): void;
-    protected onmouseleave(e: any): void;
-    protected onkeyup(e: any): void;
-    protected onkeydown(e: any): void;
-    protected ontouchstart(e: any): void;
-    protected ontouchmove(e: any): void;
-    protected ontouchend(e: any): void;
-    protected ontouchcancel(e: any): void;
-    protected handleEvent(e: any, eventType: string): void;
+    protected handleEvent(eventType: string, e: any): void;
     addEventHandler(eventType: string, handler: any): void;
     watchAttribute(attributeName: string): Promise<StandardAttribute>;
 }

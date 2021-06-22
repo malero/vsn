@@ -11,7 +11,6 @@ export class Exec extends Attribute {
     }
 
     public async extract() {
-        console.log(this.tree);
         await this.tree.evaluate(this.tag.scope, this.tag.dom);
     }
 }

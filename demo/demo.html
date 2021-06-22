@@ -22,7 +22,6 @@
 
             TestController.prototype.add = function () {
                 this.items.push(new TestItem(this.name, this.age));
-                console.log(this.items, this['$scope'].wrapped);
                 window['controller'] = this['$scope'].wrapped;
                 this.reset();
             };
@@ -62,10 +61,21 @@
             return Controller;
         }());
     </script>
+
+    <script type="vsn">
+        class Test {
+            wut() {
+                print('wut');
+            }
+        }
+    </script>
+    <template type="vsn" id="something">
+        <span>hi hi</span>
+    </template>
 </head>
 <body>
 <h2>On Click</h2>
-<button vsn-click="show = !show" vsn-set:show="false|boolean">Toggle</button>
+<button vsn-on:click="show = !show" vsn-set:show="false|boolean">Toggle</button>
 <span vsn-bind="show"></span>
 
 <h2>Attribute Binding</h2>
@@ -74,7 +84,7 @@
 <input type="text" vsn-bind="#link.@href"/>
 
 <h2>Conditional Elements</h2>
-<button vsn-click="show = !show">Toggle</button>
+<button vsn-on:click="show = !show">Toggle</button>
 <span vsn-if="show">Show is true</span>
 <span vsn-if="!show">Show is false</span>
 
@@ -82,45 +92,44 @@
 <div vsn-controller:controller="Controller">
     <span vsn-if="controller.on">It's on!</span>
     <span vsn-if="!controller.on">It's off...</span>
-    <a href="/" vsn-click="controller.doSomething($event, !controller.on)">Click Me</a>
+    <a href="/" vsn-on:click="controller.doSomething($event, !controller.on)">Click Me</a>
 </div>
 
 <h2>Lists</h2>
-<div vsn-controller:test="TestController" id="testing" vsn-exec="test.obj = {'testing':123, 'something': 'wut'};test.array = [{'v':1},{'v':2},{'v':3},{'v':4},{'v':5}];">
+<div vsn-controller:test="TestController" id="testing">
     <h3>Value: <span vsn-bind="test.name">Testing</span> <span vsn-bind="test.age">32</span></h3>
-    <h4><span vsn-bind="test.obj.testing"></span> <span vsn-bind="test.obj.something"></span> <ul vsn-list:test.array vsn-list-item-model="MVal"><li vsn-template vsn-list-item><span vsn-bind="item.v"></span></li></ul></h4>
     <input type="text" vsn-bind="test.name"/>
     <input type="text" vsn-bind="test.age"/>
-    <button vsn-click="test.reset()" vsn-if="test.name">Reset</button>
-    <button vsn-click="test.add();">Add New List Item</button>
+    <button vsn-on:click="test.reset()" vsn-if="test.name">Reset</button>
+    <button vsn-on:click="test.add();">Add New List Item</button>
     <ul vsn-list:test.items vsn-list-item-model="TestItem" vsn-name="list">
         <li vsn-list-item>
             <span vsn-bind="item.name">Tom</span>, <span vsn-bind="item.age">22</span> Years Old <input type="text"
                                                                                                         vsn-bind="item.name"/>
             <input type="text" vsn-bind="item.age"/>
-            <button vsn-click="item.reset()">R</button>
-            <button vsn-click="list.remove(item)">X</button>
+            <button vsn-on:click="item.reset()">R</button>
+            <button vsn-on:click="list.remove(item)">X</button>
         </li>
         <li vsn-list-item>
             <span vsn-bind="item.name">Steve</span>, <span vsn-bind="item.age">46</span> Years Old <input type="text"
                                                                                                           vsn-bind="item.name"/>
             <input type="text" vsn-bind="item.age"/>
-            <button vsn-click="item.reset()">R</button>
-            <button vsn-click="list.remove(item)">X</button>
+            <button vsn-on:click="item.reset()">R</button>
+            <button vsn-on:click="list.remove(item)">X</button>
         </li>
         <li vsn-list-item>
             <span vsn-bind="item.name">Frank</span>, <span vsn-bind="item.age">31</span> Years Old <input type="text"
                                                                                                           vsn-bind="item.name"/>
             <input type="text" vsn-bind="item.age"/>
-            <button vsn-click="item.reset()">R</button>
-            <button vsn-click="list.remove(item)">X</button>
+            <button vsn-on:click="item.reset()">R</button>
+            <button vsn-on:click="list.remove(item)">X</button>
         </li>
         <li vsn-list-item>
             <span vsn-bind="item.name">Joe</span>, <span vsn-bind="item.age">91</span> Years Old <input type="text"
                                                                                                         vsn-bind="item.name"/>
             <input type="text" vsn-bind="item.age"/>
-            <button vsn-click="item.reset()">R</button>
-            <button vsn-click="list.remove(item)">X</button>
+            <button vsn-on:click="item.reset()">R</button>
+            <button vsn-on:click="list.remove(item)">X</button>
         </li>
     </ul>
 </div>

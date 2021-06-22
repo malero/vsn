@@ -1,7 +1,6 @@
 import {Scope} from "./Scope";
 import {Attribute} from "./Attribute";
 import {Bind} from "./attributes/Bind";
-import {Click} from "./attributes/Click";
 import {List} from "./attributes/List";
 import {ListItem} from "./attributes/ListItem";
 import {EventDispatcher} from "simple-ts-event-dispatcher";
@@ -18,21 +17,14 @@ import {SetAttribute} from "./attributes/SetAttribute";
 import {RootAttribute} from "./attributes/RootAttribute";
 import {StandardAttribute} from "./attributes/StandardAttribute";
 import {TypeAttribute} from "./attributes/TypeAttribute";
-import {Focus} from "./attributes/Focus";
-import {Blur} from "./attributes/Blur";
 import {ScopeAttribute} from "./attributes/ScopeAttribute";
-import {MouseEnter} from "./attributes/MouseEnter";
-import {MouseLeave} from "./attributes/MouseLeave";
 import {AddClassIf} from "./attributes/AddClassIf";
 import {DisableIf} from "./attributes/DisableIf";
 import {KeyUp} from "./attributes/KeyUp";
 import {KeyDown} from "./attributes/KeyDown";
 import {ScopeChange} from "./attributes/ScopeChange";
-import {TouchStart} from "./attributes/TouchStart";
-import {TouchMove} from "./attributes/TouchMove";
-import {TouchEnd} from "./attributes/TouchEnd";
-import {TouchCancel} from "./attributes/TouchCancel";
 import {Exec} from "./attributes/Exec";
+import {On} from "./attributes/On";
 
 export enum TagState {
     Instantiated,
@@ -53,6 +45,7 @@ export class Tag extends EventDispatcher {
     protected _children: Tag[] = [];
     protected _scope: Scope;
     protected _controller: Controller;
+    public readonly flags: {[key: string]: boolean} = {};
 
     public static readonly attributeMap: { [attr: string]: any; } = {
         'vsn-root': RootAttribute,
@@ -66,23 +59,15 @@ export class Tag extends EventDispatcher {
         'vsn-list-item': ListItem,
         'vsn-set': SetAttribute,
         'vsn-bind': Bind,
-        'vsn-click': Click,
-        'vsn-focus': Focus,
-        'vsn-blur': Blur,
+        'vsn-on': On,
         'vsn-key-up': KeyUp,
         'vsn-key-down': KeyDown,
-        'vsn-mouseenter': MouseEnter,
-        'vsn-mouseleave': MouseLeave,
         'vsn-click-toggle-class': ClickToggleClass,
         'vsn-click-remove-class': ClickRemoveClass,
         'vsn-if': If,
         'vsn-disable-if': DisableIf,
         'vsn-add-class-if': AddClassIf,
         'vsn-type': TypeAttribute,
-        'vsn-touch-start': TouchStart,
-        'vsn-touch-move': TouchMove,
-        'vsn-touch-end': TouchEnd,
-        'vsn-touch-cancel': TouchCancel,
     };
 
     protected inputTags: string[] = [
@@ -106,6 +91,14 @@ export class Tag extends EventDispatcher {
         this.analyzeElementAttributes();
 
         this._state = TagState.Instantiated;
+    }
+
+    public get style(): CSSStyleDeclaration {
+        return this.element.style;
+    }
+
+    public get computedStyle(): CSSStyleDeclaration {
+        return window.getComputedStyle(this.element);
     }
 
     public analyzeElementAttributes() {
@@ -174,6 +167,10 @@ export class Tag extends EventDispatcher {
 
     public addChild(tag: Tag) {
         this._children.push(tag);
+    }
+
+    public get children(): Tag[] {
+        return [...this._children];
     }
 
     public get parentTag(): Tag {
@@ -311,7 +308,7 @@ export class Tag extends EventDispatcher {
         this.dom.registerElementInRoot(this);
 
         this._state = TagState.AttributesSetup;
-        this.callOnWrapped('$onAttributesSetup');
+        this.callOnWrapped('$setup');
     }
 
     public async extractAttributes() {
@@ -319,7 +316,7 @@ export class Tag extends EventDispatcher {
             await attr.extract();
         }
         this._state = TagState.AttributesExtracted;
-        this.callOnWrapped('$onAttributesExtracted');
+        this.callOnWrapped('$extracted');
     }
 
     public async connectAttributes() {
@@ -327,12 +324,12 @@ export class Tag extends EventDispatcher {
             await attr.connect();
         }
         this._state = TagState.AttributesConnected;
-        this.callOnWrapped('$onAttributesConnected');
+        this.callOnWrapped('$bound');
     }
 
     public finalize(): void {
         this._state = TagState.Built;
-        this.callOnWrapped('$onBuilt', this, this.scope);
+        this.callOnWrapped('$built', this, this.scope);
     }
 
     public callOnWrapped(method, ...args: any[]): boolean {
@@ -343,52 +340,9 @@ export class Tag extends EventDispatcher {
         return false;
     }
 
-    protected onclick(e) {
-        this.handleEvent(e, 'click');
-    }
-
-    protected onfocus(e) {
-        this.handleEvent(e, 'focus');
-    }
-
-    protected onblur(e) {
-        this.handleEvent(e, 'blur');
-    }
-
-    protected onmouseenter(e) {
-        this.handleEvent(e, 'mouseenter');
-    }
-
-    protected onmouseleave(e) {
-        this.handleEvent(e, 'mouseleave');
-    }
-
-    protected onkeyup(e) {
-        this.handleEvent(e, 'keyup');
-    }
-
-    protected onkeydown(e) {
-        this.handleEvent(e, 'keydown');
-    }
-
-    protected ontouchstart(e) {
-        this.handleEvent(e, 'touchstart');
-    }
-
-    protected ontouchmove(e) {
-        this.handleEvent(e, 'touchmove');
-    }
-
-    protected ontouchend(e) {
-        this.handleEvent(e, 'touchend');
-    }
-
-    protected ontouchcancel(e) {
-        this.handleEvent(e, 'touchcancel');
-    }
-
-    protected handleEvent(e, eventType: string) {
-        e.stopPropagation();
+    protected handleEvent(eventType: string, e) {
+        if (e)
+            e.stopPropagation();
         if (!this.onEventHandlers[eventType])
             return;
 
@@ -400,44 +354,23 @@ export class Tag extends EventDispatcher {
     }
 
     public addEventHandler(eventType: string, handler) {
+        let passiveValue: boolean = null;
+        if (eventType.indexOf('|active')) {
+            passiveValue = false;
+            eventType = eventType.replace('|active', '');
+        } else if (eventType.indexOf('|passive')) {
+            passiveValue = true;
+            eventType = eventType.replace('|passive', '');
+        }
+
         if (!this.onEventHandlers[eventType]) {
             this.onEventHandlers[eventType] = [];
+            const element: HTMLElement | Window = On.WindowEvents.indexOf(eventType) > -1 ? window : this.element;
+            const opts: any = {};
+            if (eventType.indexOf('touch') > -1 || passiveValue !== null)
+                opts['passive'] = passiveValue === null && true || passiveValue;
 
-            switch (eventType) {
-                case 'click':
-                    this.element.onclick = this.onclick.bind(this);
-                    break;
-                case 'focus':
-                    this.element.onfocus = this.onfocus.bind(this);
-                    break;
-                case 'blur':
-                    this.element.onblur = this.onblur.bind(this);
-                    break;
-                case 'mouseenter':
-                    this.element.onmouseenter = this.onmouseenter.bind(this);
-                    break;
-                case 'mouseleave':
-                    this.element.onmouseleave = this.onmouseleave.bind(this);
-                    break;
-                case 'keyup':
-                    this.element.onkeyup = this.onkeyup.bind(this);
-                    break;
-                case 'keydown':
-                    this.element.onkeypress = this.onkeydown.bind(this);
-                    break;
-                case 'touchstart':
-                    this.element.ontouchstart = this.ontouchstart.bind(this);
-                    break;
-                case 'touchmove':
-                    this.element.ontouchmove = this.ontouchmove.bind(this);
-                    break;
-                case 'touchend':
-                    this.element.ontouchend = this.ontouchend.bind(this);
-                    break;
-                case 'touchcancel':
-                    this.element.ontouchcancel = this.ontouchcancel.bind(this);
-                    break;
-            }
+            element.addEventListener(eventType, this.handleEvent.bind(this, eventType), opts);
         }
 
         this.onEventHandlers[eventType].push(handler);

@@ -723,13 +723,11 @@ class AssignmentNode extends Node implements TreeNode {
     }
 
     public static parse(lastNode: any, token, tokens: Token[]): AssignmentNode {
-        console.log('pre assignment parse', [...tokens]);
         if (!(lastNode instanceof RootScopeMemberNode) && !(lastNode instanceof ScopeMemberNode)) {
             throw SyntaxError(`Invalid assignment syntax near ${Tree.toCode(tokens.splice(0, 10))}`);
         }
         tokens.splice(0, 1); // consume =
         const assignmentTokens: Token[] = Tree.getNextStatementTokens(tokens, false, false, true);
-        console.log('assignment', [...assignmentTokens], [...tokens]);
         return new AssignmentNode(
             lastNode,
             Tree.processTokens(assignmentTokens)
