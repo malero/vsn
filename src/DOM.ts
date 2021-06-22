@@ -55,6 +55,7 @@ export class DOM extends EventDispatcher {
         const allElements: HTMLElement[] = [];
 
         document.body.setAttribute('vsn-root', '');
+        document.ondragover = (e) => e.preventDefault();  // Allow dragging over document
 
         for (const tag of this.tags)
             allElements.push(tag.element);

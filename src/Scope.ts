@@ -316,7 +316,6 @@ export class Scope extends EventDispatcher {
         }
 
         if (toWrap['$wrapped']) {
-            console.log(toWrap, this);
             throw Error("An object should only be wrapped once.");
         }
 

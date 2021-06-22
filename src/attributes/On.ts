@@ -3,6 +3,17 @@ import {Tree} from "../AST";
 
 export abstract class On extends Attribute {
     protected handler: Tree;
+    public static readonly WindowEvents: string[] = [
+        'abort',
+        'afterprint',
+        'beforeprint',
+        'error',
+        'hashchange',
+        'load',
+        'popstate',
+        'resize',
+        'unload',
+    ];
 
     public async compile() {
         const code: string = this.getAttributeValue();
@@ -12,5 +23,9 @@ export abstract class On extends Attribute {
 
     async handleEvent(e) {
         await this.handler.evaluate(this.tag.scope, this.tag.dom);
+    }
+
+    public async connect() {
+        this.tag.addEventHandler(this.getAttributeBinding(), this.handleEvent.bind(this));
     }
 }
