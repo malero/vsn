@@ -28,14 +28,14 @@ Use `vsn-bind:attribute` to bind a scope variable to the element's attribute. Us
 ### On Click
 Use `vsn-click` on an element to execute some code. Here we have a button that toggles the root scope variable `show` between false and true. 
 
-    <button vsn-click="show = !show" vsn-set:show="false|bool">Toggle</button>
+    <button vsn-on:click="show = !show" vsn-set:show="false|bool">Toggle</button>
     <span vsn-bind="show"></span>
 
 
 ### Conditional Elements
 Use `vsn-if` if you would only like to show an element if a certain condition is met.
 
-    <button vsn-click="show = !show" vsn-set:show="false|bool">Toggle</button>
+    <button vsn-on:click="show = !show" vsn-set:show="false|bool">Toggle</button>
     <span vsn-if="show">Show is true</span>
     <span vsn-if="!show">Show is false</span>
 
