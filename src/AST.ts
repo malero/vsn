@@ -25,8 +25,13 @@ export enum BlockType {
 
 export enum TokenType {
     WHITESPACE,
+    TYPE_INT,
+    TYPE_UINT,
+    TYPE_FLOAT,
+    TYPE_STRING,
     RETURN,
     OF,
+    IN,
     FOR,
     IF,
     ELSE_IF,
@@ -50,10 +55,10 @@ export enum TokenType {
     STRICT_NOT_EQUALS,
     EQUALS,
     NOT_EQUALS,
-    GREATER_THAN,
-    LESS_THAN,
     GREATER_THAN_EQUAL,
     LESS_THAN_EQUAL,
+    GREATER_THAN,
+    LESS_THAN,
     ASSIGN,
     AND,
     OR,
@@ -74,6 +79,22 @@ const TOKEN_PATTERNS: TokenPattern[] = [
     {
         type: TokenType.WHITESPACE,
         pattern: /^[\s\n\r]+/
+    },
+    {
+        type: TokenType.TYPE_INT,
+        pattern: /^int+/
+    },
+    {
+        type: TokenType.TYPE_UINT,
+        pattern: /^uint+/
+    },
+    {
+        type: TokenType.TYPE_FLOAT,
+        pattern: /^float+/
+    },
+    {
+        type: TokenType.TYPE_STRING,
+        pattern: /^string+/
     },
     {
         type: TokenType.BOOLEAN_LITERAL,
@@ -990,12 +1011,18 @@ export interface IBlockInfo {
 }
 
 export class Tree {
+    protected static cache: {[key: string]: Node} = {};
     protected rootNode: Node;
 
     constructor(
         public readonly code: string
     ) {
-        this.parse();
+        if (Tree.cache[code]) {
+            this.rootNode = Tree.cache[code];
+        } else {
+            this.parse();
+            Tree.cache[code] = this.rootNode;
+        }
     }
 
     public parse() {
@@ -1018,7 +1045,7 @@ export class Tree {
                 _scope = await node.scope.evaluate(scope, null);
 
             const name = await node.name.evaluate(scope, null);
-            _scope.bind(`change`, fnc);
+            _scope.bind(`change:${name}`, fnc);
         }
     }
 
