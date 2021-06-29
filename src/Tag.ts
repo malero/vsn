@@ -45,26 +45,25 @@ export class Tag extends EventDispatcher {
     protected _children: Tag[] = [];
     protected _scope: Scope;
     protected _controller: Controller;
-    public readonly flags: {[key: string]: boolean} = {};
 
     public static readonly attributeMap: { [attr: string]: any; } = {
         'vsn-root': RootAttribute,
+        'vsn-on': On,
+        'vsn-if': If,
+        'vsn-set': SetAttribute,
+        'vsn-bind': Bind,
         'vsn-exec': Exec,
-        'vsn-scope': ScopeAttribute,
-        'vsn-scope-change': ScopeChange,
         'vsn-name': Name,
         'vsn-controller': ControllerAttribute,
+        'vsn-scope': ScopeAttribute,
+        'vsn-scope-change': ScopeChange,
         'vsn-model': ModelAttribute,
         'vsn-list': List,
         'vsn-list-item': ListItem,
-        'vsn-set': SetAttribute,
-        'vsn-bind': Bind,
-        'vsn-on': On,
         'vsn-key-up': KeyUp,
         'vsn-key-down': KeyDown,
         'vsn-click-toggle-class': ClickToggleClass,
         'vsn-click-remove-class': ClickRemoveClass,
-        'vsn-if': If,
         'vsn-disable-if': DisableIf,
         'vsn-add-class-if': AddClassIf,
         'vsn-type': TypeAttribute,
@@ -77,6 +76,11 @@ export class Tag extends EventDispatcher {
     ];
 
     protected onEventHandlers: {[key:string]:any[]};
+    private _uniqueScope: boolean = false;
+
+    public get uniqueScope(): boolean {
+        return this._uniqueScope;
+    };
 
     constructor(
         public readonly element: HTMLElement,
@@ -87,9 +91,7 @@ export class Tag extends EventDispatcher {
         this.parsedAttributes = {};
         this.attributes = [];
         this.onEventHandlers = {};
-
         this.analyzeElementAttributes();
-
         this._state = TagState.Instantiated;
     }
 
@@ -144,6 +146,7 @@ export class Tag extends EventDispatcher {
     }
 
     getAttributeName(attr: string): string {
+        attr = attr.split('|')[0];
         if (attr.indexOf(':') > -1) {
             const parts: string[] = attr.split(':');
             attr = parts[0];
@@ -153,12 +156,17 @@ export class Tag extends EventDispatcher {
     }
 
     getAttributeBinding(attr: string): string {
+        attr = attr.split('|')[0];
         if (attr.indexOf(':') > -1) {
             const parts: string[] = attr.split(':');
             return parts[1];
         }
 
         return null;
+    }
+
+    getAttributeModifiers(attr: string): string[] {
+        return attr.split('|').splice(1);
     }
 
     get isInput(): boolean {
@@ -218,6 +226,7 @@ export class Tag extends EventDispatcher {
         this.scope.wrap(obj, triggerUpdates, updateFromWrapped);
         obj['$scope'] = this.scope;
         obj['$tag'] = this;
+        obj['$el'] = this.element;
         return obj;
     }
 
@@ -271,8 +280,21 @@ export class Tag extends EventDispatcher {
     public async buildAttributes() {
         let requiresScope = false;
         this.attributes.length = 0;
+        const isMobile: boolean = VisionHelper.isMobile();
 
-        for (const attr in this.rawAttributes) {
+        for (let attr in this.rawAttributes) {
+            if (this.hasModifier(attr, 'mobile')) {
+                if (!isMobile) {
+                    continue;
+                }
+            }
+
+            if (this.hasModifier(attr, 'desktop')) {
+                if (isMobile) {
+                    continue;
+                }
+            }
+
             const attrClass = this.getAttributeClass(attr);
             if (attrClass) {
                 if (attrClass.scoped)
@@ -287,6 +309,7 @@ export class Tag extends EventDispatcher {
             requiresScope = true;
 
         if (requiresScope) {
+            this._uniqueScope = true;
             this._scope = new Scope();
         }
 
@@ -329,11 +352,11 @@ export class Tag extends EventDispatcher {
 
     public finalize(): void {
         this._state = TagState.Built;
-        this.callOnWrapped('$built', this, this.scope);
+        this.callOnWrapped('$built', this, this.scope, this.element);
     }
 
     public callOnWrapped(method, ...args: any[]): boolean {
-        if (this.scope && this.scope.wrapped && this.scope.wrapped[method]) {
+        if (this._uniqueScope && this.scope && this.scope.wrapped && this.scope.wrapped[method]) {
             this.scope.wrapped[method](...args);
             return true;
         }
@@ -353,14 +376,20 @@ export class Tag extends EventDispatcher {
         }
     }
 
-    public addEventHandler(eventType: string, handler) {
+    public hasModifier(attribute: string, modifier: string): boolean {
+        return attribute.indexOf(`|${modifier}`) > -1;
+    }
+
+    public stripModifier(attribute: string, modifier: string): string {
+        return attribute.replace(`|${modifier}`, '');
+    }
+
+    public addEventHandler(eventType: string, modifiers: string[], handler) {
         let passiveValue: boolean = null;
-        if (eventType.indexOf('|active')) {
+        if (modifiers.indexOf('active') > -1) {
             passiveValue = false;
-            eventType = eventType.replace('|active', '');
-        } else if (eventType.indexOf('|passive')) {
+        } else if (modifiers.indexOf('passive') > -1) {
             passiveValue = true;
-            eventType = eventType.replace('|passive', '');
         }
 
         if (!this.onEventHandlers[eventType]) {

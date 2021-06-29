@@ -17,6 +17,7 @@ export class Vision extends EventDispatcher {
             "DOMContentLoaded",
             this.setup.bind(this)
         );
+        this.registerClass(Object, 'Object');
         this.registerClass(WrappedArray, 'WrappedArray');
         this.registerClass(DataModel, 'DataModel');
     }

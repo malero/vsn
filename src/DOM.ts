@@ -7,6 +7,7 @@ export class DOM extends EventDispatcher {
     protected tags: Tag[];
     protected observer: MutationObserver;
     protected evaluateTimeout: any;
+    protected queued: HTMLElement[] = [];
 
     constructor(
         protected document: Document,
@@ -62,7 +63,16 @@ export class DOM extends EventDispatcher {
 
         // Create tags for each html element with a v-attribute
         const newTags: Tag[] = [];
-        for (const _e of Array.from(ele.querySelectorAll(`*`))) {
+        const eles = Array.from(ele.querySelectorAll(`*`));
+        const toBuild: HTMLElement[] = [];
+        for (const _e of eles) { // Don't build items more than once
+            const element: HTMLElement = _e as HTMLElement;
+            if (this.queued.indexOf(element) > -1) continue;
+            this.queued.push(element);
+            toBuild.push(element);
+        }
+
+        for (const _e of toBuild) {
             const element: HTMLElement = _e as HTMLElement;
             if (allElements.indexOf(element) > -1) continue;
             if (ElementHelper.hasVisionAttribute(element)) {
@@ -111,8 +121,10 @@ export class DOM extends EventDispatcher {
         for (const tag of newTags)
             await tag.connectAttributes();
 
-        for (const tag of newTags)
-            tag.finalize();
+        for (const tag of newTags) {
+            await tag.finalize();
+            this.queued.splice(this.queued.indexOf(tag.element), 1);
+        }
 
         for (const tag of newTags)
             this.observer.observe(tag.element, {

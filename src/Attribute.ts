@@ -25,6 +25,15 @@ export abstract class Attribute {
         return this.tag.getAttributeBinding(this.attributeName) || fallback;
     }
 
+    public getAttributeModifiers(fallback: any = []): string[] {
+        const modifiers = this.tag.getAttributeModifiers(this.attributeName);
+        return modifiers.length && modifiers || fallback;
+    }
+
+    public hasModifier(mod: string): boolean {
+        return this.getAttributeModifiers().indexOf(mod) > -1;
+    }
+
     public mutate(mutation: MutationRecord): void {}
 
     public set value(value: string) {
