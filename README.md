@@ -12,6 +12,7 @@ Use NPM to install VisionJS with the following command:
 ### Set A Scope Variable
 Use `vsn-set:variable_name="value|type"` to set a variable in the scope. `vsn-set` is only used to initialize a value and will only be evaluated once. Use `vsn-bind` if you would like to bind the element to the scope variable.
 
+    <div vsn-set:my_string="42"></div>
     <div vsn-set:my_int="42|int"></div>
     <div vsn-set:my_float="42.3|float"></div>
     <div vsn-set:my_bool="false|bool"></div>
@@ -25,8 +26,8 @@ Use `vsn-bind:attribute` to bind a scope variable to the element's attribute. Us
     <input type="text" vsn-bind="#link.@href" />
 
 
-### On Click
-Use `vsn-click` on an element to execute some code. Here we have a button that toggles the root scope variable `show` between false and true. 
+### Bind to Element Events
+Use `vsn-on` on an element to execute some code when the specified event is triggered. Here we have a button that toggles the root scope variable `show` between false and true when the element is clicked. 
 
     <button vsn-on:click="show = !show" vsn-set:show="false|bool">Toggle</button>
     <span vsn-bind="show"></span>
@@ -60,7 +61,7 @@ HTML to use the above controller:
     <div vsn-controller:controller="Controller">
         <span vsn-if="controller.on">It's on!</span>
         <span vsn-if="!controller.on">It's off...</span>
-        <a href="/" vsn-click="controller.doSomething($event, !controller.on)">Click Me</a>
+        <a href="/" vsn-on:click="controller.doSomething($event, !controller.on)">Click Me</a>
     </div>
 
 Note: `variable_name` cannot contain capitalized letters. Use `<tag vsn-controller="ClassName" vsn-name="variableName" />` if you need to use capitalized letters in your controller name.

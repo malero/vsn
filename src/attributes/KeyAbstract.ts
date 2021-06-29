@@ -9,7 +9,7 @@ export abstract class KeyAbstract extends On {
     }
 
     public async connect() {
-        this.tag.addEventHandler('keydown', this.handleEvent.bind(this));
+        this.tag.addEventHandler('keydown', this.getAttributeModifiers(), this.handleEvent.bind(this));
     }
 
     public async handleEvent(e) {

@@ -75,7 +75,7 @@ export class List extends Attribute {
     }
 
     public get listItemModel(): string {
-        return this.tag.getRawAttributeValue('vsn-list-item-model', 'DataModel');
+        return this.tag.getRawAttributeValue('vsn-list-item-model', 'Object');
     }
 
     public remove(item: any) {

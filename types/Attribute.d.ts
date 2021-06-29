@@ -12,6 +12,8 @@ export declare abstract class Attribute {
     evaluate(): Promise<void>;
     getAttributeValue(fallback?: any): any;
     getAttributeBinding(fallback?: any): string;
+    getAttributeModifiers(fallback?: any): string[];
+    hasModifier(mod: string): boolean;
     mutate(mutation: MutationRecord): void;
     set value(value: string);
     get value(): string;

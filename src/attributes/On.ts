@@ -26,6 +26,6 @@ export abstract class On extends Attribute {
     }
 
     public async connect() {
-        this.tag.addEventHandler(this.getAttributeBinding(), this.handleEvent.bind(this));
+        this.tag.addEventHandler(this.getAttributeBinding(), this.getAttributeModifiers(), this.handleEvent.bind(this));
     }
 }
