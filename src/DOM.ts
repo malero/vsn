@@ -1,6 +1,7 @@
 import {Tag} from "./Tag";
 import {ElementHelper} from "./helpers/ElementHelper";
 import {EventDispatcher} from "simple-ts-event-dispatcher";
+import {DOMHelper} from "./helpers/DOMHelper";
 
 export class DOM extends EventDispatcher {
     protected root: Tag;
@@ -18,7 +19,7 @@ export class DOM extends EventDispatcher {
         this.tags = [];
 
         if (build) {
-            this.buildFrom(document);
+            this.buildFrom(document, true);
         }
         this.evaluate();
     }
@@ -51,39 +52,48 @@ export class DOM extends EventDispatcher {
         }
     }
 
-    async buildFrom(ele: any) {
+    async buildFrom(ele: any, isRoot: boolean = false) {
+        const startTime: number = new Date().getTime();
         // Assign parents to each tag
         const allElements: HTMLElement[] = [];
+        if (ele.attributes && ele.getAttribute('building')) {
+            console.error(`Already built from ${ele}`);
+        }
+        ele.attributes && ele.setAttribute('building', 'yes');
 
-        document.body.setAttribute('vsn-root', '');
-        document.ondragover = (e) => e.preventDefault();  // Allow dragging over document
+        if (isRoot) {
+            document.body.setAttribute('vsn-root', '');
+            document.ondragover = (e) => e.preventDefault();  // Allow dragging over document
+        }
 
         for (const tag of this.tags)
             allElements.push(tag.element);
 
         // Create tags for each html element with a v-attribute
         const newTags: Tag[] = [];
-        const eles = Array.from(ele.querySelectorAll(`*`));
         const toBuild: HTMLElement[] = [];
-        for (const _e of eles) { // Don't build items more than once
-            const element: HTMLElement = _e as HTMLElement;
-            if (this.queued.indexOf(element) > -1) continue;
+        await DOMHelper.walk(ele, (element: HTMLElement) => { // Don't build items more than once
+            if (this.queued.indexOf(element) > -1) return;
+            if (!ElementHelper.hasVisionAttribute(element)) return;
             this.queued.push(element);
             toBuild.push(element);
-        }
+        });
+        if (isRoot)
+            console.warn(`Took ${new Date().getTime() - startTime}ms to walk ${ele}`);
 
         for (const _e of toBuild) {
             const element: HTMLElement = _e as HTMLElement;
             if (allElements.indexOf(element) > -1) continue;
-            if (ElementHelper.hasVisionAttribute(element)) {
-                const tag: Tag = new Tag(element as HTMLElement, this);
-                this.tags.push(tag);
-                newTags.push(tag);
-                allElements.push(element as HTMLElement);
-            }
+            const tag: Tag = new Tag(element as HTMLElement, this);
+            this.tags.push(tag);
+            newTags.push(tag);
+            allElements.push(element as HTMLElement);
         }
+        if (isRoot)
+            console.warn(`Took ${new Date().getTime() - startTime}ms to build tags for ${ele}`);
 
-        this.root = await this.getTagForElement(document.body);
+        if (isRoot)
+            this.root = await this.getTagForElement(document.body);
 
         // Configure, setup & execute attributes
         for (const tag of newTags)
@@ -91,6 +101,9 @@ export class DOM extends EventDispatcher {
 
         for (const tag of newTags)
             await tag.compileAttributes();
+
+        if (isRoot)
+            console.warn(`Took ${new Date().getTime() - startTime}ms to compile all child nodes for ${ele}`);
 
         for (const tag of newTags) {
             if (tag === this.root)
@@ -111,20 +124,30 @@ export class DOM extends EventDispatcher {
             if (!foundParent)
                 console.error('Could not find parent for ', tag);
         }
+        if (isRoot)
+            console.warn(`Took ${new Date().getTime() - startTime}ms to assign parents for ${ele}`);
 
         for (const tag of newTags)
             await tag.setupAttributes();
+        if (isRoot)
+            console.warn(`Took ${new Date().getTime() - startTime}ms to setup child node attrs for ${ele}`);
 
         for (const tag of newTags)
             await tag.extractAttributes();
+        if (isRoot)
+            console.warn(`Took ${new Date().getTime() - startTime}ms to extract child node attributes for ${ele}`);
 
         for (const tag of newTags)
             await tag.connectAttributes();
+        if (isRoot)
+            console.warn(`Took ${new Date().getTime() - startTime}ms to connect child node attributes for ${ele}`);
 
         for (const tag of newTags) {
             await tag.finalize();
             this.queued.splice(this.queued.indexOf(tag.element), 1);
         }
+        if (isRoot)
+            console.warn(`Took ${new Date().getTime() - startTime}ms to finalize child node attributes for ${ele}`);
 
         for (const tag of newTags)
             this.observer.observe(tag.element, {
@@ -135,6 +158,8 @@ export class DOM extends EventDispatcher {
             });
 
         this.trigger('built');
+        if (isRoot)
+            console.warn(`Took ${new Date().getTime() - startTime}ms to build from ${ele}`);
     }
 
     async getTagForElement(element: Element, create: boolean = false) {

@@ -96,10 +96,12 @@ export class Bind extends Attribute {
     }
 
     updateFrom() {
-        const valueFromElement = typeof this.valueFromElement === 'string' && this.valueFromElement.trim() || this.valueFromElement;
-        const valueFromScope = typeof this.value === 'string' && this.value.trim() || this.value;
+        let valueFromElement = this.valueFromElement;
+        valueFromElement = typeof valueFromElement === 'string' && valueFromElement.trim() || valueFromElement;
+        let valueFromScope = this.value;
+        valueFromScope = typeof valueFromScope === 'string' && valueFromScope.trim() || valueFromScope;
 
-        if (!this.value || valueFromElement != valueFromScope)
+        if (!valueFromScope || valueFromElement != valueFromScope)
             this.value = valueFromElement;
     }
 

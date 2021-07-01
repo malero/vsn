@@ -8,11 +8,12 @@ import {Tree} from "./AST";
 export class Vision extends EventDispatcher {
     protected static _instance: Vision;
     protected _dom?: DOM;
-    protected controllers: {[key: string]: any} = {};
+    protected controllers: {[key: string]: any};
     protected controllerTimeouts = {};
 
     constructor() {
         super();
+        this.controllers = document['visionRegistry'] || {};
         document.addEventListener(
             "DOMContentLoaded",
             this.setup.bind(this)
@@ -44,6 +45,7 @@ export class Vision extends EventDispatcher {
         if (!!this.controllers[key]) {
             deferred.resolve(this.controllers[key]);
         } else {
+            console.warn(`Waiting for ${key} to be registered. Consider registering it before including vision.js`);
             this.controllerTimeouts[key] = setTimeout(() => {
                 console.warn(`vision.getClass timed out after 5 seconds trying to find ${key}. Make sure the class is registered with vision.registerClass`);
             }, 5000);

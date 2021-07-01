@@ -104,6 +104,7 @@ export class Tag extends EventDispatcher {
     }
 
     public analyzeElementAttributes() {
+        if (!this.element.attributes || this.element.attributes.length <= 0) return;
         for (let i: number = 0; i < this.element.attributes.length; i++) {
             const a = this.element.attributes[i];
             this.rawAttributes[a.name] = a.value;

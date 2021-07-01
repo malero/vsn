@@ -85,7 +85,7 @@ export class WrappedArray<T> extends Array<T> {
     }
 
     unbind(event: string, key?: number): boolean {
-        if(event in this._listeners === false) return false;
+        if(!(event in this._listeners)) return false;
         if(key) {
             for(const cb of this._listeners[event]) {
                 if(key == cb.key) {
@@ -101,7 +101,7 @@ export class WrappedArray<T> extends Array<T> {
     }
 
     unbindWithContext(event: string, context: any): number {
-        if(event in this._listeners === false) return 0;
+        if(!(event in this._listeners)) return 0;
         let toRemove: EventCallback[] = [],
             cnt = 0;
 
@@ -126,7 +126,7 @@ export class WrappedArray<T> extends Array<T> {
     }
 
     trigger(event: string, ...args: any[]): void {
-        if(event in this._listeners === false) return;
+        if(!(event in this._listeners)) return;
 
         for(let i = 0; i < this._listeners[event].length; i++) {
             const cb: EventCallback = this._listeners[event][i];
