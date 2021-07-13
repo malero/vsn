@@ -91,4 +91,36 @@ describe('ListItem', () => {
             listAttr.items.push(new TestItem(555, 1));
         });
     });
+
+    it("vsn-list-item should work with vsn-set", (done) => {
+        document.body.innerHTML = `
+            <ul vsn-list:list id="test"><li vsn-list-item:item="TestItem" id="test-item" vsn-set:item.testing="1|int"></li></ul>
+        `;
+
+        const dom = new DOM(document);
+        dom.once('built', async () => {
+            const list = await dom.getTagForElement(document.getElementById('test'));
+            const listItem = await dom.getTagForElement(document.getElementById('test-item'));
+            const listItemAttr: ListItem = listItem.getAttribute('vsn-list-item') as ListItem;
+
+            expect(listItem.scope.get('testing')).toBe(1);
+            done();
+        });
+    });
+
+    it("vsn-list-item should work with vsn-exec", (done) => {
+        document.body.innerHTML = `
+            <ul vsn-list:list id="test"><li vsn-list-item:item="TestItem" id="test-item" vsn-exec="item.testing = 1"></li></ul>
+        `;
+
+        const dom = new DOM(document);
+        dom.once('built', async () => {
+            const list = await dom.getTagForElement(document.getElementById('test'));
+            const listItem = await dom.getTagForElement(document.getElementById('test-item'));
+            const listItemAttr: ListItem = listItem.getAttribute('vsn-list-item') as ListItem;
+
+            expect(listItem.scope.get('testing')).toBe(1);
+            done();
+        });
+    });
 });

@@ -72,7 +72,7 @@ describe('Bind', () => {
 
             test.innerHTML = 'new-val';
         });
-        dom.buildFrom(document);
+        dom.buildFrom(document, true);
     });
 
     it("vsn-bind input value changes trigger updating scope with new value", (done) => {
@@ -97,7 +97,7 @@ describe('Bind', () => {
             test.dispatchEvent(new KeyboardEvent('keyup', {key: 'w'}));
         });
 
-        dom.buildFrom(document);
+        dom.buildFrom(document, true);
     });
 
     it("vsn-bind element innerHTML should change when scope value is changed", (done) => {
@@ -118,7 +118,7 @@ describe('Bind', () => {
 
             tag.scope.get('test').set('val', 'new-val');
         });
-        dom.buildFrom(document);
+        dom.buildFrom(document, true);
     });
 
     it("vsn-bind input value should change when scope value is changed", (done) => {
