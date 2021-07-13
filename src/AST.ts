@@ -301,15 +301,43 @@ export interface TreeNode<T = any> {
 
 
 export abstract class Node implements TreeNode {
+    protected requiresPrep: boolean = false;
+    protected _isPreparationRequired: boolean;
+    protected childNodes: Node[];
     abstract evaluate(scope: Scope, dom: DOM);
+
+    isPreparationRequired(): boolean {
+        if (this.requiresPrep)
+            return true;
+
+        if (this._isPreparationRequired !== undefined)
+            return this._isPreparationRequired;
+
+        for (const node of this.getChildNodes()) {
+            if (node.isPreparationRequired()) {
+                this._isPreparationRequired = true;
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     async prepare(scope: Scope, dom: DOM) {
         for (const node of this.getChildNodes()) {
             await node.prepare(scope, dom);
         }
     }
 
-    getChildNodes(): Node[] {
+    protected _getChildNodes(): Node[] {
         return [];
+    }
+
+    getChildNodes(): Node[] {
+        if (this.childNodes === undefined) {
+            this.childNodes = this._getChildNodes();
+        }
+        return this.childNodes;
     }
 
     findChildrenByType<T = Node>(t: any): T[] {
@@ -339,7 +367,7 @@ export class BlockNode extends Node implements TreeNode {
         super();
     }
 
-    getChildNodes(): Node[] {
+    protected _getChildNodes(): Node[] {
         return [...(this.statements as Node[])];
     }
 
@@ -349,12 +377,6 @@ export class BlockNode extends Node implements TreeNode {
             returnValue = await this.statements[i].evaluate(scope, dom);
         }
         return returnValue;
-    }
-
-    public async prepare(scope: Scope, dom: DOM) {
-        for (let i = 0; i < this.statements.length; i++) {
-            await this.statements[i].prepare(scope, dom);
-        }
     }
 }
 
@@ -367,7 +389,7 @@ class ComparisonNode extends Node implements TreeNode {
         super();
     }
 
-    getChildNodes(): Node[] {
+    protected _getChildNodes(): Node[] {
         return [
             this.left as Node,
             this.right as Node
@@ -418,7 +440,7 @@ class ConditionalNode extends Node implements TreeNode {
         super();
     }
 
-    getChildNodes(): Node[] {
+    protected _getChildNodes(): Node[] {
         return [
             this.condition as Node,
             this.block as Node
@@ -441,7 +463,7 @@ class IfStatementNode extends Node implements TreeNode {
         super();
     }
 
-    getChildNodes(): Node[] {
+    protected _getChildNodes(): Node[] {
         return [
             ...(this.nodes as Node[])
         ]
@@ -449,7 +471,7 @@ class IfStatementNode extends Node implements TreeNode {
 
     public async evaluate(scope: Scope, dom: DOM) {
         for (const condition of this.nodes) {
-            const uno = await condition.condition.evaluate(scope, dom);
+            const uno: boolean = await condition.condition.evaluate(scope, dom);
             if (uno) {
                 return await condition.block.evaluate(scope, dom);
             }
@@ -503,7 +525,7 @@ class ForStatementNode extends Node implements TreeNode {
         super();
     }
 
-    getChildNodes(): Node[] {
+    protected _getChildNodes(): Node[] {
         return [
             this.variable,
             this.list,
@@ -557,7 +579,7 @@ class NotNode extends Node implements TreeNode {
         return !flipping;
     }
 
-    getChildNodes(): Node[] {
+    protected _getChildNodes(): Node[] {
         return [
             this.toFlip
         ];
@@ -624,7 +646,7 @@ class FunctionCallNode<T = any> extends Node implements TreeNode {
         super();
     }
 
-    getChildNodes(): Node[] {
+    protected _getChildNodes(): Node[] {
         return [
             this.fnc as Node,
             this.args as Node
@@ -649,7 +671,7 @@ class FunctionArgumentNode<T = any> extends Node implements TreeNode {
         super();
     }
 
-    getChildNodes(): Node[] {
+    protected _getChildNodes(): Node[] {
         return [
             ...(this.args as Node[])
         ]
@@ -673,7 +695,7 @@ class ScopeMemberNode extends Node implements TreeNode {
         super();
     }
 
-    getChildNodes(): Node[] {
+    protected _getChildNodes(): Node[] {
         return [
             this.scope as Node,
             this.name as Node
@@ -702,7 +724,7 @@ class RootScopeMemberNode<T = any> extends Node implements TreeNode {
         super();
     }
 
-    getChildNodes(): Node[] {
+    protected _getChildNodes(): Node[] {
         return [
             this.name as Node
         ]
@@ -722,7 +744,7 @@ class AssignmentNode extends Node implements TreeNode {
         super();
     }
 
-    getChildNodes(): Node[] {
+    protected _getChildNodes(): Node[] {
         return [
             this.rootNode as Node,
             this.toAssign as Node
@@ -765,7 +787,7 @@ class ArithmeticNode extends Node implements TreeNode {
         super();
     }
 
-    getChildNodes(): Node[] {
+    protected _getChildNodes(): Node[] {
         return [
             this.left as Node,
             this.right as Node
@@ -812,7 +834,7 @@ class ArithmeticAssignmentNode extends Node implements TreeNode {
         super();
     }
 
-    getChildNodes(): Node[] {
+    protected _getChildNodes(): Node[] {
         return [
             this.left as Node,
             this.right as Node
@@ -862,7 +884,7 @@ class ArithmeticAssignmentNode extends Node implements TreeNode {
         tokens.splice(0, 1); // consume +=
         const assignmentTokens: Token[] = Tree.getNextStatementTokens(tokens);
         return new ArithmeticAssignmentNode(
-            lastNode,
+            lastNode as RootScopeMemberNode,
             Tree.processTokens(assignmentTokens),
             token.type
         );
@@ -876,7 +898,7 @@ class ArrayNode extends Node implements TreeNode {
         super();
     }
 
-    getChildNodes(): Node[] {
+    protected _getChildNodes(): Node[] {
         return new Array(...this.values);
     }
 
@@ -918,7 +940,7 @@ class ObjectNode extends Node implements TreeNode {
         super();
     }
 
-    getChildNodes(): Node[] {
+    protected _getChildNodes(): Node[] {
         return new Array(...this.values);
     }
 
@@ -955,6 +977,8 @@ class ObjectNode extends Node implements TreeNode {
 }
 
 class ElementReferenceNode extends Node implements TreeNode {
+    protected requiresPrep: boolean = true;
+
     constructor(
         public readonly id: string
     ) {
@@ -971,6 +995,8 @@ class ElementReferenceNode extends Node implements TreeNode {
 }
 
 class ElementAttributeNode extends Node implements TreeNode {
+    protected requiresPrep: boolean = true;
+
     constructor(
         public readonly elementRef: ElementReferenceNode,
         public readonly attr: string
@@ -978,7 +1004,7 @@ class ElementAttributeNode extends Node implements TreeNode {
         super();
     }
 
-    getChildNodes(): Node[] {
+    protected _getChildNodes(): Node[] {
         return [
             this.elementRef
         ]
@@ -1035,6 +1061,8 @@ export class Tree {
     }
 
     async prepare(scope: Scope, dom: DOM) {
+        if (!this.rootNode.isPreparationRequired())
+            return;
         return await this.rootNode.prepare(scope, dom);
     }
 

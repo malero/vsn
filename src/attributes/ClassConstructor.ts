@@ -21,9 +21,6 @@ export class ClassConstructor extends Attribute {
             parentScope.set(this.attributeKey, this.tag.scope);
     }
 
-    public async extract() {
-    }
-
     protected instantiateClass(cls) {
         this.tag.wrap(cls);
     }

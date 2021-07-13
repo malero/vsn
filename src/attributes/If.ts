@@ -10,10 +10,6 @@ export class If extends Attribute {
         await this.tree.prepare(this.tag.scope, this.tag.dom);
     }
 
-    public async setup() {
-
-    }
-
     public async extract() {
         await this.evaluate();
     }

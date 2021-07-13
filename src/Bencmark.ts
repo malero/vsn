@@ -1,0 +1,59 @@
+
+export interface IBenchmark {
+    name: string;
+    time: number;
+}
+export const BENCHMARKS: IBenchmark[] = [];
+
+export function benchmark(name?: string, print: boolean = false) {
+    return function(target: any, key: string, descriptor: PropertyDescriptor): void {
+        name = name || key;
+        const method: (...args: any[]) => any = descriptor.value;
+
+         descriptor.value = function(): any {
+            const start: Date = new Date();
+            const result = method.apply(this, arguments);
+            const end: Date = new Date();
+            const data = {
+                name: name,
+                time: end.getTime() - start.getTime()
+            };
+            BENCHMARKS.push(data);
+
+            if (print)
+                console.log(data);
+
+            return result;
+        };
+    };
+}
+
+export function benchmarkResults(name: string): any {
+    let calls: number = 0;
+    let time: number = 0;
+    for (const bm of BENCHMARKS)
+        if (bm.name === name) {
+            calls++;
+            time += bm.time;
+        }
+
+    return {
+        name: name,
+        calls: calls,
+        time: time
+    };
+}
+
+export function benchmarkResultsAll(): any {
+    const data: any = {};
+    for (const bm of BENCHMARKS) {
+        if (!data[bm.name])
+            data[bm.name] = benchmarkResults(bm.name)
+    }
+
+    return data;
+}
+
+window['benchmarks'] = BENCHMARKS;
+window['benchmarkResults'] = benchmarkResults;
+window['benchmarkResultsAll'] = benchmarkResultsAll;

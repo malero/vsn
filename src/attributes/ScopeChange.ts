@@ -1,4 +1,3 @@
-
 import {Attribute} from "../Attribute";
 import {Tree} from "../AST";
 import {ScopeReference} from "../Scope";

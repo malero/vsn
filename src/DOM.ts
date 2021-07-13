@@ -11,7 +11,8 @@ export class DOM extends EventDispatcher {
 
     constructor(
         protected document: Document,
-        build: boolean = true
+        build: boolean = true,
+        protected debug: boolean = false
     ) {
         super();
         this.observer = new MutationObserver(this.mutation.bind(this));
@@ -75,7 +76,7 @@ export class DOM extends EventDispatcher {
             toBuild.push(element);
         }
 
-        if (isRoot) {
+        if (isRoot && this.debug) {
             console.warn(`Took ${new Date().getTime() - startTime}ms to walk ${ele}`);
             startTime = new Date().getTime();
         }
@@ -87,7 +88,7 @@ export class DOM extends EventDispatcher {
             newTags.push(tag);
             allElements.push(element as HTMLElement);
         }
-        if (isRoot) {
+        if (isRoot && this.debug) {
             console.warn(`Took ${new Date().getTime() - startTime}ms to build tags for ${ele}`);
             startTime = new Date().getTime();
         }
@@ -102,7 +103,7 @@ export class DOM extends EventDispatcher {
         for (const tag of newTags)
             await tag.compileAttributes();
 
-        if (isRoot) {
+        if (isRoot && this.debug) {
             console.warn(`Took ${new Date().getTime() - startTime}ms to compile all child nodes for ${ele}`);
             startTime = new Date().getTime();
         }
@@ -126,7 +127,7 @@ export class DOM extends EventDispatcher {
             if (!foundParent)
                 console.error('Could not find parent for ', tag);
         }
-        if (isRoot) {
+        if (isRoot && this.debug) {
             console.warn(`Took ${new Date().getTime() - startTime}ms to assign parents for ${ele}`);
             startTime = new Date().getTime();
         }
@@ -134,21 +135,21 @@ export class DOM extends EventDispatcher {
         for (const tag of newTags)
             await tag.setupAttributes();
 
-        if (isRoot) {
+        if (isRoot && this.debug) {
             console.warn(`Took ${new Date().getTime() - startTime}ms to setup child node attrs for ${ele}`);
             startTime = new Date().getTime();
         }
 
         for (const tag of newTags)
             await tag.extractAttributes();
-        if (isRoot) {
+        if (isRoot && this.debug) {
             console.warn(`Took ${new Date().getTime() - startTime}ms to extract child node attributes for ${ele}`);
             startTime = new Date().getTime();
         }
 
         for (const tag of newTags)
             await tag.connectAttributes();
-        if (isRoot) {
+        if (isRoot && this.debug) {
             console.warn(`Took ${new Date().getTime() - startTime}ms to connect child node attributes for ${ele}`);
             startTime = new Date().getTime();
         }
@@ -157,7 +158,7 @@ export class DOM extends EventDispatcher {
             await tag.finalize();
             this.queued.splice(this.queued.indexOf(tag.element), 1);
         }
-        if (isRoot) {
+        if (isRoot && this.debug) {
             console.warn(`Took ${new Date().getTime() - startTime}ms to finalize child node attributes for ${ele}`);
             startTime = new Date().getTime();
         }
@@ -171,7 +172,7 @@ export class DOM extends EventDispatcher {
             });
 
         this.trigger('built');
-        if (isRoot) {
+        if (isRoot && this.debug) {
             console.warn(`Took ${new Date().getTime() - startTime}ms to build from ${ele}`);
         }
     }

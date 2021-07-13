@@ -6,7 +6,6 @@ export class Bind extends Attribute {
     protected key?: string;
     protected property?: string;
     protected boundScope?: Scope;
-    protected extracted: boolean = false;
 
     public async compile() {
         const tree: Tree = new Tree(this.getAttributeValue());
@@ -18,8 +17,6 @@ export class Bind extends Attribute {
     }
 
     public async extract() {
-        if (this.extracted) console.error("already extracted");
-        this.extracted = true;
         let scopeKey: string = this.getAttributeValue();
         let ref: ScopeReference;
         try {
