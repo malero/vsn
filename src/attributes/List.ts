@@ -3,7 +3,6 @@ import {Tag} from "../Tag";
 import {WrappedArray} from "../Scope";
 import {Tree} from "../AST";
 import {ElementHelper} from "../helpers/ElementHelper";
-import {DOMHelper} from "../helpers/DOMHelper";
 
 export class List extends Attribute {
     public static readonly scoped: boolean = true;
@@ -45,9 +44,10 @@ export class List extends Attribute {
                 await this.add(existingItem);
             }
 
+
         for (const element of Array.from(this.tag.element.querySelectorAll('*'))) {
             if (!ElementHelper.hasVisionAttribute(element, 'vsn-list-item'))
-                return;
+                continue;
 
             const tag: Tag = await this.tag.dom.getTagForElement(element);
             if (tag) {
@@ -55,18 +55,6 @@ export class List extends Attribute {
                 this.items.push(tag.scope.wrapped || tag.scope);
             }
         }
-
-        /*
-        await DOMHelper.walk(this.tag.element, async (element: HTMLElement) => {
-            if (!ElementHelper.hasVisionAttribute(element, 'vsn-list-item'))
-                return;
-
-            const tag: Tag = await this.tag.dom.getTagForElement(element);
-            if (tag) {
-                this.tags.push(tag);
-                this.items.push(tag.scope.wrapped || tag.scope);
-            }
-        }, false); */
 
         if (!(this.items instanceof WrappedArray)) {
             this.items = new WrappedArray(this.items);

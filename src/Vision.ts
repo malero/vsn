@@ -1,7 +1,7 @@
 import {DOM} from "./DOM";
 import {EventDispatcher} from "simple-ts-event-dispatcher";
 import {WrappedArray} from "./Scope";
-import {IDeferred, IPromise, Promise} from "simple-ts-promise";
+import {IDeferred, IPromise, Promise as SimplePromise} from "simple-ts-promise";
 import {DataModel} from "simple-ts-models";
 import {Tree} from "./AST";
 
@@ -27,10 +27,13 @@ export class Vision extends EventDispatcher {
         return this._dom;
     }
 
-    setup(): void {
+    public async setup() {
         const body: HTMLElement = document.body;
         body.setAttribute('vsn-root', '');
-        this._dom = new DOM(document);
+        this._dom = new DOM(document, false);
+        const startTime: number = new Date().getTime();
+        await this._dom.buildFrom(document, true);
+        console.warn(`Took ${new Date().getTime() - startTime}ms to start up VisionJS`);
     }
 
     registerClass(cls: any, constructorName: string = null) {
@@ -40,7 +43,7 @@ export class Vision extends EventDispatcher {
     }
 
     getClass(key: string): IPromise<any> {
-        const deferred: IDeferred<any> = Promise.defer();
+        const deferred: IDeferred<any> = SimplePromise.defer();
 
         if (!!this.controllers[key]) {
             deferred.resolve(this.controllers[key]);

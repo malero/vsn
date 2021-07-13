@@ -1,8 +1,8 @@
 
 export class DOMHelper {
-public static async walk(e: HTMLElement, fnc: (e: HTMLElement) => void, callOnBaseElement: boolean = true) {
-       // if (callOnBaseElement)
-        await fnc(e);
+    public static async walk(e: HTMLElement, fnc: (e: HTMLElement) => void, callOnBaseElement: boolean = true) {
+        if (callOnBaseElement)
+            await fnc(e);
 
         const len: number = e.childNodes.length;
         if (len <= 0) return;

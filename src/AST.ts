@@ -966,7 +966,7 @@ class ElementReferenceNode extends Node implements TreeNode {
     }
 
     async prepare(scope: Scope, dom: DOM) {
-        const tag = await dom.get(this.id, true);
+        await dom.get(this.id, true);
     }
 }
 
