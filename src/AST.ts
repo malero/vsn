@@ -1065,7 +1065,7 @@ export class Tree {
             return;
         return await this.rootNode.prepare(scope, dom);
     }
-
+    
     async bindToScopeChanges(scope, fnc) {
         for (const node of this.rootNode.findChildrenByTypes<ScopeMemberNode>([RootScopeMemberNode, ScopeMemberNode])) {
             let _scope: Scope = scope;

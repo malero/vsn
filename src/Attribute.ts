@@ -1,5 +1,6 @@
 import {Tag} from "./Tag";
 
+
 export abstract class Attribute {
     public static readonly scoped: boolean = false;
 
@@ -13,6 +14,7 @@ export abstract class Attribute {
     protected async configure() {};
     public async compile() {};
     public async setup() {};
+
     public async extract() {};
     public async connect() {}
     public async evaluate() {};

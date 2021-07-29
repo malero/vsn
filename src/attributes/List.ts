@@ -4,6 +4,7 @@ import {WrappedArray} from "../Scope";
 import {Tree} from "../AST";
 import {ElementHelper} from "../helpers/ElementHelper";
 
+
 export class List extends Attribute {
     public static readonly scoped: boolean = true;
     public tree: Tree;

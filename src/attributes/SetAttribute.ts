@@ -1,6 +1,7 @@
 import {Scope, ScopeReference} from "../Scope";
 import {Attribute} from "../Attribute";
 
+
 export class SetAttribute extends Attribute {
     protected key?: string;
     protected property?: string;

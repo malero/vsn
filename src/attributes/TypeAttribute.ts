@@ -1,6 +1,7 @@
 import {Attribute} from "../Attribute";
 import {ScopeReference, ScopeVariableType} from "../Scope";
 
+
 export class TypeAttribute extends Attribute {
     public async extract() {
         const key: string = this.getAttributeBinding();

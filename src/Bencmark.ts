@@ -5,7 +5,7 @@ export interface IBenchmark {
 }
 export const BENCHMARKS: IBenchmark[] = [];
 
-export function benchmark(name?: string, print: boolean = false) {
+export function benchmarkz(name?: string, print: boolean = false) {
     return function(target: any, key: string, descriptor: PropertyDescriptor): void {
         name = name || key;
         const method: (...args: any[]) => any = descriptor.value;
@@ -40,20 +40,56 @@ export function benchmarkResults(name: string): any {
     return {
         name: name,
         calls: calls,
-        time: time
+        time: time,
+        average: time / calls
     };
+}
+
+export function benchmarkResultsMatch(regexp: RegExp): any {
+    const data: any = {};
+    let calls: number = 0;
+    let time: number = 0;
+    for (const bm of BENCHMARKS) {
+        if (regexp.test(bm.name) && !data[bm.name]) {
+            data[bm.name] = benchmarkResults(bm.name);
+            calls += data[bm.name].calls;
+            time += data[bm.name].time;
+        }
+    }
+
+    data['ALL'] = {
+        name: 'ALL',
+        calls: calls,
+        time: time,
+        average: time / calls
+    };
+
+    return data;
 }
 
 export function benchmarkResultsAll(): any {
     const data: any = {};
+    let calls: number = 0;
+    let time: number = 0;
     for (const bm of BENCHMARKS) {
-        if (!data[bm.name])
-            data[bm.name] = benchmarkResults(bm.name)
+        if (!data[bm.name]) {
+            data[bm.name] = benchmarkResults(bm.name);
+            calls += data[bm.name].calls;
+            time += data[bm.name].time;
+        }
     }
+
+    data['ALL'] = {
+        name: 'ALL',
+        calls: calls,
+        time: time,
+        average: time / calls
+    };
 
     return data;
 }
 
 window['benchmarks'] = BENCHMARKS;
 window['benchmarkResults'] = benchmarkResults;
+window['benchmarkResultsMatch'] = benchmarkResultsMatch;
 window['benchmarkResultsAll'] = benchmarkResultsAll;

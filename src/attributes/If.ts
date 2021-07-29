@@ -1,6 +1,7 @@
 import {Attribute} from "../Attribute";
 import {Tree} from "../AST";
 
+
 export class If extends Attribute {
     protected tree: Tree;
 

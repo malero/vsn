@@ -221,7 +221,8 @@ export class Scope extends EventDispatcher {
             this.data.createField(key);
 
         if (typeof value === 'string') {
-            switch (this.getType(key)) {
+            const valueType = this.getType(key);
+            switch (valueType) {
                 case ScopeVariableType.Integer:
                     value = parseInt(value);
                     break;
@@ -231,6 +232,10 @@ export class Scope extends EventDispatcher {
                 case ScopeVariableType.Boolean:
                     value = [0, '0', 'false', ''].indexOf(value) === -1;
                     break;
+            }
+
+            if ([ScopeVariableType.Integer, ScopeVariableType.Float].indexOf(valueType) > -1 && isNaN(value)) {
+                value = null;
             }
         }
 
@@ -316,6 +321,7 @@ export class Scope extends EventDispatcher {
         }
 
         if (toWrap['$wrapped']) {
+            console.error(toWrap);
             throw Error("An object should only be wrapped once.");
         }
 

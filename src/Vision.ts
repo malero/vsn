@@ -30,7 +30,7 @@ export class Vision extends EventDispatcher {
     public async setup() {
         const body: HTMLElement = document.body;
         body.setAttribute('vsn-root', '');
-        this._dom = new DOM(document, false);
+        this._dom = new DOM(document, false, true);
         const startTime: number = new Date().getTime();
         await this._dom.buildFrom(document, true);
         console.warn(`Took ${new Date().getTime() - startTime}ms to start up VisionJS`);

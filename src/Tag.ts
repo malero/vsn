@@ -26,6 +26,7 @@ import {ScopeChange} from "./attributes/ScopeChange";
 import {Exec} from "./attributes/Exec";
 import {On} from "./attributes/On";
 
+
 export enum TagState {
     Instantiated,
     AttributesBuilt,

@@ -1,5 +1,6 @@
 import {Attribute} from "../Attribute";
 
+
 export class StandardAttribute extends Attribute {
     protected readonly magicAttributes: string[] = [
         '@text',
