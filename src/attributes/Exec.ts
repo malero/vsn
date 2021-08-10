@@ -1,7 +1,8 @@
 import {Attribute} from "../Attribute";
 import {Tree} from "../AST";
+import {Registry} from "../Registry";
 
-
+@Registry.attribute('vsn-exec')
 export class Exec extends Attribute {
     protected tree: Tree;
 

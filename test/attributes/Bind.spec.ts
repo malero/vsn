@@ -1,4 +1,7 @@
+import "../../src/Types";
+import "../../src/attributes/_import";
 import {DOM} from "../../src/DOM";
+
 
 describe('Bind', () => {
     it("vsn-bind to work with inner text", (done) => {

@@ -1,6 +1,8 @@
 import {Attribute} from "../Attribute";
 import {VisionHelper} from "../helpers/VisionHelper";
+import {Registry} from "../Registry";
 
+@Registry.attribute('vsn-root')
 export class RootAttribute extends Attribute {
     public static readonly scoped: boolean = true;
 

@@ -1,7 +1,8 @@
 import {Scope, ScopeReference} from "../Scope";
 import {Attribute} from "../Attribute";
+import {Registry} from "../Registry";
 
-
+@Registry.attribute('vsn-set')
 export class SetAttribute extends Attribute {
     protected key?: string;
     protected property?: string;
@@ -34,7 +35,7 @@ export class SetAttribute extends Attribute {
         let value = this.getAttributeValue(null);
         const typeIndex: number = value && value.indexOf('|') || -1;
         if (typeIndex > -1) {
-            this.boundScope.setType(this.key, this.boundScope.stringToType(value.substr(typeIndex + 1)));
+            this.boundScope.setType(this.key, value.substr(typeIndex + 1));
             value = value.substr(0, typeIndex);
         }
         this.boundScope.set(this.key, value);

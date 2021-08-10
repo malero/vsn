@@ -1,5 +1,6 @@
 import {DataModel} from "simple-ts-models";
 import {EventCallback, EventCallbackList, EventDispatcher, EventDispatcherCallback} from "simple-ts-event-dispatcher";
+import {Registry} from "./Registry";
 
 export class ScopeReference {
     constructor(
@@ -9,11 +10,11 @@ export class ScopeReference {
     ) {}
 }
 
-export enum ScopeVariableType {
-    String,
-    Integer,
-    Float,
-    Boolean
+export class ScopeVariableType {
+    public static readonly Integer: string = 'integer';
+    public static readonly Float: string = 'float';
+    public static readonly Boolean: string = 'boolean';
+    public static readonly String: string = 'string';
 }
 
 export class WrappedArray<T> extends Array<T> {
@@ -148,7 +149,7 @@ export class WrappedArray<T> extends Array<T> {
 export class Scope extends EventDispatcher {
     public wrapped: any;
     protected data: DataModel;
-    protected types: {[key: string]: ScopeVariableType;} = {};
+    protected types: {[key: string]: string;} = {};
     protected children: Scope[];
     protected keys: string[];
     protected _parentScope: Scope;
@@ -222,17 +223,9 @@ export class Scope extends EventDispatcher {
 
         if (typeof value === 'string') {
             const valueType = this.getType(key);
-            switch (valueType) {
-                case ScopeVariableType.Integer:
-                    value = parseInt(value);
-                    break;
-                case ScopeVariableType.Float:
-                    value = parseFloat(value);
-                    break;
-                case ScopeVariableType.Boolean:
-                    value = [0, '0', 'false', ''].indexOf(value) === -1;
-                    break;
-            }
+            const caster = Registry.instance.types.getSynchronous(valueType);
+            if (caster)
+                value = caster(value);
 
             if ([ScopeVariableType.Integer, ScopeVariableType.Float].indexOf(valueType) > -1 && isNaN(value)) {
                 value = null;
@@ -260,29 +253,14 @@ export class Scope extends EventDispatcher {
         return this.keys.indexOf(key) > -1;
     }
 
-    setType(key: string, type: ScopeVariableType) {
+    setType(key: string, type: string) {
         this.types[key] = type;
         if (this.has(key))
             this.set(key, this.get(key));
     }
 
-    getType(key: string): ScopeVariableType {
+    getType(key: string): string {
         return this.types[key] || ScopeVariableType.String;
-    }
-
-    stringToType(str: string): ScopeVariableType {
-        switch(str.toLowerCase()) {
-            case 'int':
-            case 'integer':
-                return ScopeVariableType.Integer;
-            case 'float':
-                return ScopeVariableType.Float;
-            case 'boolean':
-            case 'bool':
-                return ScopeVariableType.Boolean;
-            default:
-                return ScopeVariableType.String;
-        }
     }
 
     extend(data) {

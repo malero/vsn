@@ -1,5 +1,7 @@
 import {If} from "./If";
+import {Registry} from "../Registry";
 
+@Registry.attribute('vsn-disable-if')
 export class DisableIf extends If {
     async onChange() {
         const result: boolean = await this.tree.evaluate(this.tag.scope, this.tag.dom);

@@ -1,6 +1,8 @@
 import {Attribute} from "../Attribute";
 import {Scope} from "../Scope";
+import {Registry} from "../Registry";
 
+@Registry.attribute('vsn-name')
 export class Name extends Attribute {
     public static readonly scoped: boolean = true;
 

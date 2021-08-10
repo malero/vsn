@@ -1,6 +1,8 @@
+import "../src/Vision";
 import {DOM} from "../src/DOM";
-import {vision} from "../src/Vision";
+import {Registry} from "../src/Registry";
 
+@Registry.class('TestController')
 class TestController {}
 
 describe('DOM', () => {
@@ -14,9 +16,5 @@ describe('DOM', () => {
             expect(bodyTag.hasAttribute('vsn-root')).toBe(true)
             done();
         });
-
-        setTimeout(() => {
-            vision.registerClass(TestController, 'TestController');
-        }, 500);
     });
 });

@@ -1,7 +1,9 @@
 import {Attribute} from "../Attribute";
 import {Tree} from "../AST";
 import {ScopeReference} from "../Scope";
+import {Registry} from "../Registry";
 
+@Registry.attribute('vsn-scope-change')
 export abstract class ScopeChange extends Attribute {
     protected handler: Tree;
 

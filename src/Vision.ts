@@ -1,26 +1,26 @@
 import {DOM} from "./DOM";
 import {EventDispatcher} from "simple-ts-event-dispatcher";
 import {WrappedArray} from "./Scope";
-import {IDeferred, IPromise, Promise as SimplePromise} from "simple-ts-promise";
 import {DataModel} from "simple-ts-models";
 import {Tree} from "./AST";
+import {Registry} from "./Registry";
+import "./Types";
+import "./attributes/_import";
 
 export class Vision extends EventDispatcher {
     protected static _instance: Vision;
     protected _dom?: DOM;
-    protected controllers: {[key: string]: any};
-    protected controllerTimeouts = {};
+    public readonly registry = Registry.instance;
 
     constructor() {
         super();
-        this.controllers = document['visionRegistry'] || {};
         document.addEventListener(
             "DOMContentLoaded",
             this.setup.bind(this)
         );
-        this.registerClass(Object, 'Object');
-        this.registerClass(WrappedArray, 'WrappedArray');
-        this.registerClass(DataModel, 'DataModel');
+        this.registry.classes.register('Object', Object);
+        this.registry.classes.register('WrappedArray', WrappedArray);
+        this.registry.classes.register('DataModel', DataModel);
     }
 
     public get dom(): DOM {
@@ -36,31 +36,6 @@ export class Vision extends EventDispatcher {
         console.warn(`Took ${new Date().getTime() - startTime}ms to start up VisionJS`);
     }
 
-    registerClass(cls: any, constructorName: string = null) {
-        const key: string = constructorName || cls.prototype.constructor.name;
-        this.controllers[key] = cls;
-        this.trigger(`registered:${key}`, cls);
-    }
-
-    getClass(key: string): IPromise<any> {
-        const deferred: IDeferred<any> = SimplePromise.defer();
-
-        if (!!this.controllers[key]) {
-            deferred.resolve(this.controllers[key]);
-        } else {
-            console.warn(`Waiting for ${key} to be registered. Consider registering it before including vision.js`);
-            this.controllerTimeouts[key] = setTimeout(() => {
-                console.warn(`vision.getClass timed out after 5 seconds trying to find ${key}. Make sure the class is registered with vision.registerClass`);
-            }, 5000);
-            this.once(`registered:${key}`, (cls) => {
-                clearTimeout(this.controllerTimeouts[key]);
-                deferred.resolve(cls);
-            })
-        }
-
-        return deferred.promise;
-    }
-
     public static get instance() {
         if (!Vision._instance)
             Vision._instance = new Vision();
@@ -73,3 +48,4 @@ export const vision: Vision = Vision.instance;
 window['Vision'] = Vision;
 window['vision'] = window['vsn'] = vision;
 window['Tree'] = Tree;
+window['registry'] = Registry.instance;

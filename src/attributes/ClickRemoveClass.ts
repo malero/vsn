@@ -1,5 +1,7 @@
 import {Attribute} from "../Attribute";
+import {Registry} from "../Registry";
 
+@Registry.attribute('vsn-click-remove-class')
 export class ClickRemoveClass extends Attribute {
     protected cssClass: string = '';
     protected target: string = null;

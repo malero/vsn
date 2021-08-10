@@ -1,30 +1,12 @@
 import {Scope} from "./Scope";
 import {Attribute} from "./Attribute";
-import {Bind} from "./attributes/Bind";
-import {List} from "./attributes/List";
-import {ListItem} from "./attributes/ListItem";
 import {EventDispatcher} from "simple-ts-event-dispatcher";
 import {DOM} from "./DOM";
-import {Name} from "./attributes/Name";
-import {If} from "./attributes/If";
-import {ClickToggleClass} from "./attributes/ClickToggleClass";
-import {ClickRemoveClass} from "./attributes/ClickRemoveClass";
-import {ControllerAttribute} from "./attributes/ControllerAttribute";
-import {ModelAttribute} from "./attributes/ModelAttribute";
 import {Controller} from "./Controller";
 import {VisionHelper} from "./helpers/VisionHelper";
-import {SetAttribute} from "./attributes/SetAttribute";
-import {RootAttribute} from "./attributes/RootAttribute";
 import {StandardAttribute} from "./attributes/StandardAttribute";
-import {TypeAttribute} from "./attributes/TypeAttribute";
-import {ScopeAttribute} from "./attributes/ScopeAttribute";
-import {AddClassIf} from "./attributes/AddClassIf";
-import {DisableIf} from "./attributes/DisableIf";
-import {KeyUp} from "./attributes/KeyUp";
-import {KeyDown} from "./attributes/KeyDown";
-import {ScopeChange} from "./attributes/ScopeChange";
-import {Exec} from "./attributes/Exec";
 import {On} from "./attributes/On";
+import {Registry} from "./Registry";
 
 
 export enum TagState {
@@ -46,29 +28,6 @@ export class Tag extends EventDispatcher {
     protected _children: Tag[] = [];
     protected _scope: Scope;
     protected _controller: Controller;
-
-    public static readonly attributeMap: { [attr: string]: any; } = {
-        'vsn-root': RootAttribute,
-        'vsn-on': On,
-        'vsn-if': If,
-        'vsn-set': SetAttribute,
-        'vsn-bind': Bind,
-        'vsn-exec': Exec,
-        'vsn-name': Name,
-        'vsn-controller': ControllerAttribute,
-        'vsn-scope': ScopeAttribute,
-        'vsn-scope-change': ScopeChange,
-        'vsn-model': ModelAttribute,
-        'vsn-list': List,
-        'vsn-list-item': ListItem,
-        'vsn-key-up': KeyUp,
-        'vsn-key-down': KeyDown,
-        'vsn-click-toggle-class': ClickToggleClass,
-        'vsn-click-remove-class': ClickRemoveClass,
-        'vsn-disable-if': DisableIf,
-        'vsn-add-class-if': AddClassIf,
-        'vsn-type': TypeAttribute,
-    };
 
     protected inputTags: string[] = [
         'input',
@@ -141,10 +100,11 @@ export class Tag extends EventDispatcher {
         this.element.setAttribute(attr, value);
     }
 
-    getAttributeClass(attr: string): any {
+    public async getAttributeClass(attr: string) {
+        if (!attr.startsWith('vsn-'))
+            return null;
         attr = this.getAttributeName(attr);
-
-        return Tag.attributeMap[attr]
+        return Registry.instance.attributes.get(attr);
     }
 
     getAttributeName(attr: string): string {
@@ -263,8 +223,8 @@ export class Tag extends EventDispatcher {
         return !!this.parsedAttributes[attr];
     }
 
-    public getAttribute<T = Attribute>(key: string): T {
-        const cls: any = Tag.attributeMap[key];
+    public async getAttribute<T = Attribute>(key: string): Promise<T> {
+        const cls: any = await Registry.instance.attributes.get(key);
         if (!cls) return;
         for (const attr of this.attributes)
             if (attr instanceof cls)
@@ -297,7 +257,7 @@ export class Tag extends EventDispatcher {
                 }
             }
 
-            const attrClass = this.getAttributeClass(attr);
+            const attrClass = await this.getAttributeClass(attr);
             if (attrClass) {
                 if (attrClass.scoped)
                     requiresScope = true;

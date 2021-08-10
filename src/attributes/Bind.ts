@@ -1,7 +1,9 @@
 import {Scope, ScopeReference} from "../Scope";
 import {Attribute} from "../Attribute";
 import {Tree} from "../AST";
+import {Registry} from "../Registry";
 
+@Registry.attribute('vsn-bind')
 export class Bind extends Attribute {
     protected key?: string;
     protected property?: string;

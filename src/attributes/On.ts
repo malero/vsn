@@ -1,6 +1,8 @@
 import {Attribute} from "../Attribute";
 import {Tree} from "../AST";
+import {Registry} from "../Registry";
 
+@Registry.attribute('vsn-on')
 export abstract class On extends Attribute {
     protected handler: Tree;
     public static readonly WindowEvents: string[] = [
