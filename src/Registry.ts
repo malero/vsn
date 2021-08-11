@@ -1,12 +1,14 @@
 import {EventDispatcher} from "simple-ts-event-dispatcher";
 import {IDeferred, IPromise, Promise as SimplePromise} from "simple-ts-promise";
 
-export function register(store: string, key: string = null) {
+export function register(store: string, key: string = null, setup: () => void = null) {
     return function(target: any, _key: string = null) {
         key = key || target.prototype.constructor.name;
         if (_key !== null)
             target = target[_key];
         Registry.instance[store].register(key, target);
+        if (setup)
+            setup();
     }
 }
 
@@ -60,36 +62,36 @@ export class Registry extends EventDispatcher {
     constructor() {
         super();
 
-        this.classes = new RegistryStore(document['visionClasses'] || {});
-        this.models = new RegistryStore(document['visionModels'] || {});
-        this.templates = new RegistryStore(document['visionTemplates'] || {});
-        this.types = new RegistryStore(document['visionTypes'] || {});
-        this.formats = new RegistryStore(document['visionFormats'] || {});
-        this.attributes = new RegistryStore(document['visionAttributes'] || {});
+        this.classes = new RegistryStore(window['$classes'] || {});
+        this.models = new RegistryStore(window['$models'] || {});
+        this.templates = new RegistryStore(window['$templates'] || {});
+        this.types = new RegistryStore(window['$types'] || {});
+        this.formats = new RegistryStore(window['$formats'] || {});
+        this.attributes = new RegistryStore(window['$attributes'] || {});
     }
 
-    public static class(key: string = null) {
-        return register('classes', key);
+    public static class(key: string = null, setup = null) {
+        return register('classes', key, setup);
     }
 
-    public static model(key: string = null) {
-        return register('models', key);
+    public static model(key: string = null, setup = null) {
+        return register('models', key, setup);
     }
 
-    public static template(key: string = null) {
-        return register('templates', key);
+    public static template(key: string = null, setup = null) {
+        return register('templates', key, setup);
     }
 
-    public static type(key: string = null) {
-        return register('types', key);
+    public static type(key: string = null, setup = null) {
+        return register('types', key, setup);
     }
 
-    public static format(key: string = null) {
-        return register('formats', key);
+    public static format(key: string = null, setup = null) {
+        return register('formats', key, setup);
     }
 
-    public static attribute(attributeName: string = null) {
-        return register('attributes', attributeName);
+    public static attribute(attributeName: string = null, setup = null) {
+        return register('attributes', attributeName, setup);
     }
 
     public static get instance() {

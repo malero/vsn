@@ -1,5 +1,5 @@
 import "../../src/Types";
-import "../../src/attributes/_import";
+import "../../src/attributes/_imports";
 import {DOM} from "../../src/DOM";
 import {ListItem} from "../../src/attributes/ListItem";
 import {List} from "../../types/attributes/List";

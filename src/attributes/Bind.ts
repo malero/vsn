@@ -7,7 +7,9 @@ import {Registry} from "../Registry";
 export class Bind extends Attribute {
     protected key?: string;
     protected property?: string;
+    protected direction: string = 'both';
     protected boundScope?: Scope;
+    protected formatter: (v: string) => string = (v) => v;
 
     public async compile() {
         const tree: Tree = new Tree(this.getAttributeValue());
@@ -16,6 +18,14 @@ export class Bind extends Attribute {
 
     public async setup() {
         this.property = this.getAttributeBinding();
+        const mods = this.getAttributeModifiers();
+        if (mods.length) {
+            if (mods.indexOf('from') > -1) {
+                this.direction = 'from';
+            } else if (mods.indexOf('to') > -1) {
+                this.direction = 'to';
+            }
+        }
     }
 
     public async extract() {
@@ -36,21 +46,23 @@ export class Bind extends Attribute {
     }
 
     public async connect() {
-        if (this.tag.isInput) {
+        if (this.doUpdateFrom && this.tag.isInput) {
             //this.tag.element.onchange = this.updateFrom.bind(this);
             this.tag.element.onkeydown = this.updateFrom.bind(this);
             this.tag.element.onkeyup = this.updateFrom.bind(this);
         }
-        this.updateTo();
-        this.boundScope.bind(`change:${this.key}`, this.updateTo, this);
+
+        if (this.doUpdateTo) {
+            this.updateTo();
+            this.boundScope.bind(`change:${this.key}`, this.updateTo, this);
+        }
     }
 
     public async evaluate() {
         const elementValue = this.valueFromElement;
         if (!!elementValue)
             this.updateFrom();
-        else
-            this.updateTo();
+        this.updateTo();
     }
 
     public set value(v: any) {
@@ -82,6 +94,8 @@ export class Bind extends Attribute {
     public mutate(mutation: MutationRecord) {
         super.mutate(mutation);
 
+        if (!this.doUpdateFrom) return;
+
         // Element innerText binding
         if (!this.property && [
             'characterData',
@@ -96,26 +110,40 @@ export class Bind extends Attribute {
             this.updateFrom();
     }
 
+    public get doUpdateFrom(): boolean {
+        return ['both', 'to'].indexOf(this.direction) > -1;
+    }
+
     updateFrom() {
         let valueFromElement = this.valueFromElement;
         valueFromElement = typeof valueFromElement === 'string' && valueFromElement.trim() || valueFromElement;
         let valueFromScope = this.value;
         valueFromScope = typeof valueFromScope === 'string' && valueFromScope.trim() || valueFromScope;
+        valueFromScope = this.formatter(valueFromScope); // Apply format for comparison
 
         if (!valueFromScope || valueFromElement != valueFromScope)
             this.value = valueFromElement;
     }
 
+    public get doUpdateTo(): boolean {
+        return ['both', 'from'].indexOf(this.direction) > -1;
+    }
+
     updateTo() {
+        const value = this.formatter(this.value);
         if (this.property) {
-            this.tag.element.setAttribute(this.property, this.value);
+            this.tag.element.setAttribute(this.property, value);
         } else {
             if (this.tag.isInput) {
-                this.tag.element.setAttribute('value', this.value);
-                (this.tag.element as any).value = this.value;
+                this.tag.element.setAttribute('value', value);
+                (this.tag.element as any).value = value;
             } else {
-                this.tag.element.innerText = this.value;
+                this.tag.element.innerText = value;
             }
         }
+    }
+
+    setFormatter(formatter) {
+        this.formatter = formatter;
     }
 }

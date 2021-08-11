@@ -1,4 +1,5 @@
 import "./Bind";
+import "./Format";
 import "./List";
 import "./ListItem";
 import "./ListItemModel";

@@ -5,7 +5,7 @@ export interface IBenchmark {
 }
 export const BENCHMARKS: IBenchmark[] = [];
 
-export function benchmarkz(name?: string, print: boolean = false) {
+export function benchmark(name?: string, print: boolean = false) {
     return function(target: any, key: string, descriptor: PropertyDescriptor): void {
         name = name || key;
         const method: (...args: any[]) => any = descriptor.value;
@@ -89,6 +89,7 @@ export function benchmarkResultsAll(): any {
     return data;
 }
 
+window['benchmark'] = benchmark;
 window['benchmarks'] = BENCHMARKS;
 window['benchmarkResults'] = benchmarkResults;
 window['benchmarkResultsMatch'] = benchmarkResultsMatch;

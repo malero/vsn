@@ -1,8 +1,10 @@
 import {Tag} from "./Tag";
 import {ElementHelper} from "./helpers/ElementHelper";
 import {EventDispatcher} from "simple-ts-event-dispatcher";
+import {Configuration} from "./Configuration";
 
 export class DOM extends EventDispatcher {
+    protected static _instance: DOM;
     protected root: Tag;
     protected tags: Tag[];
     protected observer: MutationObserver;
@@ -22,6 +24,7 @@ export class DOM extends EventDispatcher {
             this.buildFrom(document, true);
         }
         this.evaluate();
+        Configuration.instance.bind('change', this.evaluate.bind(this));
     }
 
     public async get(selector: string, create: boolean = false) {
@@ -36,10 +39,10 @@ export class DOM extends EventDispatcher {
             this.root.scope.set(`#${id}`, tag.scope);
     }
 
-    public evaluate() {
+    public async evaluate() {
         clearTimeout(this.evaluateTimeout);
         for (const tag of this.tags) {
-            tag.evaluate();
+            await tag.evaluate();
         }
     }
 
@@ -53,7 +56,6 @@ export class DOM extends EventDispatcher {
     }
 
     async buildFrom(ele: any, isRoot: boolean = false) {
-        let startTime: number = new Date().getTime();
         // Assign parents to each tag
         const allElements: HTMLElement[] = [];
 
@@ -76,21 +78,12 @@ export class DOM extends EventDispatcher {
             toBuild.push(element);
         }
 
-        if (isRoot && this.debug) {
-            console.warn(`Took ${new Date().getTime() - startTime}ms to walk ${ele}`);
-            startTime = new Date().getTime();
-        }
-
         for (const element of toBuild) {
             if (allElements.indexOf(element) > -1) continue;
             const tag: Tag = new Tag(element, this);
             this.tags.push(tag);
             newTags.push(tag);
             allElements.push(element as HTMLElement);
-        }
-        if (isRoot && this.debug) {
-            console.warn(`Took ${new Date().getTime() - startTime}ms to build tags for ${ele}`);
-            startTime = new Date().getTime();
         }
 
         if (isRoot)
@@ -102,11 +95,6 @@ export class DOM extends EventDispatcher {
 
         for (const tag of newTags)
             await tag.compileAttributes();
-
-        if (isRoot && this.debug) {
-            console.warn(`Took ${new Date().getTime() - startTime}ms to compile all child nodes for ${ele}`);
-            startTime = new Date().getTime();
-        }
 
         for (const tag of newTags) {
             if (tag === this.root)
@@ -127,40 +115,20 @@ export class DOM extends EventDispatcher {
             if (!foundParent)
                 console.error('Could not find parent for ', tag);
         }
-        if (isRoot && this.debug) {
-            console.warn(`Took ${new Date().getTime() - startTime}ms to assign parents for ${ele}`);
-            startTime = new Date().getTime();
-        }
 
         for (const tag of newTags)
             await tag.setupAttributes();
 
-        if (isRoot && this.debug) {
-            console.warn(`Took ${new Date().getTime() - startTime}ms to setup child node attrs for ${ele}`);
-            startTime = new Date().getTime();
-        }
 
         for (const tag of newTags)
             await tag.extractAttributes();
-        if (isRoot && this.debug) {
-            console.warn(`Took ${new Date().getTime() - startTime}ms to extract child node attributes for ${ele}`);
-            startTime = new Date().getTime();
-        }
 
         for (const tag of newTags)
             await tag.connectAttributes();
-        if (isRoot && this.debug) {
-            console.warn(`Took ${new Date().getTime() - startTime}ms to connect child node attributes for ${ele}`);
-            startTime = new Date().getTime();
-        }
 
         for (const tag of newTags) {
             await tag.finalize();
             this.queued.splice(this.queued.indexOf(tag.element), 1);
-        }
-        if (isRoot && this.debug) {
-            console.warn(`Took ${new Date().getTime() - startTime}ms to finalize child node attributes for ${ele}`);
-            startTime = new Date().getTime();
         }
 
         for (const tag of newTags)
@@ -172,9 +140,6 @@ export class DOM extends EventDispatcher {
             });
 
         this.trigger('built');
-        if (isRoot && this.debug) {
-            console.warn(`Took ${new Date().getTime() - startTime}ms to build from ${ele}`);
-        }
     }
 
     async getTagForElement(element: Element, create: boolean = false) {
@@ -190,5 +155,12 @@ export class DOM extends EventDispatcher {
         }
 
         return null;
+    }
+
+    public static get instance(): DOM {
+        if (!DOM._instance)
+            DOM._instance = new DOM(document ,false, false);
+
+        return DOM._instance;
     }
 }

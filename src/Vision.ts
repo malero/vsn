@@ -2,15 +2,17 @@ import {DOM} from "./DOM";
 import {EventDispatcher} from "simple-ts-event-dispatcher";
 import {WrappedArray} from "./Scope";
 import {DataModel} from "simple-ts-models";
-import {Tree} from "./AST";
 import {Registry} from "./Registry";
 import "./Types";
-import "./attributes/_import";
+import "./Formats";
+import "./attributes/_imports";
+import {Configuration} from "./Configuration";
 
 export class Vision extends EventDispatcher {
     protected static _instance: Vision;
     protected _dom?: DOM;
     public readonly registry = Registry.instance;
+    public readonly config: Configuration = Configuration.instance;
 
     constructor() {
         super();
@@ -30,7 +32,7 @@ export class Vision extends EventDispatcher {
     public async setup() {
         const body: HTMLElement = document.body;
         body.setAttribute('vsn-root', '');
-        this._dom = new DOM(document, false, true);
+        this._dom = DOM.instance;
         const startTime: number = new Date().getTime();
         await this._dom.buildFrom(document, true);
         console.warn(`Took ${new Date().getTime() - startTime}ms to start up VisionJS`);
@@ -47,5 +49,3 @@ export class Vision extends EventDispatcher {
 export const vision: Vision = Vision.instance;
 window['Vision'] = Vision;
 window['vision'] = window['vsn'] = vision;
-window['Tree'] = Tree;
-window['registry'] = Registry.instance;

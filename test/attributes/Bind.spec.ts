@@ -1,5 +1,5 @@
 import "../../src/Types";
-import "../../src/attributes/_import";
+import "../../src/attributes/_imports";
 import {DOM} from "../../src/DOM";
 
 
@@ -141,6 +141,21 @@ describe('Bind', () => {
             });
 
             tag.scope.set('val', 'new-val');
+        });
+    });
+
+    it("vsn-bind should work with currency formatter", (done) => {
+        document.body.innerHTML = `
+            <span id="test" vsn-name="test" vsn-bind="test.value" vsn-format="currency" vsn-type:test.value="float">1.5</span>
+        `;
+        const dom = new DOM(document);
+        dom.once('built', async () => {
+            const tag = await dom.getTagForElement(document.getElementById('test'));
+            expect(tag).toBeTruthy();
+            expect(tag.getParsedAttributeValue('vsn-name', 1)).toBe('test');
+            expect(tag.scope.get('value')).toBe(1.5);
+            expect(tag.element.innerText).toBe('$1.50');
+            done();
         });
     });
 });

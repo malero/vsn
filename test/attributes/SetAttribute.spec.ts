@@ -1,6 +1,6 @@
 import {DOM} from "../../src/DOM";
 import "../../src/Types";
-import "../../src/attributes/_import";
+import "../../src/attributes/_imports";
 
 
 describe('Bind', () => {

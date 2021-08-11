@@ -83,6 +83,15 @@
 <input type="text" vsn-bind="#link.@text"/>
 <input type="text" vsn-bind="#link.@href"/>
 
+<h2>Attribute Formatters</h2>
+<h3>Currency</h3>
+<span vsn-bind="currency_format" vsn-type:currency_format="float" vsn-format="currency" id="formatter">1.5</span>
+<input type="text" vsn-bind="#formatter.currency_format"/>
+<br />
+<h3>Date</h3>
+<span vsn-bind:|from="date_format" vsn-type:date_format="date" vsn-format="date" id="date-formatter">Aug 11, 2021 01:03:00 PM PDT</span>
+<input type="text" vsn-bind:|to="#date-formatter.date_format" />
+
 <h2>Conditional Elements</h2>
 <button vsn-on:click="show = !show">Toggle</button>
 <span vsn-if="show">Show is true</span>
@@ -137,10 +146,10 @@
 <script type="text/javascript" src="vision.js"></script>
 <script type="text/javascript">
     window.addEventListener('load', function () {
-        vision.registerClass(TestController, 'TestController');
-        vision.registerClass(TestItem, 'TestItem');
-        vision.registerClass(Controller, 'Controller');
-        vision.registerClass(MVal, 'MVal');
+        vision.registry.classes.register('TestController', TestController);
+        vision.registry.classes.register('TestItem', TestItem);
+        vision.registry.classes.register('Controller', Controller);
+        vision.registry.classes.register('MVal', MVal);
     });
 </script>
 </body>
