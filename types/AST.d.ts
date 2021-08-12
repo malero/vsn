@@ -59,7 +59,8 @@ export declare enum TokenType {
     DIVIDE_ASSIGN = 45,
     EXCLAMATION_POINT = 46,
     ELEMENT_REFERENCE = 47,
-    ELEMENT_ATTRIBUTE = 48
+    ELEMENT_ATTRIBUTE = 48,
+    ELEMENT_QUERY = 49
 }
 export declare function tokenize(code: string): Token[];
 export interface TreeNode<T = any> {
@@ -84,6 +85,49 @@ export declare class BlockNode extends Node implements TreeNode {
     protected _getChildNodes(): Node[];
     evaluate(scope: Scope, dom: DOM): Promise<any>;
 }
+declare class LiteralNode<T = any> extends Node implements TreeNode {
+    readonly value: T;
+    constructor(value: T);
+    evaluate(scope: Scope, dom: DOM): Promise<T>;
+}
+declare class ScopeMemberNode extends Node implements TreeNode {
+    readonly scope: TreeNode<Scope>;
+    readonly name: TreeNode<string>;
+    constructor(scope: TreeNode<Scope>, name: TreeNode<string>);
+    protected _getChildNodes(): Node[];
+    evaluate(scope: Scope, dom: DOM): Promise<any>;
+}
+declare class RootScopeMemberNode<T = any> extends Node implements TreeNode {
+    readonly name: TreeNode<string>;
+    constructor(name: TreeNode<string>);
+    protected _getChildNodes(): Node[];
+    evaluate(scope: Scope, dom: DOM): Promise<any>;
+}
+declare class ElementQueryNode extends Node implements TreeNode {
+    readonly query: string;
+    protected requiresPrep: boolean;
+    constructor(query: string);
+    evaluate(scope: Scope, dom: DOM): Promise<any>;
+    prepare(scope: Scope, dom: DOM): Promise<void>;
+}
+declare class ElementReferenceNode extends Node implements TreeNode {
+    readonly id: string;
+    protected requiresPrep: boolean;
+    constructor(id: string);
+    evaluate(scope: Scope, dom: DOM): Promise<any[]>;
+    prepare(scope: Scope, dom: DOM): Promise<void>;
+}
+declare class ElementAttributeNode extends Node implements TreeNode {
+    readonly elementRef: ElementReferenceNode | ElementQueryNode;
+    readonly attr: string;
+    protected requiresPrep: boolean;
+    constructor(elementRef: ElementReferenceNode | ElementQueryNode, attr: string);
+    get name(): LiteralNode<string>;
+    protected _getChildNodes(): Node[];
+    get attributeName(): string;
+    evaluate(scope: Scope, dom: DOM): Promise<any[]>;
+    prepare(scope: Scope, dom: DOM): Promise<void>;
+}
 export interface IBlockInfo {
     type: BlockType;
     open: TokenType;
@@ -91,6 +135,7 @@ export interface IBlockInfo {
     openCharacter: string;
     closeCharacter: string;
 }
+export declare const AttributableNodes: (typeof ScopeMemberNode | typeof RootScopeMemberNode | typeof ElementAttributeNode | typeof ElementReferenceNode)[];
 export declare class Tree {
     readonly code: string;
     protected static cache: {
@@ -111,3 +156,4 @@ export declare class Tree {
     static getTokensUntil(tokens: Token[], terminator?: TokenType, consumeTerminator?: boolean, includeTerminator?: boolean, validIfTerminatorNotFound?: boolean): Token[];
     static consumeTypes(tokens: Token[], types: TokenType[]): Token[];
 }
+export {};

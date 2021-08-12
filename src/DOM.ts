@@ -13,7 +13,7 @@ export class DOM extends EventDispatcher {
     protected queued: HTMLElement[] = [];
 
     constructor(
-        protected document: Document,
+        protected rootElement: Document,
         build: boolean = true,
         protected debug: boolean = false
     ) {
@@ -22,7 +22,7 @@ export class DOM extends EventDispatcher {
         this.tags = [];
 
         if (build) {
-            this.buildFrom(document, true);
+            this.buildFrom(rootElement, true);
         }
         this.evaluate();
         Configuration.instance.bind('change', this.evaluate.bind(this));
@@ -31,6 +31,13 @@ export class DOM extends EventDispatcher {
     public async get(selector: string, create: boolean = false) {
         if (selector.startsWith('#')) {
             return await this.getTagForElement(document.getElementById(selector.substring(1)), create);
+        } else {
+            const elements: Tag[] = [];
+            const nodes = this.querySelectorAll(selector);
+            for (let i = 0; i < nodes.length; i++) {
+                elements.push(await this.getTagForElement(nodes[i] as Element, create));
+            }
+            return elements;
         }
     }
 
@@ -38,6 +45,15 @@ export class DOM extends EventDispatcher {
         const id: string = tag.element.getAttribute('id');
         if (!!id)
             this.root.scope.set(`#${id}`, tag.scope);
+    }
+
+    public querySelectorAll(q: string): NodeList {
+        console.log(`Dom qsa ${q}`);
+        return this.rootElement.querySelectorAll(q);
+    }
+
+    public querySelector(q: string): Element {
+        return this.rootElement.querySelector(q);
     }
 
     public async eval(code: string) {
@@ -78,11 +94,13 @@ export class DOM extends EventDispatcher {
         const newTags: Tag[] = [];
         const toBuild: HTMLElement[] = [];
 
-        for (const element of (Array.from(ele.querySelectorAll(`*`)) as HTMLElement[])) { // Don't build items more than once
-            if (!ElementHelper.hasVisionAttribute(element)) continue;
-            if (this.queued.indexOf(element) > -1) continue;
-            this.queued.push(element);
-            toBuild.push(element);
+        if (ele && ele.querySelectorAll) {
+            for (const element of (Array.from(ele.querySelectorAll(`*`)) as HTMLElement[])) { // Don't build items more than once
+                if (!ElementHelper.hasVisionAttribute(element)) continue;
+                if (this.queued.indexOf(element) > -1) continue;
+                this.queued.push(element);
+                toBuild.push(element);
+            }
         }
 
         for (const element of toBuild) {

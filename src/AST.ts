@@ -73,6 +73,7 @@ export enum TokenType {
     EXCLAMATION_POINT,
     ELEMENT_REFERENCE,
     ELEMENT_ATTRIBUTE,
+    ELEMENT_QUERY,
 }
 
 const TOKEN_PATTERNS: TokenPattern[] = [
@@ -135,6 +136,10 @@ const TOKEN_PATTERNS: TokenPattern[] = [
     {
         type: TokenType.ELEMENT_REFERENCE,
         pattern: /^#[-_a-zA-Z0-9]*/
+    },
+    {
+        type: TokenType.ELEMENT_QUERY,
+        pattern: /^\?([#.\[a-z*][\[\],=_a-zA-Z0-9*\s]*)/
     },
     {
         type: TokenType.NAME,
@@ -752,20 +757,24 @@ class AssignmentNode extends Node implements TreeNode {
     }
 
     async evaluate(scope: Scope, dom: DOM) {
-        let localScope = scope;
+        let scopes = [];
         const name: string = await this.rootNode.name.evaluate(scope, dom);
         const value: any = await this.toAssign.evaluate(scope, dom);
 
         if (this.rootNode instanceof ScopeMemberNode)
-            localScope = await this.rootNode.scope.evaluate(scope, dom);
+            scopes.push(await this.rootNode.scope.evaluate(scope, dom));
         else if (this.rootNode instanceof ElementAttributeNode)
-            localScope = await this.rootNode.elementRef.evaluate(scope, dom);
+            scopes = await this.rootNode.elementRef.evaluate(scope, dom);
+        else
+            scopes.push(scope);
 
-        if (localScope instanceof Tag) {
-            localScope = localScope.scope;
+        for (let localScope of scopes) {
+            if (localScope instanceof Tag) {
+                localScope = localScope.scope;
+            }
+
+            localScope.set(name, value);
         }
-
-        localScope.set(name, value);
         return value;
     }
 
@@ -981,6 +990,27 @@ class ObjectNode extends Node implements TreeNode {
     }
 }
 
+class ElementQueryNode extends Node implements TreeNode {
+    protected requiresPrep: boolean = true;
+
+    constructor(
+        public readonly query: string
+    ) {
+        super();
+    }
+
+    async evaluate(scope: Scope, dom: DOM) {
+        let r = await dom.get(this.query, true);
+        if (!(r instanceof Array))
+            r = [r];
+        return r;
+    }
+
+    async prepare(scope: Scope, dom: DOM) {
+        await dom.get(this.query, true);
+    }
+}
+
 class ElementReferenceNode extends Node implements TreeNode {
     protected requiresPrep: boolean = true;
 
@@ -991,7 +1021,7 @@ class ElementReferenceNode extends Node implements TreeNode {
     }
 
     async evaluate(scope: Scope, dom: DOM) {
-        return await dom.get(this.id, true);
+        return [await dom.get(this.id, true)];
     }
 
     async prepare(scope: Scope, dom: DOM) {
@@ -1003,7 +1033,7 @@ class ElementAttributeNode extends Node implements TreeNode {
     protected requiresPrep: boolean = true;
 
     constructor(
-        public readonly elementRef: ElementReferenceNode,
+        public readonly elementRef: ElementReferenceNode | ElementQueryNode,
         public readonly attr: string
     ) {
         super();
@@ -1026,14 +1056,15 @@ class ElementAttributeNode extends Node implements TreeNode {
     }
 
     async evaluate(scope: Scope, dom: DOM) {
-        const tag: Tag = await this.elementRef.evaluate(scope, dom);
-        return tag.scope.get(`@${this.attributeName}`);
+        const tags: Tag[] = await this.elementRef.evaluate(scope, dom);
+        return tags.map((tag) => tag.scope.get(`@${this.attributeName}`));
     }
 
     async prepare(scope: Scope, dom: DOM) {
         await this.elementRef.prepare(scope, dom);
-        const tag: Tag = await this.elementRef.evaluate(scope, dom);
-        await tag.watchAttribute(this.attributeName);
+        const tags: Tag[] = await this.elementRef.evaluate(scope, dom);
+        for (const tag of tags)
+            await tag.watchAttribute(this.attributeName);
     }
 }
 
@@ -1044,6 +1075,13 @@ export interface IBlockInfo {
     openCharacter: string,
     closeCharacter: string
 }
+
+export const AttributableNodes = [
+    RootScopeMemberNode,
+    ScopeMemberNode,
+    ElementReferenceNode,
+    ElementAttributeNode
+];
 
 export class Tree {
     protected static cache: {[key: string]: Node} = {};
@@ -1135,14 +1173,17 @@ export class Tree {
             } else if (tokens[0].type === TokenType.ELEMENT_REFERENCE) {
                 node = new ElementReferenceNode(tokens[0].value);
                 tokens.splice(0, 1);
+            } else if (tokens[0].type === TokenType.ELEMENT_QUERY) {
+                node = new ElementQueryNode(tokens[0].value);
+                tokens.splice(0, 1);
             } else if (tokens[0].type === TokenType.L_BRACKET) {
                 node = ArrayNode.parse(node, token, tokens);
             } else if (tokens[0].type === TokenType.L_BRACE) {
                 node = ObjectNode.parse(node, token, tokens);
-            } else if (tokens[0].type === TokenType.ELEMENT_ATTRIBUTE && node instanceof ElementReferenceNode) {
-                node = new ElementAttributeNode(node, tokens[0].value);
+            } else if (tokens[0].type === TokenType.ELEMENT_ATTRIBUTE && [ElementReferenceNode, ElementQueryNode].map((t) => node instanceof t).indexOf(true) > -1) {
+                node = new ElementAttributeNode(node as ElementReferenceNode | ElementQueryNode, tokens[0].value);
                 tokens.splice(0, 1);
-            } else if (token.type === TokenType.PERIOD && tokens[1].type === TokenType.NAME) {
+            } else if (node !== null && token.type === TokenType.PERIOD && tokens[1].type === TokenType.NAME) {
                 node = new ScopeMemberNode(
                     node,
                     new LiteralNode<string>(tokens[1].value)
