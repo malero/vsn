@@ -4,6 +4,5 @@ export declare class ClassConstructor extends Attribute {
     protected attributeKey: string;
     protected className: string;
     setup(): Promise<void>;
-    extract(): Promise<void>;
     protected instantiateClass(cls: any): void;
 }

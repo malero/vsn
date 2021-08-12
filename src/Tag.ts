@@ -135,6 +135,14 @@ export class Tag extends EventDispatcher {
         return this.inputTags.indexOf(this.element.tagName.toLowerCase()) > -1;
     }
 
+    get value(): string {
+        if (this.isInput) {
+            return (this.element as any).value;
+        } else {
+            return this.element.textContent;
+        }
+    }
+
     public addChild(tag: Tag) {
         this._children.push(tag);
     }
@@ -332,6 +340,7 @@ export class Tag extends EventDispatcher {
             return;
 
         this.scope.set('$event', e);
+        this.scope.set('$value', this.value);
         for (const handler of this.onEventHandlers[eventType])
         {
             handler(e);

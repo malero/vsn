@@ -29,6 +29,10 @@ export class Vision extends EventDispatcher {
         return this._dom;
     }
 
+    public async eval(code: string) {
+        return await this._dom.eval(code);
+    }
+
     public async setup() {
         const body: HTMLElement = document.body;
         body.setAttribute('vsn-root', '');

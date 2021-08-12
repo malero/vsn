@@ -1,5 +1,6 @@
 import { Attribute } from "../Attribute";
 import { Tag } from "../Tag";
+import { List } from "./List";
 export declare class ListItem extends Attribute {
     static readonly scoped: boolean;
     static readonly ERROR_NO_PARENT = "Cannot find list parent.";
@@ -7,7 +8,7 @@ export declare class ListItem extends Attribute {
     get list(): Tag;
     setup(): Promise<void>;
     get listItemName(): string;
-    get modelClassName(): string;
+    getList(): Promise<List>;
     protected configure(): Promise<void>;
     private instantiateModel;
 }

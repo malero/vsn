@@ -2,6 +2,7 @@ import {Tag} from "./Tag";
 import {ElementHelper} from "./helpers/ElementHelper";
 import {EventDispatcher} from "simple-ts-event-dispatcher";
 import {Configuration} from "./Configuration";
+import {Tree} from "./AST";
 
 export class DOM extends EventDispatcher {
     protected static _instance: DOM;
@@ -37,6 +38,12 @@ export class DOM extends EventDispatcher {
         const id: string = tag.element.getAttribute('id');
         if (!!id)
             this.root.scope.set(`#${id}`, tag.scope);
+    }
+
+    public async eval(code: string) {
+        const tree = new Tree(code);
+        await tree.prepare(this.root.scope, this);
+        return await tree.evaluate(this.root.scope, this);
     }
 
     public async evaluate() {

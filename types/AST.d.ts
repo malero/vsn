@@ -12,49 +12,54 @@ export declare enum BlockType {
 }
 export declare enum TokenType {
     WHITESPACE = 0,
-    RETURN = 1,
-    OF = 2,
-    FOR = 3,
-    IF = 4,
-    ELSE_IF = 5,
-    ELSE = 6,
-    NAME = 7,
-    L_BRACE = 8,
-    R_BRACE = 9,
-    L_BRACKET = 10,
-    R_BRACKET = 11,
-    L_PAREN = 12,
-    R_PAREN = 13,
-    PERIOD = 14,
-    COMMA = 15,
-    COLON = 16,
-    SEMI_COLON = 17,
-    STRING_LITERAL = 18,
-    NUMBER_LITERAL = 19,
-    BOOLEAN_LITERAL = 20,
-    NULL_LITERAL = 21,
-    STRICT_EQUALS = 22,
-    STRICT_NOT_EQUALS = 23,
-    EQUALS = 24,
-    NOT_EQUALS = 25,
-    GREATER_THAN = 26,
-    LESS_THAN = 27,
-    GREATER_THAN_EQUAL = 28,
-    LESS_THAN_EQUAL = 29,
-    ASSIGN = 30,
-    AND = 31,
-    OR = 32,
-    ADD = 33,
-    SUBTRACT = 34,
-    MULTIPLY = 35,
-    DIVIDE = 36,
-    ADD_ASSIGN = 37,
-    SUBTRACT_ASSIGN = 38,
-    MULTIPLY_ASSIGN = 39,
-    DIVIDE_ASSIGN = 40,
-    EXCLAMATION_POINT = 41,
-    ELEMENT_REFERENCE = 42,
-    ELEMENT_ATTRIBUTE = 43
+    TYPE_INT = 1,
+    TYPE_UINT = 2,
+    TYPE_FLOAT = 3,
+    TYPE_STRING = 4,
+    RETURN = 5,
+    OF = 6,
+    IN = 7,
+    FOR = 8,
+    IF = 9,
+    ELSE_IF = 10,
+    ELSE = 11,
+    NAME = 12,
+    L_BRACE = 13,
+    R_BRACE = 14,
+    L_BRACKET = 15,
+    R_BRACKET = 16,
+    L_PAREN = 17,
+    R_PAREN = 18,
+    PERIOD = 19,
+    COMMA = 20,
+    COLON = 21,
+    SEMI_COLON = 22,
+    STRING_LITERAL = 23,
+    NUMBER_LITERAL = 24,
+    BOOLEAN_LITERAL = 25,
+    NULL_LITERAL = 26,
+    STRICT_EQUALS = 27,
+    STRICT_NOT_EQUALS = 28,
+    EQUALS = 29,
+    NOT_EQUALS = 30,
+    GREATER_THAN_EQUAL = 31,
+    LESS_THAN_EQUAL = 32,
+    GREATER_THAN = 33,
+    LESS_THAN = 34,
+    ASSIGN = 35,
+    AND = 36,
+    OR = 37,
+    ADD = 38,
+    SUBTRACT = 39,
+    MULTIPLY = 40,
+    DIVIDE = 41,
+    ADD_ASSIGN = 42,
+    SUBTRACT_ASSIGN = 43,
+    MULTIPLY_ASSIGN = 44,
+    DIVIDE_ASSIGN = 45,
+    EXCLAMATION_POINT = 46,
+    ELEMENT_REFERENCE = 47,
+    ELEMENT_ATTRIBUTE = 48
 }
 export declare function tokenize(code: string): Token[];
 export interface TreeNode<T = any> {
@@ -62,8 +67,13 @@ export interface TreeNode<T = any> {
     prepare(scope: Scope, dom: DOM): any;
 }
 export declare abstract class Node implements TreeNode {
+    protected requiresPrep: boolean;
+    protected _isPreparationRequired: boolean;
+    protected childNodes: Node[];
     abstract evaluate(scope: Scope, dom: DOM): any;
+    isPreparationRequired(): boolean;
     prepare(scope: Scope, dom: DOM): Promise<void>;
+    protected _getChildNodes(): Node[];
     getChildNodes(): Node[];
     findChildrenByType<T = Node>(t: any): T[];
     findChildrenByTypes<T = Node>(types: any[]): T[];
@@ -71,9 +81,8 @@ export declare abstract class Node implements TreeNode {
 export declare class BlockNode extends Node implements TreeNode {
     readonly statements: Node[];
     constructor(statements: Node[]);
-    getChildNodes(): Node[];
+    protected _getChildNodes(): Node[];
     evaluate(scope: Scope, dom: DOM): Promise<any>;
-    prepare(scope: Scope, dom: DOM): Promise<void>;
 }
 export interface IBlockInfo {
     type: BlockType;
@@ -84,6 +93,9 @@ export interface IBlockInfo {
 }
 export declare class Tree {
     readonly code: string;
+    protected static cache: {
+        [key: string]: Node;
+    };
     protected rootNode: Node;
     constructor(code: string);
     parse(): void;

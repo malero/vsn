@@ -738,7 +738,7 @@ class RootScopeMemberNode<T = any> extends Node implements TreeNode {
 
 class AssignmentNode extends Node implements TreeNode {
     constructor(
-        public readonly rootNode: RootScopeMemberNode | ScopeMemberNode,
+        public readonly rootNode: RootScopeMemberNode | ScopeMemberNode | ElementAttributeNode,
         public readonly toAssign: TreeNode,
     ) {
         super();
@@ -758,19 +758,24 @@ class AssignmentNode extends Node implements TreeNode {
 
         if (this.rootNode instanceof ScopeMemberNode)
             localScope = await this.rootNode.scope.evaluate(scope, dom);
+        else if (this.rootNode instanceof ElementAttributeNode)
+            localScope = await this.rootNode.elementRef.evaluate(scope, dom);
+
+        if (localScope instanceof Tag) {
+            localScope = localScope.scope;
+        }
 
         localScope.set(name, value);
-        if (localScope.get(name) !== value)
-            throw Error(`System Error: Failed to assign ${name} to ${value}`);
         return value;
     }
 
     public static parse(lastNode: any, token, tokens: Token[]): AssignmentNode {
-        if (!(lastNode instanceof RootScopeMemberNode) && !(lastNode instanceof ScopeMemberNode)) {
+        if (!(lastNode instanceof RootScopeMemberNode) && !(lastNode instanceof ScopeMemberNode) && !(lastNode instanceof ElementAttributeNode)) {
             throw SyntaxError(`Invalid assignment syntax near ${Tree.toCode(tokens.splice(0, 10))}`);
         }
         tokens.splice(0, 1); // consume =
         const assignmentTokens: Token[] = Tree.getNextStatementTokens(tokens, false, false, true);
+
         return new AssignmentNode(
             lastNode,
             Tree.processTokens(assignmentTokens)
@@ -986,7 +991,7 @@ class ElementReferenceNode extends Node implements TreeNode {
     }
 
     async evaluate(scope: Scope, dom: DOM) {
-        return await dom.get(this.id);
+        return await dom.get(this.id, true);
     }
 
     async prepare(scope: Scope, dom: DOM) {
@@ -1002,6 +1007,10 @@ class ElementAttributeNode extends Node implements TreeNode {
         public readonly attr: string
     ) {
         super();
+    }
+
+    public get name(): LiteralNode<string> {
+        return new LiteralNode<string>(`@${this.attributeName}`);
     }
 
     protected _getChildNodes(): Node[] {

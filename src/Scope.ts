@@ -224,8 +224,9 @@ export class Scope extends EventDispatcher {
         if (typeof value === 'string') {
             const valueType = this.getType(key);
             const caster = Registry.instance.types.getSynchronous(valueType);
-            if (caster)
+            if (caster) {
                 value = caster(value);
+            }
 
             if ([ScopeVariableType.Integer, ScopeVariableType.Float].indexOf(valueType) > -1 && isNaN(value)) {
                 value = null;
