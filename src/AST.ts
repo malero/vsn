@@ -131,7 +131,7 @@ const TOKEN_PATTERNS: TokenPattern[] = [
     },
     {
         type: TokenType.ELEMENT_ATTRIBUTE,
-        pattern: /^\.?@[_a-zA-Z0-9]*/
+        pattern: /^\.@[_a-zA-Z0-9]*/
     },
     {
         type: TokenType.ELEMENT_REFERENCE,
@@ -139,7 +139,7 @@ const TOKEN_PATTERNS: TokenPattern[] = [
     },
     {
         type: TokenType.ELEMENT_QUERY,
-        pattern: /^\?([#.\[a-z*][\[\],=_a-zA-Z0-9*\s]*)/
+        pattern: /^\?([#.\[a-z*][.\[\],=\-_a-zA-Z0-9*\s]*[\]_a-zA-Z0-9*]+)/
     },
     {
         type: TokenType.NAME,

@@ -10,7 +10,7 @@ export declare class DOM extends EventDispatcher {
     protected evaluateTimeout: any;
     protected queued: HTMLElement[];
     constructor(rootElement: Document, build?: boolean, debug?: boolean);
-    get(selector: string, create?: boolean): Promise<any>;
+    get(selector: string, create?: boolean): Promise<Tag[]>;
     registerElementInRoot(tag: Tag): void;
     querySelectorAll(q: string): NodeList;
     querySelector(q: string): Element;

@@ -3,6 +3,7 @@ import {ElementHelper} from "./helpers/ElementHelper";
 import {EventDispatcher} from "simple-ts-event-dispatcher";
 import {Configuration} from "./Configuration";
 import {Tree} from "./AST";
+import {Query} from "./Query";
 
 export class DOM extends EventDispatcher {
     protected static _instance: DOM;
@@ -29,16 +30,12 @@ export class DOM extends EventDispatcher {
     }
 
     public async get(selector: string, create: boolean = false) {
-        if (selector.startsWith('#')) {
-            return await this.getTagForElement(document.getElementById(selector.substring(1)), create);
-        } else {
-            const elements: Tag[] = [];
-            const nodes = this.querySelectorAll(selector);
-            for (let i = 0; i < nodes.length; i++) {
-                elements.push(await this.getTagForElement(nodes[i] as Element, create));
-            }
-            return elements;
+        const elements: Tag[] = [];
+        const nodes = this.querySelectorAll(selector);
+        for (let i = 0; i < nodes.length; i++) {
+            elements.push(await this.getTagForElement(nodes[i] as Element, create));
         }
+        return elements;
     }
 
     public registerElementInRoot(tag: Tag): void {
@@ -172,8 +169,8 @@ export class DOM extends EventDispatcher {
                 return tag;
         }
 
-        if (create) {
-            element.setAttribute('vsn-referenced', '');
+        if (element && create) {
+            element.setAttribute('vsn-ref', '');
             await this.buildFrom(element.parentElement);
             return await this.getTagForElement(element, false);
         }
