@@ -46,12 +46,6 @@ export class Bind extends Attribute {
     }
 
     public async connect() {
-        if (this.doUpdateFrom && this.tag.isInput) {
-            //this.tag.element.onchange = this.updateFrom.bind(this);
-            this.tag.element.onkeydown = this.updateFrom.bind(this);
-            this.tag.element.onkeyup = this.updateFrom.bind(this);
-        }
-
         if (this.doUpdateTo) {
             this.updateTo();
             this.boundScope.bind(`change:${this.key}`, this.updateTo, this);
@@ -111,6 +105,7 @@ export class Bind extends Attribute {
     }
 
     updateFrom() {
+        if (!this.doUpdateFrom) return;
         let valueFromElement = this.valueFromElement;
         valueFromElement = typeof valueFromElement === 'string' && valueFromElement.trim() || valueFromElement;
         let valueFromScope = this.value;
@@ -126,16 +121,12 @@ export class Bind extends Attribute {
     }
 
     updateTo() {
+        if (!this.doUpdateTo) return;
         const value = this.formatter(this.value);
         if (this.property) {
             this.tag.element.setAttribute(this.property, value);
         } else {
-            if (this.tag.isInput) {
-                this.tag.element.setAttribute('value', value);
-                (this.tag.element as any).value = value;
-            } else {
-                this.tag.element.innerText = value;
-            }
+            this.tag.value = value;
         }
     }
 

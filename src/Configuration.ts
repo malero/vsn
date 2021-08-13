@@ -1,4 +1,5 @@
 import {EventDispatcher} from "simple-ts-event-dispatcher";
+import {VisionHelper} from "./helpers/VisionHelper";
 
 export type ConfigurationValue = string | number | boolean | null | undefined;
 
@@ -8,7 +9,7 @@ export class Configuration extends EventDispatcher {
 
     constructor() {
         super();
-        this.data = window['$configuration'] || {};
+        this.data = VisionHelper.window && window['$configuration'] || {};
     }
 
     public get(key: string, defaultValue: ConfigurationValue = null): ConfigurationValue {

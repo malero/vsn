@@ -7,6 +7,8 @@ import "./Types";
 import "./Formats";
 import "./attributes/_imports";
 import {Configuration} from "./Configuration";
+import {VisionHelper} from "./helpers/VisionHelper";
+import {Tree} from "./AST";
 
 export class Vision extends EventDispatcher {
     protected static _instance: Vision;
@@ -16,10 +18,14 @@ export class Vision extends EventDispatcher {
 
     constructor() {
         super();
-        document.addEventListener(
-            "DOMContentLoaded",
-            this.setup.bind(this)
-        );
+        if (VisionHelper.document) {
+            document.addEventListener(
+                "DOMContentLoaded",
+                this.setup.bind(this)
+            );
+        } else {
+            console.warn('No dom, running in CLI mode.');
+        }
         this.registry.classes.register('Object', Object);
         this.registry.classes.register('WrappedArray', WrappedArray);
         this.registry.classes.register('DataModel', DataModel);
@@ -51,5 +57,8 @@ export class Vision extends EventDispatcher {
 }
 
 export const vision: Vision = Vision.instance;
-window['Vision'] = Vision;
-window['vision'] = window['vsn'] = vision;
+if (VisionHelper.window) {
+    window['Vision'] = Vision;
+    window['vision'] = window['vsn'] = vision;
+    window['Tree'] = Tree;
+}

@@ -1,3 +1,4 @@
+import {VisionHelper} from "./helpers/VisionHelper";
 
 export interface IBenchmark {
     name: string;
@@ -89,8 +90,10 @@ export function benchmarkResultsAll(): any {
     return data;
 }
 
-window['benchmark'] = benchmark;
-window['benchmarks'] = BENCHMARKS;
-window['benchmarkResults'] = benchmarkResults;
-window['benchmarkResultsMatch'] = benchmarkResultsMatch;
-window['benchmarkResultsAll'] = benchmarkResultsAll;
+if (VisionHelper.window) {
+    window['benchmark'] = benchmark;
+    window['benchmarks'] = BENCHMARKS;
+    window['benchmarkResults'] = benchmarkResults;
+    window['benchmarkResultsMatch'] = benchmarkResultsMatch;
+    window['benchmarkResultsAll'] = benchmarkResultsAll;
+}

@@ -60,7 +60,7 @@ export class Tag extends EventDispatcher {
     }
 
     public get computedStyle(): CSSStyleDeclaration {
-        return window.getComputedStyle(this.element);
+        return VisionHelper.window && window.getComputedStyle(this.element) || null;
     }
 
     public analyzeElementAttributes() {
@@ -133,6 +133,15 @@ export class Tag extends EventDispatcher {
 
     get isInput(): boolean {
         return this.inputTags.indexOf(this.element.tagName.toLowerCase()) > -1;
+    }
+
+    set value(value) {
+        if (this.isInput) {
+            this.element.setAttribute('value', value);
+            (this.element as any).value = value;
+        } else {
+            this.element.innerText = value;
+        }
     }
 
     get value(): string {
@@ -313,11 +322,19 @@ export class Tag extends EventDispatcher {
     }
 
     public async connectAttributes() {
+        if (this.isInput) {
+            this.addEventHandler('input', [], this.inputMutation.bind(this));
+        }
+
         for (const attr of this.attributes) {
             await attr.connect();
         }
         this._state = TagState.AttributesConnected;
         this.callOnWrapped('$bound');
+    }
+
+    public inputMutation(e) {
+        this.element.setAttribute('value', e.target.value);
     }
 
     public finalize(): void {
@@ -365,7 +382,7 @@ export class Tag extends EventDispatcher {
 
         if (!this.onEventHandlers[eventType]) {
             this.onEventHandlers[eventType] = [];
-            const element: HTMLElement | Window = On.WindowEvents.indexOf(eventType) > -1 ? window : this.element;
+            const element: HTMLElement | Window = On.WindowEvents.indexOf(eventType) > -1 && window ? window : this.element;
             const opts: any = {};
             if (eventType.indexOf('touch') > -1 || passiveValue !== null)
                 opts['passive'] = passiveValue === null && true || passiveValue;

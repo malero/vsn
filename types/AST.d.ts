@@ -62,7 +62,6 @@ export declare enum TokenType {
     ELEMENT_ATTRIBUTE = 48,
     ELEMENT_QUERY = 49
 }
-export declare function tokenize(code: string): Token[];
 export interface TreeNode<T = any> {
     evaluate(scope: Scope, dom: DOM): any;
     prepare(scope: Scope, dom: DOM): any;
@@ -110,18 +109,11 @@ declare class ElementQueryNode extends Node implements TreeNode {
     evaluate(scope: Scope, dom: DOM): Promise<any>;
     prepare(scope: Scope, dom: DOM): Promise<void>;
 }
-declare class ElementReferenceNode extends Node implements TreeNode {
-    readonly id: string;
-    protected requiresPrep: boolean;
-    constructor(id: string);
-    evaluate(scope: Scope, dom: DOM): Promise<any[]>;
-    prepare(scope: Scope, dom: DOM): Promise<void>;
-}
 declare class ElementAttributeNode extends Node implements TreeNode {
-    readonly elementRef: ElementReferenceNode | ElementQueryNode;
+    readonly elementRef: ElementQueryNode;
     readonly attr: string;
     protected requiresPrep: boolean;
-    constructor(elementRef: ElementReferenceNode | ElementQueryNode, attr: string);
+    constructor(elementRef: ElementQueryNode, attr: string);
     get name(): LiteralNode<string>;
     protected _getChildNodes(): Node[];
     get attributeName(): string;
@@ -135,7 +127,7 @@ export interface IBlockInfo {
     openCharacter: string;
     closeCharacter: string;
 }
-export declare const AttributableNodes: (typeof ScopeMemberNode | typeof RootScopeMemberNode | typeof ElementAttributeNode | typeof ElementReferenceNode)[];
+export declare const AttributableNodes: (typeof ScopeMemberNode | typeof RootScopeMemberNode | typeof ElementAttributeNode)[];
 export declare class Tree {
     readonly code: string;
     protected static cache: {
@@ -147,12 +139,13 @@ export declare class Tree {
     evaluate(scope: Scope, dom: DOM): Promise<any>;
     prepare(scope: Scope, dom: DOM): Promise<void>;
     bindToScopeChanges(scope: any, fnc: any): Promise<void>;
+    static tokenize(code: string): Token[];
     static stripWhiteSpace(tokens: Token[]): Token[];
     static processTokens(tokens: Token[]): BlockNode;
     static toCode(tokens: Token[], limit?: any): string;
     static getBlockInfo(tokens: Token[]): IBlockInfo;
     static getNextStatementTokens(tokens: Token[], consumeClosingToken?: boolean, consumeOpeningToken?: boolean, includeClosingToken?: boolean): Token[];
-    static getBlockTokens(tokens: Token[], groupByComma?: boolean): Token[][];
+    static getBlockTokens(tokens: Token[], groupBy?: TokenType | null): Token[][];
     static getTokensUntil(tokens: Token[], terminator?: TokenType, consumeTerminator?: boolean, includeTerminator?: boolean, validIfTerminatorNotFound?: boolean): Token[];
     static consumeTypes(tokens: Token[], types: TokenType[]): Token[];
 }

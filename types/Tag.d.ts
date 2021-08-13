@@ -47,6 +47,7 @@ export declare class Tag extends EventDispatcher {
     getAttributeBinding(attr: string): string;
     getAttributeModifiers(attr: string): string[];
     get isInput(): boolean;
+    set value(value: string);
     get value(): string;
     addChild(tag: Tag): void;
     get children(): Tag[];
@@ -72,6 +73,7 @@ export declare class Tag extends EventDispatcher {
     setupAttributes(): Promise<void>;
     extractAttributes(): Promise<void>;
     connectAttributes(): Promise<void>;
+    inputMutation(e: any): void;
     finalize(): void;
     callOnWrapped(method: any, ...args: any[]): boolean;
     protected handleEvent(eventType: string, e: any): void;

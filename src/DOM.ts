@@ -48,7 +48,6 @@ export class DOM extends EventDispatcher {
     }
 
     public querySelectorAll(q: string): NodeList {
-        console.log(`Dom qsa ${q}`);
         return this.rootElement.querySelectorAll(q);
     }
 

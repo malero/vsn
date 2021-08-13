@@ -1,5 +1,6 @@
 import {EventDispatcher} from "simple-ts-event-dispatcher";
 import {IDeferred, IPromise, Promise as SimplePromise} from "simple-ts-promise";
+import {VisionHelper} from "./helpers/VisionHelper";
 
 export function register(store: string, key: string = null, setup: () => void = null) {
     return function(target: any, _key: string = null) {
@@ -62,12 +63,13 @@ export class Registry extends EventDispatcher {
     constructor() {
         super();
 
-        this.classes = new RegistryStore(window['$classes'] || {});
-        this.models = new RegistryStore(window['$models'] || {});
-        this.templates = new RegistryStore(window['$templates'] || {});
-        this.types = new RegistryStore(window['$types'] || {});
-        this.formats = new RegistryStore(window['$formats'] || {});
-        this.attributes = new RegistryStore(window['$attributes'] || {});
+        const w = VisionHelper.window || {};
+        this.classes = new RegistryStore(w['$classes'] || {});
+        this.models = new RegistryStore(w['$models'] || {});
+        this.templates = new RegistryStore(w['$templates'] || {});
+        this.types = new RegistryStore(w['$types'] || {});
+        this.formats = new RegistryStore(w['$formats'] || {});
+        this.attributes = new RegistryStore(w['$attributes'] || {});
     }
 
     public static class(key: string = null, setup = null) {

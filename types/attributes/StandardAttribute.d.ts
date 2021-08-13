@@ -9,6 +9,6 @@ export declare class StandardAttribute extends Attribute {
     updateTo(): void;
     updateFrom(): void;
     get key(): string;
-    set value(value: string);
-    get value(): string;
+    set value(value: any);
+    get value(): any;
 }
