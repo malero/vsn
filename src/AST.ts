@@ -780,6 +780,7 @@ class AssignmentNode extends Node implements TreeNode {
 
     public static parse(lastNode: any, token, tokens: Token[]): AssignmentNode {
         if (!(lastNode instanceof RootScopeMemberNode) && !(lastNode instanceof ScopeMemberNode) && !(lastNode instanceof ElementAttributeNode)) {
+            console.log('lastNode', lastNode);
             throw SyntaxError(`Invalid assignment syntax near ${Tree.toCode(tokens.splice(0, 10))}`);
         }
         tokens.splice(0, 1); // consume =
@@ -876,9 +877,6 @@ class ArithmeticAssignmentNode extends Node implements TreeNode {
         }
 
         scope.set(name, left);
-
-        if (scope.get(name) != left)
-            throw Error(`System Error: Failed to assign ${name} to ${right}`);
         return left;
     }
 
@@ -892,7 +890,7 @@ class ArithmeticAssignmentNode extends Node implements TreeNode {
     }
 
     public static parse(lastNode, token, tokens: Token[]): ArithmeticAssignmentNode {
-        if (!(lastNode instanceof RootScopeMemberNode) && !(lastNode instanceof ScopeMemberNode)) {
+        if (!(lastNode instanceof RootScopeMemberNode) && !(lastNode instanceof ScopeMemberNode) && !(lastNode instanceof ElementAttributeNode)) {
             throw SyntaxError('Invalid assignment syntax.');
         }
         tokens.splice(0, 1); // consume +=

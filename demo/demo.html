@@ -22,7 +22,6 @@
 
             TestController.prototype.add = function () {
                 this.items.push(new TestItem(this.name, this.age));
-                window['controller'] = this['$scope'].wrapped;
                 this.reset();
             };
 
@@ -77,6 +76,11 @@
 <h2>On Click</h2>
 <button vsn-on:click="show = !show" vsn-set:show="false|boolean">Toggle</button>
 <span vsn-bind="show"></span>
+
+<h2>? Operator</h2>
+<input id="qop-inp" type="text" />
+<button vsn-on:click="#qop.@class += [#qop-inp.@value];#qop-inp.@value = '';">Toggle</button>
+<span id="qop"></span>
 
 <h2>Attribute Binding</h2>
 <a href="/index.html" id="link">Home</a>
