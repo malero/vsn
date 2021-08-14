@@ -139,7 +139,7 @@ const TOKEN_PATTERNS: TokenPattern[] = [
     },
     {
         type: TokenType.ELEMENT_QUERY,
-        pattern: /^\?([#.\[a-z*][.\[\],=\-_a-zA-Z0-9*\s]*[\]_a-zA-Z0-9*]+)/
+        pattern: /^\?([.\[\],=\-_a-zA-Z0-9*\s]*[\]_a-zA-Z0-9*])/
     },
     {
         type: TokenType.NAME,
@@ -1179,6 +1179,7 @@ export class Tree {
             for (const tp of TOKEN_PATTERNS) {
                 const match: RegExpMatchArray = tp.pattern.exec(code);
                 if (match) {
+                    console.log(match);
                     tokens.push({
                         type: tp.type,
                         value: match[match.length - 1]
