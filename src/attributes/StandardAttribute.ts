@@ -2,14 +2,15 @@ import {Attribute} from "../Attribute";
 
 
 export class StandardAttribute extends Attribute {
-    protected readonly magicAttributes: string[] = [
+    protected static readonly magicAttributes: string[] = [
         '@text',
         '@html',
         '@class',
         '@value'
-    ]
+    ];
+
     public async setup() {
-        if (this.magicAttributes.indexOf(this.key) === -1 && !this.tag.element.hasAttribute(this.attributeName)) {
+        if (StandardAttribute.magicAttributes.indexOf(this.key) === -1 && !this.tag.element.hasAttribute(this.attributeName)) {
             this.tag.element.setAttribute(this.attributeName, '');
         }
     }

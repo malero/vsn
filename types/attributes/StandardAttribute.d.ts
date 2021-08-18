@@ -1,6 +1,6 @@
 import { Attribute } from "../Attribute";
 export declare class StandardAttribute extends Attribute {
-    protected readonly magicAttributes: string[];
+    protected static readonly magicAttributes: string[];
     setup(): Promise<void>;
     extract(): Promise<void>;
     connect(): Promise<void>;

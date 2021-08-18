@@ -73,7 +73,7 @@ export enum TokenType {
     EXCLAMATION_POINT,
     ELEMENT_REFERENCE,
     ELEMENT_ATTRIBUTE,
-    ELEMENT_QUERY,
+    ELEMENT_QUERY
 }
 
 const TOKEN_PATTERNS: TokenPattern[] = [
@@ -139,7 +139,7 @@ const TOKEN_PATTERNS: TokenPattern[] = [
     },
     {
         type: TokenType.ELEMENT_QUERY,
-        pattern: /^\?([.\[\],=\-_a-zA-Z0-9*\s]*[\]_a-zA-Z0-9*])/
+        pattern: /^\?([#.\[\],=\-_a-zA-Z0-9*\s]*[\]_a-zA-Z0-9*])/
     },
     {
         type: TokenType.NAME,
@@ -233,7 +233,7 @@ const TOKEN_PATTERNS: TokenPattern[] = [
         type: TokenType.ADD_ASSIGN,
         pattern: /^\+=/
     },
-        {
+    {
         type: TokenType.SUBTRACT_ASSIGN,
         pattern: /^-=/
     },
@@ -268,7 +268,7 @@ const TOKEN_PATTERNS: TokenPattern[] = [
     {
         type: TokenType.EXCLAMATION_POINT,
         pattern: /^!/
-    },
+    }
 ];
 
 
@@ -808,7 +808,8 @@ class ArithmeticAssignmentNode extends Node implements TreeNode {
         for (let localScope of scopes) {
             if (localScope instanceof Tag) {
                 localScope = localScope.scope;
-            }
+            } else if (localScope['$wrapped'] && localScope['$scope'])
+                localScope = localScope['$scope'];
 
             let left: number | Array<any> | string = await this.left.evaluate(localScope, dom);
             let right: number | Array<any> | string = await this.right.evaluate(localScope, dom);
@@ -1179,7 +1180,6 @@ export class Tree {
             for (const tp of TOKEN_PATTERNS) {
                 const match: RegExpMatchArray = tp.pattern.exec(code);
                 if (match) {
-                    console.log(match);
                     tokens.push({
                         type: tp.type,
                         value: match[match.length - 1]
