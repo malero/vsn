@@ -287,7 +287,7 @@ export class Tag extends EventDispatcher {
         if (this.element.getAttribute('id'))
             requiresScope = true;
 
-        if (requiresScope) {
+        if (requiresScope && !this.uniqueScope) {
             this._uniqueScope = true;
             this._scope = new Scope();
         }
@@ -401,7 +401,7 @@ export class Tag extends EventDispatcher {
         }
 
         // Standard attribute requires a unique scope
-        // @todo: Does this cause any issues with attributes binding to the parent scope? hmm...
+        // @todo: Does this cause any issues with attribute bindings on the parent scope prior to having its own scope? hmm...
         if (!this.uniqueScope) {
             this._uniqueScope = true;
             this._scope = new Scope();
