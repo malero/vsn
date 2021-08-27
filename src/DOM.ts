@@ -3,7 +3,8 @@ import {ElementHelper} from "./helpers/ElementHelper";
 import {EventDispatcher} from "simple-ts-event-dispatcher";
 import {Configuration} from "./Configuration";
 import {Tree} from "./AST";
-import {Query} from "./Query";
+import {TagList} from "./Tag/List";
+import {benchmark} from "./Bencmark";
 
 export class DOM extends EventDispatcher {
     protected static _instance: DOM;
@@ -30,12 +31,8 @@ export class DOM extends EventDispatcher {
     }
 
     public async get(selector: string, create: boolean = false) {
-        const elements: Tag[] = [];
         const nodes = this.querySelectorAll(selector);
-        for (let i = 0; i < nodes.length; i++) {
-            elements.push(await this.getTagForElement(nodes[i] as Element, create));
-        }
-        return elements;
+        return await this.getTagsForElement(Array.from(nodes) as Element[], create);
     }
 
     public registerElementInRoot(tag: Tag): void {
@@ -74,6 +71,7 @@ export class DOM extends EventDispatcher {
         }
     }
 
+    @benchmark("buildFrom")
     async buildFrom(ele: any, isRoot: boolean = false) {
         // Assign parents to each tag
         const allElements: HTMLElement[] = [];
@@ -161,6 +159,33 @@ export class DOM extends EventDispatcher {
             });
 
         this.trigger('built');
+    }
+
+    async getTagsForElement(elements: Element[], create: boolean = false) {
+        const tags: TagList = new TagList();
+        const found: Element[] = [];
+        for (const tag of this.tags)
+        {
+            if (elements.indexOf(tag.element) > -1) {
+                tags.push(tag);
+                found.push(tag.element);
+            }
+        }
+
+        if (create) {
+            const notFound: Element[] = [...elements];
+            for (let i = notFound.length; i >= 0; i--) {
+                const element: Element = notFound[i];
+                if (found.indexOf(element) > -1)
+                    notFound.pop();
+            }
+
+            for (const element of notFound) {
+                tags.push(await this.getTagForElement(element, create));
+            }
+        }
+
+        return tags;
     }
 
     async getTagForElement(element: Element, create: boolean = false) {

@@ -1,6 +1,7 @@
 import {Scope} from "./Scope";
 import {DOM} from "./DOM";
 import {Tag} from "./Tag";
+import {TagList} from "./Tag/List";
 
 function lower(str: string): string {
     return str ? str.toLowerCase() : null;
@@ -1064,10 +1065,7 @@ class ElementQueryNode extends Node implements TreeNode {
     }
 
     async evaluate(scope: Scope, dom: DOM) {
-        let r = await dom.get(this.query, true);
-        if (!(r instanceof Array))
-            r = [r];
-        return r;
+        return await dom.get(this.query, true);
     }
 
     async prepare(scope: Scope, dom: DOM) {

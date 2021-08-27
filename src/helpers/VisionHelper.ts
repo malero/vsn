@@ -1,3 +1,5 @@
+declare var IN_DEVELOPMENT: boolean;
+
 export class VisionHelper {
     public static isConstructor(obj: any): boolean {
         return obj &&
@@ -23,5 +25,14 @@ export class VisionHelper {
             })(navigator.userAgent || navigator.vendor || window['opera']);
         }
         return check;
+    }
+
+    public static get inDevelopment() {
+        console.log('in dev?', IN_DEVELOPMENT);
+        return IN_DEVELOPMENT;
+    }
+
+    public static get inLegacy() {
+        return process.env.BUILD_TARGET === 'es5';
     }
 }

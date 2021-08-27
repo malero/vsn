@@ -9,6 +9,7 @@ import "./attributes/_imports";
 import {Configuration} from "./Configuration";
 import {VisionHelper} from "./helpers/VisionHelper";
 import {Tree} from "./AST";
+import {Query} from "./Query";
 
 export class Vision extends EventDispatcher {
     protected static _instance: Vision;
@@ -61,4 +62,5 @@ if (VisionHelper.window) {
     window['Vision'] = Vision;
     window['vision'] = window['vsn'] = vision;
     window['Tree'] = Tree;
+    window['$'] = Query;
 }

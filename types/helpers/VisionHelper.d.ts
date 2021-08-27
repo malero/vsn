@@ -3,4 +3,6 @@ export declare class VisionHelper {
     static get document(): Document;
     static get window(): Window & typeof globalThis;
     static isMobile(): boolean;
+    static get inDevelopment(): boolean;
+    static get inLegacy(): boolean;
 }

@@ -16,13 +16,14 @@ describe('Scope', () => {
         const scope = new Scope();
         const obj = new Test();
         scope.wrap(obj);
+        console.log(scope['keys']);
 
         expect(obj.test()).toBe(true);
         scope.set('testing', 'yes');
         expect(obj.test()).toBe(false);
         obj.testing = 'test';
         expect(scope.get('testing')).toBe('test');
-        expect(scope.get('test').call(scope.wrapped)).toBe(true);
+        expect(scope.get('test')()).toBe(true);
     });
 });
 

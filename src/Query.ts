@@ -1,11 +1,11 @@
-import {QueryList} from "./Query/List";
+import {TagList} from "./Tag/List";
 import {VisionHelper} from "./helpers/VisionHelper";
+import {DOM} from "./DOM";
 
-export function Query(selector: string): QueryList {
-    const list = new QueryList();
-
+export async function Query(selector: string, dom: DOM = null): Promise<TagList> {
     if (VisionHelper.document) {
-
+        dom = dom || DOM.instance;
+        return await dom.get(selector, true)
     }
-    return list
+    return new TagList();
 }
