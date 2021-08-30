@@ -7,6 +7,8 @@ import {VisionHelper} from "./helpers/VisionHelper";
 import {StandardAttribute} from "./attributes/StandardAttribute";
 import {On} from "./attributes/On";
 import {Registry} from "./Registry";
+import {benchmarkEnd, benchmarkStart} from "./Bencmark";
+import {Vision} from "./Vision";
 
 
 export enum TagState {
@@ -53,6 +55,13 @@ export class Tag extends EventDispatcher {
         this.onEventHandlers = {};
         this.analyzeElementAttributes();
         this._state = TagState.Instantiated;
+        if (VisionHelper.window) {
+            if (!VisionHelper.window['Tags']) {
+                VisionHelper.window['Tags'] = [];
+                VisionHelper.window['Attributes'] = [];
+            }
+            VisionHelper.window['Tags'].push(this);
+        }
     }
 
     public get style(): CSSStyleDeclaration {
@@ -278,10 +287,10 @@ export class Tag extends EventDispatcher {
             if (attrClass) {
                 if (attrClass.scoped)
                     requiresScope = true;
-
                 const attrObj = new attrClass(this, attr)
                 this.attributes.push(attrObj);
             }
+
         }
 
         if (this.element.getAttribute('id'))
@@ -304,13 +313,17 @@ export class Tag extends EventDispatcher {
     }
 
     public async setupAttributes() {
+        if (VisionHelper.doBenchmark) benchmarkStart('Tag.setupAttributes');
         for (const attr of this.attributes) {
             await attr.setup();
         }
+        if (VisionHelper.doBenchmark) benchmarkEnd('Tag.setupAttributes', 'Attribute.setup');
         this.dom.registerElementInRoot(this);
+        if (VisionHelper.doBenchmark) benchmarkEnd('Tag.setupAttributes', 'register');
 
         this._state = TagState.AttributesSetup;
         this.callOnWrapped('$setup');
+        if (VisionHelper.doBenchmark) benchmarkEnd('Tag.setupAttributes', '$setup');
     }
 
     public async extractAttributes() {

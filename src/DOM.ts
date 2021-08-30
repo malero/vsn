@@ -4,8 +4,10 @@ import {EventDispatcher} from "simple-ts-event-dispatcher";
 import {Configuration} from "./Configuration";
 import {Tree} from "./AST";
 import {TagList} from "./Tag/List";
-import {benchmark} from "./Bencmark";
+import {benchmark, benchmarkClass, benchmarkEnd, benchmarkStart} from "./Bencmark";
+import {VisionHelper} from "./helpers/VisionHelper";
 
+@benchmarkClass('DOM')
 export class DOM extends EventDispatcher {
     protected static _instance: DOM;
     protected root: Tag;
@@ -71,7 +73,7 @@ export class DOM extends EventDispatcher {
         }
     }
 
-    @benchmark("buildFrom")
+    @benchmark()
     async buildFrom(ele: any, isRoot: boolean = false) {
         // Assign parents to each tag
         const allElements: HTMLElement[] = [];
@@ -88,6 +90,7 @@ export class DOM extends EventDispatcher {
         const newTags: Tag[] = [];
         const toBuild: HTMLElement[] = [];
 
+        if (VisionHelper.doBenchmark) benchmarkStart('DOM','findElements');
         if (ele && ele.querySelectorAll) {
             for (const element of (Array.from(ele.querySelectorAll(`*`)) as HTMLElement[])) { // Don't build items more than once
                 if (!ElementHelper.hasVisionAttribute(element)) continue;
@@ -96,7 +99,9 @@ export class DOM extends EventDispatcher {
                 toBuild.push(element);
             }
         }
+        if (VisionHelper.doBenchmark) benchmarkEnd('DOM', 'findElements');
 
+        if (VisionHelper.doBenchmark) benchmarkStart('DOM', 'buildTags');
         for (const element of toBuild) {
             if (allElements.indexOf(element) > -1) continue;
             const tag: Tag = new Tag(element, this);
@@ -104,17 +109,23 @@ export class DOM extends EventDispatcher {
             newTags.push(tag);
             allElements.push(element as HTMLElement);
         }
+        if (VisionHelper.doBenchmark) benchmarkEnd('DOM', 'buildTags');
 
         if (isRoot)
             this.root = await this.getTagForElement(document.body);
 
         // Configure, setup & execute attributes
+        if (VisionHelper.doBenchmark) benchmarkStart('DOM','buildTagAttributes');
         for (const tag of newTags)
             await tag.buildAttributes();
+        if (VisionHelper.doBenchmark) benchmarkEnd('DOM','buildTagAttributes');
 
+        if (VisionHelper.inDevelopment) benchmarkStart('DOM', 'compileAttributes');
         for (const tag of newTags)
             await tag.compileAttributes();
+        if (VisionHelper.doBenchmark) benchmarkEnd('DOM','compileAttributes');
 
+        if (VisionHelper.doBenchmark) benchmarkStart('DOM', 'buildTree');
         for (const tag of newTags) {
             if (tag === this.root)
                 continue;
@@ -134,22 +145,31 @@ export class DOM extends EventDispatcher {
             if (!foundParent)
                 console.error('Could not find parent for ', tag);
         }
+        if (VisionHelper.doBenchmark) benchmarkEnd('DOM', 'buildTree');
 
+        if (VisionHelper.doBenchmark) benchmarkStart('DOM', 'setupAttributes');
         for (const tag of newTags)
             await tag.setupAttributes();
+        if (VisionHelper.doBenchmark) benchmarkEnd('DOM', 'setupAttributes');
 
-
+        if (VisionHelper.doBenchmark) benchmarkStart('DOM', 'extractAttributes');
         for (const tag of newTags)
             await tag.extractAttributes();
+        if (VisionHelper.doBenchmark) benchmarkEnd('DOM', 'extractAttributes');
 
+        if (VisionHelper.doBenchmark) benchmarkStart('DOM', 'connectAttributes');
         for (const tag of newTags)
             await tag.connectAttributes();
+        if (VisionHelper.doBenchmark) benchmarkEnd('DOM', 'connectAttributes');
 
+        if (VisionHelper.doBenchmark) benchmarkStart('DOM', 'finalizeTags');
         for (const tag of newTags) {
             await tag.finalize();
             this.queued.splice(this.queued.indexOf(tag.element), 1);
         }
+        if (VisionHelper.doBenchmark) benchmarkEnd('DOM', 'finalizeTags');
 
+        if (VisionHelper.doBenchmark) benchmarkStart('DOM', 'observeTags');
         for (const tag of newTags)
             this.observer.observe(tag.element, {
                 attributes: true,
@@ -157,6 +177,7 @@ export class DOM extends EventDispatcher {
                 childList: true,
                 subtree: true
             });
+        if (VisionHelper.doBenchmark) benchmarkEnd('DOM', 'observeTags');
 
         this.trigger('built');
     }

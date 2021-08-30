@@ -2,6 +2,7 @@ import {Attribute} from "../Attribute";
 import {Tag} from "../Tag";
 import {List} from "./List";
 import {Registry} from "../Registry";
+import {benchmark} from "../Bencmark";
 
 @Registry.attribute('vsn-list-item')
 export class ListItem extends Attribute {
@@ -13,6 +14,7 @@ export class ListItem extends Attribute {
         return this._list;
     }
 
+    @benchmark('attributeSetup', 'ListItem')
     public async setup() {
         this._list = this.tag.findAncestorByAttribute('vsn-list');
         if (!this._list)

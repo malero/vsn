@@ -4,6 +4,7 @@ import {WrappedArray} from "../Scope";
 import {Tree} from "../AST";
 import {ElementHelper} from "../helpers/ElementHelper";
 import {Registry} from "../Registry";
+import {benchmark} from "../Bencmark";
 
 @Registry.attribute('vsn-list')
 export class List extends Attribute {
@@ -19,6 +20,7 @@ export class List extends Attribute {
         await this.tree.prepare(this.tag.scope, this.tag.dom);
     }
 
+    @benchmark('attributeSetup', 'List')
     public async setup() {
         if (this.tag.element.children.length > 0) {
             const template = this.tag.element.children[0];

@@ -1,4 +1,5 @@
 declare var IN_DEVELOPMENT: boolean;
+declare var DO_BENCHMARK: boolean;
 
 export class VisionHelper {
     public static isConstructor(obj: any): boolean {
@@ -28,8 +29,11 @@ export class VisionHelper {
     }
 
     public static get inDevelopment() {
-        console.log('in dev?', IN_DEVELOPMENT);
         return IN_DEVELOPMENT;
+    }
+
+    public static get doBenchmark() {
+        return DO_BENCHMARK;
     }
 
     public static get inLegacy() {

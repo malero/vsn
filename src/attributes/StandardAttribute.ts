@@ -1,4 +1,5 @@
 import {Attribute} from "../Attribute";
+import {benchmark} from "../Bencmark";
 
 
 export class StandardAttribute extends Attribute {
@@ -9,6 +10,7 @@ export class StandardAttribute extends Attribute {
         '@value'
     ];
 
+    @benchmark('attributeSetup', 'StandardAttribute')
     public async setup() {
         if (StandardAttribute.magicAttributes.indexOf(this.key) === -1 && !this.tag.element.hasAttribute(this.attributeName)) {
             this.tag.element.setAttribute(this.attributeName, '');

@@ -1,14 +1,18 @@
 import {Tag} from "./Tag";
+import {VisionHelper} from "./helpers/VisionHelper";
 
 
 export abstract class Attribute {
     public static readonly scoped: boolean = false;
+    public static readonly cache: {[key: string]: Attribute} = {};
 
     constructor(
         public readonly tag: Tag,
         public readonly attributeName: string
     ) {
         this.configure();
+        if (VisionHelper.window) VisionHelper.window['Attributes'].push(this);
+        Attribute.cache[attributeName] = this;
     }
 
     protected async configure() {};

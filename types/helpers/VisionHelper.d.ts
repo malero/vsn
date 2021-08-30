@@ -4,5 +4,6 @@ export declare class VisionHelper {
     static get window(): Window & typeof globalThis;
     static isMobile(): boolean;
     static get inDevelopment(): boolean;
+    static get doBenchmark(): boolean;
     static get inLegacy(): boolean;
 }

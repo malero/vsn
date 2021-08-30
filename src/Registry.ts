@@ -1,6 +1,7 @@
 import {EventDispatcher} from "simple-ts-event-dispatcher";
 import {IDeferred, IPromise, Promise as SimplePromise} from "simple-ts-promise";
 import {VisionHelper} from "./helpers/VisionHelper";
+import {benchmark} from "./Bencmark";
 
 export function register(store: string, key: string = null, setup: () => void = null) {
     return function(target: any, _key: string = null) {
@@ -27,6 +28,7 @@ export class RegistryStore extends EventDispatcher {
         this.trigger(`registered:${key}`, item);
     }
 
+    @benchmark('RegistryStore.get')
     get(key: string): IPromise<any> {
         const deferred: IDeferred<any> = SimplePromise.defer();
 

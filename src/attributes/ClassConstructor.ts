@@ -1,6 +1,7 @@
 import {Scope} from "../Scope";
 import {Attribute} from "../Attribute";
 import {Registry} from "../Registry";
+import {benchmark} from "../Bencmark";
 
 @Registry.attribute('vsn-controller')
 export class ClassConstructor extends Attribute {
@@ -8,6 +9,7 @@ export class ClassConstructor extends Attribute {
     protected attributeKey: string;
     protected className: string;
 
+    @benchmark('attributeSetup', 'ClassConstructor')
     public async setup() {
         const parentScope: Scope = this.tag.parentTag.scope;
         if (!parentScope)

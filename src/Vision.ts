@@ -30,6 +30,14 @@ export class Vision extends EventDispatcher {
         this.registry.classes.register('Object', Object);
         this.registry.classes.register('WrappedArray', WrappedArray);
         this.registry.classes.register('DataModel', DataModel);
+
+        if (VisionHelper.window) {
+            window['Vision'] = Vision;
+            window['vision'] = window['vsn'] = this;
+            window['Tree'] = Tree;
+            window['$'] = Query;
+            VisionHelper.window.dispatchEvent(new Event('vsn'));
+        }
     }
 
     public get dom(): DOM {
@@ -58,9 +66,3 @@ export class Vision extends EventDispatcher {
 }
 
 export const vision: Vision = Vision.instance;
-if (VisionHelper.window) {
-    window['Vision'] = Vision;
-    window['vision'] = window['vsn'] = vision;
-    window['Tree'] = Tree;
-    window['$'] = Query;
-}

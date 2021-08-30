@@ -3,6 +3,9 @@ export declare abstract class Attribute {
     readonly tag: Tag;
     readonly attributeName: string;
     static readonly scoped: boolean;
+    static readonly cache: {
+        [key: string]: Attribute;
+    };
     constructor(tag: Tag, attributeName: string);
     protected configure(): Promise<void>;
     compile(): Promise<void>;

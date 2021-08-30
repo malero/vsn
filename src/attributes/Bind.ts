@@ -2,6 +2,7 @@ import {Scope, ScopeReference} from "../Scope";
 import {Attribute} from "../Attribute";
 import {Tree} from "../AST";
 import {Registry} from "../Registry";
+import {benchmark} from "../Bencmark";
 
 @Registry.attribute('vsn-bind')
 export class Bind extends Attribute {
@@ -11,11 +12,13 @@ export class Bind extends Attribute {
     protected boundScope?: Scope;
     protected formatter: (v: string) => string = (v) => v;
 
+    @benchmark('Attribute', ['Bind', 'compile'])
     public async compile() {
         const tree: Tree = new Tree(this.getAttributeValue());
         await tree.prepare(this.tag.scope, this.tag.dom);
     }
 
+    @benchmark('attributeSetup', 'Bind')
     public async setup() {
         this.property = this.getAttributeBinding();
         const mods = this.getAttributeModifiers();

@@ -1,11 +1,13 @@
 import {Attribute} from "../Attribute";
 import {Registry} from "../Registry";
+import {benchmark} from "../Bencmark";
 
 @Registry.attribute('vsn-click-toggle-class')
 export class ClickToggleClass extends Attribute {
     protected cssClass: string = '';
     protected target: string = null;
 
+    @benchmark('attributeSetup', 'ClickToggleClass')
     public async setup() {
         this.cssClass = this.getAttributeBinding( 'active');
         this.target = this.getAttributeValue();
