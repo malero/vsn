@@ -4,10 +4,9 @@ import {EventDispatcher} from "simple-ts-event-dispatcher";
 import {Configuration} from "./Configuration";
 import {Tree} from "./AST";
 import {TagList} from "./Tag/List";
-import {benchmark, benchmarkClass, benchmarkEnd, benchmarkStart} from "./Bencmark";
+import {benchmark, benchmarkEnd, benchmarkStart} from "./Bencmark";
 import {VisionHelper} from "./helpers/VisionHelper";
 
-@benchmarkClass('DOM')
 export class DOM extends EventDispatcher {
     protected static _instance: DOM;
     protected root: Tag;

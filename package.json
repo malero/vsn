@@ -8,7 +8,7 @@
   ],
   "main": "./dist/vision.min.js",
   "scripts": {
-    "build": "rm -rf ./dist/ && webpack --env BUILD=production BENCHMARK=1",
+    "build": "rm -rf ./dist/ && webpack --env BUILD=production BENCHMARK=0",
     "build_dev": "rm -rf ./dist/ && webpack --env BUILD=development BENCHMARK=1",
     "demo": "rm -rf ./dist/ && webpack --env BUILD=production BENCHMARK=1 && cp ./dist/vision.min.js ./demo/vision.js",
     "clean": "rm -rf ./dist/",

@@ -3,6 +3,7 @@ module.exports = function (config) {
     config.set({
         frameworks: ['jasmine', 'karma-typescript'],
         files: [
+            './test/globals.js',
             {pattern: './src/**/*.ts'},
             {pattern: './test/**/*.ts'}
         ],

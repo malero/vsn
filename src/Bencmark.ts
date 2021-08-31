@@ -53,29 +53,18 @@ function hasTags(fullList: TTag, toMatch: TTag): boolean {
     return true;
 }
 
-export function benchmarkClass(name?: string, tags?: TTag) {
-    return function <T extends { new(...args: any[]): {} }>(constructor: T) {
-        return class extends constructor {
-            __BENCHMARK_NAME__ = name;
-            __BENCHMARK_TAGS__ = tags;
-        };
-    }
-}
-
 export function benchmark(name?: string, tags?: TTag, print: boolean = false) {
     return function (target: any, key?: string, descriptor?: PropertyDescriptor): void {
         if (VisionHelper.doBenchmark) {
             const method: (...args: any[]) => any = descriptor.value;
 
             descriptor.value = function (): any {
-                console.log(target, target.__BENCHMARK_NAME__);
                 name = target.__BENCHMARK_NAME__ || name || key;
                 tags = totags(tags);
                 if (target.__BENCHMARK_NAME__ || target.__BENCHMARK_TAGS__) {
                     tags.push(name || key);
                     tags.push(...target.__BENCHMARK_TAGS__);
                 }
-                console.log(name, tags);
                 const start: Date = new Date();
                 const result = method.apply(this, arguments);
                 const end: Date = new Date();
@@ -97,9 +86,9 @@ export function benchmarkAsync(name?: string, tags?: TTag, print: boolean = fals
             name = name || key;
             const method: (...args: any[]) => any = descriptor.value;
 
-            descriptor.value = async function () {
+            descriptor.value = async function (...args) {
                 const start: Date = new Date();
-                const result = await method.apply(this, arguments);
+                const result = await method.apply(this, ...args);
                 const end: Date = new Date();
                 const data = todata(name, tags, start, end);
                 BENCHMARKS.push(data);
