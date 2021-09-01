@@ -1,8 +1,7 @@
 import {Attribute} from "../Attribute";
-import {benchmark} from "../Bencmark";
-
 
 export class StandardAttribute extends Attribute {
+    public static readonly canDefer: boolean = false;
     protected static readonly magicAttributes: string[] = [
         '@text',
         '@html',
@@ -10,7 +9,6 @@ export class StandardAttribute extends Attribute {
         '@value'
     ];
 
-    @benchmark('attributeSetup', 'StandardAttribute')
     public async setup() {
         if (StandardAttribute.magicAttributes.indexOf(this.key) === -1 && !this.tag.element.hasAttribute(this.attributeName)) {
             this.tag.element.setAttribute(this.attributeName, '');

@@ -1,8 +1,6 @@
 import {Scope} from "./Scope";
 import {DOM} from "./DOM";
 import {Tag} from "./Tag";
-import {TagList} from "./Tag/List";
-import {benchmark, benchmarkAsync} from "./Bencmark";
 
 function lower(str: string): string {
     return str ? str.toLowerCase() : null;
@@ -1149,25 +1147,21 @@ export class Tree {
         }
     }
 
-    @benchmark('AST', 'parse')
     public parse() {
         const tokens = Tree.tokenize(this.code);
         this.rootNode = Tree.processTokens(tokens);
     }
 
-    @benchmarkAsync('AST', 'evaluate')
     async evaluate(scope: Scope, dom: DOM) {
         return await this.rootNode.evaluate(scope, dom);
     }
 
-    @benchmarkAsync('AST', 'prepare')
     async prepare(scope: Scope, dom: DOM) {
         if (!this.rootNode.isPreparationRequired())
             return;
         return await this.rootNode.prepare(scope, dom);
     }
 
-    @benchmarkAsync('AST', 'bindToScopeChanges')
     async bindToScopeChanges(scope, fnc) {
         for (const node of this.rootNode.findChildrenByTypes<ScopeMemberNode>([RootScopeMemberNode, ScopeMemberNode], 'ScopeMemberNodes')) {
             let _scope: Scope = scope;
@@ -1179,7 +1173,6 @@ export class Tree {
         }
     }
 
-    @benchmark('AST', 'tokenize')
     public static tokenize(code: string): Token[] {
         const tokens: Token[] = [];
         if (!code || code.length === 0)
@@ -1206,7 +1199,6 @@ export class Tree {
         return tokens;
     }
 
-    @benchmark('AST', 'stripWhiteSpace')
     public static stripWhiteSpace(tokens: Token[]): Token[] {
         for (let i: number = 0; i < tokens.length; i++) {
             if (tokens[i].type === TokenType.WHITESPACE) {
@@ -1217,7 +1209,6 @@ export class Tree {
         return tokens;
     }
 
-    @benchmark('AST', 'processTokens')
     public static processTokens(tokens: Token[]): BlockNode {
         let blockNodes: Node[] = [];
         let node: Node = null;
@@ -1335,7 +1326,6 @@ export class Tree {
         return code;
     }
 
-    @benchmark('AST', 'getBlockInfo')
     public static getBlockInfo(tokens: Token[]): IBlockInfo {
         let blockType: BlockType;
         const opener = tokens[0];
@@ -1390,7 +1380,6 @@ export class Tree {
         }
     }
 
-    @benchmark('AST', 'getNextStatementTokens')
     public static getNextStatementTokens(tokens: Token[], consumeClosingToken: boolean = true, consumeOpeningToken: boolean = true, includeClosingToken: boolean = false): Token[] {
         const blockInfo: IBlockInfo = Tree.getBlockInfo(tokens);
 
@@ -1402,7 +1391,6 @@ export class Tree {
         return Tree.getTokensUntil(tokens, blockInfo.close, consumeClosingToken, includeClosingToken);
     }
 
-    @benchmark('AST', 'getBlockTokens')
     public static getBlockTokens(tokens: Token[], groupBy: TokenType | null = TokenType.COMMA): Token[][] {
         const blockInfo: IBlockInfo = Tree.getBlockInfo(tokens);
         let openBlocks: number = 0;
@@ -1438,7 +1426,6 @@ export class Tree {
         throw Error(`Invalid Syntax, missing ${blockInfo.closeCharacter}`);
     }
 
-    @benchmark('AST', 'getTokensUntil')
     public static getTokensUntil(tokens: Token[], terminator: TokenType = TokenType.SEMI_COLON, consumeTerminator: boolean = true, includeTerminator: boolean = false, validIfTerminatorNotFound: boolean = false): Token[] {
         const statementTokens: Token[] = [];
         const blockInfo: IBlockInfo = Tree.getBlockInfo(tokens);
@@ -1493,7 +1480,6 @@ export class Tree {
         return statementTokens;
     }
 
-    @benchmark('AST', 'consumeTypes')
     static consumeTypes(tokens: Token[], types: TokenType[]): Token[] {
         const matching: Token[] = [];
 

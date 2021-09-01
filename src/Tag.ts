@@ -1,5 +1,5 @@
 import {Scope} from "./Scope";
-import {Attribute} from "./Attribute";
+import {Attribute, AttributeState} from "./Attribute";
 import {EventDispatcher} from "simple-ts-event-dispatcher";
 import {DOM} from "./DOM";
 import {Controller} from "./Controller";
@@ -8,8 +8,6 @@ import {StandardAttribute} from "./attributes/StandardAttribute";
 import {On} from "./attributes/On";
 import {Registry} from "./Registry";
 import {benchmarkEnd, benchmarkStart} from "./Bencmark";
-import {Vision} from "./Vision";
-
 
 export enum TagState {
     Instantiated,
@@ -24,8 +22,10 @@ export enum TagState {
 export class Tag extends EventDispatcher {
     public readonly rawAttributes: { [key: string]: string; };
     public readonly parsedAttributes: { [key: string]: string[]; };
+    public readonly deferredAttributes: Attribute[] = [];
     protected _state: TagState;
     protected attributes: Attribute[];
+    protected _nonDeferredAttributes: Attribute[] = [];
     protected _parentTag: Tag;
     protected _children: Tag[] = [];
     protected _scope: Scope;
@@ -64,6 +64,25 @@ export class Tag extends EventDispatcher {
         }
     }
 
+    protected onAttributeStateChange(event) {
+        if (event.previouseState === AttributeState.Deferred)
+            this._nonDeferredAttributes.length = 0;
+    }
+
+    public get nonDeferredAttributes(): Attribute[] {
+        if (this._nonDeferredAttributes.length > 0)
+            return this._nonDeferredAttributes;
+
+        const attrs: Attribute[] = [];
+        for (const attribute of this.attributes) {
+            if (attribute.state === AttributeState.Deferred)
+                continue;
+            attrs.push(attribute);
+        }
+        this._nonDeferredAttributes = attrs;
+        return attrs;
+    }
+
     public get style(): CSSStyleDeclaration {
         return this.element.style;
     }
@@ -89,7 +108,7 @@ export class Tag extends EventDispatcher {
     }
 
     public async evaluate() {
-        for (const attr of this.attributes) {
+        for (const attr of this.nonDeferredAttributes) {
             await attr.evaluate();
         }
     }
@@ -267,8 +286,15 @@ export class Tag extends EventDispatcher {
 
     public async buildAttributes() {
         let requiresScope = false;
+        let defer: boolean = false;
         this.attributes.length = 0;
         const isMobile: boolean = VisionHelper.isMobile();
+        if (this.element.offsetParent === null ||
+            this.hasAttribute('hidden') ||
+            this.hasAttribute('vsn-defer')
+        ) {
+            defer = true;
+        }
 
         for (let attr in this.rawAttributes) {
             if (this.hasModifier(attr, 'mobile')) {
@@ -289,8 +315,13 @@ export class Tag extends EventDispatcher {
                     requiresScope = true;
                 const attrObj = new attrClass(this, attr)
                 this.attributes.push(attrObj);
-            }
 
+                if (defer && attrClass.canDefer) {
+                    await attrObj.defer();
+                    this.deferredAttributes.push(attrObj);
+                    attrObj.bind('state', this.onAttributeStateChange.bind(this));
+                }
+            }
         }
 
         if (this.element.getAttribute('id'))
@@ -305,7 +336,7 @@ export class Tag extends EventDispatcher {
     }
 
     public async compileAttributes() {
-        for (const attr of this.attributes) {
+        for (const attr of this.nonDeferredAttributes) {
             await attr.compile();
         }
 
@@ -314,7 +345,7 @@ export class Tag extends EventDispatcher {
 
     public async setupAttributes() {
         if (VisionHelper.doBenchmark) benchmarkStart('Tag.setupAttributes');
-        for (const attr of this.attributes) {
+        for (const attr of this.nonDeferredAttributes) {
             await attr.setup();
         }
         if (VisionHelper.doBenchmark) benchmarkEnd('Tag.setupAttributes', 'Attribute.setup');
@@ -327,7 +358,7 @@ export class Tag extends EventDispatcher {
     }
 
     public async extractAttributes() {
-        for (const attr of this.attributes) {
+        for (const attr of this.nonDeferredAttributes) {
             await attr.extract();
         }
         this._state = TagState.AttributesExtracted;
@@ -339,7 +370,7 @@ export class Tag extends EventDispatcher {
             this.addEventHandler('input', [], this.inputMutation.bind(this));
         }
 
-        for (const attr of this.attributes) {
+        for (const attr of this.nonDeferredAttributes) {
             await attr.connect();
         }
         this._state = TagState.AttributesConnected;
@@ -353,6 +384,7 @@ export class Tag extends EventDispatcher {
     public finalize(): void {
         this._state = TagState.Built;
         this.callOnWrapped('$built', this, this.scope, this.element);
+        VisionHelper.nice(this.setupDeferredAttributes.bind(this));
     }
 
     public callOnWrapped(method, ...args: any[]): boolean {
@@ -426,11 +458,21 @@ export class Tag extends EventDispatcher {
 
         const standardAttribute = new StandardAttribute(this, attributeName);
         this.attributes.push(standardAttribute);
-        await standardAttribute.compile();
-        await standardAttribute.setup();
-        await standardAttribute.extract();
-        await standardAttribute.connect();
+        await this.setupAttribute(standardAttribute);
 
         return standardAttribute;
+    }
+
+    private async setupAttribute(attribute: Attribute) {
+        await attribute.compile();
+        await attribute.setup();
+        await attribute.extract();
+        await attribute.connect();
+    }
+
+    private async setupDeferredAttributes() {
+        for (const attr of this.deferredAttributes)
+            await this.setupAttribute(attr);
+        this.deferredAttributes.length = 0;
     }
 }

@@ -4,6 +4,8 @@ import {Bind} from "./Bind";
 
 @Registry.attribute('vsn-format')
 export class Format extends Attribute {
+    public static readonly canDefer: boolean = false;
+
     public async extract() {
         const value = this.getAttributeValue(null);
         const attribute = this.getAttributeBinding(null);

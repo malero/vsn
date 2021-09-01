@@ -22,8 +22,10 @@ export declare class Tag extends EventDispatcher {
     readonly parsedAttributes: {
         [key: string]: string[];
     };
+    readonly deferredAttributes: Attribute[];
     protected _state: TagState;
     protected attributes: Attribute[];
+    protected _nonDeferredAttributes: Attribute[];
     protected _parentTag: Tag;
     protected _children: Tag[];
     protected _scope: Scope;
@@ -35,6 +37,8 @@ export declare class Tag extends EventDispatcher {
     private _uniqueScope;
     get uniqueScope(): boolean;
     constructor(element: HTMLElement, dom: DOM);
+    protected onAttributeStateChange(event: any): void;
+    get nonDeferredAttributes(): Attribute[];
     get style(): CSSStyleDeclaration;
     get computedStyle(): CSSStyleDeclaration;
     analyzeElementAttributes(): void;
@@ -81,4 +85,6 @@ export declare class Tag extends EventDispatcher {
     stripModifier(attribute: string, modifier: string): string;
     addEventHandler(eventType: string, modifiers: string[], handler: any): void;
     watchAttribute(attributeName: string): Promise<StandardAttribute>;
+    private setupAttribute;
+    private setupDeferredAttributes;
 }

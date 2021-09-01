@@ -2,10 +2,10 @@ import {Attribute} from "../Attribute";
 import {Tag} from "../Tag";
 import {List} from "./List";
 import {Registry} from "../Registry";
-import {benchmark} from "../Bencmark";
 
 @Registry.attribute('vsn-list-item')
 export class ListItem extends Attribute {
+    public static readonly canDefer: boolean = false;
     public static readonly scoped: boolean = true;
     public static readonly ERROR_NO_PARENT = "Cannot find list parent.";
     protected _list: Tag;
@@ -14,7 +14,6 @@ export class ListItem extends Attribute {
         return this._list;
     }
 
-    @benchmark('attributeSetup', 'ListItem')
     public async setup() {
         this._list = this.tag.findAncestorByAttribute('vsn-list');
         if (!this._list)

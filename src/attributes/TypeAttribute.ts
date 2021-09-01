@@ -4,6 +4,7 @@ import {Registry} from "../Registry";
 
 @Registry.attribute('vsn-type')
 export class TypeAttribute extends Attribute {
+    public static readonly canDefer: boolean = false;
     public async extract() {
         const key: string = this.getAttributeBinding();
         let type: string = this.getAttributeValue();

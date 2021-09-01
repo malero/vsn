@@ -2,23 +2,22 @@ import {Scope, ScopeReference} from "../Scope";
 import {Attribute} from "../Attribute";
 import {Tree} from "../AST";
 import {Registry} from "../Registry";
-import {benchmark} from "../Bencmark";
 
 @Registry.attribute('vsn-bind')
 export class Bind extends Attribute {
+    public static readonly canDefer: boolean = false;
     protected key?: string;
     protected property?: string;
     protected direction: string = 'both';
     protected boundScope?: Scope;
     protected formatter: (v: string) => string = (v) => v;
 
-    @benchmark('Attribute', ['Bind', 'compile'])
     public async compile() {
         const tree: Tree = new Tree(this.getAttributeValue());
         await tree.prepare(this.tag.scope, this.tag.dom);
+        await super.compile();
     }
 
-    @benchmark('attributeSetup', 'Bind')
     public async setup() {
         this.property = this.getAttributeBinding();
         const mods = this.getAttributeModifiers();
@@ -29,6 +28,7 @@ export class Bind extends Attribute {
                 this.direction = 'to';
             }
         }
+        await super.setup();
     }
 
     public async extract() {
@@ -46,6 +46,8 @@ export class Bind extends Attribute {
 
         if (!!this.valueFromElement)
             this.updateFrom();
+
+        await super.extract();
     }
 
     public async connect() {
@@ -53,6 +55,7 @@ export class Bind extends Attribute {
             this.updateTo();
             this.boundScope.bind(`change:${this.key}`, this.updateTo, this);
         }
+        await super.connect();
     }
 
     public async evaluate() {
@@ -60,6 +63,7 @@ export class Bind extends Attribute {
         if (!!elementValue)
             this.updateFrom();
         this.updateTo();
+        await super.evaluate();
     }
 
     public set value(v: any) {

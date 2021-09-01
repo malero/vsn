@@ -39,4 +39,12 @@ export class VisionHelper {
     public static get inLegacy() {
         return process.env.BUILD_TARGET === 'es5';
     }
+
+    public static nice(callback, timeout: number = 100) {
+        if (VisionHelper.window && window['requestIdleCallback']) {
+            window['requestIdleCallback'](callback);
+        } else {
+            setTimeout(callback, timeout);
+        }
+    }
 }

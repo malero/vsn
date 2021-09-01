@@ -5,6 +5,7 @@ import {Registry} from "../Registry";
 
 @Registry.attribute('vsn-scope-change')
 export abstract class ScopeChange extends Attribute {
+    public static readonly canDefer: boolean = false;
     protected handler: Tree;
 
     public async compile() {

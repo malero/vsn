@@ -4,6 +4,7 @@ import {Registry} from "../Registry";
 
 @Registry.attribute('vsn-if')
 export class If extends Attribute {
+    public static readonly canDefer: boolean = false;
     protected tree: Tree;
 
     public async compile() {

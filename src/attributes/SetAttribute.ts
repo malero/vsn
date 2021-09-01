@@ -1,10 +1,10 @@
 import {Scope, ScopeReference} from "../Scope";
 import {Attribute} from "../Attribute";
 import {Registry} from "../Registry";
-import {benchmark} from "../Bencmark";
 
 @Registry.attribute('vsn-set')
 export class SetAttribute extends Attribute {
+    public static readonly canDefer: boolean = false;
     protected key?: string;
     protected property?: string;
     protected boundScope?: Scope;
@@ -20,7 +20,6 @@ export class SetAttribute extends Attribute {
         return this.boundScope.get(this.key, false);
     }
 
-    @benchmark('attributeSetup', 'SetAttribute')
     public async setup() {
         this.property = this.getAttributeBinding();
         let ref: ScopeReference;

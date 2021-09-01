@@ -4,7 +4,7 @@ import {EventDispatcher} from "simple-ts-event-dispatcher";
 import {Configuration} from "./Configuration";
 import {Tree} from "./AST";
 import {TagList} from "./Tag/List";
-import {benchmark, benchmarkEnd, benchmarkStart} from "./Bencmark";
+import {benchmarkEnd, benchmarkStart} from "./Bencmark";
 import {VisionHelper} from "./helpers/VisionHelper";
 
 export class DOM extends EventDispatcher {
@@ -72,7 +72,6 @@ export class DOM extends EventDispatcher {
         }
     }
 
-    @benchmark()
     async buildFrom(ele: any, isRoot: boolean = false) {
         // Assign parents to each tag
         const allElements: HTMLElement[] = [];

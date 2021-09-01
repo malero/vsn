@@ -1,6 +1,7 @@
 import { Scope } from "../Scope";
 import { Attribute } from "../Attribute";
 export declare class Bind extends Attribute {
+    static readonly canDefer: boolean;
     protected key?: string;
     protected property?: string;
     protected direction: string;

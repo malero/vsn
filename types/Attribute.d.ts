@@ -1,12 +1,23 @@
 import { Tag } from "./Tag";
-export declare abstract class Attribute {
+import { EventDispatcher } from "simple-ts-event-dispatcher";
+export declare enum AttributeState {
+    Instantiated = 0,
+    Deferred = 1,
+    Compiled = 2,
+    Setup = 3,
+    Extracted = 4,
+    Connected = 5,
+    Built = 6
+}
+export declare abstract class Attribute extends EventDispatcher {
     readonly tag: Tag;
     readonly attributeName: string;
+    protected _state: AttributeState;
     static readonly scoped: boolean;
-    static readonly cache: {
-        [key: string]: Attribute;
-    };
+    static readonly canDefer: boolean;
     constructor(tag: Tag, attributeName: string);
+    get state(): AttributeState;
+    protected defer(): Promise<void>;
     protected configure(): Promise<void>;
     compile(): Promise<void>;
     setup(): Promise<void>;
@@ -20,4 +31,5 @@ export declare abstract class Attribute {
     mutate(mutation: MutationRecord): void;
     set value(value: string);
     get value(): string;
+    private setState;
 }

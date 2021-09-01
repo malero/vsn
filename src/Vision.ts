@@ -54,7 +54,22 @@ export class Vision extends EventDispatcher {
         this._dom = DOM.instance;
         const startTime: number = new Date().getTime();
         await this._dom.buildFrom(document, true);
-        console.warn(`Took ${new Date().getTime() - startTime}ms to start up VisionJS`);
+        const now = (new Date()).getTime();
+        const setupTime = now - startTime;
+        console.warn(`Took ${setupTime}ms to start up VisionJS`);
+        VisionHelper.nice(() => {
+            const javascriptIdle: number = window['epoch'] ? (new Date()).getTime() - window['epoch'] : null
+            fetch('https://api.tabon.io/report-test/', {
+                method: 'post',
+                body: JSON.stringify({
+                    tab: 'startuptime',
+                    bootstrap: setupTime,
+                    load: window['epoch'] && now - window['epoch'] || null,
+                    idle: javascriptIdle,
+                    page: window.location.href
+                })
+            });
+        }, 10);
     }
 
     public static get instance() {

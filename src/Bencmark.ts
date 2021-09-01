@@ -58,7 +58,7 @@ export function benchmark(name?: string, tags?: TTag, print: boolean = false) {
         if (VisionHelper.doBenchmark) {
             const method: (...args: any[]) => any = descriptor.value;
 
-            descriptor.value = function (): any {
+            descriptor.value = function (...args): any {
                 name = target.__BENCHMARK_NAME__ || name || key;
                 tags = totags(tags);
                 if (target.__BENCHMARK_NAME__ || target.__BENCHMARK_TAGS__) {
@@ -66,29 +66,7 @@ export function benchmark(name?: string, tags?: TTag, print: boolean = false) {
                     tags.push(...target.__BENCHMARK_TAGS__);
                 }
                 const start: Date = new Date();
-                const result = method.apply(this, arguments);
-                const end: Date = new Date();
-                const data = todata(name, tags, start, end);
-                BENCHMARKS.push(data);
-
-                if (print)
-                    console.log(data);
-
-                return result;
-            };
-        }
-    };
-}
-
-export function benchmarkAsync(name?: string, tags?: TTag, print: boolean = false) {
-    return function (target: any, key: string, descriptor: PropertyDescriptor) {
-        if (VisionHelper.doBenchmark) {
-            name = name || key;
-            const method: (...args: any[]) => any = descriptor.value;
-
-            descriptor.value = async function (...args) {
-                const start: Date = new Date();
-                const result = await method.apply(this, ...args);
+                const result = method.apply(this, args);
                 const end: Date = new Date();
                 const data = todata(name, tags, start, end);
                 BENCHMARKS.push(data);
