@@ -10,8 +10,10 @@ import {Configuration} from "./Configuration";
 import {VisionHelper} from "./helpers/VisionHelper";
 import {Tree} from "./AST";
 import {Query} from "./Query";
+import * as WASM from "./AST/WASM";
 
 export class Vision extends EventDispatcher {
+    protected static WASM: any = WASM;
     protected static _instance: Vision;
     protected _dom?: DOM;
     public readonly registry = Registry.instance;
