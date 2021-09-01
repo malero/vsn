@@ -275,6 +275,7 @@ const TOKEN_PATTERNS: TokenPattern[] = [
 export interface TreeNode<T = any> {
     evaluate(scope: Scope, dom: DOM);
     prepare(scope: Scope, dom: DOM);
+    compile();
 }
 
 
@@ -306,6 +307,15 @@ export abstract class Node implements TreeNode {
         for (const node of this.getChildNodes()) {
             await node.prepare(scope, dom);
         }
+    }
+
+    public async compile() {
+        const sections = [];
+        for (const node of this.getChildNodes()) {
+            sections.push(await node.compile());
+        }
+
+        return sections;
     }
 
     protected _getChildNodes(): Node[] {
@@ -761,6 +771,15 @@ class ArithmeticNode extends Node implements TreeNode {
             case TokenType.DIVIDE:
                 return left / right;
         }
+    }
+
+    public async compile() {
+        const sections = [];
+        for (const node of this.getChildNodes()) {
+            sections.push(await node.compile());
+        }
+
+        return sections;
     }
 
     public static match(tokens: Token[]): boolean {

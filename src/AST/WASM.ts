@@ -45,7 +45,7 @@ export const unsignedLEB128 = (n: number) => {
 
 const flatten = (arr: any[]) => [].concat.apply([], arr);
 
-enum Section {
+enum ESectionType {
     custom = 0,
     type = 1,
     import = 2,
@@ -61,18 +61,18 @@ enum Section {
 }
 
 // https://webassembly.github.io/spec/core/binary/types.html
-enum Valtype {
+enum EValueType {
     i32 = 0x7f,
     f32 = 0x7d
 }
 
 // https://webassembly.github.io/spec/core/binary/types.html#binary-blocktype
-enum Blocktype {
+enum EBlocktype {
     void = 0x40
 }
 
 // https://webassembly.github.io/spec/core/binary/instructions.html
-enum Opcodes {
+enum EOpCode {
     block = 0x02,
     loop = 0x03,
     br = 0x0c,
@@ -85,6 +85,9 @@ enum Opcodes {
     i32_const = 0x41,
     f32_const = 0x43,
     i32_add = 0x6a,
+    i32_sub = 0x6B,
+    i32_mul = 0x6C,
+    i32_div = 0x6D,
     i32_eqz = 0x45,
     i32_eq = 0x46,
     f32_eq = 0x5b,
@@ -99,18 +102,18 @@ enum Opcodes {
 }
 
 const binaryOpcode = {
-    "+": Opcodes.f32_add,
-    "-": Opcodes.f32_sub,
-    "*": Opcodes.f32_mul,
-    "/": Opcodes.f32_div,
-    "==": Opcodes.f32_eq,
-    ">": Opcodes.f32_gt,
-    "<": Opcodes.f32_lt,
-    "&&": Opcodes.i32_and
+    "+": EOpCode.f32_add,
+    "-": EOpCode.f32_sub,
+    "*": EOpCode.f32_mul,
+    "/": EOpCode.f32_div,
+    "==": EOpCode.f32_eq,
+    ">": EOpCode.f32_gt,
+    "<": EOpCode.f32_lt,
+    "&&": EOpCode.i32_and
 };
 
 // http://webassembly.github.io/spec/core/binary/modules.html#export-section
-enum ExportType {
+enum EExportType {
     func = 0x00,
     table = 0x01,
     mem = 0x02,
@@ -134,14 +137,14 @@ const encodeVector = (data: any[]) => [
 ];
 
 // https://webassembly.github.io/spec/core/binary/modules.html#code-section
-const encodeLocal = (count: number, type: Valtype) => [
+const encodeLocal = (count: number, type: EValueType) => [
     ...unsignedLEB128(count),
     type
 ];
 
 // https://webassembly.github.io/spec/core/binary/modules.html#sections
 // sections are encoded by their type followed by their vector contents
-const createSection = (sectionType: Section, data: any[]) => [
+const createSection = (sectionType: ESectionType, data: any[]) => [
     sectionType,
     ...encodeVector(data)
 ];
@@ -152,46 +155,139 @@ const createSection = (sectionType: Section, data: any[]) => [
     https://github.com/ColinEberhardt/chasm/blob/master/src/emitter.ts
     https://webassembly.github.io/wabt/demo/wat2wasm/
 */
+
+export abstract class Section {
+    abstract get sectionTypes(): number[];
+    abstract get sectionExport(): number[];
+}
+
+export class FunctionSection extends Section {
+    protected readonly params: EOpCode[] = [];
+    protected readonly code: number[] = [];
+
+    constructor(
+        protected readonly name: string
+    ) {
+        super();
+    }
+
+    public addParam(paramType: EOpCode) {
+        this.params.push(paramType);
+    }
+
+    public addCode(code: number[]) {
+        this.code.push(...code);
+    }
+
+    get sectionTypes(): number[] {
+        return [functionType,
+            this.paramCount, // Number of params
+            ...this.paramTypes, // Param types
+            this.resultCount, // Number of results
+            ...this.resultTypes, // result type
+        ];
+    }
+
+    get sectionExport(): number[] {
+        return [
+            ...encodeString(this.name),
+            EExportType.func,
+        ]
+    }
+
+    get sectionCode(): number[] {
+        return this.code;
+    }
+
+    get paramCount(): number {
+        return this.params.length;
+    }
+
+    get paramTypes(): number[] {
+        return []
+    }
+
+    get resultCount(): number {
+        return 1;
+    }
+
+    get resultTypes(): number[] {
+        return [];
+    }
+}
+
 export const emitter = () => {
+    const add = new FunctionSection("i32add");
+    add.addCode([
+        0x00, // local declare count
+        EOpCode.get_local,
+        0x00, // local var 0
+        EOpCode.get_local,
+        0x01, // local var 1
+        EOpCode.i32_add,
+        EOpCode.end
+    ]);
+    
     // Types section
-    const typesSection = createSection(Section.type, [
-        0x01, // Number of types
+    const typesSection = createSection(ESectionType.type, [
+        2, // Number of types
         functionType,
         0x02, // Number of params
-        Valtype.i32, // Param 0 type
-        Valtype.i32, // Param 1 type
+        EValueType.i32, // Param 0 type
+        EValueType.i32, // Param 1 type
         0x01, // Number of results
-        Valtype.i32 // result 0 type
+        EValueType.i32, // result 0 type
+        functionType,
+        0x02, // Number of params
+        EValueType.i32, // Param 0 type
+        EValueType.i32, // Param 1 type
+        0x01, // Number of results
+        EValueType.i32 // result 0 type
     ]);
 
     // Functions section
-    const functionsSection = createSection(Section.func, [
-        0x01, // number of functions
+    const functionsSection = createSection(ESectionType.func, [
+        0x02, // number of functions
         0x00, // function 0 index
+        0x01, // function 1 index
     ]);
 
     // Export section
     const exportSection = createSection(
-        Section.export,
+        ESectionType.export,
         encodeVector([
             [
                 ...encodeString("addTwo"),
-                ExportType.func,
+                EExportType.func,
                 0x00
-            ]
+            ],
+            [
+                ...encodeString("subTwo"),
+                EExportType.func,
+                0x01
+            ],
         ])
     );
 
-    const codeSection = createSection(Section.code, [
-        0x01, // Number of functions
+    const codeSection = createSection(ESectionType.code, [
+        0x02, // Number of functions
         ...encodeVector([
             0x00, // local declare count
-            Opcodes.get_local,
+            EOpCode.get_local,
             0x00, // local var 0
-            Opcodes.get_local,
+            EOpCode.get_local,
             0x01, // local var 1
-            Opcodes.i32_add,
-            Opcodes.end
+            EOpCode.i32_add,
+            EOpCode.end
+        ]),
+        ...encodeVector([
+            0x00, // local declare count
+            EOpCode.get_local,
+            0x00, // local var 0
+            EOpCode.get_local,
+            0x01, // local var 1
+            EOpCode.i32_sub,
+            EOpCode.end
         ])
     ]);
 

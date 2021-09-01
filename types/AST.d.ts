@@ -65,6 +65,7 @@ export declare enum TokenType {
 export interface TreeNode<T = any> {
     evaluate(scope: Scope, dom: DOM): any;
     prepare(scope: Scope, dom: DOM): any;
+    compile(): any;
 }
 export declare abstract class Node implements TreeNode {
     protected requiresPrep: boolean;
@@ -76,6 +77,7 @@ export declare abstract class Node implements TreeNode {
     abstract evaluate(scope: Scope, dom: DOM): any;
     isPreparationRequired(): boolean;
     prepare(scope: Scope, dom: DOM): Promise<void>;
+    compile(): Promise<any[]>;
     protected _getChildNodes(): Node[];
     getChildNodes(): Node[];
     findChildrenByType<T = Node>(t: any): T[];
