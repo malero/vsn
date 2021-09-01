@@ -1,6 +1,7 @@
 
 export class ElementHelper {
     public static hasVisionAttribute(element: HTMLElement | Element, testAttr: string = 'vsn-'): boolean {
+        if (!element.attributes || element.attributes.length <= 0) return false;
         for (let i: number = 0; i < element.attributes.length; i++) {
             const attr: Attr = element.attributes[i];
             if (attr.name.startsWith(testAttr))

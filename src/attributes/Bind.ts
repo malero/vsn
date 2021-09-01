@@ -1,19 +1,34 @@
 import {Scope, ScopeReference} from "../Scope";
 import {Attribute} from "../Attribute";
 import {Tree} from "../AST";
+import {Registry} from "../Registry";
 
+@Registry.attribute('vsn-bind')
 export class Bind extends Attribute {
+    public static readonly canDefer: boolean = false;
     protected key?: string;
     protected property?: string;
+    protected direction: string = 'both';
     protected boundScope?: Scope;
+    protected formatter: (v: string) => string = (v) => v;
 
     public async compile() {
         const tree: Tree = new Tree(this.getAttributeValue());
         await tree.prepare(this.tag.scope, this.tag.dom);
+        await super.compile();
     }
 
     public async setup() {
         this.property = this.getAttributeBinding();
+        const mods = this.getAttributeModifiers();
+        if (mods.length) {
+            if (mods.indexOf('from') > -1) {
+                this.direction = 'from';
+            } else if (mods.indexOf('to') > -1) {
+                this.direction = 'to';
+            }
+        }
+        await super.setup();
     }
 
     public async extract() {
@@ -29,27 +44,26 @@ export class Bind extends Attribute {
         this.key = ref.key;
         this.boundScope = ref.scope;
 
-        const elementValue = this.valueFromElement;
-        if (!!elementValue)
+        if (!!this.valueFromElement)
             this.updateFrom();
+
+        await super.extract();
     }
 
     public async connect() {
-        if (this.tag.isInput) {
-            //this.tag.element.onchange = this.updateFrom.bind(this);
-            this.tag.element.onkeydown = this.updateFrom.bind(this);
-            this.tag.element.onkeyup = this.updateFrom.bind(this);
+        if (this.doUpdateTo) {
+            this.updateTo();
+            this.boundScope.bind(`change:${this.key}`, this.updateTo, this);
         }
-        this.updateTo();
-        this.boundScope.bind(`change:${this.key}`, this.updateTo, this);
+        await super.connect();
     }
 
     public async evaluate() {
         const elementValue = this.valueFromElement;
         if (!!elementValue)
             this.updateFrom();
-        else
-            this.updateTo();
+        this.updateTo();
+        await super.evaluate();
     }
 
     public set value(v: any) {
@@ -68,11 +82,7 @@ export class Bind extends Attribute {
         if (this.property) {
             value = this.tag.element.getAttribute(this.property);
         } else {
-            if (this.tag.isInput) {
-                value = (this.tag.element as any).value;
-            } else {
-                value = this.tag.element.textContent;
-            }
+            value = this.tag.value;
         }
 
         return value;
@@ -80,6 +90,8 @@ export class Bind extends Attribute {
 
     public mutate(mutation: MutationRecord) {
         super.mutate(mutation);
+
+        if (!this.doUpdateFrom) return;
 
         // Element innerText binding
         if (!this.property && [
@@ -95,24 +107,37 @@ export class Bind extends Attribute {
             this.updateFrom();
     }
 
-    updateFrom() {
-        const valueFromElement = typeof this.valueFromElement === 'string' && this.valueFromElement.trim() || this.valueFromElement;
-        const valueFromScope = typeof this.value === 'string' && this.value.trim() || this.value;
+    public get doUpdateFrom(): boolean {
+        return ['both', 'to'].indexOf(this.direction) > -1;
+    }
 
-        if (!this.value || valueFromElement != valueFromScope)
+    updateFrom() {
+        if (!this.doUpdateFrom) return;
+        let valueFromElement = this.valueFromElement;
+        valueFromElement = typeof valueFromElement === 'string' && valueFromElement.trim() || valueFromElement;
+        let valueFromScope = this.value;
+        valueFromScope = typeof valueFromScope === 'string' && valueFromScope.trim() || valueFromScope;
+        valueFromScope = this.formatter(valueFromScope); // Apply format for comparison
+
+        if (!valueFromScope || valueFromElement != valueFromScope)
             this.value = valueFromElement;
     }
 
+    public get doUpdateTo(): boolean {
+        return ['both', 'from'].indexOf(this.direction) > -1;
+    }
+
     updateTo() {
+        if (!this.doUpdateTo) return;
+        const value = this.formatter(this.value);
         if (this.property) {
-            this.tag.element.setAttribute(this.property, this.value);
+            this.tag.element.setAttribute(this.property, value);
         } else {
-            if (this.tag.isInput) {
-                this.tag.element.setAttribute('value', this.value);
-                (this.tag.element as any).value = this.value;
-            } else {
-                this.tag.element.innerText = this.value;
-            }
+            this.tag.value = value;
         }
+    }
+
+    setFormatter(formatter) {
+        this.formatter = formatter;
     }
 }

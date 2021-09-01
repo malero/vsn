@@ -1,5 +1,7 @@
 import {Attribute} from "../Attribute";
+import {Registry} from "../Registry";
 
+@Registry.attribute('vsn-click-toggle-class')
 export class ClickToggleClass extends Attribute {
     protected cssClass: string = '';
     protected target: string = null;

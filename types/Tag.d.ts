@@ -22,23 +22,23 @@ export declare class Tag extends EventDispatcher {
     readonly parsedAttributes: {
         [key: string]: string[];
     };
+    readonly deferredAttributes: Attribute[];
     protected _state: TagState;
     protected attributes: Attribute[];
+    protected _nonDeferredAttributes: Attribute[];
     protected _parentTag: Tag;
     protected _children: Tag[];
     protected _scope: Scope;
     protected _controller: Controller;
-    readonly flags: {
-        [key: string]: boolean;
-    };
-    static readonly attributeMap: {
-        [attr: string]: any;
-    };
     protected inputTags: string[];
     protected onEventHandlers: {
         [key: string]: any[];
     };
+    private _uniqueScope;
+    get uniqueScope(): boolean;
     constructor(element: HTMLElement, dom: DOM);
+    protected onAttributeStateChange(event: any): void;
+    get nonDeferredAttributes(): Attribute[];
     get style(): CSSStyleDeclaration;
     get computedStyle(): CSSStyleDeclaration;
     analyzeElementAttributes(): void;
@@ -46,10 +46,13 @@ export declare class Tag extends EventDispatcher {
     mutate(mutation: MutationRecord): void;
     get(attr: string): void;
     set(attr: string, value: any): void;
-    getAttributeClass(attr: string): any;
+    getAttributeClass(attr: string): Promise<any>;
     getAttributeName(attr: string): string;
     getAttributeBinding(attr: string): string;
+    getAttributeModifiers(attr: string): string[];
     get isInput(): boolean;
+    set value(value: string);
+    get value(): string;
     addChild(tag: Tag): void;
     get children(): Tag[];
     get parentTag(): Tag;
@@ -66,7 +69,7 @@ export declare class Tag extends EventDispatcher {
     show(): void;
     findAncestorByAttribute(attr: string): Tag;
     hasAttribute(attr: string): boolean;
-    getAttribute<T = Attribute>(key: string): T;
+    getAttribute<T = Attribute>(key: string): Promise<T>;
     getRawAttributeValue(key: string, fallback?: any): any;
     getParsedAttributeValue(key: string, index?: number, fallback?: any): any;
     buildAttributes(): Promise<void>;
@@ -74,9 +77,14 @@ export declare class Tag extends EventDispatcher {
     setupAttributes(): Promise<void>;
     extractAttributes(): Promise<void>;
     connectAttributes(): Promise<void>;
+    inputMutation(e: any): void;
     finalize(): void;
     callOnWrapped(method: any, ...args: any[]): boolean;
     protected handleEvent(eventType: string, e: any): void;
-    addEventHandler(eventType: string, handler: any): void;
+    hasModifier(attribute: string, modifier: string): boolean;
+    stripModifier(attribute: string, modifier: string): string;
+    addEventHandler(eventType: string, modifiers: string[], handler: any): void;
     watchAttribute(attributeName: string): Promise<StandardAttribute>;
+    private setupAttribute;
+    private setupDeferredAttributes;
 }

@@ -1,4 +1,7 @@
+import "../../src/Types";
+import "../../src/attributes/_imports";
 import {DOM} from "../../src/DOM";
+
 
 describe('Bind', () => {
     it("vsn-bind to work with inner text", (done) => {
@@ -72,7 +75,7 @@ describe('Bind', () => {
 
             test.innerHTML = 'new-val';
         });
-        dom.buildFrom(document);
+        dom.buildFrom(document, true);
     });
 
     it("vsn-bind input value changes trigger updating scope with new value", (done) => {
@@ -97,7 +100,7 @@ describe('Bind', () => {
             test.dispatchEvent(new KeyboardEvent('keyup', {key: 'w'}));
         });
 
-        dom.buildFrom(document);
+        dom.buildFrom(document, true);
     });
 
     it("vsn-bind element innerHTML should change when scope value is changed", (done) => {
@@ -118,7 +121,7 @@ describe('Bind', () => {
 
             tag.scope.get('test').set('val', 'new-val');
         });
-        dom.buildFrom(document);
+        dom.buildFrom(document, true);
     });
 
     it("vsn-bind input value should change when scope value is changed", (done) => {
@@ -138,6 +141,21 @@ describe('Bind', () => {
             });
 
             tag.scope.set('val', 'new-val');
+        });
+    });
+
+    it("vsn-bind should work with currency formatter", (done) => {
+        document.body.innerHTML = `
+            <span id="test" vsn-name="test" vsn-bind="test.value" vsn-format="currency" vsn-type:test.value="float">1.5</span>
+        `;
+        const dom = new DOM(document);
+        dom.once('built', async () => {
+            const tag = await dom.getTagForElement(document.getElementById('test'));
+            expect(tag).toBeTruthy();
+            expect(tag.getParsedAttributeValue('vsn-name', 1)).toBe('test');
+            expect(tag.scope.get('value')).toBe(1.5);
+            expect(tag.element.innerText).toBe('$1.50');
+            done();
         });
     });
 });

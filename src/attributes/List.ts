@@ -3,8 +3,11 @@ import {Tag} from "../Tag";
 import {WrappedArray} from "../Scope";
 import {Tree} from "../AST";
 import {ElementHelper} from "../helpers/ElementHelper";
+import {Registry} from "../Registry";
 
+@Registry.attribute('vsn-list')
 export class List extends Attribute {
+    public static readonly canDefer: boolean = false;
     public static readonly scoped: boolean = true;
     public tree: Tree;
     public items: any[];
@@ -43,6 +46,7 @@ export class List extends Attribute {
             for (const existingItem of defaultList) {
                 await this.add(existingItem);
             }
+
 
         for (const element of Array.from(this.tag.element.querySelectorAll('*'))) {
             if (!ElementHelper.hasVisionAttribute(element, 'vsn-list-item'))

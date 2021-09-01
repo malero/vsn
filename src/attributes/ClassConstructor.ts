@@ -1,7 +1,10 @@
 import {Scope} from "../Scope";
 import {Attribute} from "../Attribute";
+import {Registry} from "../Registry";
 
+@Registry.attribute('vsn-controller')
 export class ClassConstructor extends Attribute {
+    public static readonly canDefer: boolean = false;
     public static readonly scoped: boolean = true;
     protected attributeKey: string;
     protected className: string;
@@ -14,14 +17,12 @@ export class ClassConstructor extends Attribute {
         this.attributeKey = this.getAttributeBinding();
         this.className = this.getAttributeValue();
 
-        const cls = await window['Vision'].instance.getClass(this.className);
+        const cls = await Registry.instance.classes.get(this.className);
         this.instantiateClass(cls);
 
         if (this.attributeKey && parentScope)
             parentScope.set(this.attributeKey, this.tag.scope);
-    }
-
-    public async extract() {
+        await super.setup();
     }
 
     protected instantiateClass(cls) {

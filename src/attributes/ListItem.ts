@@ -1,8 +1,11 @@
 import {Attribute} from "../Attribute";
 import {Tag} from "../Tag";
 import {List} from "./List";
+import {Registry} from "../Registry";
 
+@Registry.attribute('vsn-list-item')
 export class ListItem extends Attribute {
+    public static readonly canDefer: boolean = false;
     public static readonly scoped: boolean = true;
     public static readonly ERROR_NO_PARENT = "Cannot find list parent.";
     protected _list: Tag;
@@ -17,8 +20,8 @@ export class ListItem extends Attribute {
             throw Error(ListItem.ERROR_NO_PARENT);
 
         this.tag.scope.set(this.listItemName, this.tag.scope);
-        const modelName: string = this.modelClassName;
-        const cls = await window['Vision'].instance.getClass(modelName);
+        const modelName: string = (await this.getList()).listItemModel;
+        const cls = await Registry.instance.classes.get(modelName);
         this.instantiateModel(cls);
     }
 
@@ -26,8 +29,8 @@ export class ListItem extends Attribute {
         return this.getAttributeBinding('item');
     }
 
-    public get modelClassName(): string {
-        return this.getAttributeValue(this._list.getAttribute<List>('vsn-list').listItemModel);
+    public async getList(): Promise<List> {
+        return await this._list.getAttribute<List>('vsn-list');
     }
 
     protected async configure() {

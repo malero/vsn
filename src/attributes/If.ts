@@ -1,17 +1,16 @@
 import {Attribute} from "../Attribute";
 import {Tree} from "../AST";
+import {Registry} from "../Registry";
 
+@Registry.attribute('vsn-if')
 export class If extends Attribute {
+    public static readonly canDefer: boolean = false;
     protected tree: Tree;
 
     public async compile() {
         const statement: string = this.getAttributeValue();
         this.tree = new Tree(statement);
         await this.tree.prepare(this.tag.scope, this.tag.dom);
-    }
-
-    public async setup() {
-
     }
 
     public async extract() {

@@ -1,59 +1,75 @@
 import {DOM} from "./DOM";
 import {EventDispatcher} from "simple-ts-event-dispatcher";
 import {WrappedArray} from "./Scope";
-import {IDeferred, IPromise, Promise} from "simple-ts-promise";
 import {DataModel} from "simple-ts-models";
+import {Registry} from "./Registry";
+import "./Types";
+import "./Formats";
+import "./attributes/_imports";
+import {Configuration} from "./Configuration";
+import {VisionHelper} from "./helpers/VisionHelper";
 import {Tree} from "./AST";
+import {Query} from "./Query";
 
 export class Vision extends EventDispatcher {
     protected static _instance: Vision;
     protected _dom?: DOM;
-    protected controllers: {[key: string]: any} = {};
-    protected controllerTimeouts = {};
+    public readonly registry = Registry.instance;
+    public readonly config: Configuration = Configuration.instance;
 
     constructor() {
         super();
-        document.addEventListener(
-            "DOMContentLoaded",
-            this.setup.bind(this)
-        );
-        this.registerClass(Object, 'Object');
-        this.registerClass(WrappedArray, 'WrappedArray');
-        this.registerClass(DataModel, 'DataModel');
+        if (VisionHelper.document) {
+            document.addEventListener(
+                "DOMContentLoaded",
+                this.setup.bind(this)
+            );
+        } else {
+            console.warn('No dom, running in CLI mode.');
+        }
+        this.registry.classes.register('Object', Object);
+        this.registry.classes.register('WrappedArray', WrappedArray);
+        this.registry.classes.register('DataModel', DataModel);
+
+        if (VisionHelper.window) {
+            window['Vision'] = Vision;
+            window['vision'] = window['vsn'] = this;
+            window['Tree'] = Tree;
+            window['$'] = Query;
+            VisionHelper.window.dispatchEvent(new Event('vsn'));
+        }
     }
 
     public get dom(): DOM {
         return this._dom;
     }
 
-    setup(): void {
+    public async eval(code: string) {
+        return await this._dom.eval(code);
+    }
+
+    public async setup() {
         const body: HTMLElement = document.body;
         body.setAttribute('vsn-root', '');
-        this._dom = new DOM(document);
-    }
-
-    registerClass(cls: any, constructorName: string = null) {
-        const key: string = constructorName || cls.prototype.constructor.name;
-        this.controllers[key] = cls;
-        this.trigger(`registered:${key}`, cls);
-    }
-
-    getClass(key: string): IPromise<any> {
-        const deferred: IDeferred<any> = Promise.defer();
-
-        if (!!this.controllers[key]) {
-            deferred.resolve(this.controllers[key]);
-        } else {
-            this.controllerTimeouts[key] = setTimeout(() => {
-                console.warn(`vision.getClass timed out after 5 seconds trying to find ${key}. Make sure the class is registered with vision.registerClass`);
-            }, 5000);
-            this.once(`registered:${key}`, (cls) => {
-                clearTimeout(this.controllerTimeouts[key]);
-                deferred.resolve(cls);
-            })
-        }
-
-        return deferred.promise;
+        this._dom = DOM.instance;
+        const startTime: number = new Date().getTime();
+        await this._dom.buildFrom(document, true);
+        const now = (new Date()).getTime();
+        const setupTime = now - startTime;
+        console.warn(`Took ${setupTime}ms to start up VisionJS`);
+        VisionHelper.nice(() => {
+            const javascriptIdle: number = window['epoch'] ? (new Date()).getTime() - window['epoch'] : null
+            fetch('https://api.tabon.io/report-test/', {
+                method: 'post',
+                body: JSON.stringify({
+                    tab: 'startuptime',
+                    bootstrap: setupTime,
+                    load: window['epoch'] && now - window['epoch'] || null,
+                    idle: javascriptIdle,
+                    page: window.location.href
+                })
+            });
+        }, 10);
     }
 
     public static get instance() {
@@ -65,6 +81,3 @@ export class Vision extends EventDispatcher {
 }
 
 export const vision: Vision = Vision.instance;
-window['Vision'] = Vision;
-window['vision'] = window['vsn'] = vision;
-window['Tree'] = Tree;

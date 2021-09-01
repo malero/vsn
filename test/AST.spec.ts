@@ -198,6 +198,18 @@ describe('Tree', () => {
         expect(scope.get('something')).toBe(1);
     });
 
+    it("should be able to assign arrays with incrementing/decrementing variables properly", async () => {
+        let tree: Tree = new Tree(`something = [5,6];something += 10;`);
+        const dom: DOM = new DOM(document, false);
+        await tree.evaluate(scope, dom);
+        const something = scope.get('something');
+        expect(something).toEqual([5,6,10]);
+
+        tree = new Tree(`something -= 5;`);
+        await tree.evaluate(scope, dom);
+        expect(something).toEqual([6,10]);
+    });
+
     it("should be able to block properly with promises", async () => {
         scope.set('blockingFunction', async (num, toAdd, fin: boolean = false) => {
             const deferred: IDeferred<number> = SimplePromise.defer();

@@ -1,12 +1,16 @@
 import {Attribute} from "../Attribute";
 
 export class StandardAttribute extends Attribute {
-    protected readonly magicAttributes: string[] = [
+    public static readonly canDefer: boolean = false;
+    protected static readonly magicAttributes: string[] = [
         '@text',
-        '@html'
-    ]
+        '@html',
+        '@class',
+        '@value'
+    ];
+
     public async setup() {
-        if (this.magicAttributes.indexOf(this.key) === -1 && !this.tag.element.hasAttribute(this.attributeName)) {
+        if (StandardAttribute.magicAttributes.indexOf(this.key) === -1 && !this.tag.element.hasAttribute(this.attributeName)) {
             this.tag.element.setAttribute(this.attributeName, '');
         }
     }
@@ -25,8 +29,21 @@ export class StandardAttribute extends Attribute {
     }
 
     public get needsToBeSynced(): boolean {
-        const currentScopeValue = this.tag.scope.get(this.key) || '';
-        return currentScopeValue.trim() !== this.value.trim();
+        let currentScopeValue = this.tag.scope.get(this.key) || '';
+        let value = this.value;
+        if (currentScopeValue && currentScopeValue.trim)
+            currentScopeValue = currentScopeValue.trim();
+
+        if (value && value.trim)
+            value = value.trim();
+
+        if (currentScopeValue instanceof Array) {
+            if (!(value instanceof Array) || currentScopeValue.length !== value.length)
+                return true;
+
+            return currentScopeValue.map(v => value.indexOf(v) > -1).indexOf(false) > -1;
+        }
+        return currentScopeValue !== value;
     }
 
     public updateTo() {
@@ -43,21 +60,33 @@ export class StandardAttribute extends Attribute {
         return `@${this.attributeName}`;
     }
 
-    public set value(value: string) {
+    public set value(value: any) {
         if (this.key === '@text')
             this.tag.element.innerText = value;
         else if (this.key === '@html')
             this.tag.element.innerHTML = value;
+        else if (this.key === '@value')
+            this.tag.value = value;
+        else if (this.key === '@class' && value) {
+            this.tag.element.classList.remove(...Array.from(this.tag.element.classList));
+            const classes: string[] = value instanceof Array ? value : [value];
+            if (classes.length)
+                this.tag.element.classList.add(...classes);
+        }
         else
             this.tag.element.setAttribute(this.attributeName, value);
     }
 
-    public get value(): string {
+    public get value(): any {
         if (this.key === '@text')
             return this.tag.element.innerText;
         else if (this.key === '@html')
             return this.tag.element.innerHTML;
-        else
+        else if (this.key === '@value')
+            return this.tag.value;
+        else if (this.key === '@class') {
+            return Array.from(this.tag.element.classList);
+        } else
             return this.tag.element.getAttribute(this.attributeName);
     }
 }

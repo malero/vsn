@@ -1,4 +1,7 @@
 import {DOM} from "../../src/DOM";
+import "../../src/Types";
+import "../../src/attributes/_imports";
+
 
 describe('Bind', () => {
     it("vsn-set to work with a value", (done) => {
@@ -34,9 +37,9 @@ describe('Bind', () => {
 
     it("vsn-set to work with a typed value", (done) => {
         document.body.innerHTML = `
-            <span id="test-int" vsn-set:int="142.3|int">testing</span>
+            <span id="test-int" vsn-set:int="142.3|integer">testing</span>
             <span id="test-float" vsn-set:float="142.3|float">testing</span>
-            <span id="test-bool" vsn-set:bool="false|bool">testing</span>
+            <span id="test-bool" vsn-set:bool="false|boolean">testing</span>
         `;
         const dom = new DOM(document);
         dom.once('built', async () => {

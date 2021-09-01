@@ -73,6 +73,7 @@ export enum TokenType {
     EXCLAMATION_POINT,
     ELEMENT_REFERENCE,
     ELEMENT_ATTRIBUTE,
+    ELEMENT_QUERY
 }
 
 const TOKEN_PATTERNS: TokenPattern[] = [
@@ -130,11 +131,15 @@ const TOKEN_PATTERNS: TokenPattern[] = [
     },
     {
         type: TokenType.ELEMENT_ATTRIBUTE,
-        pattern: /^\.?@[_a-zA-Z0-9]*/
+        pattern: /^\.@[_a-zA-Z0-9]*/
     },
     {
         type: TokenType.ELEMENT_REFERENCE,
         pattern: /^#[-_a-zA-Z0-9]*/
+    },
+    {
+        type: TokenType.ELEMENT_QUERY,
+        pattern: /^\?([#.\[\],=\-_a-zA-Z0-9*\s]*[\]_a-zA-Z0-9*])/
     },
     {
         type: TokenType.NAME,
@@ -228,7 +233,7 @@ const TOKEN_PATTERNS: TokenPattern[] = [
         type: TokenType.ADD_ASSIGN,
         pattern: /^\+=/
     },
-        {
+    {
         type: TokenType.SUBTRACT_ASSIGN,
         pattern: /^-=/
     },
@@ -263,35 +268,8 @@ const TOKEN_PATTERNS: TokenPattern[] = [
     {
         type: TokenType.EXCLAMATION_POINT,
         pattern: /^!/
-    },
+    }
 ];
-
-
-export function tokenize(code: string): Token[] {
-    const tokens: Token[] = [];
-    if (!code || code.length === 0)
-        return tokens;
-
-    let foundToken: boolean;
-    do {
-        foundToken = false;
-        for (const tp of TOKEN_PATTERNS) {
-            const match: RegExpMatchArray = tp.pattern.exec(code);
-            if (match) {
-                tokens.push({
-                    type: tp.type,
-                    value: match[match.length - 1]
-                });
-
-                code = code.substring(match[0].length);
-                foundToken = true;
-                break;
-            }
-        }
-    } while (code.length > 0 && foundToken);
-
-    return tokens;
-}
 
 
 export interface TreeNode<T = any> {
@@ -301,22 +279,54 @@ export interface TreeNode<T = any> {
 
 
 export abstract class Node implements TreeNode {
+    protected requiresPrep: boolean = false;
+    protected _isPreparationRequired: boolean;
+    protected childNodes: Node[];
+    protected nodeCache: {[key: string]: Node[]} = {};
     abstract evaluate(scope: Scope, dom: DOM);
+
+    isPreparationRequired(): boolean {
+        if (this.requiresPrep)
+            return true;
+
+        if (this._isPreparationRequired !== undefined)
+            return this._isPreparationRequired;
+
+        for (const node of this.getChildNodes()) {
+            if (node.isPreparationRequired()) {
+                this._isPreparationRequired = true;
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     async prepare(scope: Scope, dom: DOM) {
         for (const node of this.getChildNodes()) {
             await node.prepare(scope, dom);
         }
     }
 
-    getChildNodes(): Node[] {
+    protected _getChildNodes(): Node[] {
         return [];
+    }
+
+    getChildNodes(): Node[] {
+        if (this.childNodes === undefined) {
+            this.childNodes = this._getChildNodes();
+        }
+        return this.childNodes;
     }
 
     findChildrenByType<T = Node>(t: any): T[] {
         return this.findChildrenByTypes([t]);
     }
 
-    findChildrenByTypes<T = Node>(types: any[]): T[] {
+    findChildrenByTypes<T = Node>(types: any[], cacheKey: string = null): T[] {
+        if (cacheKey !== null && this.nodeCache[cacheKey])
+            return this.nodeCache[cacheKey] as any;
+
         const nodes: T[] = [];
         for (const child of this.getChildNodes()) {
             for (const t of types) {
@@ -326,6 +336,9 @@ export abstract class Node implements TreeNode {
                 nodes.push(...childNodes);
             }
         }
+
+        if (cacheKey !== null)
+            this.nodeCache[cacheKey] = nodes as any;
 
         return nodes;
     }
@@ -339,7 +352,7 @@ export class BlockNode extends Node implements TreeNode {
         super();
     }
 
-    getChildNodes(): Node[] {
+    protected _getChildNodes(): Node[] {
         return [...(this.statements as Node[])];
     }
 
@@ -349,12 +362,6 @@ export class BlockNode extends Node implements TreeNode {
             returnValue = await this.statements[i].evaluate(scope, dom);
         }
         return returnValue;
-    }
-
-    public async prepare(scope: Scope, dom: DOM) {
-        for (let i = 0; i < this.statements.length; i++) {
-            await this.statements[i].prepare(scope, dom);
-        }
     }
 }
 
@@ -367,7 +374,7 @@ class ComparisonNode extends Node implements TreeNode {
         super();
     }
 
-    getChildNodes(): Node[] {
+    protected _getChildNodes(): Node[] {
         return [
             this.left as Node,
             this.right as Node
@@ -418,7 +425,7 @@ class ConditionalNode extends Node implements TreeNode {
         super();
     }
 
-    getChildNodes(): Node[] {
+    protected _getChildNodes(): Node[] {
         return [
             this.condition as Node,
             this.block as Node
@@ -441,7 +448,7 @@ class IfStatementNode extends Node implements TreeNode {
         super();
     }
 
-    getChildNodes(): Node[] {
+    protected _getChildNodes(): Node[] {
         return [
             ...(this.nodes as Node[])
         ]
@@ -449,7 +456,7 @@ class IfStatementNode extends Node implements TreeNode {
 
     public async evaluate(scope: Scope, dom: DOM) {
         for (const condition of this.nodes) {
-            const uno = await condition.condition.evaluate(scope, dom);
+            const uno: boolean = await condition.condition.evaluate(scope, dom);
             if (uno) {
                 return await condition.block.evaluate(scope, dom);
             }
@@ -466,8 +473,8 @@ class IfStatementNode extends Node implements TreeNode {
 
         tokens.splice(0, 1); // consume if and else if
         return new ConditionalNode(
-            Tree.processTokens(Tree.getBlockTokens(tokens, false)[0]),
-            Tree.processTokens(Tree.getBlockTokens(tokens, false)[0])
+            Tree.processTokens(Tree.getBlockTokens(tokens, null)[0]),
+            Tree.processTokens(Tree.getBlockTokens(tokens, null)[0])
         );
     }
 
@@ -486,7 +493,7 @@ class IfStatementNode extends Node implements TreeNode {
             tokens.splice(0, 1); // Consume else
             nodes.push(new ConditionalNode(
                 new LiteralNode(true),
-                Tree.processTokens(Tree.getBlockTokens(tokens, false)[0])
+                Tree.processTokens(Tree.getBlockTokens(tokens, null)[0])
             ))
         }
 
@@ -503,7 +510,7 @@ class ForStatementNode extends Node implements TreeNode {
         super();
     }
 
-    getChildNodes(): Node[] {
+    protected _getChildNodes(): Node[] {
         return [
             this.variable,
             this.list,
@@ -535,7 +542,7 @@ class ForStatementNode extends Node implements TreeNode {
         const variableName: Token = loopDef.splice(0, 1)[0];
         loopDef.splice(0, 1); // consume of
         const list: TreeNode = Tree.processTokens(loopDef);
-        const block: TreeNode = Tree.processTokens(Tree.getBlockTokens(tokens, false)[0]);
+        const block: TreeNode = Tree.processTokens(Tree.getBlockTokens(tokens, null)[0]);
 
         return new ForStatementNode(
             new LiteralNode<string>(variableName.value),
@@ -557,7 +564,7 @@ class NotNode extends Node implements TreeNode {
         return !flipping;
     }
 
-    getChildNodes(): Node[] {
+    protected _getChildNodes(): Node[] {
         return [
             this.toFlip
         ];
@@ -624,7 +631,7 @@ class FunctionCallNode<T = any> extends Node implements TreeNode {
         super();
     }
 
-    getChildNodes(): Node[] {
+    protected _getChildNodes(): Node[] {
         return [
             this.fnc as Node,
             this.args as Node
@@ -649,7 +656,7 @@ class FunctionArgumentNode<T = any> extends Node implements TreeNode {
         super();
     }
 
-    getChildNodes(): Node[] {
+    protected _getChildNodes(): Node[] {
         return [
             ...(this.args as Node[])
         ]
@@ -673,7 +680,7 @@ class ScopeMemberNode extends Node implements TreeNode {
         super();
     }
 
-    getChildNodes(): Node[] {
+    protected _getChildNodes(): Node[] {
         return [
             this.scope as Node,
             this.name as Node
@@ -681,16 +688,26 @@ class ScopeMemberNode extends Node implements TreeNode {
     }
 
     async evaluate(scope: Scope, dom: DOM) {
-        let parent = await this.scope.evaluate(scope, dom);
+        let scopes = [];
+        const values = [];
 
-        if (parent instanceof Tag)
-            parent = parent.scope;
+        if (this.scope instanceof ElementQueryNode) {
+            scopes = await this.scope.evaluate(scope, dom);
+        } else
+            scopes.push(await this.scope.evaluate(scope, dom));
 
-        if (!parent) {
-            throw Error(`Cannot access "${await this.name.evaluate(scope, dom)}" of undefined.`);
+        for (let parent of scopes) {
+            if (parent instanceof Tag)
+                parent = parent.scope;
+
+            if (!parent) {
+                throw Error(`Cannot access "${await this.name.evaluate(scope, dom)}" of undefined.`);
+            }
+            const name = await this.name.evaluate(scope, dom);
+            const value: any = parent.get(name, false);
+            values.push(value instanceof Scope && value.wrapped || value);
         }
-        const value: any = parent.get(await this.name.evaluate(scope, dom), false);
-        return value instanceof Scope && value.wrapped || value;
+        return values.length === 1 ? values[0] : values;
     }
 }
 
@@ -702,7 +719,7 @@ class RootScopeMemberNode<T = any> extends Node implements TreeNode {
         super();
     }
 
-    getChildNodes(): Node[] {
+    protected _getChildNodes(): Node[] {
         return [
             this.name as Node
         ]
@@ -711,48 +728,6 @@ class RootScopeMemberNode<T = any> extends Node implements TreeNode {
     async evaluate(scope: Scope, dom: DOM) {
         const value = scope.get(await this.name.evaluate(scope, dom));
         return value instanceof Scope && value.wrapped || value;
-    }
-}
-
-class AssignmentNode extends Node implements TreeNode {
-    constructor(
-        public readonly rootNode: RootScopeMemberNode | ScopeMemberNode,
-        public readonly toAssign: TreeNode,
-    ) {
-        super();
-    }
-
-    getChildNodes(): Node[] {
-        return [
-            this.rootNode as Node,
-            this.toAssign as Node
-        ]
-    }
-
-    async evaluate(scope: Scope, dom: DOM) {
-        let localScope = scope;
-        const name: string = await this.rootNode.name.evaluate(scope, dom);
-        const value: any = await this.toAssign.evaluate(scope, dom);
-
-        if (this.rootNode instanceof ScopeMemberNode)
-            localScope = await this.rootNode.scope.evaluate(scope, dom);
-
-        localScope.set(name, value);
-        if (localScope.get(name) !== value)
-            throw Error(`System Error: Failed to assign ${name} to ${value}`);
-        return value;
-    }
-
-    public static parse(lastNode: any, token, tokens: Token[]): AssignmentNode {
-        if (!(lastNode instanceof RootScopeMemberNode) && !(lastNode instanceof ScopeMemberNode)) {
-            throw SyntaxError(`Invalid assignment syntax near ${Tree.toCode(tokens.splice(0, 10))}`);
-        }
-        tokens.splice(0, 1); // consume =
-        const assignmentTokens: Token[] = Tree.getNextStatementTokens(tokens, false, false, true);
-        return new AssignmentNode(
-            lastNode,
-            Tree.processTokens(assignmentTokens)
-        );
     }
 }
 
@@ -765,7 +740,7 @@ class ArithmeticNode extends Node implements TreeNode {
         super();
     }
 
-    getChildNodes(): Node[] {
+    protected _getChildNodes(): Node[] {
         return [
             this.left as Node,
             this.right as Node
@@ -812,7 +787,7 @@ class ArithmeticAssignmentNode extends Node implements TreeNode {
         super();
     }
 
-    getChildNodes(): Node[] {
+    protected _getChildNodes(): Node[] {
         return [
             this.left as Node,
             this.right as Node
@@ -820,34 +795,104 @@ class ArithmeticAssignmentNode extends Node implements TreeNode {
     }
 
     async evaluate(scope: Scope, dom: DOM) {
+        let scopes = [];
         const name: string = await this.left.name.evaluate(scope, dom);
-        let left: number = await this.left.evaluate(scope, dom);
-        const right: number = await this.right.evaluate(scope, dom);
 
-        switch (this.type) {
-            case TokenType.ADD_ASSIGN:
-                left += right;
-                break;
-            case TokenType.SUBTRACT_ASSIGN:
-                left -= right;
-                break;
-            case TokenType.MULTIPLY_ASSIGN:
-                left *= right;
-                break;
-            case TokenType.DIVIDE_ASSIGN:
-                left /= right;
-                break;
+        if (this.left instanceof ScopeMemberNode) {
+            const inner = await this.left.scope.evaluate(scope, dom);
+            if (this.left.scope instanceof ElementQueryNode) {
+                scopes.push(...inner);
+            } else {
+                scopes.push(inner);
+            }
         }
+        else if (this.left instanceof ElementAttributeNode)
+            scopes = await this.left.elementRef.evaluate(scope, dom);
+        else
+            scopes.push(scope);
 
-        scope.set(name, left);
+        const values = [];
+        for (let localScope of scopes) {
+            if (localScope instanceof Tag) {
+                localScope = localScope.scope;
+            } else if (localScope['$wrapped'] && localScope['$scope'])
+                localScope = localScope['$scope'];
 
-        if (scope.get(name) != left)
-            throw Error(`System Error: Failed to assign ${name} to ${right}`);
-        return left;
+            let left: number | Array<any> | string = await this.left.evaluate(localScope, dom);
+            let right: number | Array<any> | string = await this.right.evaluate(localScope, dom);
+
+            if (this.left instanceof ElementAttributeNode) {
+                left = left[0];
+            }
+
+            if (this.right instanceof ElementAttributeNode) {
+                right = right[0];
+            }
+
+            if (left instanceof Array) {
+                if (!(right instanceof Array))
+                    right = [right];
+
+                switch (this.type) {
+                    case TokenType.ASSIGN:
+                        left.splice(0, left.length);
+                        left.push(...right);
+                        break;
+                    case TokenType.ADD_ASSIGN:
+                        left.push(...right);
+                        break;
+                    case TokenType.SUBTRACT_ASSIGN:
+                        for (let i = left.length - 1; i >= 0; i--) {
+                            if (right.indexOf(left[i]) > -1) {
+                                left.splice(i, 1);
+                                i++;
+                            }
+                        }
+                        break;
+                }
+                /*
+                 We have to trigger a change manually here. Setting the variable on the scope with an array won't trigger
+                 it since we are modifying values inside of the array instance.
+                 */
+                localScope.trigger(`change:${name}`);
+            } else if (Number.isFinite(left)) {
+                if (right !== null && !Number.isFinite(right))
+                    right = parseFloat(`${right}`);
+
+                left = left as number;
+                right = right as number;
+
+                switch (this.type) {
+                    case TokenType.ASSIGN:
+                        left = right;
+                        break;
+                    case TokenType.ADD_ASSIGN:
+                        left += right;
+                        break;
+                    case TokenType.SUBTRACT_ASSIGN:
+                        left -= right;
+                        break;
+                    case TokenType.MULTIPLY_ASSIGN:
+                        left *= right;
+                        break;
+                    case TokenType.DIVIDE_ASSIGN:
+                        left /= right;
+                        break;
+                }
+                localScope.set(name, left);
+            } else {
+                left = right;
+                localScope.set(name, left);
+            }
+
+            values.push(left);
+        }
+        return values.length > 1 ? values : values[0];
     }
 
     public static match(tokens: Token[]): boolean {
         return [
+            TokenType.ASSIGN,
             TokenType.ADD_ASSIGN,
             TokenType.SUBTRACT_ASSIGN,
             TokenType.MULTIPLY_ASSIGN,
@@ -855,17 +900,87 @@ class ArithmeticAssignmentNode extends Node implements TreeNode {
         ].indexOf(tokens[0].type) > -1;
     }
 
-    public static parse(lastNode, token, tokens: Token[]): ArithmeticAssignmentNode {
-        if (!(lastNode instanceof RootScopeMemberNode) && !(lastNode instanceof ScopeMemberNode)) {
+    public static parsed(lastNode, token, tokens: Token[]): ArithmeticAssignmentNode {
+        if (!(lastNode instanceof RootScopeMemberNode) && !(lastNode instanceof ScopeMemberNode) && !(lastNode instanceof ElementAttributeNode)) {
             throw SyntaxError('Invalid assignment syntax.');
         }
         tokens.splice(0, 1); // consume +=
         const assignmentTokens: Token[] = Tree.getNextStatementTokens(tokens);
         return new ArithmeticAssignmentNode(
-            lastNode,
+            lastNode as RootScopeMemberNode,
             Tree.processTokens(assignmentTokens),
             token.type
         );
+    }
+
+    public static parse(lastNode: any, token, tokens: Token[]): ArithmeticAssignmentNode {
+        if (!(lastNode instanceof RootScopeMemberNode) && !(lastNode instanceof ScopeMemberNode) && !(lastNode instanceof ElementAttributeNode)) {
+            throw SyntaxError(`Invalid assignment syntax near ${Tree.toCode(tokens.splice(0, 10))}`);
+        }
+        tokens.splice(0, 1); // consume =
+        const assignmentTokens: Token[] = Tree.getNextStatementTokens(tokens, false, false, true);
+
+        return new ArithmeticAssignmentNode(
+            lastNode as RootScopeMemberNode,
+            Tree.processTokens(assignmentTokens),
+            token.type
+        );
+    }
+}
+
+class IndexNode extends Node implements TreeNode {
+    constructor(
+        public readonly object: Node,
+        public readonly index: Node,
+        public readonly indexTwo: Node = null
+    ) {
+        super();
+    }
+
+    protected _getChildNodes(): Node[] {
+        const children = [
+            this.object,
+            this.index
+        ];
+        if (this.indexTwo)
+            children.push(this.indexTwo);
+
+        return children;
+    }
+
+    public negativeIndex(obj: any[], index: number | string): number | string {
+        if (Number.isFinite(index) && index < 0)
+            return obj.length + (index as number);
+        return index;
+    }
+
+    async evaluate(scope: Scope, dom: DOM) {
+        const obj = await this.object.evaluate(scope, dom);
+        const index: string | number = this.negativeIndex(obj, await this.index.evaluate(scope, dom));
+
+        if (Number.isFinite(index) && this.indexTwo) {
+            const indexTwo: number = this.negativeIndex(obj, await this.indexTwo.evaluate(scope, dom)) as number;
+            const values = [];
+            for (let i: number = index as number; i <= indexTwo; i++) {
+                values.push(obj[i]);
+            }
+            return values;
+        } else {
+            return (obj)[index];
+        }
+    }
+
+    public static match(tokens: Token[]): boolean {
+        return tokens[0].type === TokenType.L_BRACKET;
+    }
+
+    public static parse(lastNode, token, tokens: Token[]): IndexNode {
+        const valueTokens: Token[][] = Tree.getBlockTokens(tokens, TokenType.COLON);
+        const values: Node[] = [];
+        for (const arg of valueTokens) {
+            values.push(Tree.processTokens(arg));
+        }
+        return new IndexNode(lastNode, values[0], values.length > 1 && values[1]);
     }
 }
 
@@ -876,7 +991,7 @@ class ArrayNode extends Node implements TreeNode {
         super();
     }
 
-    getChildNodes(): Node[] {
+    protected _getChildNodes(): Node[] {
         return new Array(...this.values);
     }
 
@@ -894,14 +1009,6 @@ class ArrayNode extends Node implements TreeNode {
 
     public static parse(lastNode, token, tokens: Token[]): ArrayNode {
         const valueTokens: Token[][] = Tree.getBlockTokens(tokens);
-        const copy = [];
-        for (const v of valueTokens) {
-            const item = [];
-            for (const i of v) {
-                item.push(i);
-            }
-            copy.push(item);
-        }
         const values: Node[] = [];
         for (const arg of valueTokens) {
             values.push(Tree.processTokens(arg));
@@ -918,7 +1025,7 @@ class ObjectNode extends Node implements TreeNode {
         super();
     }
 
-    getChildNodes(): Node[] {
+    protected _getChildNodes(): Node[] {
         return new Array(...this.values);
     }
 
@@ -954,31 +1061,39 @@ class ObjectNode extends Node implements TreeNode {
     }
 }
 
-class ElementReferenceNode extends Node implements TreeNode {
+class ElementQueryNode extends Node implements TreeNode {
+    protected requiresPrep: boolean = true;
+
     constructor(
-        public readonly id: string
+        public readonly query: string
     ) {
         super();
     }
 
     async evaluate(scope: Scope, dom: DOM) {
-        return await dom.get(this.id);
+        return await dom.get(this.query, true);
     }
 
     async prepare(scope: Scope, dom: DOM) {
-        const tag = await dom.get(this.id, true);
+        await dom.get(this.query, true);
     }
 }
 
 class ElementAttributeNode extends Node implements TreeNode {
+    protected requiresPrep: boolean = true;
+
     constructor(
-        public readonly elementRef: ElementReferenceNode,
+        public readonly elementRef: ElementQueryNode,
         public readonly attr: string
     ) {
         super();
     }
 
-    getChildNodes(): Node[] {
+    public get name(): LiteralNode<string> {
+        return new LiteralNode<string>(`@${this.attributeName}`);
+    }
+
+    protected _getChildNodes(): Node[] {
         return [
             this.elementRef
         ]
@@ -991,14 +1106,15 @@ class ElementAttributeNode extends Node implements TreeNode {
     }
 
     async evaluate(scope: Scope, dom: DOM) {
-        const tag: Tag = await this.elementRef.evaluate(scope, dom);
-        return tag.scope.get(`@${this.attributeName}`);
+        const tags: Tag[] = await this.elementRef.evaluate(scope, dom);
+        return tags.map((tag) => tag.scope.get(`@${this.attributeName}`));
     }
 
     async prepare(scope: Scope, dom: DOM) {
         await this.elementRef.prepare(scope, dom);
-        const tag: Tag = await this.elementRef.evaluate(scope, dom);
-        await tag.watchAttribute(this.attributeName);
+        const tags: Tag[] = await this.elementRef.evaluate(scope, dom);
+        for (const tag of tags)
+            await tag.watchAttribute(this.attributeName);
     }
 }
 
@@ -1009,6 +1125,12 @@ export interface IBlockInfo {
     openCharacter: string,
     closeCharacter: string
 }
+
+export const AttributableNodes = [
+    RootScopeMemberNode,
+    ScopeMemberNode,
+    ElementAttributeNode
+];
 
 export class Tree {
     protected static cache: {[key: string]: Node} = {};
@@ -1026,7 +1148,7 @@ export class Tree {
     }
 
     public parse() {
-        const tokens = tokenize(this.code);
+        const tokens = Tree.tokenize(this.code);
         this.rootNode = Tree.processTokens(tokens);
     }
 
@@ -1035,11 +1157,13 @@ export class Tree {
     }
 
     async prepare(scope: Scope, dom: DOM) {
+        if (!this.rootNode.isPreparationRequired())
+            return;
         return await this.rootNode.prepare(scope, dom);
     }
 
     async bindToScopeChanges(scope, fnc) {
-        for (const node of this.rootNode.findChildrenByTypes<ScopeMemberNode>([RootScopeMemberNode, ScopeMemberNode])) {
+        for (const node of this.rootNode.findChildrenByTypes<ScopeMemberNode>([RootScopeMemberNode, ScopeMemberNode], 'ScopeMemberNodes')) {
             let _scope: Scope = scope;
             if (node instanceof ScopeMemberNode)
                 _scope = await node.scope.evaluate(scope, null);
@@ -1047,6 +1171,32 @@ export class Tree {
             const name = await node.name.evaluate(scope, null);
             _scope.bind(`change:${name}`, fnc);
         }
+    }
+
+    public static tokenize(code: string): Token[] {
+        const tokens: Token[] = [];
+        if (!code || code.length === 0)
+            return tokens;
+
+        let foundToken: boolean;
+        do {
+            foundToken = false;
+            for (const tp of TOKEN_PATTERNS) {
+                const match: RegExpMatchArray = tp.pattern.exec(code);
+                if (match) {
+                    tokens.push({
+                        type: tp.type,
+                        value: match[match.length - 1]
+                    });
+
+                    code = code.substring(match[0].length);
+                    foundToken = true;
+                    break;
+                }
+            }
+        } while (code.length > 0 && foundToken);
+
+        return tokens;
     }
 
     public static stripWhiteSpace(tokens: Token[]): Token[] {
@@ -1079,8 +1229,6 @@ export class Tree {
                     new LiteralNode<string>(token.value)
                 );
                 tokens.splice(0, 1);
-            } else if (token.type === TokenType.ASSIGN) {
-                node = AssignmentNode.parse(node as any, token, tokens);
             } else if (token.type === TokenType.IF) {
                 node = IfStatementNode.parse(node, token, tokens);
                 blockNodes.push(node);
@@ -1096,16 +1244,23 @@ export class Tree {
                 node = new NumberLiteralNode(token.value);
                 tokens.splice(0, 1);
             } else if (tokens[0].type === TokenType.ELEMENT_REFERENCE) {
-                node = new ElementReferenceNode(tokens[0].value);
+                node = new ElementQueryNode(tokens[0].value);
+                tokens.splice(0, 1);
+            } else if (tokens[0].type === TokenType.ELEMENT_QUERY) {
+                node = new ElementQueryNode(tokens[0].value);
                 tokens.splice(0, 1);
             } else if (tokens[0].type === TokenType.L_BRACKET) {
-                node = ArrayNode.parse(node, token, tokens);
+                if (node) {
+                    node = IndexNode.parse(node, token, tokens);
+                } else {
+                    node = ArrayNode.parse(node, token, tokens);
+                }
             } else if (tokens[0].type === TokenType.L_BRACE) {
                 node = ObjectNode.parse(node, token, tokens);
-            } else if (tokens[0].type === TokenType.ELEMENT_ATTRIBUTE && node instanceof ElementReferenceNode) {
+            } else if (tokens[0].type === TokenType.ELEMENT_ATTRIBUTE && node instanceof ElementQueryNode) {
                 node = new ElementAttributeNode(node, tokens[0].value);
                 tokens.splice(0, 1);
-            } else if (token.type === TokenType.PERIOD && tokens[1].type === TokenType.NAME) {
+            } else if (node !== null && token.type === TokenType.PERIOD && tokens[1].type === TokenType.NAME) {
                 node = new ScopeMemberNode(
                     node,
                     new LiteralNode<string>(tokens[1].value)
@@ -1117,10 +1272,14 @@ export class Tree {
                 for (const arg of funcArgs) {
                     nodes.push(Tree.processTokens(arg));
                 }
-                node = new FunctionCallNode(
-                    node, // Previous node should be a NAME
-                    new FunctionArgumentNode(nodes)
-                );
+                if (node) {
+                    node = new FunctionCallNode(
+                        node, // Previous node should be a NAME
+                        new FunctionArgumentNode(nodes)
+                    );
+                } else {
+                    node = new BlockNode(nodes);
+                }
             } else if (tokens[0].type === TokenType.SEMI_COLON) {
                 if (node) {
                     blockNodes.push(node);
@@ -1232,7 +1391,7 @@ export class Tree {
         return Tree.getTokensUntil(tokens, blockInfo.close, consumeClosingToken, includeClosingToken);
     }
 
-    public static getBlockTokens(tokens: Token[], groupByComma: boolean = true): Token[][] {
+    public static getBlockTokens(tokens: Token[], groupBy: TokenType | null = TokenType.COMMA): Token[][] {
         const blockInfo: IBlockInfo = Tree.getBlockInfo(tokens);
         let openBlocks: number = 0;
         const args: Token[][] = [];
@@ -1247,7 +1406,7 @@ export class Tree {
                 openBlocks -= 1;
                 if (openBlocks > 0)
                     arg.push(token);
-            } else if (groupByComma && token.type === TokenType.COMMA && openBlocks == 1) {
+            } else if (groupBy !== null && token.type === groupBy && openBlocks == 1) {
                 args.push(arg);
                 arg = [];
             } else if (token.type !== TokenType.WHITESPACE) {
