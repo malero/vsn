@@ -67,7 +67,7 @@ enum EValueType {
 }
 
 // https://webassembly.github.io/spec/core/binary/types.html#binary-blocktype
-enum EBlocktype {
+enum EBlockType {
     void = 0x40
 }
 
@@ -162,7 +162,8 @@ export abstract class Section {
 }
 
 export class FunctionSection extends Section {
-    protected readonly params: EOpCode[] = [];
+    protected readonly params: EValueType[] = [];
+    protected readonly results: EValueType[] = [];
     protected readonly code: number[] = [];
 
     constructor(
@@ -171,8 +172,12 @@ export class FunctionSection extends Section {
         super();
     }
 
-    public addParam(paramType: EOpCode) {
+    public addParam(paramType: EValueType) {
         this.params.push(paramType);
+    }
+
+    public addResult(paramType: EValueType) {
+        this.results.push(paramType);
     }
 
     public addCode(code: number[]) {
@@ -180,11 +185,12 @@ export class FunctionSection extends Section {
     }
 
     get sectionTypes(): number[] {
-        return [functionType,
+        return [
+            functionType,
             this.paramCount, // Number of params
-            ...this.paramTypes, // Param types
+            ...this.paramTypes, // Param type(s)
             this.resultCount, // Number of results
-            ...this.resultTypes, // result type
+            ...this.resultTypes, // result type(s)
         ];
     }
 
@@ -196,7 +202,7 @@ export class FunctionSection extends Section {
     }
 
     get sectionCode(): number[] {
-        return this.code;
+        return encodeVector(this.code);
     }
 
     get paramCount(): number {
@@ -204,21 +210,25 @@ export class FunctionSection extends Section {
     }
 
     get paramTypes(): number[] {
-        return []
+        return this.params;
     }
 
     get resultCount(): number {
-        return 1;
+        return this.results.length;
     }
 
     get resultTypes(): number[] {
-        return [];
+        return this.results;
     }
 }
 
 export const emitter = () => {
-    const add = new FunctionSection("i32add");
-    add.addCode([
+    const functions: FunctionSection[] = [];
+    const i32add = new FunctionSection("i32add");
+    i32add.addParam(EValueType.i32);
+    i32add.addParam(EValueType.i32);
+    i32add.addResult(EValueType.i32);
+    i32add.addCode([
         0x00, // local declare count
         EOpCode.get_local,
         0x00, // local var 0
@@ -227,68 +237,64 @@ export const emitter = () => {
         EOpCode.i32_add,
         EOpCode.end
     ]);
+    functions.push(i32add);
+
+    const i32sub = new FunctionSection("i32sub");
+    i32sub.addParam(EValueType.i32);
+    i32sub.addParam(EValueType.i32);
+    i32sub.addResult(EValueType.i32);
+    i32sub.addCode([
+        0x00, // local declare count
+        EOpCode.get_local,
+        0x00, // local var 0
+        EOpCode.get_local,
+        0x01, // local var 1
+        EOpCode.i32_sub,
+        EOpCode.end
+    ]);
+    functions.push(i32sub);
+
+    const i32ooo = new FunctionSection("i3ooo");
+    i32ooo.addParam(EValueType.i32);
+    i32ooo.addParam(EValueType.i32);
+    i32ooo.addParam(EValueType.i32);
+    i32ooo.addParam(EValueType.i32);
+    i32ooo.addParam(EValueType.i32);
+    i32ooo.addResult(EValueType.i32);
+    i32ooo.addCode([
+        0x00, // local declare count
+        EOpCode.get_local,
+        0x00, // local var 0
+        EOpCode.get_local,
+        0x01, // local var 1
+        EOpCode.i32_sub,
+        EOpCode.get_local,
+        0x00,
+        EOpCode.end
+    ]);
+    functions.push(i32ooo);
     
     // Types section
     const typesSection = createSection(ESectionType.type, [
-        2, // Number of types
-        functionType,
-        0x02, // Number of params
-        EValueType.i32, // Param 0 type
-        EValueType.i32, // Param 1 type
-        0x01, // Number of results
-        EValueType.i32, // result 0 type
-        functionType,
-        0x02, // Number of params
-        EValueType.i32, // Param 0 type
-        EValueType.i32, // Param 1 type
-        0x01, // Number of results
-        EValueType.i32 // result 0 type
+        functions.length, // Number of types
+        ...flatten(functions.map((func) => func.sectionTypes))
     ]);
 
     // Functions section
     const functionsSection = createSection(ESectionType.func, [
-        0x02, // number of functions
-        0x00, // function 0 index
-        0x01, // function 1 index
+        functions.length, // number of functions
+        ...functions.map((func, i) => i)
     ]);
 
     // Export section
     const exportSection = createSection(
         ESectionType.export,
-        encodeVector([
-            [
-                ...encodeString("addTwo"),
-                EExportType.func,
-                0x00
-            ],
-            [
-                ...encodeString("subTwo"),
-                EExportType.func,
-                0x01
-            ],
-        ])
+        encodeVector(functions.map((func,i) => [...func.sectionExport, i]))
     );
 
     const codeSection = createSection(ESectionType.code, [
-        0x02, // Number of functions
-        ...encodeVector([
-            0x00, // local declare count
-            EOpCode.get_local,
-            0x00, // local var 0
-            EOpCode.get_local,
-            0x01, // local var 1
-            EOpCode.i32_add,
-            EOpCode.end
-        ]),
-        ...encodeVector([
-            0x00, // local declare count
-            EOpCode.get_local,
-            0x00, // local var 0
-            EOpCode.get_local,
-            0x01, // local var 1
-            EOpCode.i32_sub,
-            EOpCode.end
-        ])
+        functions.length, // Number of functions
+        ...flatten(functions.map((func) => func.sectionCode))
     ]);
 
     return Uint8Array.from([
