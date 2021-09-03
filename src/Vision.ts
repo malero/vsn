@@ -33,6 +33,7 @@ export class Vision extends EventDispatcher {
 
         if (VisionHelper.window) {
             window['Vision'] = Vision;
+            window['Registry'] = Registry;
             window['vision'] = window['vsn'] = this;
             window['Tree'] = Tree;
             window['$'] = Query;
@@ -80,4 +81,6 @@ export class Vision extends EventDispatcher {
     }
 }
 
+export * from './Registry';
+export * from './Attribute';
 export const vision: Vision = Vision.instance;
