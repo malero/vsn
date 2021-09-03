@@ -1,6 +1,6 @@
 {
   "name": "vsn",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "SEO Friendly Javascript/Typescript Framework",
   "keywords": [
     "framework",
@@ -39,6 +39,7 @@
   "homepage": "https://www.vsnjs.com",
   "git": "https://github.com/malero/visionjs",
   "typings": "./types/Vision.d.ts",
+  "types": "./types/Vision.d.ts",
   "author": "Malero <contact@vsnjs.com> (https://www.vsnjs.com/)",
   "bugs": {
     "url": "https://github.com/malero/visionjs/issues",
