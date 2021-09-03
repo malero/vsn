@@ -6,6 +6,7 @@ import "./Formats";
 import "./attributes/_imports";
 import { Configuration } from "./Configuration";
 export declare class Vision extends EventDispatcher {
+    protected static WASM: any;
     protected static _instance: Vision;
     protected _dom?: DOM;
     readonly registry: Registry;

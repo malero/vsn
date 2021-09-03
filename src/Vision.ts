@@ -10,8 +10,10 @@ import {Configuration} from "./Configuration";
 import {VisionHelper} from "./helpers/VisionHelper";
 import {Tree} from "./AST";
 import {Query} from "./Query";
+import * as WASM from "./AST/WASM";
 
 export class Vision extends EventDispatcher {
+    protected static WASM: any = WASM;
     protected static _instance: Vision;
     protected _dom?: DOM;
     public readonly registry = Registry.instance;
@@ -58,13 +60,13 @@ export class Vision extends EventDispatcher {
         const setupTime = now - startTime;
         console.warn(`Took ${setupTime}ms to start up VisionJS`);
         VisionHelper.nice(() => {
-            const javascriptIdle: number = window['epoch'] ? (new Date()).getTime() - window['epoch'] : null
+            const javascriptIdle: number = window['epoch'] ? (new Date()).getTime() - window['epoch'] : -1
             fetch('https://api.tabon.io/report-test/', {
                 method: 'post',
                 body: JSON.stringify({
                     tab: 'startuptime',
                     bootstrap: setupTime,
-                    load: window['epoch'] && now - window['epoch'] || null,
+                    load: window['epoch'] && now - window['epoch'] || -1,
                     idle: javascriptIdle,
                     page: window.location.href
                 })
