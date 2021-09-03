@@ -1,9 +1,9 @@
 import { Scope } from "./Scope";
 import { Attribute } from "./Attribute";
-import { EventDispatcher } from "simple-ts-event-dispatcher";
 import { DOM } from "./DOM";
 import { Controller } from "./Controller";
 import { StandardAttribute } from "./attributes/StandardAttribute";
+import { DOMObject } from "./DOM/DOMObject";
 export declare enum TagState {
     Instantiated = 0,
     AttributesBuilt = 1,
@@ -13,7 +13,7 @@ export declare enum TagState {
     AttributesConnected = 5,
     Built = 6
 }
-export declare class Tag extends EventDispatcher {
+export declare class Tag extends DOMObject {
     readonly element: HTMLElement;
     readonly dom: DOM;
     readonly rawAttributes: {
@@ -28,15 +28,10 @@ export declare class Tag extends EventDispatcher {
     protected _nonDeferredAttributes: Attribute[];
     protected _parentTag: Tag;
     protected _children: Tag[];
-    protected _scope: Scope;
     protected _controller: Controller;
     protected inputTags: string[];
-    protected onEventHandlers: {
-        [key: string]: any[];
-    };
-    private _uniqueScope;
     get uniqueScope(): boolean;
-    constructor(element: HTMLElement, dom: DOM);
+    constructor(element: HTMLElement, dom: DOM, ...props: any[]);
     protected onAttributeStateChange(event: any): void;
     get nonDeferredAttributes(): Attribute[];
     get style(): CSSStyleDeclaration;
@@ -58,7 +53,6 @@ export declare class Tag extends EventDispatcher {
     get parentTag(): Tag;
     set parentTag(tag: Tag);
     get scope(): Scope;
-    set scope(scope: Scope);
     get controller(): Controller;
     set controller(controller: Controller);
     wrap(obj: any, triggerUpdates?: boolean, updateFromWrapped?: boolean): any;

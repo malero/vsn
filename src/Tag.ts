@@ -1,6 +1,5 @@
 import {Scope} from "./Scope";
 import {Attribute, AttributeState} from "./Attribute";
-import {EventDispatcher} from "simple-ts-event-dispatcher";
 import {DOM} from "./DOM";
 import {Controller} from "./Controller";
 import {VisionHelper} from "./helpers/VisionHelper";
@@ -8,6 +7,7 @@ import {StandardAttribute} from "./attributes/StandardAttribute";
 import {On} from "./attributes/On";
 import {Registry} from "./Registry";
 import {benchmarkEnd, benchmarkStart} from "./Bencmark";
+import {DOMObject} from "./DOM/DOMObject";
 
 export enum TagState {
     Instantiated,
@@ -19,7 +19,7 @@ export enum TagState {
     Built,
 }
 
-export class Tag extends EventDispatcher {
+export class Tag extends DOMObject {
     public readonly rawAttributes: { [key: string]: string; };
     public readonly parsedAttributes: { [key: string]: string[]; };
     public readonly deferredAttributes: Attribute[] = [];
@@ -28,7 +28,6 @@ export class Tag extends EventDispatcher {
     protected _nonDeferredAttributes: Attribute[] = [];
     protected _parentTag: Tag;
     protected _children: Tag[] = [];
-    protected _scope: Scope;
     protected _controller: Controller;
 
     protected inputTags: string[] = [
@@ -37,18 +36,16 @@ export class Tag extends EventDispatcher {
         'textarea'
     ];
 
-    protected onEventHandlers: {[key:string]:any[]};
-    private _uniqueScope: boolean = false;
-
     public get uniqueScope(): boolean {
         return this._uniqueScope;
     };
 
     constructor(
         public readonly element: HTMLElement,
-        public readonly dom: DOM
+        public readonly dom: DOM,
+        ...props
     ) {
-        super();
+        super(props);
         this.rawAttributes = {};
         this.parsedAttributes = {};
         this.attributes = [];
@@ -211,10 +208,6 @@ export class Tag extends EventDispatcher {
             return this._parentTag.scope;
 
         return null;
-    }
-
-    public set scope(scope: Scope) {
-        this._scope = scope;
     }
 
     public get controller(): Controller {

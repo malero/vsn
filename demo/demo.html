@@ -78,9 +78,8 @@
 <span vsn-bind="show"></span>
 
 <h2>? Operator</h2>
-<input id="qop-inp" type="text" />
-<button vsn-on:click="#qop.@class += [#qop-inp.@value];#qop-inp.@value = '';">Toggle</button>
-<span id="qop"></span>
+<p>Bind to window attributes.</p>
+<p>window.scrollY <span vsn-bind="?window.@scrollY"></span></p>
 
 <h2>Attribute Binding</h2>
 <a href="/index.html" id="link">Home</a>

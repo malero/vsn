@@ -6,6 +6,8 @@ import {Tree} from "./AST";
 import {TagList} from "./Tag/List";
 import {benchmarkEnd, benchmarkStart} from "./Bencmark";
 import {VisionHelper} from "./helpers/VisionHelper";
+import {WrappedWindow} from "./DOM/WrappedWindow";
+import {WrappedDocument} from "./DOM/WrappedDocument";
 
 export class DOM extends EventDispatcher {
     protected static _instance: DOM;
@@ -14,6 +16,8 @@ export class DOM extends EventDispatcher {
     protected observer: MutationObserver;
     protected evaluateTimeout: any;
     protected queued: HTMLElement[] = [];
+    protected window: WrappedWindow;
+    protected document: WrappedDocument;
 
     constructor(
         protected rootElement: Document,
@@ -24,6 +28,9 @@ export class DOM extends EventDispatcher {
         this.observer = new MutationObserver(this.mutation.bind(this));
         this.tags = [];
 
+        this.window = new WrappedWindow(window);
+        this.document = new WrappedDocument(window.document);
+
         if (build) {
             this.buildFrom(rootElement, true);
         }
@@ -32,8 +39,16 @@ export class DOM extends EventDispatcher {
     }
 
     public async get(selector: string, create: boolean = false) {
-        const nodes = this.querySelectorAll(selector);
-        return await this.getTagsForElement(Array.from(nodes) as Element[], create);
+
+        switch (selector) {
+            case 'window':
+                return new TagList(this.window);
+            case 'document':
+                return new TagList(this.document);
+            default:
+                const nodes = this.querySelectorAll(selector);
+                return await this.getTagsForElement(Array.from(nodes) as Element[], create);
+        }
     }
 
     public registerElementInRoot(tag: Tag): void {
@@ -97,6 +112,7 @@ export class DOM extends EventDispatcher {
                 toBuild.push(element);
             }
         }
+
         if (VisionHelper.doBenchmark) benchmarkEnd('DOM', 'findElements');
 
         if (VisionHelper.doBenchmark) benchmarkStart('DOM', 'buildTags');
@@ -214,8 +230,9 @@ export class DOM extends EventDispatcher {
         }
 
         if (element && create) {
-            element.setAttribute('vsn-ref', '');
-            await this.buildFrom(element.parentElement);
+            if (element instanceof HTMLElement)
+                element.setAttribute('vsn-ref', '');
+            await this.buildFrom(element.parentElement || element);
             return await this.getTagForElement(element, false);
         }
 

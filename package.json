@@ -6,7 +6,7 @@
     "framework",
     "typescript"
   ],
-  "main": "./dist/vision.js",
+  "main": "./dist/Vision.js",
   "scripts": {
     "build": "rm -rf ./dist/ && tsc",
     "build_dev": "rm -rf ./dist/ && webpack --env BUILD=development BENCHMARK=1",

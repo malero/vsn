@@ -1,6 +1,6 @@
 import {DOM} from "./DOM";
 import {EventDispatcher} from "simple-ts-event-dispatcher";
-import {WrappedArray} from "./Scope";
+import {Scope, WrappedArray} from "./Scope";
 import {DataModel} from "simple-ts-models";
 import {Registry} from "./Registry";
 import "./Types";
@@ -10,6 +10,8 @@ import {Configuration} from "./Configuration";
 import {VisionHelper} from "./helpers/VisionHelper";
 import {Tree} from "./AST";
 import {Query} from "./Query";
+import {WrappedWindow} from "./DOM/WrappedWindow";
+import {WrappedDocument} from "./DOM/WrappedDocument";
 
 export class Vision extends EventDispatcher {
     protected static _instance: Vision;
@@ -59,13 +61,13 @@ export class Vision extends EventDispatcher {
         const setupTime = now - startTime;
         console.warn(`Took ${setupTime}ms to start up VisionJS`);
         VisionHelper.nice(() => {
-            const javascriptIdle: number = window['epoch'] ? (new Date()).getTime() - window['epoch'] : null
+            const javascriptIdle: number = window['epoch'] ? (new Date()).getTime() - window['epoch'] : -1
             fetch('https://api.tabon.io/report-test/', {
                 method: 'post',
                 body: JSON.stringify({
                     tab: 'startuptime',
                     bootstrap: setupTime,
-                    load: window['epoch'] && now - window['epoch'] || null,
+                    load: window['epoch'] && now - window['epoch'] || -1,
                     idle: javascriptIdle,
                     page: window.location.href
                 })

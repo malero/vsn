@@ -1,6 +1,8 @@
 import {Scope} from "./Scope";
 import {DOM} from "./DOM";
 import {Tag} from "./Tag";
+import {DOMObject} from "./DOM/DOMObject";
+import {TagList} from "./Tag/List";
 
 function lower(str: string): string {
     return str ? str.toLowerCase() : null;
@@ -697,7 +699,7 @@ class ScopeMemberNode extends Node implements TreeNode {
             scopes.push(await this.scope.evaluate(scope, dom));
 
         for (let parent of scopes) {
-            if (parent instanceof Tag)
+            if (parent instanceof DOMObject)
                 parent = parent.scope;
 
             if (!parent) {
@@ -813,7 +815,7 @@ class ArithmeticAssignmentNode extends Node implements TreeNode {
 
         const values = [];
         for (let localScope of scopes) {
-            if (localScope instanceof Tag) {
+            if (localScope instanceof DOMObject) {
                 localScope = localScope.scope;
             } else if (localScope['$wrapped'] && localScope['$scope'])
                 localScope = localScope['$scope'];
@@ -1106,13 +1108,15 @@ class ElementAttributeNode extends Node implements TreeNode {
     }
 
     async evaluate(scope: Scope, dom: DOM) {
-        const tags: Tag[] = await this.elementRef.evaluate(scope, dom);
+        const tags: TagList = await this.elementRef.evaluate(scope, dom);
+        if (tags.length === 1)
+            return tags[0].scope.get(`@${this.attributeName}`);
         return tags.map((tag) => tag.scope.get(`@${this.attributeName}`));
     }
 
     async prepare(scope: Scope, dom: DOM) {
         await this.elementRef.prepare(scope, dom);
-        const tags: Tag[] = await this.elementRef.evaluate(scope, dom);
+        const tags: TagList = await this.elementRef.evaluate(scope, dom);
         for (const tag of tags)
             await tag.watchAttribute(this.attributeName);
     }

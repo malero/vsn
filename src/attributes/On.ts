@@ -14,6 +14,7 @@ export abstract class On extends Attribute {
         'load',
         'popstate',
         'resize',
+        'scroll',
         'unload',
     ];
 

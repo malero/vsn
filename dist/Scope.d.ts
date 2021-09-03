@@ -6,6 +6,13 @@ export declare class ScopeReference {
     readonly value: any;
     constructor(scope: Scope, key: string, value: any);
 }
+export declare class QueryReference extends ScopeReference {
+    readonly path: string;
+    readonly scope: Scope;
+    constructor(path: string, scope: Scope);
+    static getKey(path: string): string;
+    static getValue(path: string): any;
+}
 export declare class ScopeVariableType {
     static readonly Integer: string;
     static readonly Float: string;

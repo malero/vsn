@@ -1,6 +1,8 @@
 import { Tag } from "./Tag";
 import { EventDispatcher } from "simple-ts-event-dispatcher";
 import { TagList } from "./Tag/List";
+import { WrappedWindow } from "./DOM/WrappedWindow";
+import { WrappedDocument } from "./DOM/WrappedDocument";
 export declare class DOM extends EventDispatcher {
     protected rootElement: Document;
     protected debug: boolean;
@@ -10,6 +12,8 @@ export declare class DOM extends EventDispatcher {
     protected observer: MutationObserver;
     protected evaluateTimeout: any;
     protected queued: HTMLElement[];
+    protected window: WrappedWindow;
+    protected document: WrappedDocument;
     constructor(rootElement: Document, build?: boolean, debug?: boolean);
     get(selector: string, create?: boolean): Promise<TagList>;
     registerElementInRoot(tag: Tag): void;

@@ -1,3 +1,4 @@
 import { TagList } from "./Tag/List";
 import { DOM } from "./DOM";
-export declare function Query(selector: string, dom?: DOM): Promise<TagList>;
+import { DOMObject } from "./DOM/DOMObject";
+export declare function Query(selector: string, dom?: DOM): Promise<TagList | DOMObject>;

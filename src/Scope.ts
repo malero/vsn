@@ -1,6 +1,7 @@
 import {DataModel} from "simple-ts-models";
 import {EventCallback, EventCallbackList, EventDispatcher, EventDispatcherCallback} from "simple-ts-event-dispatcher";
 import {Registry} from "./Registry";
+import {DOM} from "./DOM";
 
 export class ScopeReference {
     constructor(
@@ -8,6 +9,24 @@ export class ScopeReference {
         public readonly key: string,
         public readonly value: any
     ) {}
+}
+
+export class QueryReference extends ScopeReference {
+    constructor(
+        public readonly path: string,
+        public readonly scope: Scope
+    ) {
+        super(scope, QueryReference.getKey(path), QueryReference.getValue(path));
+    }
+
+    public static getKey(path: string): string {
+        const parts: string[] = path.split('.');
+        return parts[parts.length - 1];
+    }
+
+    public static getValue(path: string): any {
+        return DOM.instance.eval(path);
+    }
 }
 
 export class ScopeVariableType {
@@ -184,6 +203,12 @@ export class Scope extends EventDispatcher {
         let scope: Scope = this;
         let val: any = null;
         let len: number = scopePath.length;
+
+        console.log('?', path);
+        if (path.startsWith('?')) {
+            console.log('?? yes');
+            return new QueryReference(path, scope);
+        }
 
         for (let i: number = 0; i < len; i++) {
             key = scopePath[i];

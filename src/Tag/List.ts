@@ -1,7 +1,7 @@
-import {Tag} from "../Tag";
 import {VisionHelper} from "../helpers/VisionHelper";
+import {DOMObject} from "../DOM/DOMObject";
 
-export class TagList extends Array<Tag> {
+export class TagList extends Array<DOMObject> {
 
 }
 

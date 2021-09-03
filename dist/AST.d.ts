@@ -1,5 +1,6 @@
 import { Scope } from "./Scope";
 import { DOM } from "./DOM";
+import { TagList } from "./Tag/List";
 export interface Token {
     type: TokenType;
     value: string;
@@ -109,7 +110,7 @@ declare class ElementQueryNode extends Node implements TreeNode {
     readonly query: string;
     protected requiresPrep: boolean;
     constructor(query: string);
-    evaluate(scope: Scope, dom: DOM): Promise<import("./Tag/List").TagList>;
+    evaluate(scope: Scope, dom: DOM): Promise<TagList>;
     prepare(scope: Scope, dom: DOM): Promise<void>;
 }
 declare class ElementAttributeNode extends Node implements TreeNode {
@@ -120,7 +121,7 @@ declare class ElementAttributeNode extends Node implements TreeNode {
     get name(): LiteralNode<string>;
     protected _getChildNodes(): Node[];
     get attributeName(): string;
-    evaluate(scope: Scope, dom: DOM): Promise<any[]>;
+    evaluate(scope: Scope, dom: DOM): Promise<any>;
     prepare(scope: Scope, dom: DOM): Promise<void>;
 }
 export interface IBlockInfo {
