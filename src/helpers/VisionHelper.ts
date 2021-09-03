@@ -1,5 +1,6 @@
 declare var IN_DEVELOPMENT: boolean;
 declare var DO_BENCHMARK: boolean;
+declare var WASM: boolean;
 
 export class VisionHelper {
     public static isConstructor(obj: any): boolean {
@@ -36,6 +37,10 @@ export class VisionHelper {
         return DO_BENCHMARK;
     }
 
+    public static get doWASM() {
+        return WASM;
+    }
+
     public static get inLegacy() {
         return process.env.BUILD_TARGET === 'es5';
     }
@@ -46,5 +51,18 @@ export class VisionHelper {
         } else {
             setTimeout(callback, timeout);
         }
+    }
+
+    public static get wasmSupport(): boolean {
+        try {
+            if (typeof WebAssembly === "object"
+                && typeof WebAssembly.instantiate === "function") {
+                const module = new WebAssembly.Module(Uint8Array.of(0x0, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00));
+                if (module instanceof WebAssembly.Module)
+                    return new WebAssembly.Instance(module) instanceof WebAssembly.Instance;
+            }
+        } catch (e) {
+        }
+        return false;
     }
 }

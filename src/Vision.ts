@@ -60,13 +60,13 @@ export class Vision extends EventDispatcher {
         const setupTime = now - startTime;
         console.warn(`Took ${setupTime}ms to start up VisionJS`);
         VisionHelper.nice(() => {
-            const javascriptIdle: number = window['epoch'] ? (new Date()).getTime() - window['epoch'] : null
+            const javascriptIdle: number = window['epoch'] ? (new Date()).getTime() - window['epoch'] : -1
             fetch('https://api.tabon.io/report-test/', {
                 method: 'post',
                 body: JSON.stringify({
                     tab: 'startuptime',
                     bootstrap: setupTime,
-                    load: window['epoch'] && now - window['epoch'] || null,
+                    load: window['epoch'] && now - window['epoch'] || -1,
                     idle: javascriptIdle,
                     page: window.location.href
                 })

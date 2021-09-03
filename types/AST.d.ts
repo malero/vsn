@@ -1,5 +1,9 @@
 import { Scope } from "./Scope";
 import { DOM } from "./DOM";
+export declare class WASMContext {
+    readonly names: string[];
+    addName(name: string): number;
+}
 export interface Token {
     type: TokenType;
     value: string;
@@ -65,7 +69,7 @@ export declare enum TokenType {
 export interface TreeNode<T = any> {
     evaluate(scope: Scope, dom: DOM): any;
     prepare(scope: Scope, dom: DOM): any;
-    compile(): any;
+    compile(context: WASMContext): any;
 }
 export declare abstract class Node implements TreeNode {
     protected requiresPrep: boolean;
@@ -77,7 +81,7 @@ export declare abstract class Node implements TreeNode {
     abstract evaluate(scope: Scope, dom: DOM): any;
     isPreparationRequired(): boolean;
     prepare(scope: Scope, dom: DOM): Promise<void>;
-    compile(): Promise<any[]>;
+    compile(context: WASMContext): Promise<any[]>;
     protected _getChildNodes(): Node[];
     getChildNodes(): Node[];
     findChildrenByType<T = Node>(t: any): T[];

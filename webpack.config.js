@@ -26,6 +26,7 @@ function buildConfig(env) {
   console.log(env);
   defaultConfiguration.plugins.push(new webpack.DefinePlugin({
     BUILD: JSON.stringify(env.BUILD),
+    WASM: JSON.stringify([1, '1', 'True', 'true'].indexOf(env.WASM)),
     IN_DEVELOPMENT: JSON.stringify(env.BUILD === 'development'),
     DO_BENCHMARK: JSON.stringify([1, '1', 'True', 'true'].indexOf(env.BENCHMARK) > -1),
   }));

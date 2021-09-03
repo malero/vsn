@@ -2,6 +2,18 @@ import {Scope} from "./Scope";
 import {DOM} from "./DOM";
 import {Tag} from "./Tag";
 
+export class WASMContext {
+    public readonly names: string[];
+    public addName(name: string): number {
+        let index: number = this.names.indexOf(name);
+        if (index == -1) {
+            index = this.names.length;
+            this.names.push(name);
+        }
+        return index;
+    }
+}
+
 function lower(str: string): string {
     return str ? str.toLowerCase() : null;
 }
@@ -275,7 +287,7 @@ const TOKEN_PATTERNS: TokenPattern[] = [
 export interface TreeNode<T = any> {
     evaluate(scope: Scope, dom: DOM);
     prepare(scope: Scope, dom: DOM);
-    compile();
+    compile(context: WASMContext);
 }
 
 
@@ -309,10 +321,10 @@ export abstract class Node implements TreeNode {
         }
     }
 
-    public async compile() {
+    public async compile(context: WASMContext) {
         const sections = [];
         for (const node of this.getChildNodes()) {
-            sections.push(await node.compile());
+            sections.push(await node.compile(context));
         }
 
         return sections;
@@ -773,13 +785,9 @@ class ArithmeticNode extends Node implements TreeNode {
         }
     }
 
-    public async compile() {
-        const sections = [];
-        for (const node of this.getChildNodes()) {
-            sections.push(await node.compile());
-        }
-
-        return sections;
+    public async compile(context: WASMContext) {
+        const code: number[] = [];
+        return code;
     }
 
     public static match(tokens: Token[]): boolean {
@@ -793,9 +801,10 @@ class ArithmeticNode extends Node implements TreeNode {
 
     public static parse(lastNode, token, tokens: Token[]) {
         tokens.splice(0, 1); // Remove arithmetic operator
-        return new ArithmeticNode(lastNode, Tree.processTokens(Tree.getNextStatementTokens(tokens)), token.type)
+        return new ArithmeticNode(lastNode, Tree.processTokens(Tree.getNextStatementTokens(tokens)), token.type);
     }
 }
+
 
 class ArithmeticAssignmentNode extends Node implements TreeNode {
     constructor(

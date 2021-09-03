@@ -1,49 +1,70 @@
-export const ieee754 = (n: number) => {
-    const buf = Buffer.allocUnsafe(4);
-    buf.writeFloatLE(n, 0);
-    return Uint8Array.from(buf);
-};
+import {VisionHelper} from "../helpers/VisionHelper";
+import {FunctionSection} from "./Function";
 
-export const encodeString = (str: string) => [
-    str.length,
-    ...str.split("").map(s => s.charCodeAt(0))
-];
 
-export const signedLEB128 = (n: number) => {
-    const buffer = [];
-    let more = true;
-    const isNegative = n < 0;
-    const bitCount = Math.ceil(Math.log2(Math.abs(n))) + 1;
-    while (more) {
-        let byte = n & 0x7f;
-        n >>= 7;
-        if (isNegative) {
-            n = n | -(1 << (bitCount - 8));
+const dummyFunc = (...args: any[]): any => null;
+const dummyVal = null;
+
+let _ieee754 = dummyFunc;
+let _encodeString = dummyFunc;
+let _signedLEB128 = dummyFunc;
+let _unsignedLEB128 = dummyFunc;
+
+if (VisionHelper.doWASM) {
+    _ieee754 = (n: number) => {
+        const buf = Buffer.allocUnsafe(4);
+        buf.writeFloatLE(n, 0);
+        return Uint8Array.from(buf);
+    };
+
+    _encodeString = (str: string) => [
+        str.length,
+        ...str.split("").map(s => s.charCodeAt(0))
+    ];
+
+    _signedLEB128 = (n: number) => {
+        const buffer = [];
+        let more = true;
+        const isNegative = n < 0;
+        const bitCount = Math.ceil(Math.log2(Math.abs(n))) + 1;
+        while (more) {
+            let byte = n & 0x7f;
+            n >>= 7;
+            if (isNegative) {
+                n = n | -(1 << (bitCount - 8));
+            }
+            if ((n === 0 && (byte & 0x40) === 0) || (n === -1 && (byte & 0x40) !== 0x40)) {
+                more = false;
+            } else {
+                byte |= 0x80;
+            }
+            buffer.push(byte);
         }
-        if ((n === 0 && (byte & 0x40) === 0) || (n === -1 && (byte & 0x40) !== 0x40)) {
-            more = false;
-        } else {
-            byte |= 0x80;
-        }
-        buffer.push(byte);
-    }
-    return buffer;
-};
+        return buffer;
+    };
 
-export const unsignedLEB128 = (n: number) => {
-    const buffer = [];
-    do {
-        let byte = n & 0x7f;
-        n >>>= 7;
-        if (n !== 0) {
-            byte |= 0x80;
-        }
-        buffer.push(byte);
-    } while (n !== 0);
-    return buffer;
-};
+    _unsignedLEB128 = (n: number) => {
+        const buffer = [];
+        do {
+            let byte = n & 0x7f;
+            n >>>= 7;
+            if (n !== 0) {
+                byte |= 0x80;
+            }
+            buffer.push(byte);
+        } while (n !== 0);
+        return buffer;
+    };
+}
 
-const flatten = (arr: any[]) => [].concat.apply([], arr);
+export const ieee754 = _ieee754;
+export const encodeString = _encodeString;
+export const signedLEB128 = _signedLEB128;
+export const unsignedLEB128 = _unsignedLEB128;
+
+export const flatten = (arr: any[]) => {
+    return [].concat.apply([], arr);
+}
 
 enum ESectionType {
     custom = 0,
@@ -61,18 +82,18 @@ enum ESectionType {
 }
 
 // https://webassembly.github.io/spec/core/binary/types.html
-enum EValueType {
+export enum EValueType {
     i32 = 0x7f,
     f32 = 0x7d
 }
 
 // https://webassembly.github.io/spec/core/binary/types.html#binary-blocktype
-enum EBlockType {
+export enum EBlockType {
     void = 0x40
 }
 
 // https://webassembly.github.io/spec/core/binary/instructions.html
-enum EOpCode {
+export enum EOpCode {
     block = 0x02,
     loop = 0x03,
     br = 0x0c,
@@ -98,7 +119,13 @@ enum EOpCode {
     f32_sub = 0x93,
     f32_mul = 0x94,
     f32_div = 0x95,
-    i32_trunc_f32_s = 0xa8
+    i32_trunc_f32_s = 0xa8,
+    memory_size = 0x3f,
+    memory_grow = 0x40,
+
+    // Vision op codes
+    scope_get = 0x400,
+    scope_set = 0x401
 }
 
 const binaryOpcode = {
@@ -113,7 +140,7 @@ const binaryOpcode = {
 };
 
 // http://webassembly.github.io/spec/core/binary/modules.html#export-section
-enum EExportType {
+export enum EExportType {
     func = 0x00,
     table = 0x01,
     mem = 0x02,
@@ -121,9 +148,9 @@ enum EExportType {
 }
 
 // http://webassembly.github.io/spec/core/binary/types.html#function-types
-const functionType = 0x60;
+export const functionType = 0x60;
 
-const emptyArray = 0x0;
+export const emptyArray = 0x0;
 
 // https://webassembly.github.io/spec/core/binary/modules.html#binary-module
 const magicModuleHeader = [0x00, 0x61, 0x73, 0x6d];
@@ -131,13 +158,13 @@ const moduleVersion = [0x01, 0x00, 0x00, 0x00];
 
 // https://webassembly.github.io/spec/core/binary/conventions.html#binary-vec
 // Vectors are encoded with their length followed by their element sequence
-const encodeVector = (data: any[]) => [
+export const encodeVector = (data: any[]) => [
     ...unsignedLEB128(data.length),
     ...flatten(data)
 ];
 
 // https://webassembly.github.io/spec/core/binary/modules.html#code-section
-const encodeLocal = (count: number, type: EValueType) => [
+export const encodeLocal = (count: number, type: EValueType) => [
     ...unsignedLEB128(count),
     type
 ];
@@ -156,124 +183,7 @@ const createSection = (sectionType: ESectionType, data: any[]) => [
     https://webassembly.github.io/wabt/demo/wat2wasm/
 */
 
-export abstract class Section {
-    abstract get sectionTypes(): number[];
-    abstract get sectionExport(): number[];
-}
-
-export class FunctionSection extends Section {
-    protected readonly params: EValueType[] = [];
-    protected readonly results: EValueType[] = [];
-    protected readonly code: number[] = [];
-
-    constructor(
-        protected readonly name: string
-    ) {
-        super();
-    }
-
-    public addParam(paramType: EValueType) {
-        this.params.push(paramType);
-    }
-
-    public addResult(paramType: EValueType) {
-        this.results.push(paramType);
-    }
-
-    public addCode(code: number[]) {
-        this.code.push(...code);
-    }
-
-    get sectionTypes(): number[] {
-        return [
-            functionType,
-            this.paramCount, // Number of params
-            ...this.paramTypes, // Param type(s)
-            this.resultCount, // Number of results
-            ...this.resultTypes, // result type(s)
-        ];
-    }
-
-    get sectionExport(): number[] {
-        return [
-            ...encodeString(this.name),
-            EExportType.func,
-        ]
-    }
-
-    get sectionCode(): number[] {
-        return encodeVector(this.code);
-    }
-
-    get paramCount(): number {
-        return this.params.length;
-    }
-
-    get paramTypes(): number[] {
-        return this.params;
-    }
-
-    get resultCount(): number {
-        return this.results.length;
-    }
-
-    get resultTypes(): number[] {
-        return this.results;
-    }
-}
-
-export const emitter = () => {
-    const functions: FunctionSection[] = [];
-    const i32add = new FunctionSection("i32add");
-    i32add.addParam(EValueType.i32);
-    i32add.addParam(EValueType.i32);
-    i32add.addResult(EValueType.i32);
-    i32add.addCode([
-        0x00, // local declare count
-        EOpCode.get_local,
-        0x00, // local var 0
-        EOpCode.get_local,
-        0x01, // local var 1
-        EOpCode.i32_add,
-        EOpCode.end
-    ]);
-    functions.push(i32add);
-
-    const i32sub = new FunctionSection("i32sub");
-    i32sub.addParam(EValueType.i32);
-    i32sub.addParam(EValueType.i32);
-    i32sub.addResult(EValueType.i32);
-    i32sub.addCode([
-        0x00, // local declare count
-        EOpCode.get_local,
-        0x00, // local var 0
-        EOpCode.get_local,
-        0x01, // local var 1
-        EOpCode.i32_sub,
-        EOpCode.end
-    ]);
-    functions.push(i32sub);
-
-    const i32ooo = new FunctionSection("i3ooo");
-    i32ooo.addParam(EValueType.i32);
-    i32ooo.addParam(EValueType.i32);
-    i32ooo.addParam(EValueType.i32);
-    i32ooo.addParam(EValueType.i32);
-    i32ooo.addParam(EValueType.i32);
-    i32ooo.addResult(EValueType.i32);
-    i32ooo.addCode([
-        0x00, // local declare count
-        EOpCode.get_local,
-        0x00, // local var 0
-        EOpCode.get_local,
-        0x01, // local var 1
-        EOpCode.i32_sub,
-        EOpCode.get_local,
-        0x00,
-        EOpCode.end
-    ]);
-    functions.push(i32ooo);
-    
+export const emitter = (functions: FunctionSection[]) => {
     // Types section
     const typesSection = createSection(ESectionType.type, [
         functions.length, // Number of types
@@ -307,10 +217,28 @@ export const emitter = () => {
     ]);
 }
 
-async function run() {
-    const wasm = emitter();
-    const instance = await WebAssembly.instantiate(wasm);
-    return instance;
+const defaultMemory: WebAssembly.Memory = new WebAssembly.Memory({initial: 10, maximum: 100, shared: true} as WebAssembly.MemoryDescriptor);
+
+export async function compile(functions: FunctionSection[], memory?: WebAssembly.Memory) {
+    memory = memory || defaultMemory;
+    const wasm = emitter(functions);
+    return await WebAssembly.instantiate(wasm, {
+        js: {
+            memory: memory
+        }
+    });
 }
 
-window['run'] = run;
+export async function run(functions: FunctionSection | FunctionSection[], ...args) {
+    const memory = args[0] instanceof WebAssembly.Memory && args[0] || defaultMemory;
+    if (functions instanceof FunctionSection)
+        functions = [functions];
+
+    const wasm = await compile(functions, memory);
+    return 'main' in wasm.instance.exports ? (wasm.instance.exports.main as any)(...args) : wasm;
+}
+
+if (VisionHelper.window)
+    window['wasm'] = {
+        compile: compile
+    }
