@@ -28,8 +28,8 @@ export class SetAttribute extends Attribute {
         } catch (e) {
             return;
         }
-        this.key = ref.key;
-        this.boundScope = ref.scope;
+        this.key = await ref.getKey();
+        this.boundScope = await ref.getScope();
     }
 
     public async extract() {

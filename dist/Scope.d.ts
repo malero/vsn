@@ -1,17 +1,21 @@
 import { DataModel } from "simple-ts-models";
 import { EventCallback, EventDispatcher, EventDispatcherCallback } from "simple-ts-event-dispatcher";
 export declare class ScopeReference {
-    readonly scope: Scope;
-    readonly key: string;
-    readonly value: any;
-    constructor(scope: Scope, key: string, value: any);
+    private _scope;
+    private _key;
+    private _value;
+    constructor(scope?: Scope, key?: string, value?: any);
+    getScope(): Promise<Scope>;
+    getKey(): Promise<string>;
+    getValue(): Promise<any>;
 }
 export declare class QueryReference extends ScopeReference {
     readonly path: string;
     readonly scope: Scope;
     constructor(path: string, scope: Scope);
-    static getKey(path: string): string;
-    static getValue(path: string): any;
+    getScope(): Promise<any>;
+    getKey(): Promise<string>;
+    getValue(): Promise<any>;
 }
 export declare class ScopeVariableType {
     static readonly Integer: string;

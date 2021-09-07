@@ -1,6 +1,5 @@
 import {Scope} from "./Scope";
 import {DOM} from "./DOM";
-import {Tag} from "./Tag";
 import {DOMObject} from "./DOM/DOMObject";
 import {TagList} from "./Tag/List";
 
@@ -45,6 +44,7 @@ export enum TokenType {
     R_BRACKET,
     L_PAREN,
     R_PAREN,
+    TILDE,
     PERIOD,
     COMMA,
     COLON,
@@ -174,6 +174,10 @@ const TOKEN_PATTERNS: TokenPattern[] = [
     {
         type: TokenType.R_PAREN,
         pattern: /^\)/
+    },
+    {
+        type: TokenType.TILDE,
+        pattern: /^~/
     },
     {
         type: TokenType.PERIOD,
@@ -797,6 +801,7 @@ class ArithmeticAssignmentNode extends Node implements TreeNode {
     }
 
     async evaluate(scope: Scope, dom: DOM) {
+        console.log('eval');
         let scopes = [];
         const name: string = await this.left.name.evaluate(scope, dom);
 
@@ -823,40 +828,52 @@ class ArithmeticAssignmentNode extends Node implements TreeNode {
             let left: number | Array<any> | string = await this.left.evaluate(localScope, dom);
             let right: number | Array<any> | string = await this.right.evaluate(localScope, dom);
 
-            if (this.left instanceof ElementAttributeNode) {
-                left = left[0];
-            }
-
-            if (this.right instanceof ElementAttributeNode) {
-                right = right[0];
-            }
-
             if (left instanceof Array) {
-                if (!(right instanceof Array))
-                    right = [right];
+                console.log('left', left, 'right', right);
+                for (let _left of left) {
+                    if (!(_left instanceof Array))
+                        _left = [_left];
 
-                switch (this.type) {
-                    case TokenType.ASSIGN:
-                        left.splice(0, left.length);
-                        left.push(...right);
-                        break;
-                    case TokenType.ADD_ASSIGN:
-                        left.push(...right);
-                        break;
-                    case TokenType.SUBTRACT_ASSIGN:
-                        for (let i = left.length - 1; i >= 0; i--) {
-                            if (right.indexOf(left[i]) > -1) {
-                                left.splice(i, 1);
-                                i++;
+                    if (!(right instanceof Array))
+                        right = [right];
+
+                    switch (this.type) {
+                        case TokenType.ASSIGN:
+                            _left.splice(0, _left.length);
+                            _left.push(...right);
+                            break;
+                        case TokenType.ADD_ASSIGN:
+                            _left.push(...right);
+                            break;
+                        case TokenType.SUBTRACT_ASSIGN:
+                            for (let i = _left.length - 1; i >= 0; i--) {
+                                if (right.indexOf(_left[i]) > -1) {
+                                    _left.splice(i, 1);
+                                    i++;
+                                }
                             }
-                        }
-                        break;
+                            break;
+                        case TokenType.TILDE:
+                            for (const toggle of right) {
+                                console.log('to toggle', toggle, _left);
+                                const index = _left.indexOf(toggle);
+                                if (index > -1) {
+                                    console.log('removing', toggle, _left);
+                                    _left.splice(index, 1);
+                                } else {
+                                    console.log('pushing', toggle, _left);
+                                    _left.push(toggle);
+                                }
+                            }
+                            break;
+                    }
+
+                    /*
+                     We have to trigger a change manually here. Setting the variable on the scope with an array won't trigger
+                     it since we are modifying values inside of the array instance.
+                     */
+                    localScope.trigger(`change:${name}`);
                 }
-                /*
-                 We have to trigger a change manually here. Setting the variable on the scope with an array won't trigger
-                 it since we are modifying values inside of the array instance.
-                 */
-                localScope.trigger(`change:${name}`);
             } else if (Number.isFinite(left)) {
                 if (right !== null && !Number.isFinite(right))
                     right = parseFloat(`${right}`);
@@ -898,7 +915,8 @@ class ArithmeticAssignmentNode extends Node implements TreeNode {
             TokenType.ADD_ASSIGN,
             TokenType.SUBTRACT_ASSIGN,
             TokenType.MULTIPLY_ASSIGN,
-            TokenType.DIVIDE_ASSIGN
+            TokenType.DIVIDE_ASSIGN,
+            TokenType.TILDE,
         ].indexOf(tokens[0].type) > -1;
     }
 

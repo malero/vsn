@@ -78,8 +78,21 @@
 <span vsn-bind="show"></span>
 
 <h2>? Operator</h2>
-<p>Bind to window attributes.</p>
-<p>window.scrollY <span vsn-bind="?window.@scrollY"></span></p>
+<p>Add/remove class to list of elements on click.</p>
+<p>
+    <button vsn-on:click="?#list-add-remove-class-example li.@class += 'active'">Add</button> <button vsn-on:click="?#list-add-remove-class-example li.@class -= 'active'">Remove</button> <button vsn-on:click="?#list-add-remove-class-example li.@class ~ 'active'">Toggle</button>
+    <ul id="list-add-remove-class-example">
+        <li></li>
+        <li></li>
+        <li></li>
+        <li></li>
+        <li></li>
+        <li></li>
+    </ul>
+</p>
+
+<p>Bind to window attributes. </p>
+<p>window.scrollX,Y <span vsn-bind="?window.@scrollX"></span>, <span vsn-bind="?window.@scrollY"></span></p>
 
 <h2>Attribute Binding</h2>
 <a href="/index.html" id="link">Home</a>

@@ -4,11 +4,31 @@ import {Registry} from "./Registry";
 import {DOM} from "./DOM";
 
 export class ScopeReference {
+    private _scope: Scope;
+    private _key: string;
+    private _value: any;
+
     constructor(
-        public readonly scope: Scope,
-        public readonly key: string,
-        public readonly value: any
-    ) {}
+        scope: Scope = null,
+        key: string = null,
+        value: any = null
+    ) {
+        this._scope = scope;
+        this._key = key;
+        this._value = value;
+    }
+
+    public async getScope() {
+        return this._scope;
+    }
+
+    public async getKey() {
+        return this._key;
+    }
+
+    public async getValue() {
+        return this._value;
+    }
 }
 
 export class QueryReference extends ScopeReference {
@@ -16,16 +36,23 @@ export class QueryReference extends ScopeReference {
         public readonly path: string,
         public readonly scope: Scope
     ) {
-        super(scope, QueryReference.getKey(path), QueryReference.getValue(path));
+        super();
     }
 
-    public static getKey(path: string): string {
-        const parts: string[] = path.split('.');
+    public async getScope() {
+        let parts: string[] = this.path.split('.');
+        parts = parts.splice(0, parts.length - 1);
+        const qResult = await DOM.instance.eval(parts.join('.'));
+        return qResult.length === 1 ? qResult[0].scope : qResult.map((dobj) => dobj.scope);
+    }
+
+    public async getKey() {
+        const parts: string[] = this.path.split('.');
         return parts[parts.length - 1];
     }
 
-    public static getValue(path: string): any {
-        return DOM.instance.eval(path);
+    public async getValue() {
+        return await DOM.instance.eval(this.path);
     }
 }
 
@@ -204,9 +231,7 @@ export class Scope extends EventDispatcher {
         let val: any = null;
         let len: number = scopePath.length;
 
-        console.log('?', path);
         if (path.startsWith('?')) {
-            console.log('?? yes');
             return new QueryReference(path, scope);
         }
 

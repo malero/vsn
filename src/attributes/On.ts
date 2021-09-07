@@ -25,6 +25,7 @@ export abstract class On extends Attribute {
     }
 
     async handleEvent(e) {
+        console.log('handling event', e);
         await this.handler.evaluate(this.tag.scope, this.tag.dom);
     }
 

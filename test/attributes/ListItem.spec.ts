@@ -2,8 +2,8 @@ import "../../src/Types";
 import "../../src/attributes/_imports";
 import {DOM} from "../../src/DOM";
 import {ListItem} from "../../src/attributes/ListItem";
-import {List} from "../../types/attributes/List";
 import {Registry} from "../../src/Registry";
+import {List} from "../../src/attributes/List";
 
 @Registry.class('ListItemController')
 class ListItemController{

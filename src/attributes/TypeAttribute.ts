@@ -17,6 +17,6 @@ export class TypeAttribute extends Attribute {
             return;
         }
 
-        ref.scope.setType(ref.key, type);
+        (await ref.getScope()).setType(await ref.getKey(), type);
     }
 }

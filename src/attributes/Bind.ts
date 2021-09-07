@@ -33,7 +33,6 @@ export class Bind extends Attribute {
 
     public async extract() {
         let scopeKey: string = this.getAttributeValue();
-        console.log('scopeKey', scopeKey);
         let ref: ScopeReference;
         try {
             ref = this.tag.scope.getReference(scopeKey);
@@ -42,8 +41,8 @@ export class Bind extends Attribute {
             return;
         }
 
-        this.key = ref.key;
-        this.boundScope = ref.scope;
+        this.key = await ref.getKey();
+        this.boundScope = await ref.getScope();
 
         if (!!this.valueFromElement)
             this.updateFrom();
@@ -54,7 +53,6 @@ export class Bind extends Attribute {
     public async connect() {
         if (this.doUpdateTo) {
             this.updateTo();
-            console.log('binding to', this.boundScope, `change:${this.key}`);
             this.boundScope.bind(`change:${this.key}`, this.updateTo, this);
         }
         await super.connect();
