@@ -39,7 +39,6 @@ export class DOM extends EventDispatcher {
     }
 
     public async get(selector: string, create: boolean = false) {
-
         switch (selector) {
             case 'window':
                 return new TagList(this.window);
@@ -102,17 +101,21 @@ export class DOM extends EventDispatcher {
         // Create tags for each html element with a v-attribute
         const newTags: Tag[] = [];
         const toBuild: HTMLElement[] = [];
+        const toSkip: HTMLElement[] = [];
 
         if (VisionHelper.doBenchmark) benchmarkStart('DOM','findElements');
         if (ele && ele.querySelectorAll) {
             for (const element of (Array.from(ele.querySelectorAll(`*`)) as HTMLElement[])) { // Don't build items more than once
                 if (!ElementHelper.hasVisionAttribute(element)) continue;
+                if ((element.hasAttribute('vsn-template') && element.tagName === 'template') || toSkip.indexOf(element.parentElement) > -1) {
+                    toSkip.push(element);
+                    continue;
+                }
                 if (this.queued.indexOf(element) > -1) continue;
                 this.queued.push(element);
                 toBuild.push(element);
             }
         }
-
         if (VisionHelper.doBenchmark) benchmarkEnd('DOM', 'findElements');
 
         if (VisionHelper.doBenchmark) benchmarkStart('DOM', 'buildTags');

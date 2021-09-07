@@ -270,7 +270,11 @@ export class Tag extends DOMObject {
     }
 
     public getRawAttributeValue(key: string, fallback: any = null) {
-        return this.rawAttributes[key] && this.rawAttributes[key] || fallback;
+        return this.rawAttributes[key] ? this.rawAttributes[key] : fallback;
+    }
+
+    public hasRawAttribute(mod: string): boolean {
+        return this.getRawAttributeValue(mod, undefined) !== undefined;
     }
 
     public getParsedAttributeValue(key: string, index: number = 0, fallback: any = null) {

@@ -801,7 +801,6 @@ class ArithmeticAssignmentNode extends Node implements TreeNode {
     }
 
     async evaluate(scope: Scope, dom: DOM) {
-        console.log('eval');
         let scopes = [];
         const name: string = await this.left.name.evaluate(scope, dom);
 
@@ -812,101 +811,132 @@ class ArithmeticAssignmentNode extends Node implements TreeNode {
             } else {
                 scopes.push(inner);
             }
-        }
-        else if (this.left instanceof ElementAttributeNode)
+        } else if (this.left instanceof ElementAttributeNode) {
             scopes = await this.left.elementRef.evaluate(scope, dom);
-        else
+        } else
             scopes.push(scope);
 
         const values = [];
         for (let localScope of scopes) {
             if (localScope instanceof DOMObject) {
-                localScope = localScope.scope;
-            } else if (localScope['$wrapped'] && localScope['$scope'])
-                localScope = localScope['$scope'];
-
-            let left: number | Array<any> | string = await this.left.evaluate(localScope, dom);
-            let right: number | Array<any> | string = await this.right.evaluate(localScope, dom);
-
-            if (left instanceof Array) {
-                console.log('left', left, 'right', right);
-                for (let _left of left) {
-                    if (!(_left instanceof Array))
-                        _left = [_left];
-
-                    if (!(right instanceof Array))
-                        right = [right];
-
-                    switch (this.type) {
-                        case TokenType.ASSIGN:
-                            _left.splice(0, _left.length);
-                            _left.push(...right);
-                            break;
-                        case TokenType.ADD_ASSIGN:
-                            _left.push(...right);
-                            break;
-                        case TokenType.SUBTRACT_ASSIGN:
-                            for (let i = _left.length - 1; i >= 0; i--) {
-                                if (right.indexOf(_left[i]) > -1) {
-                                    _left.splice(i, 1);
-                                    i++;
-                                }
-                            }
-                            break;
-                        case TokenType.TILDE:
-                            for (const toggle of right) {
-                                console.log('to toggle', toggle, _left);
-                                const index = _left.indexOf(toggle);
-                                if (index > -1) {
-                                    console.log('removing', toggle, _left);
-                                    _left.splice(index, 1);
-                                } else {
-                                    console.log('pushing', toggle, _left);
-                                    _left.push(toggle);
-                                }
-                            }
-                            break;
-                    }
-
-                    /*
-                     We have to trigger a change manually here. Setting the variable on the scope with an array won't trigger
-                     it since we are modifying values inside of the array instance.
-                     */
-                    localScope.trigger(`change:${name}`);
-                }
-            } else if (Number.isFinite(left)) {
-                if (right !== null && !Number.isFinite(right))
-                    right = parseFloat(`${right}`);
-
-                left = left as number;
-                right = right as number;
-
-                switch (this.type) {
-                    case TokenType.ASSIGN:
-                        left = right;
-                        break;
-                    case TokenType.ADD_ASSIGN:
-                        left += right;
-                        break;
-                    case TokenType.SUBTRACT_ASSIGN:
-                        left -= right;
-                        break;
-                    case TokenType.MULTIPLY_ASSIGN:
-                        left *= right;
-                        break;
-                    case TokenType.DIVIDE_ASSIGN:
-                        left /= right;
-                        break;
-                }
-                localScope.set(name, left);
+                await this.handleDOMObject(name, dom, localScope);
             } else {
-                left = right;
-                localScope.set(name, left);
-            }
+                if (localScope['$wrapped'] && localScope['$scope'])
+                    localScope = localScope['$scope'];
 
-            values.push(left);
+                let left: number | Array<any> | string = await this.left.evaluate(localScope, dom);
+                let right: number | Array<any> | string = await this.right.evaluate(localScope, dom);
+
+                if (left instanceof Array) {
+                    left = this.handleArray(name, left, right, localScope);
+                } else if (Number.isFinite(left)) {
+                    left = this.handleNumber(name, left, right, localScope);
+                } else {
+                    left = this.handleString(name, left, right, localScope);
+                }
+
+                values.push(left);
+            }
         }
         return values.length > 1 ? values : values[0];
+    }
+
+    public handleNumber(key, left, right, scope) {
+        if (right !== null && !Number.isFinite(right))
+            right = parseFloat(`${right}`);
+
+        left = left as number;
+        right = right as number;
+
+        switch (this.type) {
+            case TokenType.ASSIGN:
+                left = right;
+                break;
+            case TokenType.ADD_ASSIGN:
+                left += right;
+                break;
+            case TokenType.SUBTRACT_ASSIGN:
+                left -= right;
+                break;
+            case TokenType.MULTIPLY_ASSIGN:
+                left *= right;
+                break;
+            case TokenType.DIVIDE_ASSIGN:
+                left /= right;
+                break;
+        }
+        scope.set(key, left);
+        return left;
+    }
+
+    public handleString(key, left, right, scope) {
+        switch (this.type) {
+            case TokenType.ASSIGN:
+                left = right;
+                break;
+            case TokenType.ADD_ASSIGN:
+                left = `${left}${right}`;
+                break;
+            case TokenType.SUBTRACT_ASSIGN:
+                left.replace(right, '');
+                break;
+            case TokenType.MULTIPLY_ASSIGN:
+                left *= right;
+                break;
+            case TokenType.DIVIDE_ASSIGN:
+                left /= right;
+                break;
+        }
+
+        scope.set(key, left);
+        return left;
+    }
+
+    public async handleDOMObject(key, dom, domObject) {
+        let left = domObject.scope.get(key);
+        let right: number | Array<any> | string = await this.right.evaluate(domObject, dom);
+        return this.handleArray(key, left, right, domObject.scope);
+    }
+
+    public handleArray(key, left, right, scope) {
+        if (!(right instanceof Array))
+            right = [right];
+
+        switch (this.type) {
+            case TokenType.ASSIGN:
+                left.splice(0, left.length);
+                left.push(...right);
+                break;
+            case TokenType.ADD_ASSIGN:
+                left.push(...right);
+                break;
+            case TokenType.SUBTRACT_ASSIGN:
+                for (let i = left.length - 1; i >= 0; i--) {
+                    if (right.indexOf(left[i]) > -1) {
+                        left.splice(i, 1);
+                        i++;
+                    }
+                }
+                break;
+            case TokenType.TILDE:
+                for (const toggle of right) {
+                    const index = left.indexOf(toggle);
+                    if (index > -1) {
+                        left.splice(index, 1);
+                    } else {
+                        left.push(toggle);
+                    }
+                }
+                break;
+        }
+
+        /*
+         We have to trigger a change manually here. Setting the variable on the scope with an array won't trigger
+         it since we are modifying values inside of the array instance.
+         */
+        scope.trigger(`change:${key}`);
+
+        return left;
     }
 
     public static match(tokens: Token[]): boolean {

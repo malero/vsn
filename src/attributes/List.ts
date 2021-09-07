@@ -4,6 +4,7 @@ import {WrappedArray} from "../Scope";
 import {Tree} from "../AST";
 import {ElementHelper} from "../helpers/ElementHelper";
 import {Registry} from "../Registry";
+import {DOM} from "../DOM";
 
 @Registry.attribute('vsn-list')
 export class List extends Attribute {
@@ -23,12 +24,23 @@ export class List extends Attribute {
     public async setup() {
         if (this.tag.element.children.length > 0) {
             const template = this.tag.element.children[0];
-            if (template.hasAttribute('vsn-template')) {
-                template.removeAttribute('vsn-template');
-                this.tag.element.removeChild(template);
-                this.template = template;
-            } else {
-                this.template = template.cloneNode(true);
+
+            if (template) {
+                if (template.hasAttribute('vsn-template')) {
+                    template.removeAttribute('vsn-template');
+                    this.tag.element.removeChild(template);
+                    this.template = template;
+                } else {
+                    this.template = template.cloneNode(true);
+                }
+            }
+        } else {
+            if (this.tag.hasRawAttribute('template')) {
+                let templateNode = await DOM.instance.eval(this.tag.getRawAttributeValue('template'));
+                if (templateNode instanceof Array && templateNode.length === 1)
+                    templateNode = templateNode[0];
+
+                this.template = templateNode.element.content.cloneNode(true);
             }
         }
     }
@@ -36,6 +48,13 @@ export class List extends Attribute {
     public async extract() {
         const items = await this.tree.evaluate(this.tag.scope, this.tag.dom);
         await this.addExistingItems(items);
+
+        if (this.tag.hasRawAttribute('initial-items')) {
+            const toAdd: number = parseInt(this.tag.getRawAttributeValue('initial-items'));
+            for (let i = 0; i < toAdd; i++) {
+                await this.add({});
+            }
+        }
     }
 
     protected async addExistingItems(defaultList: any[] | null) {
@@ -46,7 +65,6 @@ export class List extends Attribute {
             for (const existingItem of defaultList) {
                 await this.add(existingItem);
             }
-
 
         for (const element of Array.from(this.tag.element.querySelectorAll('*'))) {
             if (!ElementHelper.hasVisionAttribute(element, 'vsn-list-item'))
@@ -96,7 +114,14 @@ export class List extends Attribute {
     }
 
     protected async add(obj) {
-        const element: HTMLElement = this.template.cloneNode(true) as HTMLElement;
+        const clone = this.template.cloneNode(true);
+        let element: HTMLElement;
+        if (clone instanceof DocumentFragment) {
+            element = clone.children[0] as HTMLElement;
+        } else {
+            element = clone as HTMLElement;
+        }
+
         this.tag.element.appendChild(element);
 
         await this.tag.dom.buildFrom(this.tag.element);

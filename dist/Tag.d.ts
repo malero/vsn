@@ -65,6 +65,7 @@ export declare class Tag extends DOMObject {
     hasAttribute(attr: string): boolean;
     getAttribute<T = Attribute>(key: string): Promise<T>;
     getRawAttributeValue(key: string, fallback?: any): any;
+    hasRawAttribute(mod: string): boolean;
     getParsedAttributeValue(key: string, index?: number, fallback?: any): any;
     buildAttributes(): Promise<void>;
     compileAttributes(): Promise<void>;
