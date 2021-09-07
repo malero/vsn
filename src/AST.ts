@@ -114,7 +114,7 @@ const TOKEN_PATTERNS: TokenPattern[] = [
     },
     {
         type: TokenType.NOT,
-        pattern: /not\s/
+        pattern: /^not\s/
     },
     {
         type: TokenType.OF,
@@ -629,14 +629,19 @@ class InNode extends Node implements TreeNode {
     }
 
     public static match(tokens: Token[]): boolean {
+        if (tokens[0].type === TokenType.NOT)
+            console.log('match InNode with not', tokens[1].type);
         return tokens[0].type === TokenType.IN || (tokens[0].type === TokenType.NOT && tokens[1].type === TokenType.IN);
     }
 
     public static parse(lastNode, token, tokens: Token[]) {
         const flip: boolean = tokens[0].type === TokenType.NOT;
         if (flip)
-            tokens.splice(0, 1);
-        const containedTokens = Tree.getNextStatementTokens(tokens);
+            console.log('not?', TokenType.NOT === (tokens.splice(0, 1))[0].type); // consume not
+        console.log('in?', TokenType.IN === (tokens.splice(0, 1))[0].type); // consume in
+
+        const containedTokens = Tree.getNextStatementTokens(tokens, false, false, true);
+        console.warn('contained tokens', containedTokens);
         return new InNode(lastNode, Tree.processTokens(containedTokens), flip);
     }
 }
