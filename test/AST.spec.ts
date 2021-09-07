@@ -275,4 +275,13 @@ describe('Tree', () => {
         expect(scope.get('test').get('z')).toBe(2);
         expect(scope.get('test').get('x')).toBe(120);
     });
+    
+    it("should be able to check if item is in an array", async () => {
+        let tree: Tree = new Tree(`1 in [1,2,3]`);
+        const dom: DOM = new DOM(document, false);
+        await tree.evaluate(scope, dom);
+        expect(scope.get('test').get('y')).toBe(1);
+        expect(scope.get('test').get('z')).toBe(2);
+        expect(scope.get('test').get('x')).toBe(120);
+    });
 });

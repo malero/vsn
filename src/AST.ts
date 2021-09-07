@@ -31,6 +31,7 @@ export enum TokenType {
     TYPE_FLOAT,
     TYPE_STRING,
     RETURN,
+    NOT,
     OF,
     IN,
     FOR,
@@ -112,8 +113,16 @@ const TOKEN_PATTERNS: TokenPattern[] = [
         pattern: /^return\s/
     },
     {
+        type: TokenType.NOT,
+        pattern: /not\s/
+    },
+    {
         type: TokenType.OF,
         pattern: /^of\s/
+    },
+    {
+        type: TokenType.IN,
+        pattern: /^in\s/
     },
     {
         type: TokenType.FOR,
@@ -591,6 +600,44 @@ class NotNode extends Node implements TreeNode {
             ]);
         }
         return new NotNode(Tree.processTokens(containedTokens));
+    }
+}
+
+class InNode extends Node implements TreeNode {
+    constructor(
+        public readonly left: TreeNode,
+        public readonly right: TreeNode,
+        public readonly flip: boolean = false
+    ) {
+        super();
+    }
+
+    public async evaluate(scope: Scope, dom: DOM) {
+        const toCheck = await this.left.evaluate(scope, dom);
+        const array = await this.right.evaluate(scope, dom);
+        let inArray = array.indexOf(toCheck) > -1;
+        if (this.flip)
+            inArray = !inArray;
+        return inArray;
+    }
+
+    protected _getChildNodes(): Node[] {
+        return [
+            this.left as Node,
+            this.right as Node
+        ];
+    }
+
+    public static match(tokens: Token[]): boolean {
+        return tokens[0].type === TokenType.IN || (tokens[0].type === TokenType.NOT && tokens[1].type === TokenType.IN);
+    }
+
+    public static parse(lastNode, token, tokens: Token[]) {
+        const flip: boolean = tokens[0].type === TokenType.NOT;
+        if (flip)
+            tokens.splice(0, 1);
+        const containedTokens = Tree.getNextStatementTokens(tokens);
+        return new InNode(lastNode, Tree.processTokens(containedTokens), flip);
     }
 }
 
@@ -1338,6 +1385,8 @@ export class Tree {
                 }
                 node = null;
                 tokens.splice(0, 1);
+            } else if (InNode.match(tokens)) {
+                node = InNode.parse(node, token, tokens);
             } else if (ComparisonNode.match(tokens)) {
                 node = ComparisonNode.parse(node, token, tokens);
             } else if (ArithmeticNode.match(tokens)) {
