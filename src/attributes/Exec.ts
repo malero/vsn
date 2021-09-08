@@ -9,10 +9,10 @@ export class Exec extends Attribute {
 
     public async compile() {
         this.tree = new Tree(this.getAttributeValue());
-        await this.tree.prepare(this.tag.scope, this.tag.dom);
+        await this.tree.prepare(this.tag.scope, this.tag.dom, this.tag);
     }
 
     public async extract() {
-        await this.tree.evaluate(this.tag.scope, this.tag.dom);
+        await this.tree.evaluate(this.tag.scope, this.tag.dom, this.tag);
     }
 }

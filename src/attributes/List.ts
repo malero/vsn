@@ -18,7 +18,7 @@ export class List extends Attribute {
     public async compile() {
         const listAttr: string = this.getAttributeBinding();
         this.tree = new Tree(listAttr);
-        await this.tree.prepare(this.tag.scope, this.tag.dom);
+        await this.tree.prepare(this.tag.scope, this.tag.dom, this.tag);
     }
 
     public async setup() {
@@ -46,7 +46,7 @@ export class List extends Attribute {
     }
 
     public async extract() {
-        const items = await this.tree.evaluate(this.tag.scope, this.tag.dom);
+        const items = await this.tree.evaluate(this.tag.scope, this.tag.dom, this.tag);
         await this.addExistingItems(items);
 
         if (this.tag.hasRawAttribute('initial-items')) {

@@ -8,6 +8,7 @@ import {benchmarkEnd, benchmarkStart} from "./Bencmark";
 import {VisionHelper} from "./helpers/VisionHelper";
 import {WrappedWindow} from "./DOM/WrappedWindow";
 import {WrappedDocument} from "./DOM/WrappedDocument";
+import {Scope} from "./Scope";
 
 export class DOM extends EventDispatcher {
     protected static _instance: DOM;
@@ -18,6 +19,7 @@ export class DOM extends EventDispatcher {
     protected queued: HTMLElement[] = [];
     protected window: WrappedWindow;
     protected document: WrappedDocument;
+    public selected: Tag;
 
     constructor(
         protected rootElement: Document,
@@ -38,16 +40,21 @@ export class DOM extends EventDispatcher {
         Configuration.instance.bind('change', this.evaluate.bind(this));
     }
 
-    public async get(selector: string, create: boolean = false) {
+    public async get(selector: string, create: boolean = false, tag: Tag = null) {
         switch (selector) {
             case 'window':
                 return new TagList(this.window);
             case 'document':
                 return new TagList(this.document);
             default:
-                const nodes = this.querySelectorAll(selector);
-                return await this.getTagsForElement(Array.from(nodes) as Element[], create);
+                const nodes = this.querySelectorAll(selector, tag);
+                return await this.getTagsForElements(Array.from(nodes) as Element[], create);
         }
+    }
+
+    public async getFromTag(tag: Tag, selector: string, create: boolean = false) {
+        const nodes = this.querySelectorElement(tag.element, selector);
+        return await this.getTagsForElements(Array.from(nodes) as Element[], create);
     }
 
     public registerElementInRoot(tag: Tag): void {
@@ -56,8 +63,33 @@ export class DOM extends EventDispatcher {
             this.root.scope.set(`#${id}`, tag.scope);
     }
 
-    public querySelectorAll(q: string): NodeList {
-        return this.rootElement.querySelectorAll(q);
+    public querySelectorAll(q: string, tag: Tag = null): NodeList | HTMLElement[] {
+        const element: HTMLElement | Document = tag && !q.startsWith('#') ? tag.element : this.rootElement;
+        return this.querySelectorElement(element, q);
+    }
+
+    public querySelectorElement(element: HTMLElement | Document, q: string): NodeList | HTMLElement[] {
+        const parentIndex: number = q.indexOf(':parent');
+        if (parentIndex > -1) {
+            const _q = q.substring(0, parentIndex);
+            const rest = q.substring(parentIndex + 7);
+            if (_q.length > 0) {
+                const nodeList = [];
+                for (const _element of Array.from(this.querySelectorElement(element, _q))) {
+                    if (rest.length > 0) {
+                        nodeList.push(...Array.from(this.querySelectorElement(_element.parentElement, rest)));
+                    } else {
+                        nodeList.push(_element.parentElement);
+                    }
+                }
+                return nodeList;
+            } else if (rest.length === 0) {
+                return [element.parentElement];
+            } else {
+                return this.querySelectorElement(element.parentElement, rest);
+            }
+        }
+        return element.querySelectorAll(q);
     }
 
     public querySelector(q: string): Element {
@@ -199,7 +231,7 @@ export class DOM extends EventDispatcher {
         this.trigger('built');
     }
 
-    async getTagsForElement(elements: Element[], create: boolean = false) {
+    async getTagsForElements(elements: Element[], create: boolean = false) {
         const tags: TagList = new TagList();
         const found: Element[] = [];
         for (const tag of this.tags)
@@ -237,6 +269,15 @@ export class DOM extends EventDispatcher {
                 element.setAttribute('vsn-ref', '');
             await this.buildFrom(element.parentElement || element);
             return await this.getTagForElement(element, false);
+        }
+
+        return null;
+    }
+
+    async getTagForScope(scope: Scope) {
+        for (const tag of this.tags) {
+            if (tag.scope === scope)
+                return tag;
         }
 
         return null;

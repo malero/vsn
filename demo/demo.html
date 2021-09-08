@@ -76,10 +76,10 @@
 
 <template vsn-template id="query-operator-example-item">
     <li vsn-list-item>
-        <span vsn-if="'active' in ?parent.@class">active</span>
-        <span vsn-if:not="'active' in ?parent.@class">inactive</span>
-        <button vsn-on:click="?parent.@class += 'active'">+</button>
-        <button vsn-on:click="?parent.@class -= 'active'">-</button>
+        <span vsn-if="'active' in ?:parent.@class">active</span>
+        <span vsn-if:not="'active' not in ?:parent.@class">inactive</span>
+        <button vsn-on:click="?:parent.@class += 'active'">+</button>
+        <button vsn-on:click="?:parent.@class -= 'active'">-</button>
     </li>
 </template>
 
@@ -91,7 +91,7 @@
 <p>Add/remove class to list of elements on click.</p>
 <p>
     <button vsn-on:click="?#list-add-remove-class-example li.@class += 'active'">Add</button> <button vsn-on:click="?#list-add-remove-class-example li.@class -= 'active'">Remove</button> <button vsn-on:click="?#list-add-remove-class-example li.@class ~ 'active'">Toggle</button>
-    <ul id="list-add-remove-class-example" vsn-list initial-items="5" template="?#query-operator-example-item"></ul>
+    <ul id="list-add-remove-class-example" vsn-list initial-items="5" template="#query-operator-example-item"></ul>
 </p>
 
 <p>Bind to window attributes. </p>

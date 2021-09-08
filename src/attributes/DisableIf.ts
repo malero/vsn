@@ -6,7 +6,7 @@ export class DisableIf extends If {
     public static readonly canDefer: boolean = false;
 
     async onChange() {
-        const result: boolean = await this.tree.evaluate(this.tag.scope, this.tag.dom);
+        const result: boolean = await this.tree.evaluate(this.tag.scope, this.tag.dom, this.tag);
         if (result) {
             this.tag.element.setAttribute('disabled', 'disabled');
         } else {

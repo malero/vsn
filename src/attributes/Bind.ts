@@ -14,7 +14,7 @@ export class Bind extends Attribute {
 
     public async compile() {
         const tree: Tree = new Tree(this.getAttributeValue());
-        await tree.prepare(this.tag.scope, this.tag.dom);
+        await tree.prepare(this.tag.scope, this.tag.dom, this.tag);
         await super.compile();
     }
 

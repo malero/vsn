@@ -10,7 +10,7 @@ export class If extends Attribute {
     public async compile() {
         const statement: string = this.getAttributeValue();
         this.tree = new Tree(statement);
-        await this.tree.prepare(this.tag.scope, this.tag.dom);
+        await this.tree.prepare(this.tag.scope, this.tag.dom, this.tag);
     }
 
     public async extract() {
@@ -18,7 +18,7 @@ export class If extends Attribute {
     }
 
     public async connect() {
-        await this.tree.bindToScopeChanges(this.tag.scope, this.onChange.bind(this));
+        await this.tree.bindToScopeChanges(this.tag.scope, this.onChange.bind(this), this.tag.dom, this.tag);
     }
 
     public async evaluate() {
@@ -26,7 +26,7 @@ export class If extends Attribute {
     }
 
     async onChange() {
-        const result: boolean = await this.tree.evaluate(this.tag.scope, this.tag.dom);
+        const result: boolean = await this.tree.evaluate(this.tag.scope, this.tag.dom, this.tag);
         if (result) {
             this.tag.show();
         } else {

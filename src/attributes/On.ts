@@ -21,11 +21,11 @@ export abstract class On extends Attribute {
     public async compile() {
         const code: string = this.getAttributeValue();
         this.handler = new Tree(code);
-        await this.handler.prepare(this.tag.scope, this.tag.dom);
+        await this.handler.prepare(this.tag.scope, this.tag.dom, this.tag);
     }
 
     async handleEvent(e) {
-        await this.handler.evaluate(this.tag.scope, this.tag.dom);
+        await this.handler.evaluate(this.tag.scope, this.tag.dom, this.tag);
     }
 
     public async connect() {
