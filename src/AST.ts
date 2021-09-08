@@ -946,7 +946,10 @@ class ArithmeticAssignmentNode extends Node implements TreeNode {
     public async handleDOMObject(key: string, dom: DOM, domObject: DOMObject, tag: Tag) {
         let left = domObject.scope.get(key);
         let right: number | Array<any> | string = await this.right.evaluate(domObject.scope, dom, tag);
-        return this.handleArray(key, left, right, domObject.scope);
+        if (left instanceof Array)
+            return this.handleArray(key, left, right, domObject.scope);
+
+        return this.handleString(key, left, right, domObject.scope);
     }
 
     public handleArray(key, left, right, scope) {
@@ -1258,8 +1261,9 @@ export class Tree {
             let _scope: Scope = scope;
             if (node instanceof ScopeMemberNode)
                 _scope = await node.scope.evaluate(scope, dom);
-            else if (node instanceof ElementAttributeNode)
+            else if (node instanceof ElementAttributeNode) {
                 _scope = (await node.elementRef.evaluate(scope, dom, tag))[0].scope;
+            }
 
             const name = await node.name.evaluate(scope, dom, tag);
             _scope.bind(`change:${name}`, fnc);

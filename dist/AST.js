@@ -1168,7 +1168,9 @@ var ArithmeticAssignmentNode = /** @class */ (function (_super) {
                         return [4 /*yield*/, this.right.evaluate(domObject.scope, dom, tag)];
                     case 1:
                         right = _a.sent();
-                        return [2 /*return*/, this.handleArray(key, left, right, domObject.scope)];
+                        if (left instanceof Array)
+                            return [2 /*return*/, this.handleArray(key, left, right, domObject.scope)];
+                        return [2 /*return*/, this.handleString(key, left, right, domObject.scope)];
                 }
             });
         });
