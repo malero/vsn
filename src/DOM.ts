@@ -12,7 +12,7 @@ import {Scope} from "./Scope";
 
 export class DOM extends EventDispatcher {
     protected static _instance: DOM;
-    protected root: Tag;
+    protected _root: Tag;
     protected tags: Tag[];
     protected observer: MutationObserver;
     protected evaluateTimeout: any;
@@ -38,6 +38,10 @@ export class DOM extends EventDispatcher {
         }
         this.evaluate();
         Configuration.instance.bind('change', this.evaluate.bind(this));
+    }
+
+    public get root(): Tag {
+        return this._root;
     }
 
     public async get(selector: string, create: boolean = false, tag: Tag = null) {
@@ -161,7 +165,7 @@ export class DOM extends EventDispatcher {
         if (VisionHelper.doBenchmark) benchmarkEnd('DOM', 'buildTags');
 
         if (isRoot)
-            this.root = await this.getTagForElement(document.body);
+            this._root = await this.getTagForElement(document.body);
 
         // Configure, setup & execute attributes
         if (VisionHelper.doBenchmark) benchmarkStart('DOM','buildTagAttributes');

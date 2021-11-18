@@ -41,11 +41,11 @@ export class Tag extends DOMObject {
     };
 
     constructor(
-        public readonly element: HTMLElement,
+        element: HTMLElement,
         public readonly dom: DOM,
         ...props
     ) {
-        super(props);
+        super(element, props);
         this.rawAttributes = {};
         this.parsedAttributes = {};
         this.attributes = [];

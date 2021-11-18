@@ -258,6 +258,18 @@ describe('Tree', () => {
         }
     });
 
+    it("should be able parse an array of strings", async () => {
+        let tree: Tree = new Tree(`test = ["one","two","three"];`);
+        const dom: DOM = new DOM(document, false);
+        await tree.evaluate(scope, dom);
+
+        expect(scope.get('test').length).toBe(3);
+        const expected = ["one", "two", "three"];
+        for (let i = 0; i<=5; i++) {
+            expect(scope.get('test')[i]).toBe(expected[i]);
+        }
+    });
+
     it("should be able parse an object literal", async () => {
         let tree: Tree = new Tree(`test = {"x":0,"y":1,"z":2};`);
         const dom: DOM = new DOM(document, false);
@@ -274,6 +286,16 @@ describe('Tree', () => {
         expect(scope.get('test').get('y')).toBe(1);
         expect(scope.get('test').get('z')).toBe(2);
         expect(scope.get('test').get('x')).toBe(120);
+    });
+
+    it("should be able parse an object literal containing arrays", async () => {
+        let tree: Tree = new Tree(`test = {"test_1": ["test", "testing"], "test_2": ["foo", "bar"]}`);
+        const dom: DOM = new DOM(document, false);
+        await tree.evaluate(scope, dom);
+        expect(scope.get('test').get('test_1')[0]).toBe("test");
+        expect(scope.get('test').get('test_1')[1]).toBe("testing");
+        expect(scope.get('test').get('test_2')[0]).toBe("foo");
+        expect(scope.get('test').get('test_2')[1]).toBe("bar");
     });
     
     it("should be able to check if item is in an array", async () => {

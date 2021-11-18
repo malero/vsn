@@ -6,7 +6,10 @@ export abstract class DOMObject extends EventDispatcher {
     protected onEventHandlers: {[key:string]:any[]};
     protected _uniqueScope: boolean = false;
 
-    constructor(props) {
+    constructor(
+        public readonly element: HTMLElement,
+        props
+    ) {
         super();
     }
 
