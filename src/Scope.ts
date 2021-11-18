@@ -362,7 +362,7 @@ export class Scope extends EventDispatcher {
                 this.wrapped[field] = new WrappedArray(...toWrap[field]);
             }
 
-            if (typeof this.wrapped[field] == 'object' && this.wrapped[field].constructor == Object) {
+            if (typeof this.wrapped[field] == 'object' && this.wrapped[field] && this.wrapped[field].constructor === Object) {
                 const innerObject = new Scope(this);
                 innerObject.wrap(this.wrapped[field]);
                 this.wrapped[field] = innerObject;
