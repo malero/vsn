@@ -22,7 +22,8 @@ describe('JSONAttribute', () => {
             <script type="application/ld+json" vsn-json:test>
                 {
                     "testing": [1,2,3,"four"],
-                    "test": ["one","two","three",4]
+                    "test": ["one","two","three",4],
+                    "val": 111
                 }
             </script>
         `;
@@ -36,6 +37,7 @@ describe('JSONAttribute', () => {
             expect(dom.root.scope.get('test').get("test")[1]).toBe("two");
             expect(dom.root.scope.get('test').get("test")[2]).toBe("three");
             expect(dom.root.scope.get('test').get("test")[3]).toBe(4);
+            expect(dom.root.scope.get('test').get("val")).toBe(111);
             done();
         });
     });
