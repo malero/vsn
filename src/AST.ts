@@ -750,8 +750,14 @@ class ScopeMemberNode extends Node implements TreeNode {
 
         if (this.scope instanceof ElementQueryNode) {
             scopes = await this.scope.evaluate(scope, dom, tag);
-        } else
-            scopes.push(await this.scope.evaluate(scope, dom, tag));
+        } else {
+            const evalScope = await this.scope.evaluate(scope, dom, tag)
+            if (evalScope instanceof TagList) {
+                scopes = evalScope;
+            } else {
+                scopes.push(evalScope);
+            }
+        }
 
         for (let parent of scopes) {
             if (parent instanceof DOMObject)
@@ -1143,7 +1149,13 @@ class ObjectNode extends Node implements TreeNode {
             if (valueTokens[0].type !== TokenType.COLON)
                 throw Error('Invalid object literal syntax. Expecting :');
             valueTokens.splice(0, 1); // Consume :
-            const val: Token[] = Tree.getTokensUntil(valueTokens, TokenType.COMMA, true, false, true);
+            const val: Token[] = Tree.getTokensUntil(valueTokens, TokenType.COMMA, true, false, true, {
+                type: BlockType.STATEMENT,
+                open: null,
+                close: null,
+                openCharacter: null,
+                closeCharacter: null
+            });
             keys.push(Tree.processTokens(key));
             values.push(Tree.processTokens(val));
         }
@@ -1354,8 +1366,12 @@ export class Tree {
                 }
             } else if (tokens[0].type === TokenType.L_BRACE) {
                 node = ObjectNode.parse(node, token, tokens);
-            } else if (tokens[0].type === TokenType.ELEMENT_ATTRIBUTE && node instanceof ElementQueryNode) {
-                node = new ElementAttributeNode(node, tokens[0].value);
+            } else if (tokens[0].type === TokenType.ELEMENT_ATTRIBUTE) {
+                if (node instanceof ElementQueryNode) {
+                    node = new ElementAttributeNode(node, tokens[0].value);
+                } else {
+                    node = new ScopeMemberNode(node, new LiteralNode<string>(tokens[0].value.substr(1)));
+                }
                 tokens.splice(0, 1);
             } else if (node !== null && token.type === TokenType.PERIOD && tokens[1].type === TokenType.NAME) {
                 node = new ScopeMemberNode(
@@ -1525,9 +1541,9 @@ export class Tree {
         throw Error(`Invalid Syntax, missing ${blockInfo.closeCharacter}`);
     }
 
-    public static getTokensUntil(tokens: Token[], terminator: TokenType = TokenType.SEMI_COLON, consumeTerminator: boolean = true, includeTerminator: boolean = false, validIfTerminatorNotFound: boolean = false): Token[] {
+    public static getTokensUntil(tokens: Token[], terminator: TokenType = TokenType.SEMI_COLON, consumeTerminator: boolean = true, includeTerminator: boolean = false, validIfTerminatorNotFound: boolean = false, blockInfo: IBlockInfo = null): Token[] {
         const statementTokens: Token[] = [];
-        const blockInfo: IBlockInfo = Tree.getBlockInfo(tokens);
+        blockInfo = blockInfo || Tree.getBlockInfo(tokens);
 
         let openParens: number = 0;
         let openBraces: number = 0;
@@ -1558,13 +1574,14 @@ export class Tree {
                     openBraces -= 1;
                 } else if (openBrackets > 0 && token.type === TokenType.R_BRACKET) {
                     openBrackets -= 1;
-                } else if (openParens === 0 && openBraces === 0 && openBrackets === 0 && token.type === terminator) {
+                } else if (token.type === terminator && openParens === 0 && openBraces === 0 && openBrackets === 0) {
                     if (includeTerminator)
                         statementTokens.push(token);
 
                     if ((includeTerminator || consumeTerminator) && token.type !== TokenType.SEMI_COLON)
                         tokens.splice(0, 1); // Consume end of block
                     break;
+                } else if (token.type === terminator && (openParens > 0 || openBraces > 0 || openBrackets > 0)) {
                 } else {
                     if (validIfTerminatorNotFound)
                         break;

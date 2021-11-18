@@ -264,7 +264,7 @@ export class Scope extends EventDispatcher {
             return '';
         }
 
-        return this.data[key];
+        return value;
     }
 
     set(key: string, value: any) {
@@ -332,12 +332,6 @@ export class Scope extends EventDispatcher {
         this.parentScope = null;
     }
 
-    public setData(obj: {[key: string]: any}) {
-        for (const d in obj) {
-            this.set(d, obj[d]);
-        }
-    }
-
     public wrap(toWrap: any, triggerUpdates: boolean = false, updateFromWrapped: boolean = true) {
         if (toWrap instanceof Scope)
             toWrap = toWrap.data;
@@ -366,6 +360,12 @@ export class Scope extends EventDispatcher {
 
             if (this.wrapped[field] instanceof Array && !(this.wrapped[field] instanceof WrappedArray)) {
                 this.wrapped[field] = new WrappedArray(...toWrap[field]);
+            }
+
+            if (typeof this.wrapped[field] == 'object' && this.wrapped[field].constructor == Object) {
+                const innerObject = new Scope(this);
+                innerObject.wrap(this.wrapped[field]);
+                this.wrapped[field] = innerObject;
             }
 
             // Populate scope data from wrapped object before we update the getter

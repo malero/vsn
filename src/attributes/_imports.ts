@@ -7,6 +7,7 @@ import "./DisableIf";
 import "./Exec";
 import "./Format";
 import "./If";
+import "./JSONAttribute";
 import "./KeyDown";
 import "./KeyUp";
 import "./List";
