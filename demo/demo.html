@@ -83,6 +83,16 @@
     </li>
 </template>
 
+<h2>Radio</h2>
+<div vsn-name="radio">
+    <input type="text" vsn-bind="radio.radio_test" />
+    <input type="radio" value="1" name="radio.radio_test" vsn-radio />
+    <input type="radio" value="2" name="radio.radio_test" vsn-radio />
+    <input type="radio" value="3" name="radio.radio_test" vsn-radio />
+    <input type="radio" value="4" name="radio.radio_test" vsn-radio />
+    <input type="radio" value="5" name="radio.radio_test" vsn-radio />
+</div>
+
 <h2>On Click</h2>
 <button vsn-on:click="show = !show" vsn-set:show="false|boolean">Toggle</button>
 <span vsn-bind="show"></span>

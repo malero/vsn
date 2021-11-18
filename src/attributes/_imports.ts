@@ -16,6 +16,7 @@ import "./ListItemModel";
 import "./ModelAttribute";
 import "./Name";
 import "./On";
+import "./Radio";
 import "./Referenced";
 import "./RootAttribute";
 import "./ScopeAttribute";

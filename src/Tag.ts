@@ -177,6 +177,24 @@ export class Tag extends DOMObject {
         }
     }
 
+    set checked(value) {
+        if (this.isInput) {
+            if (value) {
+                this.element.setAttribute('checked', '');
+            } else {
+                this.element.removeAttribute('checked');
+            }
+        }
+    }
+
+    get checked(): boolean {
+        if (this.isInput) {
+            return this.element.getAttribute('checked') === 'checked';
+        } else {
+            return false;
+        }
+    }
+
     public addChild(tag: Tag) {
         this._children.push(tag);
     }
