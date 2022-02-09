@@ -8,7 +8,7 @@ export declare class DOM extends EventDispatcher {
     protected rootElement: Document;
     protected debug: boolean;
     protected static _instance: DOM;
-    protected root: Tag;
+    protected _root: Tag;
     protected tags: Tag[];
     protected observer: MutationObserver;
     protected evaluateTimeout: any;
@@ -17,6 +17,7 @@ export declare class DOM extends EventDispatcher {
     protected document: WrappedDocument;
     selected: Tag;
     constructor(rootElement: Document, build?: boolean, debug?: boolean);
+    get root(): Tag;
     get(selector: string, create?: boolean, tag?: Tag): Promise<TagList>;
     getFromTag(tag: Tag, selector: string, create?: boolean): Promise<TagList>;
     registerElementInRoot(tag: Tag): void;

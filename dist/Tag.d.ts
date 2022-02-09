@@ -14,7 +14,6 @@ export declare enum TagState {
     Built = 6
 }
 export declare class Tag extends DOMObject {
-    readonly element: HTMLElement;
     readonly dom: DOM;
     readonly rawAttributes: {
         [key: string]: string;
@@ -48,6 +47,8 @@ export declare class Tag extends DOMObject {
     get isInput(): boolean;
     set value(value: string);
     get value(): string;
+    set checked(value: boolean);
+    get checked(): boolean;
     addChild(tag: Tag): void;
     get children(): Tag[];
     get parentTag(): Tag;
