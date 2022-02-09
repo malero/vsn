@@ -79,6 +79,9 @@ export class WrappedArray<T> extends Array<T> {
         const num: number = super.push(...items);
 
         this.trigger('push', ...items);
+        this.trigger('change', {
+            'added': items
+        });
         for (const item of items) {
             this.trigger('add', item);
         }
@@ -88,6 +91,9 @@ export class WrappedArray<T> extends Array<T> {
     splice(start: number, deleteCount?: number): T[] {
         const removed: T[] = super.splice(start, deleteCount);
 
+        this.trigger('change', {
+            'removed': removed
+        });
         for (const item of removed) {
             this.trigger('remove', item);
         }
@@ -104,6 +110,10 @@ export class WrappedArray<T> extends Array<T> {
     }
 
     set length(num: number) {
+        this.setLength(num);
+    }
+
+    setLength(num: number) {
         let c: number = 0;
         const toRemove: T[] = [];
         for (const item of this) {
@@ -115,7 +125,6 @@ export class WrappedArray<T> extends Array<T> {
 
         for (const item of toRemove) {
             this.splice(this.indexOf(item), 1);
-            this.trigger('remove', item);
         }
     }
 
@@ -358,8 +367,13 @@ export class Scope extends EventDispatcher {
                 continue;
             }
 
-            if (this.wrapped[field] instanceof Array && !(this.wrapped[field] instanceof WrappedArray)) {
-                this.wrapped[field] = new WrappedArray(...toWrap[field]);
+            if (this.wrapped[field] instanceof Array) {
+                if (!(this.wrapped[field] instanceof WrappedArray)) {
+                    this.wrapped[field] = new WrappedArray(...toWrap[field]);
+                }
+                this.wrapped[field].bind('change', (...args) => {
+                    this.trigger(`change:${field}`, ...args);
+                })
             }
 
             if (typeof this.wrapped[field] == 'object' && this.wrapped[field] && this.wrapped[field].constructor === Object) {

@@ -40,4 +40,18 @@ describe('WrappedArray', () => {
         expect(removes).toBe(2);
         expect(a.length).toBe(1);
     });
+
+    it("should trigger change events", async () => {
+        const a = new WrappedArray();
+        let changes: number = 0;
+        a.bind('change', (e) => {
+             changes += 1;
+        });
+        a.push(1);
+        a.push(2);
+        a.push(3);
+        a.setLength(0);
+        expect(changes).toBe(6);
+        expect(a.length).toBe(0);
+    });
 });
