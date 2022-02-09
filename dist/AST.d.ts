@@ -153,7 +153,7 @@ export declare class Tree {
     static getBlockInfo(tokens: Token[]): IBlockInfo;
     static getNextStatementTokens(tokens: Token[], consumeClosingToken?: boolean, consumeOpeningToken?: boolean, includeClosingToken?: boolean): Token[];
     static getBlockTokens(tokens: Token[], groupBy?: TokenType | null): Token[][];
-    static getTokensUntil(tokens: Token[], terminator?: TokenType, consumeTerminator?: boolean, includeTerminator?: boolean, validIfTerminatorNotFound?: boolean): Token[];
+    static getTokensUntil(tokens: Token[], terminator?: TokenType, consumeTerminator?: boolean, includeTerminator?: boolean, validIfTerminatorNotFound?: boolean, blockInfo?: IBlockInfo): Token[];
     static consumeTypes(tokens: Token[], types: TokenType[]): Token[];
 }
 export {};

@@ -181,15 +181,17 @@ export class Tag extends DOMObject {
         if (this.isInput) {
             if (value) {
                 this.element.setAttribute('checked', '');
+                (this.element as HTMLInputElement).checked = true;
             } else {
                 this.element.removeAttribute('checked');
+                (this.element as HTMLInputElement).checked = false;
             }
         }
     }
 
     get checked(): boolean {
         if (this.isInput) {
-            return this.element.getAttribute('checked') === 'checked';
+            return (this.element as HTMLInputElement).checked;
         } else {
             return false;
         }
