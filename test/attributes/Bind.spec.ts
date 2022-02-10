@@ -18,6 +18,19 @@ describe('Bind', () => {
         });
     });
 
+    it("vsn-bind to work with inner text with @text", (done) => {
+        document.body.innerHTML = `
+            <span id="test" test="testing" vsn-bind="@test"></span>
+        `;
+        const dom = new DOM(document);
+        dom.once('built', async () => {
+            const tag = await dom.getTagForElement(document.getElementById('test'));
+            expect(tag).toBeTruthy();
+            expect(tag.scope.get('@test')).toBe('testing');
+            done();
+        });
+    });
+
     it("vsn-bind order of execution to be left to right and top to bottom", (done) => {
         document.body.innerHTML = `
             <span id="test" vsn-name="test" vsn-bind:id="test.id" vsn-bind="test.id">testing</span>
