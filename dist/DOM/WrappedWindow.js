@@ -25,7 +25,7 @@ var WrappedWindow = /** @class */ (function (_super) {
         for (var _i = 1; _i < arguments.length; _i++) {
             props[_i - 1] = arguments[_i];
         }
-        var _this = _super.call(this, props) || this;
+        var _this = _super.call(this, _window, props) || this;
         _this._window = _window;
         _this._scope = new Scope_1.Scope();
         _this.scope.set('@scrollY', _this._window.scrollY);

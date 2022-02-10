@@ -87,6 +87,13 @@ var DOM = /** @class */ (function (_super) {
         Configuration_1.Configuration.instance.bind('change', _this.evaluate.bind(_this));
         return _this;
     }
+    Object.defineProperty(DOM.prototype, "root", {
+        get: function () {
+            return this._root;
+        },
+        enumerable: false,
+        configurable: true
+    });
     DOM.prototype.get = function (selector, create, tag) {
         if (create === void 0) { create = false; }
         if (tag === void 0) { tag = null; }
@@ -286,7 +293,7 @@ var DOM = /** @class */ (function (_super) {
                         _e = this;
                         return [4 /*yield*/, this.getTagForElement(document.body)];
                     case 1:
-                        _e.root = _r.sent();
+                        _e._root = _r.sent();
                         _r.label = 2;
                     case 2:
                         // Configure, setup & execute attributes

@@ -19,8 +19,9 @@ exports.DOMObject = void 0;
 var simple_ts_event_dispatcher_1 = require("simple-ts-event-dispatcher");
 var DOMObject = /** @class */ (function (_super) {
     __extends(DOMObject, _super);
-    function DOMObject(props) {
+    function DOMObject(element, props) {
         var _this = _super.call(this) || this;
+        _this.element = element;
         _this._uniqueScope = false;
         return _this;
     }

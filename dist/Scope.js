@@ -171,6 +171,9 @@ var WrappedArray = /** @class */ (function (_super) {
         }
         var num = _super.prototype.push.apply(this, items);
         this.trigger.apply(this, __spreadArray(['push'], items));
+        this.trigger('change', {
+            'added': items
+        });
         for (var _a = 0, items_1 = items; _a < items_1.length; _a++) {
             var item = items_1[_a];
             this.trigger('add', item);
@@ -179,6 +182,9 @@ var WrappedArray = /** @class */ (function (_super) {
     };
     WrappedArray.prototype.splice = function (start, deleteCount) {
         var removed = _super.prototype.splice.call(this, start, deleteCount);
+        this.trigger('change', {
+            'removed': removed
+        });
         for (var _i = 0, removed_1 = removed; _i < removed_1.length; _i++) {
             var item = removed_1[_i];
             this.trigger('remove', item);
@@ -195,24 +201,26 @@ var WrappedArray = /** @class */ (function (_super) {
             return c;
         },
         set: function (num) {
-            var c = 0;
-            var toRemove = [];
-            for (var _i = 0, _a = this; _i < _a.length; _i++) {
-                var item = _a[_i];
-                c += 1;
-                if (c >= num) {
-                    toRemove.push(item);
-                }
-            }
-            for (var _b = 0, toRemove_1 = toRemove; _b < toRemove_1.length; _b++) {
-                var item = toRemove_1[_b];
-                this.splice(this.indexOf(item), 1);
-                this.trigger('remove', item);
-            }
+            this.setLength(num);
         },
         enumerable: false,
         configurable: true
     });
+    WrappedArray.prototype.setLength = function (num) {
+        var c = 0;
+        var toRemove = [];
+        for (var _i = 0, _a = this; _i < _a.length; _i++) {
+            var item = _a[_i];
+            c += 1;
+            if (c >= num) {
+                toRemove.push(item);
+            }
+        }
+        for (var _b = 0, toRemove_1 = toRemove; _b < toRemove_1.length; _b++) {
+            var item = toRemove_1[_b];
+            this.splice(this.indexOf(item), 1);
+        }
+    };
     WrappedArray.prototype.bind = function (event, fct, context, once) {
         once = once || false;
         this._lastKey++;
@@ -348,7 +356,7 @@ var Scope = /** @class */ (function (_super) {
                 return this.parentScope.get(key, searchParents);
             return '';
         }
-        return this.data[key];
+        return value;
     };
     Scope.prototype.set = function (key, value) {
         if (this.data[key] === undefined)
@@ -406,11 +414,6 @@ var Scope = /** @class */ (function (_super) {
         this.children.length = 0;
         this.parentScope = null;
     };
-    Scope.prototype.setData = function (obj) {
-        for (var d in obj) {
-            this.set(d, obj[d]);
-        }
-    };
     Scope.prototype.wrap = function (toWrap, triggerUpdates, updateFromWrapped) {
         var _this = this;
         if (triggerUpdates === void 0) { triggerUpdates = false; }
@@ -434,8 +437,22 @@ var Scope = /** @class */ (function (_super) {
                 this_1.set(field, this_1.wrapped[field]);
                 return "continue";
             }
-            if (this_1.wrapped[field] instanceof Array && !(this_1.wrapped[field] instanceof WrappedArray)) {
-                this_1.wrapped[field] = new (WrappedArray.bind.apply(WrappedArray, __spreadArray([void 0], toWrap[field])))();
+            if (this_1.wrapped[field] instanceof Array) {
+                if (!(this_1.wrapped[field] instanceof WrappedArray)) {
+                    this_1.wrapped[field] = new (WrappedArray.bind.apply(WrappedArray, __spreadArray([void 0], toWrap[field])))();
+                }
+                this_1.wrapped[field].bind('change', function () {
+                    var args = [];
+                    for (var _i = 0; _i < arguments.length; _i++) {
+                        args[_i] = arguments[_i];
+                    }
+                    _this.trigger.apply(_this, __spreadArray(["change:" + field], args));
+                });
+            }
+            if (typeof this_1.wrapped[field] == 'object' && this_1.wrapped[field] && this_1.wrapped[field].constructor === Object) {
+                var innerObject = new Scope(this_1);
+                innerObject.wrap(this_1.wrapped[field]);
+                this_1.wrapped[field] = innerObject;
             }
             // Populate scope data from wrapped object before we update the getter
             if (updateFromWrapped && [null, undefined].indexOf(this_1.wrapped[field]) === -1) {
