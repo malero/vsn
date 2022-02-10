@@ -61,7 +61,7 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
     }
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.vision = exports.Vision = void 0;
+exports.vision = exports.Scope = exports.WrappedArray = exports.DOM = exports.Vision = void 0;
 var DOM_1 = require("./DOM");
 var simple_ts_event_dispatcher_1 = require("simple-ts-event-dispatcher");
 var Scope_1 = require("./Scope");
@@ -69,7 +69,6 @@ var simple_ts_models_1 = require("simple-ts-models");
 var Registry_1 = require("./Registry");
 require("./Types");
 require("./Formats");
-require("./attributes/_imports");
 var Configuration_1 = require("./Configuration");
 var VisionHelper_1 = require("./helpers/VisionHelper");
 var AST_1 = require("./AST");
@@ -131,20 +130,7 @@ var Vision = /** @class */ (function (_super) {
                         _a.sent();
                         now = (new Date()).getTime();
                         setupTime = now - startTime;
-                        console.warn("Took " + setupTime + "ms to start up VisionJS");
-                        VisionHelper_1.VisionHelper.nice(function () {
-                            var javascriptIdle = window['epoch'] ? (new Date()).getTime() - window['epoch'] : -1;
-                            fetch('https://api.tabon.io/report-test/', {
-                                method: 'post',
-                                body: JSON.stringify({
-                                    tab: 'startuptime',
-                                    bootstrap: setupTime,
-                                    load: window['epoch'] && now - window['epoch'] || -1,
-                                    idle: javascriptIdle,
-                                    page: window.location.href
-                                })
-                            });
-                        }, 10);
+                        console.warn("Took " + setupTime + "ms to start up VisionJS. https://www.vsnjs.com/");
                         return [2 /*return*/];
                 }
             });
@@ -162,7 +148,14 @@ var Vision = /** @class */ (function (_super) {
     return Vision;
 }(simple_ts_event_dispatcher_1.EventDispatcher));
 exports.Vision = Vision;
+__exportStar(require("./attributes/_imports"), exports);
 __exportStar(require("./Registry"), exports);
 __exportStar(require("./Attribute"), exports);
+__exportStar(require("./AST"), exports);
+var DOM_2 = require("./DOM");
+Object.defineProperty(exports, "DOM", { enumerable: true, get: function () { return DOM_2.DOM; } });
+var Scope_2 = require("./Scope");
+Object.defineProperty(exports, "WrappedArray", { enumerable: true, get: function () { return Scope_2.WrappedArray; } });
+Object.defineProperty(exports, "Scope", { enumerable: true, get: function () { return Scope_2.Scope; } });
 exports.vision = Vision.instance;
 //# sourceMappingURL=Vision.js.map

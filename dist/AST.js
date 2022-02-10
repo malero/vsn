@@ -59,6 +59,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.Tree = exports.AttributableNodes = exports.BlockNode = exports.Node = exports.TokenType = exports.BlockType = void 0;
 var Scope_1 = require("./Scope");
 var DOMObject_1 = require("./DOM/DOMObject");
+var List_1 = require("./Tag/List");
 function lower(str) {
     return str ? str.toLowerCase() : null;
 }
@@ -187,7 +188,7 @@ var TOKEN_PATTERNS = [
     },
     {
         type: TokenType.ELEMENT_ATTRIBUTE,
-        pattern: /^\.@[_a-zA-Z0-9]*/
+        pattern: /^\.?@[_a-zA-Z0-9]*/
     },
     {
         type: TokenType.ELEMENT_REFERENCE,
@@ -195,7 +196,7 @@ var TOKEN_PATTERNS = [
     },
     {
         type: TokenType.ELEMENT_QUERY,
-        pattern: /^\?([#.\[\]:,=\-_a-zA-Z0-9*\s]*[\]_a-zA-Z0-9*])/
+        pattern: /^\?\(([#.\[\]:,=\-_a-zA-Z0-9*\s]*[\]_a-zA-Z0-9*])\)/
     },
     {
         type: TokenType.NAME,
@@ -894,42 +895,46 @@ var ScopeMemberNode = /** @class */ (function (_super) {
     ScopeMemberNode.prototype.evaluate = function (scope, dom, tag) {
         if (tag === void 0) { tag = null; }
         return __awaiter(this, void 0, void 0, function () {
-            var scopes, values, _a, _b, _i, scopes_1, parent_1, _c, _d, name_1, value;
-            return __generator(this, function (_e) {
-                switch (_e.label) {
+            var scopes, values, evalScope, _i, scopes_1, parent_1, _a, _b, name_1, value;
+            return __generator(this, function (_c) {
+                switch (_c.label) {
                     case 0:
                         scopes = [];
                         values = [];
                         if (!(this.scope instanceof ElementQueryNode)) return [3 /*break*/, 2];
                         return [4 /*yield*/, this.scope.evaluate(scope, dom, tag)];
                     case 1:
-                        scopes = _e.sent();
+                        scopes = _c.sent();
                         return [3 /*break*/, 4];
-                    case 2:
-                        _b = (_a = scopes).push;
-                        return [4 /*yield*/, this.scope.evaluate(scope, dom, tag)];
+                    case 2: return [4 /*yield*/, this.scope.evaluate(scope, dom, tag)];
                     case 3:
-                        _b.apply(_a, [_e.sent()]);
-                        _e.label = 4;
+                        evalScope = _c.sent();
+                        if (evalScope instanceof List_1.TagList) {
+                            scopes = evalScope;
+                        }
+                        else {
+                            scopes.push(evalScope);
+                        }
+                        _c.label = 4;
                     case 4:
                         _i = 0, scopes_1 = scopes;
-                        _e.label = 5;
+                        _c.label = 5;
                     case 5:
                         if (!(_i < scopes_1.length)) return [3 /*break*/, 10];
                         parent_1 = scopes_1[_i];
                         if (parent_1 instanceof DOMObject_1.DOMObject)
                             parent_1 = parent_1.scope;
                         if (!!parent_1) return [3 /*break*/, 7];
-                        _c = Error;
-                        _d = "Cannot access \"";
+                        _a = Error;
+                        _b = "Cannot access \"";
                         return [4 /*yield*/, this.name.evaluate(scope, dom, tag)];
-                    case 6: throw _c.apply(void 0, [_d + (_e.sent()) + "\" of undefined."]);
+                    case 6: throw _a.apply(void 0, [_b + (_c.sent()) + "\" of undefined."]);
                     case 7: return [4 /*yield*/, this.name.evaluate(scope, dom, tag)];
                     case 8:
-                        name_1 = _e.sent();
+                        name_1 = _c.sent();
                         value = parent_1.get(name_1, false);
                         values.push(value instanceof Scope_1.Scope && value.wrapped || value);
-                        _e.label = 9;
+                        _c.label = 9;
                     case 9:
                         _i++;
                         return [3 /*break*/, 5];
@@ -1064,7 +1069,7 @@ var ArithmeticAssignmentNode = /** @class */ (function (_super) {
                         }
                         return [3 /*break*/, 6];
                     case 3:
-                        if (!(this.left instanceof ElementAttributeNode)) return [3 /*break*/, 5];
+                        if (!(this.left instanceof ElementAttributeNode && this.left.elementRef)) return [3 /*break*/, 5];
                         return [4 /*yield*/, this.left.elementRef.evaluate(scope, dom, tag)];
                     case 4:
                         scopes = _a.sent();
@@ -1405,7 +1410,13 @@ var ObjectNode = /** @class */ (function (_super) {
             if (valueTokens[0].type !== TokenType.COLON)
                 throw Error('Invalid object literal syntax. Expecting :');
             valueTokens.splice(0, 1); // Consume :
-            var val = Tree.getTokensUntil(valueTokens, TokenType.COMMA, true, false, true);
+            var val = Tree.getTokensUntil(valueTokens, TokenType.COMMA, true, false, true, {
+                type: BlockType.STATEMENT,
+                open: null,
+                close: null,
+                openCharacter: null,
+                closeCharacter: null
+            });
             keys.push(Tree.processTokens(key));
             values.push(Tree.processTokens(val));
         }
@@ -1484,9 +1495,10 @@ var ElementAttributeNode = /** @class */ (function (_super) {
         configurable: true
     });
     ElementAttributeNode.prototype._getChildNodes = function () {
-        return [
-            this.elementRef
-        ];
+        var nodes = [];
+        if (this.elementRef)
+            nodes.push(this.elementRef);
+        return nodes;
     };
     Object.defineProperty(ElementAttributeNode.prototype, "attributeName", {
         get: function () {
@@ -1504,9 +1516,21 @@ var ElementAttributeNode = /** @class */ (function (_super) {
             var _this = this;
             return __generator(this, function (_a) {
                 switch (_a.label) {
-                    case 0: return [4 /*yield*/, this.elementRef.evaluate(scope, dom, tag)];
+                    case 0:
+                        if (!this.elementRef) return [3 /*break*/, 2];
+                        return [4 /*yield*/, this.elementRef.evaluate(scope, dom, tag)];
                     case 1:
                         tags = _a.sent();
+                        return [3 /*break*/, 3];
+                    case 2:
+                        if (tag) {
+                            tags = new List_1.TagList(tag);
+                        }
+                        else {
+                            return [2 /*return*/];
+                        }
+                        _a.label = 3;
+                    case 3:
                         if (tags.length === 1)
                             return [2 /*return*/, tags[0].scope.get("@" + this.attributeName)];
                         return [2 /*return*/, tags.map(function (tag) { return tag.scope.get("@" + _this.attributeName); })];
@@ -1517,10 +1541,12 @@ var ElementAttributeNode = /** @class */ (function (_super) {
     ElementAttributeNode.prototype.prepare = function (scope, dom, tag) {
         if (tag === void 0) { tag = null; }
         return __awaiter(this, void 0, void 0, function () {
-            var tags, _i, tags_1, tag_1;
+            var tags, _i, tags_1, t;
             return __generator(this, function (_a) {
                 switch (_a.label) {
-                    case 0: return [4 /*yield*/, this.elementRef.prepare(scope, dom, tag)];
+                    case 0:
+                        if (!this.elementRef) return [3 /*break*/, 7];
+                        return [4 /*yield*/, this.elementRef.prepare(scope, dom, tag)];
                     case 1:
                         _a.sent();
                         return [4 /*yield*/, this.elementRef.evaluate(scope, dom, tag)];
@@ -1530,15 +1556,22 @@ var ElementAttributeNode = /** @class */ (function (_super) {
                         _a.label = 3;
                     case 3:
                         if (!(_i < tags_1.length)) return [3 /*break*/, 6];
-                        tag_1 = tags_1[_i];
-                        return [4 /*yield*/, tag_1.watchAttribute(this.attributeName)];
+                        t = tags_1[_i];
+                        return [4 /*yield*/, t.watchAttribute(this.attributeName)];
                     case 4:
                         _a.sent();
                         _a.label = 5;
                     case 5:
                         _i++;
                         return [3 /*break*/, 3];
-                    case 6: return [2 /*return*/];
+                    case 6: return [3 /*break*/, 9];
+                    case 7:
+                        if (!tag) return [3 /*break*/, 9];
+                        return [4 /*yield*/, tag.watchAttribute(this.attributeName)];
+                    case 8:
+                        _a.sent();
+                        _a.label = 9;
+                    case 9: return [2 /*return*/];
                 }
             });
         });
@@ -1609,7 +1642,7 @@ var Tree = /** @class */ (function () {
                         _scope = _b.sent();
                         return [3 /*break*/, 5];
                     case 3:
-                        if (!(node instanceof ElementAttributeNode)) return [3 /*break*/, 5];
+                        if (!(node instanceof ElementAttributeNode && node.elementRef)) return [3 /*break*/, 5];
                         return [4 /*yield*/, node.elementRef.evaluate(scope, dom, tag)];
                     case 4:
                         _scope = (_b.sent())[0].scope;
@@ -1712,7 +1745,7 @@ var Tree = /** @class */ (function () {
             else if (tokens[0].type === TokenType.L_BRACE) {
                 node = ObjectNode.parse(node, token, tokens);
             }
-            else if (tokens[0].type === TokenType.ELEMENT_ATTRIBUTE && node instanceof ElementQueryNode) {
+            else if (tokens[0].type === TokenType.ELEMENT_ATTRIBUTE) {
                 node = new ElementAttributeNode(node, tokens[0].value);
                 tokens.splice(0, 1);
             }
@@ -1884,13 +1917,14 @@ var Tree = /** @class */ (function () {
         }
         throw Error("Invalid Syntax, missing " + blockInfo.closeCharacter);
     };
-    Tree.getTokensUntil = function (tokens, terminator, consumeTerminator, includeTerminator, validIfTerminatorNotFound) {
+    Tree.getTokensUntil = function (tokens, terminator, consumeTerminator, includeTerminator, validIfTerminatorNotFound, blockInfo) {
         if (terminator === void 0) { terminator = TokenType.SEMI_COLON; }
         if (consumeTerminator === void 0) { consumeTerminator = true; }
         if (includeTerminator === void 0) { includeTerminator = false; }
         if (validIfTerminatorNotFound === void 0) { validIfTerminatorNotFound = false; }
+        if (blockInfo === void 0) { blockInfo = null; }
         var statementTokens = [];
-        var blockInfo = Tree.getBlockInfo(tokens);
+        blockInfo = blockInfo || Tree.getBlockInfo(tokens);
         var openParens = 0;
         var openBraces = 0;
         var openBrackets = 0;
@@ -1919,12 +1953,14 @@ var Tree = /** @class */ (function () {
                 else if (openBrackets > 0 && token.type === TokenType.R_BRACKET) {
                     openBrackets -= 1;
                 }
-                else if (openParens === 0 && openBraces === 0 && openBrackets === 0 && token.type === terminator) {
+                else if (token.type === terminator && openParens === 0 && openBraces === 0 && openBrackets === 0) {
                     if (includeTerminator)
                         statementTokens.push(token);
                     if ((includeTerminator || consumeTerminator) && token.type !== TokenType.SEMI_COLON)
                         tokens.splice(0, 1); // Consume end of block
                     break;
+                }
+                else if (token.type === terminator && (openParens > 0 || openBraces > 0 || openBrackets > 0)) {
                 }
                 else {
                     if (validIfTerminatorNotFound)

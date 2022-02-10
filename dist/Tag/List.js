@@ -20,8 +20,63 @@ var VisionHelper_1 = require("../helpers/VisionHelper");
 var TagList = /** @class */ (function (_super) {
     __extends(TagList, _super);
     function TagList() {
-        return _super !== null && _super.apply(this, arguments) || this;
+        var items = [];
+        for (var _i = 0; _i < arguments.length; _i++) {
+            items[_i] = arguments[_i];
+        }
+        var _this = _super.apply(this, items) || this;
+        Object.setPrototypeOf(_this, TagList.prototype);
+        return _this;
     }
+    Object.defineProperty(TagList.prototype, "scope", {
+        get: function () {
+            return this[0].scope;
+        },
+        enumerable: false,
+        configurable: true
+    });
+    TagList.prototype.on = function (event, cbOrSelector, cb) {
+        if (typeof cbOrSelector === "function") {
+            this.forEach(function (e) { return e.element.addEventListener(event, cbOrSelector); });
+        }
+        else {
+            this.forEach(function (elem) {
+                elem.element.addEventListener(event, function (e) {
+                    if (e.target.matches(cbOrSelector))
+                        cb(e);
+                });
+            });
+        }
+        return this;
+    };
+    Object.defineProperty(TagList.prototype, "elements", {
+        get: function () {
+            return this.map(function (e) { return e.element; });
+        },
+        enumerable: false,
+        configurable: true
+    });
+    TagList.prototype.next = function () {
+        return this.map(function (e) { return e.element.nextElementSibling; }).filter(function (e) { return e != null; });
+    };
+    TagList.prototype.prev = function () {
+        return this.map(function (e) { return e.element.previousElementSibling; }).filter(function (e) { return e != null; });
+    };
+    TagList.prototype.removeClass = function (className) {
+        this.forEach(function (e) { return e.element.classList.remove(className); });
+        return this;
+    };
+    TagList.prototype.addClass = function (className) {
+        this.forEach(function (e) { return e.element.classList.add(className); });
+        return this;
+    };
+    TagList.prototype.css = function (property, value) {
+        var camelProp = property.replace(/(-[a-z])/, function (g) {
+            return g.replace("-", "").toUpperCase();
+        });
+        this.forEach(function (e) { return (e.element.style[camelProp] = value); });
+        return this;
+    };
     return TagList;
 }(Array));
 exports.TagList = TagList;

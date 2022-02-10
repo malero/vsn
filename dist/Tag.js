@@ -82,8 +82,7 @@ var Tag = /** @class */ (function (_super) {
         for (var _i = 2; _i < arguments.length; _i++) {
             props[_i - 2] = arguments[_i];
         }
-        var _this = _super.call(this, props) || this;
-        _this.element = element;
+        var _this = _super.call(this, element, props) || this;
         _this.dom = dom;
         _this.deferredAttributes = [];
         _this._nonDeferredAttributes = [];
@@ -256,6 +255,30 @@ var Tag = /** @class */ (function (_super) {
             }
             else {
                 this.element.innerText = value;
+            }
+        },
+        enumerable: false,
+        configurable: true
+    });
+    Object.defineProperty(Tag.prototype, "checked", {
+        get: function () {
+            if (this.isInput) {
+                return this.element.checked;
+            }
+            else {
+                return false;
+            }
+        },
+        set: function (value) {
+            if (this.isInput) {
+                if (value) {
+                    this.element.setAttribute('checked', '');
+                    this.element.checked = true;
+                }
+                else {
+                    this.element.removeAttribute('checked');
+                    this.element.checked = false;
+                }
             }
         },
         enumerable: false,

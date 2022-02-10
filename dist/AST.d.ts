@@ -117,10 +117,10 @@ declare class ElementQueryNode extends Node implements TreeNode {
     prepare(scope: Scope, dom: DOM, tag?: Tag): Promise<void>;
 }
 declare class ElementAttributeNode extends Node implements TreeNode {
-    readonly elementRef: ElementQueryNode;
+    readonly elementRef: ElementQueryNode | null;
     readonly attr: string;
     protected requiresPrep: boolean;
-    constructor(elementRef: ElementQueryNode, attr: string);
+    constructor(elementRef: ElementQueryNode | null, attr: string);
     get name(): LiteralNode<string>;
     protected _getChildNodes(): Node[];
     get attributeName(): string;

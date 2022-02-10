@@ -24,7 +24,7 @@ var WrappedDocument = /** @class */ (function (_super) {
         for (var _i = 1; _i < arguments.length; _i++) {
             props[_i - 1] = arguments[_i];
         }
-        var _this = _super.call(this, props) || this;
+        var _this = _super.call(this, _document, props) || this;
         _this._document = _document;
         return _this;
     }

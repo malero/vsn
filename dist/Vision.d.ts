@@ -3,7 +3,6 @@ import { EventDispatcher } from "simple-ts-event-dispatcher";
 import { Registry } from "./Registry";
 import "./Types";
 import "./Formats";
-import "./attributes/_imports";
 import { Configuration } from "./Configuration";
 export declare class Vision extends EventDispatcher {
     protected static _instance: Vision;
@@ -16,6 +15,10 @@ export declare class Vision extends EventDispatcher {
     setup(): Promise<void>;
     static get instance(): Vision;
 }
+export * from "./attributes/_imports";
 export * from './Registry';
 export * from './Attribute';
+export * from './AST';
+export { DOM } from './DOM';
+export { WrappedArray, Scope } from './Scope';
 export declare const vision: Vision;
