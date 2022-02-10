@@ -143,7 +143,7 @@ const TOKEN_PATTERNS: TokenPattern[] = [
     },
     {
         type: TokenType.ELEMENT_ATTRIBUTE,
-        pattern: /^\.@[_a-zA-Z0-9]*/
+        pattern: /^\.?@[_a-zA-Z0-9]*/
     },
     {
         type: TokenType.ELEMENT_REFERENCE,
@@ -151,7 +151,7 @@ const TOKEN_PATTERNS: TokenPattern[] = [
     },
     {
         type: TokenType.ELEMENT_QUERY,
-        pattern: /^\?([#.\[\]:,=\-_a-zA-Z0-9*\s]*[\]_a-zA-Z0-9*])/
+        pattern: /^\?\(([#.\[\]:,=\-_a-zA-Z0-9*\s]*[\]_a-zA-Z0-9*])\)/
     },
     {
         type: TokenType.NAME,
@@ -868,7 +868,7 @@ class ArithmeticAssignmentNode extends Node implements TreeNode {
             } else {
                 scopes.push(inner);
             }
-        } else if (this.left instanceof ElementAttributeNode) {
+        } else if (this.left instanceof ElementAttributeNode && this.left.elementRef) {
             scopes = await this.left.elementRef.evaluate(scope, dom, tag);
         } else
             scopes.push(scope);
@@ -1187,7 +1187,7 @@ class ElementAttributeNode extends Node implements TreeNode {
     protected requiresPrep: boolean = true;
 
     constructor(
-        public readonly elementRef: ElementQueryNode,
+        public readonly elementRef: ElementQueryNode | null,
         public readonly attr: string
     ) {
         super();
@@ -1198,9 +1198,10 @@ class ElementAttributeNode extends Node implements TreeNode {
     }
 
     protected _getChildNodes(): Node[] {
-        return [
-            this.elementRef
-        ]
+        let nodes = [];
+        if (this.elementRef)
+            nodes.push(this.elementRef)
+        return nodes;
     }
 
     get attributeName(): string {
@@ -1210,17 +1211,30 @@ class ElementAttributeNode extends Node implements TreeNode {
     }
 
     async evaluate(scope: Scope, dom: DOM, tag: Tag = null) {
-        const tags: TagList = await this.elementRef.evaluate(scope, dom, tag);
+        let tags: TagList;
+        if (this.elementRef) {
+            tags = await this.elementRef.evaluate(scope, dom, tag);
+        } else if (tag) {
+            tags = new TagList(tag)
+        } else {
+            return;
+        }
+
         if (tags.length === 1)
             return tags[0].scope.get(`@${this.attributeName}`);
+
         return tags.map((tag) => tag.scope.get(`@${this.attributeName}`));
     }
 
     async prepare(scope: Scope, dom: DOM, tag: Tag = null) {
-        await this.elementRef.prepare(scope, dom, tag);
-        const tags: TagList = await this.elementRef.evaluate(scope, dom, tag);
-        for (const tag of tags)
+        if (this.elementRef) {
+            await this.elementRef.prepare(scope, dom, tag);
+            const tags: TagList = await this.elementRef.evaluate(scope, dom, tag);
+            for (const t of tags)
+                await t.watchAttribute(this.attributeName);
+        } else if(tag) {
             await tag.watchAttribute(this.attributeName);
+        }
     }
 }
 
@@ -1273,7 +1287,7 @@ export class Tree {
             let _scope: Scope = scope;
             if (node instanceof ScopeMemberNode)
                 _scope = await node.scope.evaluate(scope, dom);
-            else if (node instanceof ElementAttributeNode) {
+            else if (node instanceof ElementAttributeNode && node.elementRef) {
                 _scope = (await node.elementRef.evaluate(scope, dom, tag))[0].scope;
             }
 
@@ -1367,11 +1381,7 @@ export class Tree {
             } else if (tokens[0].type === TokenType.L_BRACE) {
                 node = ObjectNode.parse(node, token, tokens);
             } else if (tokens[0].type === TokenType.ELEMENT_ATTRIBUTE) {
-                if (node instanceof ElementQueryNode) {
-                    node = new ElementAttributeNode(node, tokens[0].value);
-                } else {
-                    node = new ScopeMemberNode(node, new LiteralNode<string>(tokens[0].value.substr(1)));
-                }
+                node = new ElementAttributeNode(node as any, tokens[0].value);
                 tokens.splice(0, 1);
             } else if (node !== null && token.type === TokenType.PERIOD && tokens[1].type === TokenType.NAME) {
                 node = new ScopeMemberNode(
