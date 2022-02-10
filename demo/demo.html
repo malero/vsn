@@ -76,10 +76,10 @@
 
 <template vsn-template id="query-operator-example-item">
     <li vsn-list-item>
-        <span vsn-if="'active' in ?:parent.@class">active</span>
-        <span vsn-if:not="'active' not in ?:parent.@class">inactive</span>
-        <button vsn-on:click="?:parent.@class += 'active'">+</button>
-        <button vsn-on:click="?:parent.@class -= 'active'">-</button>
+        <span vsn-if="'active' in ?(:parent).@class">active</span>
+        <span vsn-if:not="'active' not in ?(:parent).@class">inactive</span>
+        <button vsn-on:click="?(:parent).@class += 'active'">+</button>
+        <button vsn-on:click="?(:parent).@class -= 'active'">-</button>
     </li>
 </template>
 
@@ -97,18 +97,26 @@
 <button vsn-on:click="show = !show" vsn-set:show="false|boolean">Toggle</button>
 <span vsn-bind="show"></span>
 
+<button vsn-on:click="@text='Clicked'" id="ttt">Click Me</button>
+
 <h2>? Operator</h2>
 <p>Add/remove class to list of elements on click.</p>
 <p>
-    <button vsn-on:click="?#list-add-remove-class-example li.@class += 'active'">Add</button> <button vsn-on:click="?#list-add-remove-class-example li.@class -= 'active'">Remove</button> <button vsn-on:click="?#list-add-remove-class-example li.@class ~ 'active'">Toggle</button>
+    <button vsn-on:click="?(#list-add-remove-class-example li).@class += 'active'">Add</button> <button vsn-on:click="?(#list-add-remove-class-example li).@class -= 'active'">Remove</button> <button vsn-on:click="?(#list-add-remove-class-example li).@class ~ 'active'">Toggle</button>
     <ul id="list-add-remove-class-example" vsn-list initial-items="5" template="#query-operator-example-item"></ul>
 </p>
 
+<h2>@ Operator</h2>
+<p></p>
+<p>
+    <input type="text" value="testing" id="at-attribute" /> <input type="button" vsn-on:click="?(#at-attribute).@type = 'password'" value="Button" /> <input type="button" vsn-on:click="?(#at-attribute).@type = 'text'" value="Button" />
+</p>
+
 <p>Bind to window attributes. </p>
-<p>window.scrollX,Y <span vsn-bind="?window.@scrollX"></span>, <span vsn-bind="?window.@scrollY"></span></p>
+<p>window.scrollX,Y <span vsn-bind="?(window).@scrollX"></span>, <span vsn-bind="?(window).@scrollY"></span></p>
 
 <h2>Attribute Binding</h2>
-<a href="/index.html" id="link">Home</a>
+<a href="/index.html" id="link" vsn-name="link_test">Home</a>
 <input type="text" vsn-bind="#link.@text"/>
 <input type="text" vsn-bind="#link.@href"/>
 
