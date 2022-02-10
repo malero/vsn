@@ -1,11 +1,10 @@
 import {DOM} from "./DOM";
 import {EventDispatcher} from "simple-ts-event-dispatcher";
-import {Scope, WrappedArray} from "./Scope";
+import {WrappedArray} from "./Scope";
 import {DataModel} from "simple-ts-models";
 import {Registry} from "./Registry";
 import "./Types";
 import "./Formats";
-import "./attributes/_imports";
 import {Configuration} from "./Configuration";
 import {VisionHelper} from "./helpers/VisionHelper";
 import {Tree} from "./AST";
@@ -57,7 +56,7 @@ export class Vision extends EventDispatcher {
         await this._dom.buildFrom(document, true);
         const now = (new Date()).getTime();
         const setupTime = now - startTime;
-        console.warn(`Took ${setupTime}ms to start up VisionJS`);
+        console.warn(`Took ${setupTime}ms to start up VisionJS. https://www.vsnjs.com/`);
     }
 
     public static get instance() {
@@ -68,6 +67,10 @@ export class Vision extends EventDispatcher {
     }
 }
 
+export * from "./attributes/_imports";
 export * from './Registry';
 export * from './Attribute';
+export * from './AST';
+export {DOM} from './DOM';
+export {WrappedArray, Scope} from './Scope';
 export const vision: Vision = Vision.instance;
