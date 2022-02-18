@@ -475,7 +475,6 @@ class IfStatementNode extends Node implements TreeNode {
 
     public async evaluate(scope: Scope, dom: DOM, tag: Tag = null) {
         for (const condition of this.nodes) {
-            console.log('if statement', condition.condition);
             const uno: boolean = await condition.evaluate(scope, dom, tag);
             if (uno) {
                 return await condition.block.evaluate(scope, dom, tag);
@@ -760,7 +759,6 @@ class ScopeMemberNode extends Node implements TreeNode {
                 scopes = evalScope;
             } else {
                 scopes.push(evalScope);
-                console.log('evalscope', evalScope);
             }
         }
 
@@ -796,7 +794,6 @@ class RootScopeMemberNode<T = any> extends Node implements TreeNode {
     async evaluate(scope: Scope, dom: DOM, tag: Tag = null) {
         const name = await this.name.evaluate(scope, dom, tag);
         const value = scope.get(name);
-        console.log('RSMN value', scope, name, value);
         return value instanceof Scope && value.wrapped || value;
     }
 }
