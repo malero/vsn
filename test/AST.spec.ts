@@ -1,5 +1,5 @@
 import {Promise as SimplePromise, IDeferred} from 'simple-ts-promise';
-import {Scope} from "../src/Scope";
+import {Scope, WrappedArray} from "../src/Scope";
 import {Tree} from "../src/AST";
 import {DOM} from "../src/DOM";
 
@@ -144,20 +144,44 @@ describe('Tree', () => {
         expect(await tree.evaluate(scope, dom)).toBe(true);
         // Multiple if statements
         tree = new Tree(`
-            poop = 15;
-            if (poop > 5) {
-                poop = 3;
+            foo = 15;
+            if (foo > 5) {
+                foo = 3;
             } else if (true) {
-                poop = 5;
+                foo = 5;
             } else {
-                poop = false;
+                foo = false;
             }
-            if (poop == 3) {
-                poop = 5;
+            if (foo == 3) {
+                foo = 5;
             }`);
         await tree.evaluate(scope, dom);
-        expect(scope.get('poop')).toBe(5);
-        console.log('=========================');
+        expect(scope.get('foo')).toBe(5);
+
+        // Array literals should be instantiaed as WrappedArray
+        tree = new Tree(`[123,456];`);
+        expect((await tree.evaluate(scope, dom)) instanceof WrappedArray).toBe(true);
+
+        // Array if statement and length test
+        tree = new Tree(`
+            foo1 = [1234,5678,9101112];
+            bar1 = [];
+            fooLength = foo1.length;
+            fooTest = false;
+            barTest = false;
+            
+            if (foo1) {
+                fooTest = true;
+            }
+            
+            if (bar1) {
+                barTest = true;
+            }
+        `);
+        await tree.evaluate(scope, dom);
+        expect(scope.get('fooTest')).toBe(true);
+        expect(scope.get('barTest')).toBe(false);
+        expect(scope.get('fooLength')).toBe(3);
     });
 
     it("should be able to assign variables properly", async () => {
@@ -203,11 +227,16 @@ describe('Tree', () => {
         const dom: DOM = new DOM(document, false);
         await tree.evaluate(scope, dom);
         const something = scope.get('something');
-        expect(something).toEqual([5,6,10]);
+        expect(something.length).toEqual(3);
+        expect(something[0]).toEqual(5);
+        expect(something[1]).toEqual(6);
+        expect(something[2]).toEqual(10);
 
         tree = new Tree(`something -= 5;`);
         await tree.evaluate(scope, dom);
-        expect(something).toEqual([6,10]);
+        expect(something.length).toEqual(2);
+        expect(something[0]).toEqual(6);
+        expect(something[1]).toEqual(10);
     });
 
     it("should be able to block properly with promises", async () => {
