@@ -101,6 +101,13 @@ export class WrappedArray<T> extends Array<T> {
         return removed;
     }
 
+    get(key: string) {
+        const keys: string[] = [
+            'length'
+        ];
+        return keys.indexOf(key) > -1 ? this[key] : undefined;
+    }
+
     get length(): number {
         let c: number = 0;
         for (const item of this) {
