@@ -30,6 +30,7 @@ export declare class WrappedArray<T> extends Array<T> {
     constructor(...items: T[]);
     push(...items: T[]): number;
     splice(start: number, deleteCount?: number): T[];
+    get(key: string): any;
     get length(): number;
     set length(num: number);
     setLength(num: number): void;
