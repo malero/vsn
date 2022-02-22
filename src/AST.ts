@@ -127,19 +127,19 @@ const TOKEN_PATTERNS: TokenPattern[] = [
     },
     {
         type: TokenType.FOR,
-        pattern: /^for\s/
+        pattern: /^for\s?(?=\()/
     },
     {
         type: TokenType.IF,
-        pattern: /^if\s/
+        pattern: /^if\s?(?=\()/
     },
     {
         type: TokenType.ELSE_IF,
-        pattern: /^else if\s/
+        pattern: /^else if\s?(?=\()/
     },
     {
         type: TokenType.ELSE,
-        pattern: /^else\s/
+        pattern: /^else\s?(?=\{)/
     },
     {
         type: TokenType.ELEMENT_ATTRIBUTE,
