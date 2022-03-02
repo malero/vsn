@@ -23,5 +23,6 @@ export {ScopeAttribute} from "./ScopeAttribute";
 export {ScopeChange} from "./ScopeChange";
 export {SetAttribute} from "./SetAttribute";
 export {StandardAttribute} from "./StandardAttribute";
+export {StyleAttribute} from "./StyleAttribute";
 export {Template} from "./Template";
 export {TypeAttribute} from "./TypeAttribute";

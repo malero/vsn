@@ -8,6 +8,8 @@ import {On} from "./attributes/On";
 import {Registry} from "./Registry";
 import {benchmarkEnd, benchmarkStart} from "./Bencmark";
 import {DOMObject} from "./DOM/DOMObject";
+import { Tree } from "./AST";
+import {StyleAttribute} from "./attributes/StyleAttribute";
 
 export enum TagState {
     Instantiated,
@@ -102,6 +104,12 @@ export class Tag extends DOMObject {
                 this.parsedAttributes[a.name] = [null, a.value];
             }
         }
+    }
+
+    public async eval(code: string) {
+        const tree = new Tree(code);
+        await tree.prepare(this.scope, this.dom, this);
+        return await tree.evaluate(this.scope, this.dom, this);
     }
 
     public async evaluate() {
@@ -478,6 +486,31 @@ export class Tag extends DOMObject {
         await this.setupAttribute(standardAttribute);
 
         return standardAttribute;
+    }
+
+    async watchStyle(styleName: string) {
+        for (const attribute of this.attributes) {
+            if (attribute instanceof StyleAttribute) {
+                return attribute;
+            }
+        }
+
+        // Standard attribute requires a unique scope
+        // @todo: Does this cause any issues with attribute bindings on the parent scope prior to having its own scope? hmm...
+        if (!this.uniqueScope) {
+            this._uniqueScope = true;
+            this._scope = new Scope();
+
+            if (this.parentTag) {
+                this.scope.parentScope = this.parentTag.scope;
+            }
+        }
+
+        const styleAttribute = new StyleAttribute(this, 'style');
+        this.attributes.push(styleAttribute);
+        await this.setupAttribute(styleAttribute);
+
+        return styleAttribute;
     }
 
     private async setupAttribute(attribute: Attribute) {

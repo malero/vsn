@@ -77,6 +77,7 @@ export enum TokenType {
     EXCLAMATION_POINT,
     ELEMENT_REFERENCE,
     ELEMENT_ATTRIBUTE,
+    ELEMENT_STYLE,
     ELEMENT_QUERY
 }
 
@@ -146,6 +147,10 @@ const TOKEN_PATTERNS: TokenPattern[] = [
         pattern: /^\.?@[_a-zA-Z0-9]*/
     },
     {
+        type: TokenType.ELEMENT_STYLE,
+        pattern: /^\.?\$[a-zA-Z0-9]*/
+    },
+    {
         type: TokenType.ELEMENT_REFERENCE,
         pattern: /^#[-_a-zA-Z0-9]*/
     },
@@ -155,7 +160,7 @@ const TOKEN_PATTERNS: TokenPattern[] = [
     },
     {
         type: TokenType.NAME,
-        pattern: /^[$_a-zA-Z][_a-zA-Z0-9]*/
+        pattern: /^[_a-zA-Z][_a-zA-Z0-9]*/
     },
     {
         type: TokenType.NUMBER_LITERAL,
@@ -872,7 +877,7 @@ class ArithmeticAssignmentNode extends Node implements TreeNode {
             } else {
                 scopes.push(inner);
             }
-        } else if (this.left instanceof ElementAttributeNode && this.left.elementRef) {
+        } else if ((this.left instanceof ElementAttributeNode || this.left instanceof ElementStyleNode) && this.left.elementRef) {
             scopes = await this.left.elementRef.evaluate(scope, dom, tag);
         } else
             scopes.push(scope);
@@ -1014,7 +1019,7 @@ class ArithmeticAssignmentNode extends Node implements TreeNode {
     }
 
     public static parse(lastNode: any, token, tokens: Token[]): ArithmeticAssignmentNode {
-        if (!(lastNode instanceof RootScopeMemberNode) && !(lastNode instanceof ScopeMemberNode) && !(lastNode instanceof ElementAttributeNode)) {
+        if (!(lastNode instanceof RootScopeMemberNode) && !(lastNode instanceof ScopeMemberNode) && !(lastNode instanceof ElementAttributeNode) && !(lastNode instanceof ElementStyleNode)) {
             throw SyntaxError(`Invalid assignment syntax near ${Tree.toCode(tokens.splice(0, 10))}`);
         }
         tokens.splice(0, 1); // consume =
@@ -1242,6 +1247,61 @@ class ElementAttributeNode extends Node implements TreeNode {
     }
 }
 
+class ElementStyleNode extends Node implements TreeNode {
+    protected requiresPrep: boolean = true;
+
+    constructor(
+        public readonly elementRef: ElementQueryNode | null,
+        public readonly attr: string
+    ) {
+        super();
+    }
+
+    public get name(): LiteralNode<string> {
+        return new LiteralNode<string>(`$${this.attributeName}`);
+    }
+
+    protected _getChildNodes(): Node[] {
+        let nodes = [];
+        if (this.elementRef)
+            nodes.push(this.elementRef)
+        return nodes;
+    }
+
+    get attributeName(): string {
+        if (this.attr.startsWith('.'))
+            return this.attr.substring(2);
+        return this.attr.substring(1);
+    }
+
+    async evaluate(scope: Scope, dom: DOM, tag: Tag = null) {
+        let tags: TagList;
+        if (this.elementRef) {
+            tags = await this.elementRef.evaluate(scope, dom, tag);
+        } else if (tag) {
+            tags = new TagList(tag)
+        } else {
+            return;
+        }
+
+        if (tags.length === 1)
+            return tags[0].scope.get(`$${this.attributeName}`);
+
+        return tags.map((tag) => tag.scope.get(`$${this.attributeName}`));
+    }
+
+    async prepare(scope: Scope, dom: DOM, tag: Tag = null) {
+        if (this.elementRef) {
+            await this.elementRef.prepare(scope, dom, tag);
+            const tags: TagList = await this.elementRef.evaluate(scope, dom, tag);
+            for (const t of tags)
+                await t.watchStyle(this.attributeName);
+        } else if(tag) {
+            await tag.watchStyle(this.attributeName);
+        }
+    }
+}
+
 export interface IBlockInfo {
     type: BlockType,
     open: TokenType,
@@ -1386,6 +1446,9 @@ export class Tree {
                 node = ObjectNode.parse(node, token, tokens);
             } else if (tokens[0].type === TokenType.ELEMENT_ATTRIBUTE) {
                 node = new ElementAttributeNode(node as any, tokens[0].value);
+                tokens.splice(0, 1);
+            } else if (tokens[0].type === TokenType.ELEMENT_STYLE) {
+                node = new ElementStyleNode(node as any, tokens[0].value);
                 tokens.splice(0, 1);
             } else if (node !== null && token.type === TokenType.PERIOD && tokens[1].type === TokenType.NAME) {
                 node = new ScopeMemberNode(
