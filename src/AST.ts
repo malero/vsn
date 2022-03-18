@@ -78,7 +78,8 @@ export enum TokenType {
     ELEMENT_REFERENCE,
     ELEMENT_ATTRIBUTE,
     ELEMENT_STYLE,
-    ELEMENT_QUERY
+    ELEMENT_QUERY,
+    UNIT,
 }
 
 const TOKEN_PATTERNS: TokenPattern[] = [
@@ -97,6 +98,10 @@ const TOKEN_PATTERNS: TokenPattern[] = [
     {
         type: TokenType.TYPE_FLOAT,
         pattern: /^float+/
+    },
+    {
+        type: TokenType.UNIT,
+        pattern: /^\d+\.?\d?(?:cm|mm|in|px|pt|pc|em|ex|ch|rem|vw|vh|vmin|vmax|%)/
     },
     {
         type: TokenType.TYPE_STRING,
@@ -144,11 +149,11 @@ const TOKEN_PATTERNS: TokenPattern[] = [
     },
     {
         type: TokenType.ELEMENT_ATTRIBUTE,
-        pattern: /^\.?@[_a-zA-Z0-9]*/
+        pattern: /^\.?@[-_a-zA-Z0-9]*/
     },
     {
         type: TokenType.ELEMENT_STYLE,
-        pattern: /^\.?\$[a-zA-Z0-9]*/
+        pattern: /^\.?\$[-a-zA-Z0-9]*/
     },
     {
         type: TokenType.ELEMENT_REFERENCE,
@@ -687,6 +692,55 @@ class NumberLiteralNode extends LiteralNode<number> {
     }
 }
 
+class UnitLiteral {
+    protected _amount: number;
+    protected _unit: string;
+
+    constructor(
+        protected _value: any
+    ) {
+        this.value = this._value;
+    }
+
+    get amount(): number {
+        return this._amount;
+    }
+
+    get unit(): string {
+        return this._unit;
+    }
+
+    get value(): string {
+        return `${this._amount}${this._unit}`;
+    }
+
+    set value(value: string) {
+        if (value.indexOf('.') > -1) {
+            this._amount = parseFloat(value)
+        } else {
+            this._amount = parseInt(value);
+        }
+
+        if (isNaN(this._amount))
+            this._amount = 0;
+
+        const unit = /[^\d.]+$/.exec(value);
+        this._unit = unit && unit[0] || '';
+    }
+
+    public toString() {
+        return this.value;
+    }
+}
+
+class UnitLiteralNode extends LiteralNode<UnitLiteral> {
+    constructor(
+        _value: any
+    ) {
+        super(new UnitLiteral(_value));
+    }
+}
+
 
 class FunctionCallNode<T = any> extends Node implements TreeNode {
     constructor(
@@ -895,6 +949,8 @@ class ArithmeticAssignmentNode extends Node implements TreeNode {
 
                 if (left instanceof Array) {
                     left = this.handleArray(name, left, right, localScope);
+                } else if ((left as any) instanceof UnitLiteral || right instanceof UnitLiteral) {
+                    left = this.handleUnit(name, left, right, localScope);
                 } else if (Number.isFinite(left)) {
                     left = this.handleNumber(name, left, right, localScope);
                 } else {
@@ -951,6 +1007,38 @@ class ArithmeticAssignmentNode extends Node implements TreeNode {
                 break;
             case TokenType.DIVIDE_ASSIGN:
                 left /= right;
+                break;
+        }
+
+        scope.set(key, left);
+        return left;
+    }
+
+    public handleUnit(key, left, right, scope) {
+        if (!(left instanceof UnitLiteral)) {
+            left = new UnitLiteral(left);
+        }
+
+        if (!(right instanceof UnitLiteral)) {
+            right = new UnitLiteral(right);
+        }
+        const unit = left.unit || right.unit || 'px';
+
+        switch (this.type) {
+            case TokenType.ASSIGN:
+                left = right;
+                break;
+            case TokenType.ADD_ASSIGN:
+                left = new UnitLiteral(`${left.amount+right.amount}${unit}`);
+                break;
+            case TokenType.SUBTRACT_ASSIGN:
+                left = new UnitLiteral(`${left.amount-right.amount}${unit}`);
+                break;
+            case TokenType.MULTIPLY_ASSIGN:
+                left = new UnitLiteral(`${left.amount*right.amount}${unit}`);
+                break;
+            case TokenType.DIVIDE_ASSIGN:
+                left = new UnitLiteral(`${left.amount/right.amount}${unit}`);
                 break;
         }
 
@@ -1485,6 +1573,9 @@ export class Tree {
             } else if (ArithmeticAssignmentNode.match(tokens)) {
                 node = ArithmeticAssignmentNode.parse(node, token, tokens);
             } else if (tokens[0].type === TokenType.WHITESPACE) {
+                tokens.splice(0, 1);
+            } else if (tokens[0].type === TokenType.UNIT) {
+                node = new UnitLiteralNode(tokens[0].value);
                 tokens.splice(0, 1);
             } else if (tokens[0].type === TokenType.BOOLEAN_LITERAL) {
                 node = new BooleanLiteralNode(tokens[0].value);
