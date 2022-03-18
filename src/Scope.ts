@@ -207,13 +207,12 @@ export class WrappedArray<T> extends Array<T> {
     }
 }
 
-
 export class Scope extends EventDispatcher {
     public wrapped: any;
     protected data: DataModel;
     protected types: {[key: string]: string;} = {};
     protected children: Scope[];
-    protected keys: string[];
+    protected _keys: string[];
     protected _parentScope: Scope;
 
     constructor(
@@ -224,7 +223,7 @@ export class Scope extends EventDispatcher {
             this.parentScope = parent;
         this.children = [];
         this.data = new DataModel({});
-        this.keys = [];
+        this._keys = [];
     }
 
     public get parentScope(): Scope {
@@ -277,7 +276,7 @@ export class Scope extends EventDispatcher {
             if (searchParents && this.parentScope)
                 return this.parentScope.get(key, searchParents);
 
-            return '';
+            return this._keys.indexOf(key) > -1 ? '' : undefined;
         }
 
         return value;
@@ -312,12 +311,16 @@ export class Scope extends EventDispatcher {
             this.trigger('change', key, event);
         }
 
-        if (this.keys.indexOf(key) === -1)
-            this.keys.push(key);
+        if (this._keys.indexOf(key) === -1)
+            this._keys.push(key);
+    }
+
+    get keys(): string[] {
+        return [...this._keys];
     }
 
     has(key: string): boolean {
-        return this.keys.indexOf(key) > -1;
+        return this._keys.indexOf(key) > -1;
     }
 
     setType(key: string, type: string) {
@@ -337,7 +340,7 @@ export class Scope extends EventDispatcher {
     }
 
     clear() {
-        for (const key of this.keys) {
+        for (const key of this._keys) {
             if (['function', 'object'].indexOf(typeof this.get(key)) > -1) continue;
             this.set(key, null);
         }

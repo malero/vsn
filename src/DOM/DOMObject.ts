@@ -27,4 +27,8 @@ export abstract class DOMObject extends EventDispatcher {
     public watchAttribute(attr: string) {
 
     }
+
+    public watchStyle(style: string) {
+
+    }
 }

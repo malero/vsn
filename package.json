@@ -1,12 +1,12 @@
 {
   "name": "vsn",
-  "version": "0.1.18",
+  "version": "0.1.20",
   "description": "SEO Friendly Javascript/Typescript Framework",
   "keywords": [
     "framework",
     "typescript"
   ],
-  "main": "./dist/vision.min.js",
+  "main": "./dist/Vision.js",
   "scripts": {
     "build": "rm -rf ./dist/ && tsc",
     "build_dev": "rm -rf ./dist/ && webpack --env BUILD=development BENCHMARK=1",
