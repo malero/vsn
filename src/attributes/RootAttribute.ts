@@ -9,5 +9,6 @@ export class RootAttribute extends Attribute {
 
     public async setup() {
         this.tag.scope.set('$mobile', VisionHelper.isMobile());
+        await super.setup();
     }
 }

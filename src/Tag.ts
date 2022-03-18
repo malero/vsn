@@ -8,7 +8,7 @@ import {On} from "./attributes/On";
 import {Registry} from "./Registry";
 import {benchmarkEnd, benchmarkStart} from "./Bencmark";
 import {DOMObject} from "./DOM/DOMObject";
-import { Tree } from "./AST";
+import {Tree} from "./AST";
 import {StyleAttribute} from "./attributes/StyleAttribute";
 
 export enum TagState {
@@ -428,8 +428,7 @@ export class Tag extends DOMObject {
 
         this.scope.set('$event', e);
         this.scope.set('$value', this.value);
-        for (const handler of this.onEventHandlers[eventType])
-        {
+        for (const handler of this.onEventHandlers[eventType]) {
             handler(e);
         }
     }

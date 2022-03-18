@@ -11,18 +11,22 @@ export class If extends Attribute {
         const statement: string = this.getAttributeValue();
         this.tree = new Tree(statement);
         await this.tree.prepare(this.tag.scope, this.tag.dom, this.tag);
+        await super.compile();
     }
 
     public async extract() {
         await this.evaluate();
+        await super.extract();
     }
 
     public async connect() {
         await this.tree.bindToScopeChanges(this.tag.scope, this.onChange.bind(this), this.tag.dom, this.tag);
+        await super.connect();
     }
 
     public async evaluate() {
         await this.onChange();
+        await super.evaluate();
     }
 
     async onChange() {

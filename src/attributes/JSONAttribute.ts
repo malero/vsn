@@ -34,5 +34,6 @@ export class JSONAttribute extends Attribute {
         }
 
         scope.set(key, data);
+        await super.extract();
     }
 }

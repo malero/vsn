@@ -18,5 +18,6 @@ export class TypeAttribute extends Attribute {
         }
 
         (await ref.getScope()).setType(await ref.getKey(), type);
+        await super.extract();
     }
 }

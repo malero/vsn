@@ -30,6 +30,7 @@ export class SetAttribute extends Attribute {
         }
         this.key = await ref.getKey();
         this.boundScope = await ref.getScope();
+        await super.setup();
     }
 
     public async extract() {

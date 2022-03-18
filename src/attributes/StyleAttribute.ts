@@ -5,6 +5,7 @@ import {Scope, ScopeReference} from "../Scope";
 
 @Registry.attribute('vsn-styles')
 export class StyleAttribute extends Attribute {
+    public static readonly canDefer: boolean = false;
     private scopeRef: ScopeReference;
     private styleScope: Scope;
 
@@ -33,14 +34,19 @@ export class StyleAttribute extends Attribute {
 
     public async extract() {
         this.updateFrom();
+        this.updateTo();
         await super.extract();
     }
 
     updateFrom() {
         const toSkip = [
             'cssText',
+            'getPropertyPriority',
+            'getPropertyValue',
+            'removeProperty',
+            'setProperty',
             'length'
-        ]
+        ];
         for (const k in this.tag.style) {
             if (toSkip.indexOf(k) > -1 || isFinite(k as any))
                 continue;
@@ -48,6 +54,16 @@ export class StyleAttribute extends Attribute {
             const key = `$${k}`;
             if (value && value !== this.styleScope.get(key))
                 this.styleScope.set(key, value);
+        }
+    }
+
+    public updateTo() {
+        for (const k of this.styleScope.keys) {
+            const v = this.styleScope.get(k);
+            if (k.startsWith('$')) {
+                const key = k.substr(1);
+                this.tag.element.style[key] = v.value;
+            }
         }
     }
 

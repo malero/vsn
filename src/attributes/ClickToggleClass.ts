@@ -9,10 +9,12 @@ export class ClickToggleClass extends Attribute {
     public async setup() {
         this.cssClass = this.getAttributeBinding( 'active');
         this.target = this.getAttributeValue();
+        await super.setup();
     }
 
     public async connect() {
         this.tag.addEventHandler('click', this.getAttributeModifiers(), this.onClick.bind(this));
+        await super.connect();
     }
 
     onClick(e) {

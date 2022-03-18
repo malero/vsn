@@ -276,7 +276,7 @@ export class Scope extends EventDispatcher {
             if (searchParents && this.parentScope)
                 return this.parentScope.get(key, searchParents);
 
-            return this._keys.indexOf(key) > -1 ? '' : undefined;
+            return '';
         }
 
         return value;
