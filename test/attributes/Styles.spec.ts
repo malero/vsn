@@ -6,14 +6,25 @@ import "../../src/attributes/_imports";
 describe('Styles', () => {
     it("vsn-styles to just work", (done) => {
         document.body.innerHTML = `
-            <span vsn-styles="testing.styles" style="margin-top: 50px;">testing</span>
+            <div vsn-name="testing">
+                <span id="styling" vsn-styles="testing.styles" style="margin-top: 50px;">testing</span>
+                <span id="styling-dupe" vsn-styles="testing.styles" style="margin-top: 50px;">testing 2</span>
+            </div>
         `;
         const dom = new DOM(document);
         dom.once('built', async () => {
-            const scope = dom.root.scope;
-            console.log(scope.get('testing'));
-            expect(scope.get('testing')).toBeTruthy();
-            expect(scope.get('testing').get('styles')).toBeTruthy();
+            const ele1 = (await dom.get('#styling'))[0];
+            const ele2 = (await dom.get('#styling-dupe'))[0];
+            const scope = ele1.scope;
+            const container = scope.get('testing');
+            const styles = container.get('styles');
+            expect(container).toBeTruthy();
+            expect(styles).toBeTruthy();
+            expect(ele1.element.style.marginTop).toBe('50px');
+            expect(ele2.element.style.marginTop).toBe('50px');
+            styles.set('$marginTop', '-50px');
+            expect(ele1.element.style.marginTop).toBe('-50px');
+            expect(ele2.element.style.marginTop).toBe('-50px');
             done();
         });
     });
