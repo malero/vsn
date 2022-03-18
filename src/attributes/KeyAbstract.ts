@@ -4,12 +4,13 @@ export abstract class KeyAbstract extends On {
     protected specificKey: string = null;
 
     public async compile() {
-        await super.compile();
         this.specificKey = this.getAttributeBinding();
+        await super.compile();
     }
 
     public async connect() {
         this.tag.addEventHandler('keydown', this.getAttributeModifiers(), this.handleEvent.bind(this));
+        await super.connect();
     }
 
     public async handleEvent(e) {

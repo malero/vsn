@@ -19,6 +19,7 @@ export class List extends Attribute {
         const listAttr: string = this.getAttributeBinding();
         this.tree = new Tree(listAttr);
         await this.tree.prepare(this.tag.scope, this.tag.dom, this.tag);
+        await super.compile();
     }
 
     public async setup() {
@@ -43,6 +44,7 @@ export class List extends Attribute {
                 this.template = templateNode.element.content.cloneNode(true);
             }
         }
+        await super.setup();
     }
 
     public async extract() {
@@ -55,6 +57,7 @@ export class List extends Attribute {
                 await this.add({});
             }
         }
+        await super.extract();
     }
 
     protected async addExistingItems(defaultList: any[] | null) {
