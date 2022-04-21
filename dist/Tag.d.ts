@@ -4,6 +4,7 @@ import { DOM } from "./DOM";
 import { Controller } from "./Controller";
 import { StandardAttribute } from "./attributes/StandardAttribute";
 import { DOMObject } from "./DOM/DOMObject";
+import { StyleAttribute } from "./attributes/StyleAttribute";
 export declare enum TagState {
     Instantiated = 0,
     AttributesBuilt = 1,
@@ -36,6 +37,7 @@ export declare class Tag extends DOMObject {
     get style(): CSSStyleDeclaration;
     get computedStyle(): CSSStyleDeclaration;
     analyzeElementAttributes(): void;
+    eval(code: string): Promise<any>;
     evaluate(): Promise<void>;
     mutate(mutation: MutationRecord): void;
     get(attr: string): void;
@@ -81,6 +83,7 @@ export declare class Tag extends DOMObject {
     stripModifier(attribute: string, modifier: string): string;
     addEventHandler(eventType: string, modifiers: string[], handler: any): void;
     watchAttribute(attributeName: string): Promise<StandardAttribute>;
+    watchStyle(styleName: string): Promise<StyleAttribute>;
     private setupAttribute;
     private setupDeferredAttributes;
 }

@@ -64,7 +64,9 @@ export declare enum TokenType {
     EXCLAMATION_POINT = 48,
     ELEMENT_REFERENCE = 49,
     ELEMENT_ATTRIBUTE = 50,
-    ELEMENT_QUERY = 51
+    ELEMENT_STYLE = 51,
+    ELEMENT_QUERY = 52,
+    UNIT = 53
 }
 export interface TreeNode<T = any> {
     evaluate(scope: Scope, dom: DOM, tag?: Tag): any;

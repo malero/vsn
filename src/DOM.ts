@@ -183,7 +183,7 @@ export class DOM extends EventDispatcher {
             if (tag === this.root)
                 continue;
 
-            // Find closest ancestor
+            // Find the closest ancestor
             let parentElement: HTMLElement = tag.element.parentElement as HTMLElement;
             let foundParent = false;
             while (parentElement) {

@@ -9,7 +9,7 @@ export class Radio extends Attribute {
     protected key?: string;
     protected boundScope?: Scope;
 
-    public async extract() {
+    public async setup() {
         let scopeKey: string = this.getAttributeValue() || this.tag.getRawAttributeValue('name');
         let ref: ScopeReference;
         try {
@@ -21,11 +21,25 @@ export class Radio extends Attribute {
 
         this.key = await ref.getKey();
         this.boundScope = await ref.getScope();
+        await super.setup();
+    }
+
+    public async extract() {
+        if (this.tag.checked)
+            await this.handleEvent(null);
+        await super.extract();
     }
 
     public async connect() {
         this.boundScope.bind(`change:${this.key}`, this.checkSelected, this);
         this.tag.addEventHandler('change', this.getAttributeModifiers(), this.handleEvent.bind(this));
+        await this.checkSelected();
+        await super.connect();
+    }
+
+    public async evaluate() {
+        await this.checkSelected();
+        await super.evaluate();
     }
 
     async handleEvent(e) {
@@ -33,6 +47,7 @@ export class Radio extends Attribute {
     }
 
     async checkSelected() {
-        this.tag.checked = this.boundScope.get(this.key) === this.tag.value;
+        const scopeValue = this.boundScope.get(this.key);
+        this.tag.checked = `${scopeValue}` === this.tag.value;
     }
 }

@@ -80,12 +80,22 @@
         <span vsn-if:not="'active' not in ?(:parent).@class">inactive</span>
         <button vsn-on:click="?(:parent).@class += 'active'">+</button>
         <button vsn-on:click="?(:parent).@class -= 'active'">-</button>
+        <button vsn-on:click="?(:parent).@class ~ 'active'">~</button>
     </li>
 </template>
 
+<script>
+    function bindings () {
+        $('#something').on('click', function () {
+            $('#something').text('Hello, world!');
+        });
+    }
+</script>
+
 <h2>Radio</h2>
 <div vsn-name="radio">
-    <input type="text" vsn-bind="radio.radio_test" />
+    <input type="text" vsn-bind="radio.radio_test" vsn-type:radio.radio_test="integer" value="1" />
+    <input type="radio" value="0" name="radio.radio_test" vsn-radio />
     <input type="radio" value="1" name="radio.radio_test" vsn-radio />
     <input type="radio" value="2" name="radio.radio_test" vsn-radio />
     <input type="radio" value="3" name="radio.radio_test" vsn-radio />
@@ -97,13 +107,13 @@
 <button vsn-on:click="show = !show" vsn-set:show="false|boolean">Toggle</button>
 <span vsn-bind="show"></span>
 
-<button vsn-on:click="@text='Clicked'" id="ttt">Click Me</button>
+<a vsn-on:click="if(@text != clicktext){@text=clicktext}else{@text='Click Me'}" vsn-set:clicktext="Clicked!">Click Me</a>
 
 <h2>? Operator</h2>
 <p>Add/remove class to list of elements on click.</p>
 <p>
     <button vsn-on:click="?(#list-add-remove-class-example li).@class += 'active'">Add</button> <button vsn-on:click="?(#list-add-remove-class-example li).@class -= 'active'">Remove</button> <button vsn-on:click="?(#list-add-remove-class-example li).@class ~ 'active'">Toggle</button>
-    <ul id="list-add-remove-class-example" vsn-list initial-items="5" template="#query-operator-example-item"></ul>
+    <ul id="list-add-remove-class-example" vsn-list initial-items="5" template="?(#query-operator-example-item)"></ul>
 </p>
 
 <h2>@ Operator</h2>
@@ -123,12 +133,18 @@
 <h2>Attribute Formatters</h2>
 <h3>Currency</h3>
 <span vsn-bind="currency_format" vsn-type:currency_format="float" vsn-format="currency" id="formatter">1.5</span>
-<input type="text" vsn-bind="#formatter.currency_format"/>
+<input type="text" vsn-bind="#formatter.currency_format" />
 <br />
 <h3>Date</h3>
 <span vsn-bind="date_format" vsn-type:date_format="date" vsn-format="date" id="date-formatter">Aug 11, 2021 01:03:00 PM PDT</span>
-<input type="text" vsn-bind:|to="#date-formatter.date_format" />
-<input type="text" vsn-on:keyup="#date-formatter.date_format = $value" value="Aug 11, 2021 01:03:00 PM PDT" />
+<input type="text" vsn-bind:|to="?(#date-formatter).date_format" />
+<input type="text" vsn-on:keyup="?(#date-formatter).date_format = $value" value="Aug 11, 2021 01:03:00 PM PDT" />
+
+<h2>$ Operator</h2>
+<p></p>
+<p>
+    <input type="text" vsn-bind="$marginTop" id="style-attribute" /> <input type="button" vsn-on:click="?(#style-attribute).$marginTop = $padding;$padding += 1px" vsn-on:contextmenu|preventdefault="$padding -= 1px" value="Button" /> <input type="button" vsn-on:click="?(#style-attribute).$marginTop = '0'" value="Button" />
+</p>
 
 <h2>Conditional Elements</h2>
 <button vsn-on:click="show = !show">Toggle</button>
@@ -188,6 +204,6 @@
         vision.registry.classes.register('MVal', MVal);
     });
 </script>
-<script type="text/javascript" src="vision.js"></script>
+<script type="text/javascript" src="vsn.js"></script>
 </body>
 </html>

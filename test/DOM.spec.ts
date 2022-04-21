@@ -1,4 +1,4 @@
-import "../src/Vision";
+import "../src/vsn";
 import {DOM} from "../src/DOM";
 import {Registry} from "../src/Registry";
 

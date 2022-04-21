@@ -2,7 +2,7 @@ const path = require('path');
 const webpack = require("webpack");
 
 const defaultConfiguration = {
-  entry: './src/Vision.ts',
+  entry: './src/vsn.ts',
   module: {
     rules: [
       {
@@ -17,7 +17,7 @@ const defaultConfiguration = {
   },
   plugins: [],
   output: {
-    filename: 'vision.min.js',
+    filename: 'vsn.min.js',
     path: path.resolve(__dirname, 'dist'),
   },
 };

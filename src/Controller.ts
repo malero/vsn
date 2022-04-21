@@ -1,18 +1,27 @@
 import {EventDispatcher} from "simple-ts-event-dispatcher";
+import {Scope} from "./Scope";
+import {Tag} from "./Tag";
 
 export abstract class Controller extends EventDispatcher {
-    protected _tag: any;
+    protected _scope: Scope;
+    protected _tag: Tag;
+    protected _element: HTMLElement;
 
-    protected constructor() {
-        super();
+    public get scope(): Scope {
+        return this._scope;
     }
 
-    public get tag(): any {
+    public get tag(): Tag {
         return this._tag;
     }
 
-    public set tag(tag: any) {
+    public get element(): HTMLElement {
+        return this._element;
+    }
+
+    public init(scope: Scope, tag: Tag, element: HTMLElement): void {
+        this._scope = scope;
         this._tag = tag;
-        this.trigger('tag', tag);
+        this._element = element;
     }
 }

@@ -23,6 +23,7 @@ export class ListItem extends Attribute {
         const modelName: string = (await this.getList()).listItemModel;
         const cls = await Registry.instance.classes.get(modelName);
         this.instantiateModel(cls);
+        await super.setup();
     }
 
     public get listItemName(): string {

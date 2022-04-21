@@ -6,11 +6,11 @@
     "framework",
     "typescript"
   ],
-  "main": "./dist/Vision.js",
+  "main": "./dist/vsn.js",
   "scripts": {
     "build": "rm -rf ./dist/ && tsc",
     "build_dev": "rm -rf ./dist/ && webpack --env BUILD=development BENCHMARK=1",
-    "demo": "rm -rf ./dist/ && webpack --env BUILD=production BENCHMARK=1 && cp ./dist/vision.min.js ./demo/vision.js",
+    "demo": "rm -rf ./dist/ && webpack --env BUILD=production BENCHMARK=1 && cp ./dist/vsn.min.js ./demo/vsn.js",
     "clean": "rm -rf ./dist/",
     "test": "karma start --single-run",
     "posttest": "codecov",
@@ -37,16 +37,16 @@
     "webpack-cli": "^4.6.0"
   },
   "homepage": "https://www.vsnjs.com",
-  "git": "https://github.com/malero/visionjs",
-  "typings": "./dist/Vision.d.ts",
-  "types": "./dist/Vision.d.ts",
+  "git": "https://github.com/malero/vsn.git",
+  "typings": "./dist/vsn.d.ts",
+  "types": "./dist/vsn.d.ts",
   "author": "Malero <contact@vsnjs.com> (https://www.vsnjs.com/)",
   "bugs": {
-    "url": "https://github.com/malero/visionjs/issues",
+    "url": "https://github.com/malero/vsn/issues",
     "email": "contact@vsnjs.com"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/malero/visionjs.git"
+    "url": "https://github.com/malero/vsn.git"
   }
 }

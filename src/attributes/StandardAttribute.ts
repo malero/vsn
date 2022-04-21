@@ -13,14 +13,17 @@ export class StandardAttribute extends Attribute {
         if (StandardAttribute.magicAttributes.indexOf(this.key) === -1 && !this.tag.element.hasAttribute(this.attributeName)) {
             this.tag.element.setAttribute(this.attributeName, '');
         }
+        await super.setup();
     }
 
     public async extract() {
         this.updateFrom();
+        await super.extract();
     }
 
     public async connect() {
         this.tag.scope.bind(`change:${this.key}`, this.updateTo.bind(this));
+        await super.connect();
     }
 
     public mutate(mutation: MutationRecord) {

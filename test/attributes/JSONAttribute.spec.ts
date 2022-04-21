@@ -77,7 +77,7 @@ describe('JSONAttribute', () => {
     it("vsn-json should work with a ref path", (done) => {
         document.body.innerHTML = `
             <div vsn-name="testing">
-                <div vsn-json:testing.test="{&quot;testing&quot;: 123}"></div>
+                <div vsn-json:testing.test='{"testing": 123}'></div>
             </div>
         `;
         const dom = new DOM(document);

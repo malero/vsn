@@ -20,5 +20,6 @@ export * from './Registry';
 export * from './Attribute';
 export * from './AST';
 export { DOM } from './DOM';
-export { WrappedArray, Scope } from './Scope';
+export { WrappedArray, Scope, ScopeReference } from './Scope';
+export { Controller } from './Controller';
 export declare const vision: Vision;

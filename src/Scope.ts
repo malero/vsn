@@ -1,4 +1,4 @@
-import {DataModel} from "simple-ts-models";
+import {DataModel, Model} from "simple-ts-models";
 import {EventCallback, EventCallbackList, EventDispatcher, EventDispatcherCallback} from "simple-ts-event-dispatcher";
 import {Registry} from "./Registry";
 import {DOM} from "./DOM";
@@ -276,7 +276,7 @@ export class Scope extends EventDispatcher {
             if (searchParents && this.parentScope)
                 return this.parentScope.get(key, searchParents);
 
-            return this._keys.indexOf(key) > -1 ? '' : undefined;
+            return '';
         }
 
         return value;
@@ -352,6 +352,11 @@ export class Scope extends EventDispatcher {
     }
 
     public wrap(toWrap: any, triggerUpdates: boolean = false, updateFromWrapped: boolean = true) {
+        if (toWrap instanceof Model) {
+            this.data = toWrap;
+            return;
+        }
+
         if (toWrap instanceof Scope)
             toWrap = toWrap.data;
 

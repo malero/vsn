@@ -13,5 +13,6 @@ export class Format extends Attribute {
         const bindingKey = attribute ? `vsn-bind:${attribute}` : 'vsn-bind';
         const binding: Bind = await this.tag.getAttribute<Bind>(bindingKey);
         binding.setFormatter(formatter);
+        await super.extract();
     }
 }

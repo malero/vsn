@@ -12,12 +12,14 @@ export abstract class ScopeChange extends Attribute {
         const code: string = this.getAttributeValue();
         this.handler = new Tree(code);
         await this.handler.prepare(this.tag.scope, this.tag.dom, this.tag);
+        await super.compile();
     }
 
     public async connect() {
         const binding = this.getAttributeBinding();
         const ref: ScopeReference = this.tag.scope.getReference(binding, false);
         (await ref.getScope()).bind(`change:${await ref.getKey()}`, this.handleEvent.bind(this));
+        await super.connect();
     }
 
     async handleEvent(e) {
