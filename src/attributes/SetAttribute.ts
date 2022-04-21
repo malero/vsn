@@ -1,6 +1,7 @@
-import {Scope, ScopeReference} from "../Scope";
+import {Scope} from "../Scope";
 import {Attribute} from "../Attribute";
 import {Registry} from "../Registry";
+import {ScopeReference} from "../Scope/ScopeReference";
 
 @Registry.attribute('vsn-set')
 export class SetAttribute extends Attribute {

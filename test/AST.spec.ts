@@ -1,5 +1,5 @@
-
-import {Scope, WrappedArray} from "../src/Scope";
+import {WrappedArray} from '../src/Scope/WrappedArray';
+import {Scope} from "../src/Scope";
 import {Tree} from "../src/AST";
 import {DOM} from "../src/DOM";
 import {IDeferred, SimplePromise} from "../src/SimplePromise";

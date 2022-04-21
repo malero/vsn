@@ -1,19 +1,4 @@
 "use strict";
-var __extends = (this && this.__extends) || (function () {
-    var extendStatics = function (d, b) {
-        extendStatics = Object.setPrototypeOf ||
-            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-            function (d, b) { for (var p in b) if (Object.prototype.hasOwnProperty.call(b, p)) d[p] = b[p]; };
-        return extendStatics(d, b);
-    };
-    return function (d, b) {
-        if (typeof b !== "function" && b !== null)
-            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
-        extendStatics(d, b);
-        function __() { this.constructor = d; }
-        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-    };
-})();
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -50,16 +35,30 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
-var __spreadArray = (this && this.__spreadArray) || function (to, from) {
-    for (var i = 0, il = from.length, j = to.length; i < il; i++, j++)
-        to[j] = from[i];
-    return to;
-};
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.Tree = exports.AttributableNodes = exports.BlockNode = exports.Node = exports.TokenType = exports.BlockType = void 0;
-var Scope_1 = require("./Scope");
-var DOMObject_1 = require("./DOM/DOMObject");
-var List_1 = require("./Tag/List");
+exports.Tree = exports.AttributableNodes = exports.TokenType = exports.BlockType = void 0;
+var RootScopeMemberNode_1 = require("./AST/RootScopeMemberNode");
+var ScopeMemberNode_1 = require("./AST/ScopeMemberNode");
+var ElementAttributeNode_1 = require("./AST/ElementAttributeNode");
+var BlockNode_1 = require("./AST/BlockNode");
+var LiteralNode_1 = require("./AST/LiteralNode");
+var IfStatementNode_1 = require("./AST/IfStatementNode");
+var ForStatementNode_1 = require("./AST/ForStatementNode");
+var NumberLiteralNode_1 = require("./AST/NumberLiteralNode");
+var ElementQueryNode_1 = require("./AST/ElementQueryNode");
+var IndexNode_1 = require("./AST/IndexNode");
+var ArrayNode_1 = require("./AST/ArrayNode");
+var ObjectNode_1 = require("./AST/ObjectNode");
+var ElementStyleNode_1 = require("./AST/ElementStyleNode");
+var FunctionCallNode_1 = require("./AST/FunctionCallNode");
+var FunctionArgumentNode_1 = require("./AST/FunctionArgumentNode");
+var InNode_1 = require("./AST/InNode");
+var ComparisonNode_1 = require("./AST/ComparisonNode");
+var ArithmeticNode_1 = require("./AST/ArithmeticNode");
+var ArithmeticAssignmentNode_1 = require("./AST/ArithmeticAssignmentNode");
+var UnitLiteralNode_1 = require("./AST/UnitLiteralNode");
+var BooleanLiteralNode_1 = require("./AST/BooleanLiteralNode");
+var NotNode_1 = require("./AST/NotNode");
 function lower(str) {
     return str ? str.toLowerCase() : null;
 }
@@ -341,1441 +340,10 @@ var TOKEN_PATTERNS = [
         pattern: /^!/
     }
 ];
-var Node = /** @class */ (function () {
-    function Node() {
-        this.requiresPrep = false;
-        this.nodeCache = {};
-    }
-    Node.prototype.isPreparationRequired = function () {
-        if (this.requiresPrep)
-            return true;
-        if (this._isPreparationRequired !== undefined)
-            return this._isPreparationRequired;
-        for (var _i = 0, _a = this.getChildNodes(); _i < _a.length; _i++) {
-            var node = _a[_i];
-            if (node.isPreparationRequired()) {
-                this._isPreparationRequired = true;
-                return true;
-            }
-        }
-        return false;
-    };
-    Node.prototype.prepare = function (scope, dom, tag) {
-        if (tag === void 0) { tag = null; }
-        return __awaiter(this, void 0, void 0, function () {
-            var _i, _a, node;
-            return __generator(this, function (_b) {
-                switch (_b.label) {
-                    case 0:
-                        _i = 0, _a = this.getChildNodes();
-                        _b.label = 1;
-                    case 1:
-                        if (!(_i < _a.length)) return [3 /*break*/, 4];
-                        node = _a[_i];
-                        return [4 /*yield*/, node.prepare(scope, dom, tag)];
-                    case 2:
-                        _b.sent();
-                        _b.label = 3;
-                    case 3:
-                        _i++;
-                        return [3 /*break*/, 1];
-                    case 4: return [2 /*return*/];
-                }
-            });
-        });
-    };
-    Node.prototype._getChildNodes = function () {
-        return [];
-    };
-    Node.prototype.getChildNodes = function () {
-        if (this.childNodes === undefined) {
-            this.childNodes = this._getChildNodes();
-        }
-        return this.childNodes;
-    };
-    Node.prototype.findChildrenByType = function (t) {
-        return this.findChildrenByTypes([t]);
-    };
-    Node.prototype.findChildrenByTypes = function (types, cacheKey) {
-        if (cacheKey === void 0) { cacheKey = null; }
-        if (cacheKey !== null && this.nodeCache[cacheKey])
-            return this.nodeCache[cacheKey];
-        var nodes = [];
-        for (var _i = 0, _a = this.getChildNodes(); _i < _a.length; _i++) {
-            var child = _a[_i];
-            for (var _b = 0, types_1 = types; _b < types_1.length; _b++) {
-                var t = types_1[_b];
-                if (child instanceof t)
-                    nodes.push(child);
-                var childNodes = child.findChildrenByType(t);
-                nodes.push.apply(nodes, childNodes);
-            }
-        }
-        if (cacheKey !== null)
-            this.nodeCache[cacheKey] = nodes;
-        return nodes;
-    };
-    return Node;
-}());
-exports.Node = Node;
-var BlockNode = /** @class */ (function (_super) {
-    __extends(BlockNode, _super);
-    function BlockNode(statements) {
-        var _this = _super.call(this) || this;
-        _this.statements = statements;
-        return _this;
-    }
-    BlockNode.prototype._getChildNodes = function () {
-        return __spreadArray([], this.statements);
-    };
-    BlockNode.prototype.evaluate = function (scope, dom, tag) {
-        if (tag === void 0) { tag = null; }
-        return __awaiter(this, void 0, void 0, function () {
-            var returnValue, i;
-            return __generator(this, function (_a) {
-                switch (_a.label) {
-                    case 0:
-                        returnValue = null;
-                        i = 0;
-                        _a.label = 1;
-                    case 1:
-                        if (!(i < this.statements.length)) return [3 /*break*/, 4];
-                        return [4 /*yield*/, this.statements[i].evaluate(scope, dom, tag)];
-                    case 2:
-                        returnValue = _a.sent();
-                        _a.label = 3;
-                    case 3:
-                        i++;
-                        return [3 /*break*/, 1];
-                    case 4: return [2 /*return*/, returnValue];
-                }
-            });
-        });
-    };
-    return BlockNode;
-}(Node));
-exports.BlockNode = BlockNode;
-var ComparisonNode = /** @class */ (function (_super) {
-    __extends(ComparisonNode, _super);
-    function ComparisonNode(left, right, type) {
-        var _this = _super.call(this) || this;
-        _this.left = left;
-        _this.right = right;
-        _this.type = type;
-        return _this;
-    }
-    ComparisonNode.prototype._getChildNodes = function () {
-        return [
-            this.left,
-            this.right
-        ];
-    };
-    ComparisonNode.prototype.evaluate = function (scope, dom, tag) {
-        if (tag === void 0) { tag = null; }
-        return __awaiter(this, void 0, void 0, function () {
-            var left, right;
-            return __generator(this, function (_a) {
-                switch (_a.label) {
-                    case 0: return [4 /*yield*/, this.left.evaluate(scope, dom, tag)];
-                    case 1:
-                        left = _a.sent();
-                        return [4 /*yield*/, this.right.evaluate(scope, dom, tag)];
-                    case 2:
-                        right = _a.sent();
-                        switch (this.type) {
-                            case TokenType.EQUALS:
-                                return [2 /*return*/, left === right];
-                            case TokenType.NOT_EQUALS:
-                                return [2 /*return*/, left !== right];
-                            case TokenType.GREATER_THAN:
-                                return [2 /*return*/, left > right];
-                            case TokenType.LESS_THAN:
-                                return [2 /*return*/, left < right];
-                            case TokenType.GREATER_THAN_EQUAL:
-                                return [2 /*return*/, left >= right];
-                            case TokenType.LESS_THAN_EQUAL:
-                                return [2 /*return*/, left <= right];
-                        }
-                        return [2 /*return*/];
-                }
-            });
-        });
-    };
-    ComparisonNode.match = function (tokens) {
-        return [
-            TokenType.EQUALS,
-            TokenType.NOT_EQUALS,
-            TokenType.GREATER_THAN,
-            TokenType.LESS_THAN,
-            TokenType.GREATER_THAN_EQUAL,
-            TokenType.LESS_THAN_EQUAL
-        ].indexOf(tokens[0].type) > -1;
-    };
-    ComparisonNode.parse = function (lastNode, token, tokens) {
-        tokens.splice(0, 1); // Remove comparison operator
-        return new ComparisonNode(lastNode, Tree.processTokens(Tree.getNextStatementTokens(tokens)), token.type);
-    };
-    return ComparisonNode;
-}(Node));
-var ConditionalNode = /** @class */ (function (_super) {
-    __extends(ConditionalNode, _super);
-    function ConditionalNode(condition, block) {
-        var _this = _super.call(this) || this;
-        _this.condition = condition;
-        _this.block = block;
-        return _this;
-    }
-    ConditionalNode.prototype._getChildNodes = function () {
-        return [
-            this.condition,
-            this.block
-        ];
-    };
-    ConditionalNode.prototype.evaluate = function (scope, dom, tag) {
-        if (tag === void 0) { tag = null; }
-        return __awaiter(this, void 0, void 0, function () {
-            var condition, evaluation;
-            return __generator(this, function (_a) {
-                switch (_a.label) {
-                    case 0: return [4 /*yield*/, this.condition.evaluate(scope, dom, tag)];
-                    case 1:
-                        condition = _a.sent();
-                        evaluation = false;
-                        if (condition instanceof Scope_1.WrappedArray) {
-                            evaluation = condition.length > 0;
-                        }
-                        else {
-                            evaluation = !!condition;
-                        }
-                        return [2 /*return*/, evaluation];
-                }
-            });
-        });
-    };
-    return ConditionalNode;
-}(Node));
-var IfStatementNode = /** @class */ (function (_super) {
-    __extends(IfStatementNode, _super);
-    function IfStatementNode(nodes) {
-        var _this = _super.call(this) || this;
-        _this.nodes = nodes;
-        return _this;
-    }
-    IfStatementNode.prototype._getChildNodes = function () {
-        return __spreadArray([], this.nodes);
-    };
-    IfStatementNode.prototype.evaluate = function (scope, dom, tag) {
-        if (tag === void 0) { tag = null; }
-        return __awaiter(this, void 0, void 0, function () {
-            var _i, _a, condition, uno;
-            return __generator(this, function (_b) {
-                switch (_b.label) {
-                    case 0:
-                        _i = 0, _a = this.nodes;
-                        _b.label = 1;
-                    case 1:
-                        if (!(_i < _a.length)) return [3 /*break*/, 5];
-                        condition = _a[_i];
-                        return [4 /*yield*/, condition.evaluate(scope, dom, tag)];
-                    case 2:
-                        uno = _b.sent();
-                        if (!uno) return [3 /*break*/, 4];
-                        return [4 /*yield*/, condition.block.evaluate(scope, dom, tag)];
-                    case 3: return [2 /*return*/, _b.sent()];
-                    case 4:
-                        _i++;
-                        return [3 /*break*/, 1];
-                    case 5: return [2 /*return*/];
-                }
-            });
-        });
-    };
-    IfStatementNode.parseConditional = function (tokens) {
-        if ([
-            TokenType.IF,
-            TokenType.ELSE_IF
-        ].indexOf(tokens[0].type) === -1) {
-            throw SyntaxError('Invalid Syntax');
-        }
-        tokens.splice(0, 1); // consume if and else if
-        return new ConditionalNode(Tree.processTokens(Tree.getBlockTokens(tokens, null)[0]), Tree.processTokens(Tree.getBlockTokens(tokens, null)[0]));
-    };
-    IfStatementNode.parse = function (lastNode, token, tokens) {
-        if (tokens[1].type !== TokenType.L_PAREN) {
-            throw SyntaxError('If statement needs to be followed by a condition encased in parenthesis.');
-        }
-        var nodes = [];
-        nodes.push(IfStatementNode.parseConditional(tokens));
-        while (tokens.length > 0 && TokenType.ELSE_IF === tokens[0].type) {
-            nodes.push(IfStatementNode.parseConditional(tokens));
-        }
-        if (tokens.length > 0 && TokenType.ELSE === tokens[0].type) {
-            tokens.splice(0, 1); // Consume else
-            nodes.push(new ConditionalNode(new LiteralNode(true), Tree.processTokens(Tree.getBlockTokens(tokens, null)[0])));
-        }
-        return new IfStatementNode(nodes);
-    };
-    return IfStatementNode;
-}(Node));
-var ForStatementNode = /** @class */ (function (_super) {
-    __extends(ForStatementNode, _super);
-    function ForStatementNode(variable, list, block) {
-        var _this = _super.call(this) || this;
-        _this.variable = variable;
-        _this.list = list;
-        _this.block = block;
-        return _this;
-    }
-    ForStatementNode.prototype._getChildNodes = function () {
-        return [
-            this.variable,
-            this.list,
-            this.block
-        ];
-    };
-    ForStatementNode.prototype.evaluate = function (scope, dom, tag) {
-        if (tag === void 0) { tag = null; }
-        return __awaiter(this, void 0, void 0, function () {
-            var variable, list, i;
-            return __generator(this, function (_a) {
-                switch (_a.label) {
-                    case 0: return [4 /*yield*/, this.variable.evaluate(scope, dom, tag)];
-                    case 1:
-                        variable = _a.sent();
-                        return [4 /*yield*/, this.list.evaluate(scope, dom, tag)];
-                    case 2:
-                        list = _a.sent();
-                        i = 0;
-                        _a.label = 3;
-                    case 3:
-                        if (!(i < list.length)) return [3 /*break*/, 6];
-                        scope.set(variable, list[i]);
-                        return [4 /*yield*/, this.block.evaluate(scope, dom, tag)];
-                    case 4:
-                        _a.sent();
-                        _a.label = 5;
-                    case 5:
-                        i++;
-                        return [3 /*break*/, 3];
-                    case 6: return [2 /*return*/, null];
-                }
-            });
-        });
-    };
-    ForStatementNode.parse = function (lastNode, token, tokens) {
-        if (tokens[1].type !== TokenType.L_PAREN) {
-            throw SyntaxError('Syntax error: Missing (');
-        }
-        if (tokens[3].type !== TokenType.OF) {
-            throw SyntaxError('Syntax error: Missing of');
-        }
-        tokens.splice(0, 1); // consume for
-        var loopDef = Tree.getNextStatementTokens(tokens);
-        var variableName = loopDef.splice(0, 1)[0];
-        loopDef.splice(0, 1); // consume of
-        var list = Tree.processTokens(loopDef);
-        var block = Tree.processTokens(Tree.getBlockTokens(tokens, null)[0]);
-        return new ForStatementNode(new LiteralNode(variableName.value), list, block);
-    };
-    return ForStatementNode;
-}(Node));
-var NotNode = /** @class */ (function (_super) {
-    __extends(NotNode, _super);
-    function NotNode(toFlip) {
-        var _this = _super.call(this) || this;
-        _this.toFlip = toFlip;
-        return _this;
-    }
-    NotNode.prototype.evaluate = function (scope, dom, tag) {
-        if (tag === void 0) { tag = null; }
-        return __awaiter(this, void 0, void 0, function () {
-            var flipping;
-            return __generator(this, function (_a) {
-                switch (_a.label) {
-                    case 0: return [4 /*yield*/, this.toFlip.evaluate(scope, dom, tag)];
-                    case 1:
-                        flipping = _a.sent();
-                        return [2 /*return*/, !flipping];
-                }
-            });
-        });
-    };
-    NotNode.prototype._getChildNodes = function () {
-        return [
-            this.toFlip
-        ];
-    };
-    NotNode.parse = function (lastNode, token, tokens) {
-        tokens.splice(0, 1); // Remove not operator
-        var containedTokens;
-        if (tokens[0].type === TokenType.L_PAREN) {
-            containedTokens = Tree.getNextStatementTokens(tokens);
-        }
-        else {
-            containedTokens = Tree.consumeTypes(tokens, [
-                TokenType.BOOLEAN_LITERAL,
-                TokenType.NUMBER_LITERAL,
-                TokenType.STRING_LITERAL,
-                TokenType.NAME,
-                TokenType.PERIOD
-            ]);
-        }
-        return new NotNode(Tree.processTokens(containedTokens));
-    };
-    return NotNode;
-}(Node));
-var InNode = /** @class */ (function (_super) {
-    __extends(InNode, _super);
-    function InNode(left, right, flip) {
-        if (flip === void 0) { flip = false; }
-        var _this = _super.call(this) || this;
-        _this.left = left;
-        _this.right = right;
-        _this.flip = flip;
-        return _this;
-    }
-    InNode.prototype.evaluate = function (scope, dom, tag) {
-        if (tag === void 0) { tag = null; }
-        return __awaiter(this, void 0, void 0, function () {
-            var toCheck, array, inArray;
-            return __generator(this, function (_a) {
-                switch (_a.label) {
-                    case 0: return [4 /*yield*/, this.left.evaluate(scope, dom, tag)];
-                    case 1:
-                        toCheck = _a.sent();
-                        return [4 /*yield*/, this.right.evaluate(scope, dom, tag)];
-                    case 2:
-                        array = _a.sent();
-                        inArray = array.indexOf(toCheck) > -1;
-                        if (this.flip)
-                            inArray = !inArray;
-                        return [2 /*return*/, inArray];
-                }
-            });
-        });
-    };
-    InNode.prototype._getChildNodes = function () {
-        return [
-            this.left,
-            this.right
-        ];
-    };
-    InNode.match = function (tokens) {
-        return tokens[0].type === TokenType.IN || (tokens[0].type === TokenType.NOT && tokens[1].type === TokenType.IN);
-    };
-    InNode.parse = function (lastNode, token, tokens) {
-        var flip = tokens[0].type === TokenType.NOT;
-        if (flip)
-            tokens.splice(0, 1); // consume not
-        tokens.splice(0, 1); // consume in
-        var containedTokens = Tree.getNextStatementTokens(tokens, false, false, true);
-        return new InNode(lastNode, Tree.processTokens(containedTokens), flip);
-    };
-    return InNode;
-}(Node));
-var LiteralNode = /** @class */ (function (_super) {
-    __extends(LiteralNode, _super);
-    function LiteralNode(value) {
-        var _this = _super.call(this) || this;
-        _this.value = value;
-        return _this;
-    }
-    LiteralNode.prototype.evaluate = function (scope, dom, tag) {
-        if (tag === void 0) { tag = null; }
-        return __awaiter(this, void 0, void 0, function () {
-            return __generator(this, function (_a) {
-                return [2 /*return*/, this.value];
-            });
-        });
-    };
-    return LiteralNode;
-}(Node));
-var BooleanLiteralNode = /** @class */ (function (_super) {
-    __extends(BooleanLiteralNode, _super);
-    function BooleanLiteralNode(value) {
-        var _this = _super.call(this, value) || this;
-        _this.value = value;
-        _this.value = value === 'true';
-        return _this;
-    }
-    return BooleanLiteralNode;
-}(LiteralNode));
-var NumberLiteralNode = /** @class */ (function (_super) {
-    __extends(NumberLiteralNode, _super);
-    function NumberLiteralNode(value) {
-        var _this = _super.call(this, value) || this;
-        _this.value = value;
-        if (_this.value.indexOf('.') > -1) {
-            _this.value = parseFloat(_this.value);
-        }
-        else {
-            _this.value = parseInt(_this.value);
-        }
-        return _this;
-    }
-    return NumberLiteralNode;
-}(LiteralNode));
-var UnitLiteral = /** @class */ (function () {
-    function UnitLiteral(_value) {
-        this._value = _value;
-        this.value = this._value;
-    }
-    Object.defineProperty(UnitLiteral.prototype, "amount", {
-        get: function () {
-            return this._amount;
-        },
-        enumerable: false,
-        configurable: true
-    });
-    Object.defineProperty(UnitLiteral.prototype, "unit", {
-        get: function () {
-            return this._unit;
-        },
-        enumerable: false,
-        configurable: true
-    });
-    Object.defineProperty(UnitLiteral.prototype, "value", {
-        get: function () {
-            return "" + this._amount + this._unit;
-        },
-        set: function (value) {
-            if (value.indexOf('.') > -1) {
-                this._amount = parseFloat(value);
-            }
-            else {
-                this._amount = parseInt(value);
-            }
-            if (isNaN(this._amount))
-                this._amount = 0;
-            var unit = /[^\d.]+$/.exec(value);
-            this._unit = unit && unit[0] || '';
-        },
-        enumerable: false,
-        configurable: true
-    });
-    UnitLiteral.prototype.toString = function () {
-        return this.value;
-    };
-    return UnitLiteral;
-}());
-var UnitLiteralNode = /** @class */ (function (_super) {
-    __extends(UnitLiteralNode, _super);
-    function UnitLiteralNode(_value) {
-        return _super.call(this, new UnitLiteral(_value)) || this;
-    }
-    return UnitLiteralNode;
-}(LiteralNode));
-var FunctionCallNode = /** @class */ (function (_super) {
-    __extends(FunctionCallNode, _super);
-    function FunctionCallNode(fnc, args) {
-        var _this = _super.call(this) || this;
-        _this.fnc = fnc;
-        _this.args = args;
-        return _this;
-    }
-    FunctionCallNode.prototype._getChildNodes = function () {
-        return [
-            this.fnc,
-            this.args
-        ];
-    };
-    FunctionCallNode.prototype.evaluate = function (scope, dom, tag) {
-        if (tag === void 0) { tag = null; }
-        return __awaiter(this, void 0, void 0, function () {
-            var functionScope, values;
-            var _a;
-            return __generator(this, function (_b) {
-                switch (_b.label) {
-                    case 0:
-                        functionScope = scope;
-                        if (!(this.fnc instanceof ScopeMemberNode)) return [3 /*break*/, 2];
-                        return [4 /*yield*/, this.fnc.scope.evaluate(scope, dom, tag)];
-                    case 1:
-                        functionScope = _b.sent();
-                        _b.label = 2;
-                    case 2: return [4 /*yield*/, this.args.evaluate(scope, dom, tag)];
-                    case 3:
-                        values = _b.sent();
-                        return [4 /*yield*/, this.fnc.evaluate(scope, dom, tag)];
-                    case 4: return [2 /*return*/, (_a = (_b.sent())).call.apply(_a, __spreadArray([functionScope.wrapped || functionScope], values))];
-                }
-            });
-        });
-    };
-    return FunctionCallNode;
-}(Node));
-var FunctionArgumentNode = /** @class */ (function (_super) {
-    __extends(FunctionArgumentNode, _super);
-    function FunctionArgumentNode(args) {
-        var _this = _super.call(this) || this;
-        _this.args = args;
-        return _this;
-    }
-    FunctionArgumentNode.prototype._getChildNodes = function () {
-        return __spreadArray([], this.args);
-    };
-    FunctionArgumentNode.prototype.evaluate = function (scope, dom, tag) {
-        if (tag === void 0) { tag = null; }
-        return __awaiter(this, void 0, void 0, function () {
-            var values, _i, _a, arg, _b, _c;
-            return __generator(this, function (_d) {
-                switch (_d.label) {
-                    case 0:
-                        values = [];
-                        _i = 0, _a = this.args;
-                        _d.label = 1;
-                    case 1:
-                        if (!(_i < _a.length)) return [3 /*break*/, 4];
-                        arg = _a[_i];
-                        _c = (_b = values).push;
-                        return [4 /*yield*/, arg.evaluate(scope, dom, tag)];
-                    case 2:
-                        _c.apply(_b, [_d.sent()]);
-                        _d.label = 3;
-                    case 3:
-                        _i++;
-                        return [3 /*break*/, 1];
-                    case 4: return [2 /*return*/, values];
-                }
-            });
-        });
-    };
-    return FunctionArgumentNode;
-}(Node));
-var ScopeMemberNode = /** @class */ (function (_super) {
-    __extends(ScopeMemberNode, _super);
-    function ScopeMemberNode(scope, name) {
-        var _this = _super.call(this) || this;
-        _this.scope = scope;
-        _this.name = name;
-        return _this;
-    }
-    ScopeMemberNode.prototype._getChildNodes = function () {
-        return [
-            this.scope,
-            this.name
-        ];
-    };
-    ScopeMemberNode.prototype.evaluate = function (scope, dom, tag) {
-        if (tag === void 0) { tag = null; }
-        return __awaiter(this, void 0, void 0, function () {
-            var scopes, values, evalScope, _i, scopes_1, parent_1, _a, _b, name_1, value;
-            return __generator(this, function (_c) {
-                switch (_c.label) {
-                    case 0:
-                        scopes = [];
-                        values = [];
-                        if (!(this.scope instanceof ElementQueryNode)) return [3 /*break*/, 2];
-                        return [4 /*yield*/, this.scope.evaluate(scope, dom, tag)];
-                    case 1:
-                        scopes = _c.sent();
-                        return [3 /*break*/, 4];
-                    case 2: return [4 /*yield*/, this.scope.evaluate(scope, dom, tag)];
-                    case 3:
-                        evalScope = _c.sent();
-                        if (evalScope instanceof List_1.TagList) {
-                            scopes = evalScope;
-                        }
-                        else {
-                            scopes.push(evalScope);
-                        }
-                        _c.label = 4;
-                    case 4:
-                        _i = 0, scopes_1 = scopes;
-                        _c.label = 5;
-                    case 5:
-                        if (!(_i < scopes_1.length)) return [3 /*break*/, 10];
-                        parent_1 = scopes_1[_i];
-                        if (parent_1 instanceof DOMObject_1.DOMObject)
-                            parent_1 = parent_1.scope;
-                        if (!!parent_1) return [3 /*break*/, 7];
-                        _a = Error;
-                        _b = "Cannot access \"";
-                        return [4 /*yield*/, this.name.evaluate(scope, dom, tag)];
-                    case 6: throw _a.apply(void 0, [_b + (_c.sent()) + "\" of undefined."]);
-                    case 7: return [4 /*yield*/, this.name.evaluate(scope, dom, tag)];
-                    case 8:
-                        name_1 = _c.sent();
-                        value = parent_1.get(name_1, false);
-                        values.push(value instanceof Scope_1.Scope && value.wrapped || value);
-                        _c.label = 9;
-                    case 9:
-                        _i++;
-                        return [3 /*break*/, 5];
-                    case 10: return [2 /*return*/, values.length === 1 ? values[0] : values];
-                }
-            });
-        });
-    };
-    return ScopeMemberNode;
-}(Node));
-var RootScopeMemberNode = /** @class */ (function (_super) {
-    __extends(RootScopeMemberNode, _super);
-    function RootScopeMemberNode(name) {
-        var _this = _super.call(this) || this;
-        _this.name = name;
-        return _this;
-    }
-    RootScopeMemberNode.prototype._getChildNodes = function () {
-        return [
-            this.name
-        ];
-    };
-    RootScopeMemberNode.prototype.evaluate = function (scope, dom, tag) {
-        if (tag === void 0) { tag = null; }
-        return __awaiter(this, void 0, void 0, function () {
-            var name, value;
-            return __generator(this, function (_a) {
-                switch (_a.label) {
-                    case 0: return [4 /*yield*/, this.name.evaluate(scope, dom, tag)];
-                    case 1:
-                        name = _a.sent();
-                        value = scope.get(name);
-                        return [2 /*return*/, value instanceof Scope_1.Scope && value.wrapped || value];
-                }
-            });
-        });
-    };
-    return RootScopeMemberNode;
-}(Node));
-var ArithmeticNode = /** @class */ (function (_super) {
-    __extends(ArithmeticNode, _super);
-    function ArithmeticNode(left, right, type) {
-        var _this = _super.call(this) || this;
-        _this.left = left;
-        _this.right = right;
-        _this.type = type;
-        return _this;
-    }
-    ArithmeticNode.prototype._getChildNodes = function () {
-        return [
-            this.left,
-            this.right
-        ];
-    };
-    ArithmeticNode.prototype.evaluate = function (scope, dom, tag) {
-        if (tag === void 0) { tag = null; }
-        return __awaiter(this, void 0, void 0, function () {
-            var left, right;
-            return __generator(this, function (_a) {
-                switch (_a.label) {
-                    case 0: return [4 /*yield*/, this.left.evaluate(scope, dom, tag)];
-                    case 1:
-                        left = _a.sent();
-                        return [4 /*yield*/, this.right.evaluate(scope, dom, tag)];
-                    case 2:
-                        right = _a.sent();
-                        switch (this.type) {
-                            case TokenType.ADD:
-                                return [2 /*return*/, left + right];
-                            case TokenType.SUBTRACT:
-                                return [2 /*return*/, left - right];
-                            case TokenType.MULTIPLY:
-                                return [2 /*return*/, left * right];
-                            case TokenType.DIVIDE:
-                                return [2 /*return*/, left / right];
-                        }
-                        return [2 /*return*/];
-                }
-            });
-        });
-    };
-    ArithmeticNode.match = function (tokens) {
-        return [
-            TokenType.ADD,
-            TokenType.SUBTRACT,
-            TokenType.MULTIPLY,
-            TokenType.DIVIDE
-        ].indexOf(tokens[0].type) > -1;
-    };
-    ArithmeticNode.parse = function (lastNode, token, tokens) {
-        tokens.splice(0, 1); // Remove arithmetic operator
-        return new ArithmeticNode(lastNode, Tree.processTokens(Tree.getNextStatementTokens(tokens)), token.type);
-    };
-    return ArithmeticNode;
-}(Node));
-var ArithmeticAssignmentNode = /** @class */ (function (_super) {
-    __extends(ArithmeticAssignmentNode, _super);
-    function ArithmeticAssignmentNode(left, right, type) {
-        var _this = _super.call(this) || this;
-        _this.left = left;
-        _this.right = right;
-        _this.type = type;
-        return _this;
-    }
-    ArithmeticAssignmentNode.prototype._getChildNodes = function () {
-        return [
-            this.left,
-            this.right
-        ];
-    };
-    ArithmeticAssignmentNode.prototype.evaluate = function (scope, dom, tag) {
-        if (tag === void 0) { tag = null; }
-        return __awaiter(this, void 0, void 0, function () {
-            var scopes, name, inner, values, _i, scopes_2, localScope, left, right;
-            return __generator(this, function (_a) {
-                switch (_a.label) {
-                    case 0:
-                        scopes = [];
-                        return [4 /*yield*/, this.left.name.evaluate(scope, dom, tag)];
-                    case 1:
-                        name = _a.sent();
-                        if (!(this.left instanceof ScopeMemberNode)) return [3 /*break*/, 3];
-                        return [4 /*yield*/, this.left.scope.evaluate(scope, dom, tag)];
-                    case 2:
-                        inner = _a.sent();
-                        if (this.left.scope instanceof ElementQueryNode) {
-                            scopes.push.apply(scopes, inner);
-                        }
-                        else {
-                            scopes.push(inner);
-                        }
-                        return [3 /*break*/, 6];
-                    case 3:
-                        if (!((this.left instanceof ElementAttributeNode || this.left instanceof ElementStyleNode) && this.left.elementRef)) return [3 /*break*/, 5];
-                        return [4 /*yield*/, this.left.elementRef.evaluate(scope, dom, tag)];
-                    case 4:
-                        scopes = _a.sent();
-                        return [3 /*break*/, 6];
-                    case 5:
-                        scopes.push(scope);
-                        _a.label = 6;
-                    case 6:
-                        values = [];
-                        _i = 0, scopes_2 = scopes;
-                        _a.label = 7;
-                    case 7:
-                        if (!(_i < scopes_2.length)) return [3 /*break*/, 13];
-                        localScope = scopes_2[_i];
-                        if (!(localScope instanceof DOMObject_1.DOMObject)) return [3 /*break*/, 9];
-                        return [4 /*yield*/, this.handleDOMObject(name, dom, localScope, tag)];
-                    case 8:
-                        _a.sent();
-                        return [3 /*break*/, 12];
-                    case 9:
-                        if (localScope['$wrapped'] && localScope['$scope'])
-                            localScope = localScope['$scope'];
-                        return [4 /*yield*/, this.left.evaluate(localScope, dom, tag)];
-                    case 10:
-                        left = _a.sent();
-                        return [4 /*yield*/, this.right.evaluate(localScope, dom, tag)];
-                    case 11:
-                        right = _a.sent();
-                        if (left instanceof Array) {
-                            left = this.handleArray(name, left, right, localScope);
-                        }
-                        else if (left instanceof UnitLiteral || right instanceof UnitLiteral) {
-                            left = this.handleUnit(name, left, right, localScope);
-                        }
-                        else if (Number.isFinite(left)) {
-                            left = this.handleNumber(name, left, right, localScope);
-                        }
-                        else {
-                            left = this.handleString(name, left, right, localScope);
-                        }
-                        values.push(left);
-                        _a.label = 12;
-                    case 12:
-                        _i++;
-                        return [3 /*break*/, 7];
-                    case 13: return [2 /*return*/, values.length > 1 ? values : values[0]];
-                }
-            });
-        });
-    };
-    ArithmeticAssignmentNode.prototype.handleNumber = function (key, left, right, scope) {
-        if (right !== null && !Number.isFinite(right))
-            right = parseFloat("" + right);
-        left = left;
-        right = right;
-        switch (this.type) {
-            case TokenType.ASSIGN:
-                left = right;
-                break;
-            case TokenType.ADD_ASSIGN:
-                left += right;
-                break;
-            case TokenType.SUBTRACT_ASSIGN:
-                left -= right;
-                break;
-            case TokenType.MULTIPLY_ASSIGN:
-                left *= right;
-                break;
-            case TokenType.DIVIDE_ASSIGN:
-                left /= right;
-                break;
-        }
-        scope.set(key, left);
-        return left;
-    };
-    ArithmeticAssignmentNode.prototype.handleString = function (key, left, right, scope) {
-        switch (this.type) {
-            case TokenType.ASSIGN:
-                left = right;
-                break;
-            case TokenType.ADD_ASSIGN:
-                left = "" + left + right;
-                break;
-            case TokenType.SUBTRACT_ASSIGN:
-                left.replace(right, '');
-                break;
-            case TokenType.MULTIPLY_ASSIGN:
-                left *= right;
-                break;
-            case TokenType.DIVIDE_ASSIGN:
-                left /= right;
-                break;
-        }
-        scope.set(key, left);
-        return left;
-    };
-    ArithmeticAssignmentNode.prototype.handleUnit = function (key, left, right, scope) {
-        if (!(left instanceof UnitLiteral)) {
-            left = new UnitLiteral(left);
-        }
-        if (!(right instanceof UnitLiteral)) {
-            right = new UnitLiteral(right);
-        }
-        var unit = left.unit || right.unit || 'px';
-        switch (this.type) {
-            case TokenType.ASSIGN:
-                left = right;
-                break;
-            case TokenType.ADD_ASSIGN:
-                left = new UnitLiteral("" + (left.amount + right.amount) + unit);
-                break;
-            case TokenType.SUBTRACT_ASSIGN:
-                left = new UnitLiteral("" + (left.amount - right.amount) + unit);
-                break;
-            case TokenType.MULTIPLY_ASSIGN:
-                left = new UnitLiteral("" + left.amount * right.amount + unit);
-                break;
-            case TokenType.DIVIDE_ASSIGN:
-                left = new UnitLiteral("" + left.amount / right.amount + unit);
-                break;
-        }
-        scope.set(key, left);
-        return left;
-    };
-    ArithmeticAssignmentNode.prototype.handleDOMObject = function (key, dom, domObject, tag) {
-        return __awaiter(this, void 0, void 0, function () {
-            var left, right;
-            return __generator(this, function (_a) {
-                switch (_a.label) {
-                    case 0:
-                        left = domObject.scope.get(key);
-                        return [4 /*yield*/, this.right.evaluate(domObject.scope, dom, tag)];
-                    case 1:
-                        right = _a.sent();
-                        if (left instanceof Array)
-                            return [2 /*return*/, this.handleArray(key, left, right, domObject.scope)];
-                        return [2 /*return*/, this.handleString(key, left, right, domObject.scope)];
-                }
-            });
-        });
-    };
-    ArithmeticAssignmentNode.prototype.handleArray = function (key, left, right, scope) {
-        if (!(right instanceof Array))
-            right = [right];
-        switch (this.type) {
-            case TokenType.ASSIGN:
-                left.splice(0, left.length);
-                left.push.apply(left, right);
-                break;
-            case TokenType.ADD_ASSIGN:
-                left.push.apply(left, right);
-                break;
-            case TokenType.SUBTRACT_ASSIGN:
-                for (var i = left.length - 1; i >= 0; i--) {
-                    if (right.indexOf(left[i]) > -1) {
-                        left.splice(i, 1);
-                        i++;
-                    }
-                }
-                break;
-            case TokenType.TILDE:
-                for (var _i = 0, right_1 = right; _i < right_1.length; _i++) {
-                    var toggle = right_1[_i];
-                    var index = left.indexOf(toggle);
-                    if (index > -1) {
-                        left.splice(index, 1);
-                    }
-                    else {
-                        left.push(toggle);
-                    }
-                }
-                break;
-        }
-        /*
-         We have to trigger a change manually here. Setting the variable on the scope with an array won't trigger
-         it since we are modifying values inside of the array instance.
-         */
-        scope.dispatch("change:" + key);
-        return left;
-    };
-    ArithmeticAssignmentNode.match = function (tokens) {
-        return [
-            TokenType.ASSIGN,
-            TokenType.ADD_ASSIGN,
-            TokenType.SUBTRACT_ASSIGN,
-            TokenType.MULTIPLY_ASSIGN,
-            TokenType.DIVIDE_ASSIGN,
-            TokenType.TILDE,
-        ].indexOf(tokens[0].type) > -1;
-    };
-    ArithmeticAssignmentNode.parse = function (lastNode, token, tokens) {
-        if (!(lastNode instanceof RootScopeMemberNode) && !(lastNode instanceof ScopeMemberNode) && !(lastNode instanceof ElementAttributeNode) && !(lastNode instanceof ElementStyleNode)) {
-            throw SyntaxError("Invalid assignment syntax near " + Tree.toCode(tokens.splice(0, 10)));
-        }
-        tokens.splice(0, 1); // consume =
-        var assignmentTokens = Tree.getNextStatementTokens(tokens, false, false, true);
-        return new ArithmeticAssignmentNode(lastNode, Tree.processTokens(assignmentTokens), token.type);
-    };
-    return ArithmeticAssignmentNode;
-}(Node));
-var IndexNode = /** @class */ (function (_super) {
-    __extends(IndexNode, _super);
-    function IndexNode(object, index, indexTwo) {
-        if (indexTwo === void 0) { indexTwo = null; }
-        var _this = _super.call(this) || this;
-        _this.object = object;
-        _this.index = index;
-        _this.indexTwo = indexTwo;
-        return _this;
-    }
-    IndexNode.prototype._getChildNodes = function () {
-        var children = [
-            this.object,
-            this.index
-        ];
-        if (this.indexTwo)
-            children.push(this.indexTwo);
-        return children;
-    };
-    IndexNode.prototype.negativeIndex = function (obj, index) {
-        if (Number.isFinite(index) && index < 0)
-            return obj.length + index;
-        return index;
-    };
-    IndexNode.prototype.evaluate = function (scope, dom, tag) {
-        if (tag === void 0) { tag = null; }
-        return __awaiter(this, void 0, void 0, function () {
-            var obj, index, _a, _b, indexTwo, _c, _d, values, i;
-            return __generator(this, function (_e) {
-                switch (_e.label) {
-                    case 0: return [4 /*yield*/, this.object.evaluate(scope, dom, tag)];
-                    case 1:
-                        obj = _e.sent();
-                        _a = this.negativeIndex;
-                        _b = [obj];
-                        return [4 /*yield*/, this.index.evaluate(scope, dom, tag)];
-                    case 2:
-                        index = _a.apply(this, _b.concat([_e.sent()]));
-                        if (!(Number.isFinite(index) && this.indexTwo)) return [3 /*break*/, 4];
-                        _c = this.negativeIndex;
-                        _d = [obj];
-                        return [4 /*yield*/, this.indexTwo.evaluate(scope, dom, tag)];
-                    case 3:
-                        indexTwo = _c.apply(this, _d.concat([_e.sent()]));
-                        values = [];
-                        for (i = index; i <= indexTwo; i++) {
-                            values.push(obj[i]);
-                        }
-                        return [2 /*return*/, values];
-                    case 4: return [2 /*return*/, (obj)[index]];
-                }
-            });
-        });
-    };
-    IndexNode.match = function (tokens) {
-        return tokens[0].type === TokenType.L_BRACKET;
-    };
-    IndexNode.parse = function (lastNode, token, tokens) {
-        var valueTokens = Tree.getBlockTokens(tokens, TokenType.COLON);
-        var values = [];
-        for (var _i = 0, valueTokens_1 = valueTokens; _i < valueTokens_1.length; _i++) {
-            var arg = valueTokens_1[_i];
-            values.push(Tree.processTokens(arg));
-        }
-        return new IndexNode(lastNode, values[0], values.length > 1 && values[1]);
-    };
-    return IndexNode;
-}(Node));
-var ArrayNode = /** @class */ (function (_super) {
-    __extends(ArrayNode, _super);
-    function ArrayNode(values) {
-        var _this = _super.call(this) || this;
-        _this.values = values;
-        return _this;
-    }
-    ArrayNode.prototype._getChildNodes = function () {
-        return new (Array.bind.apply(Array, __spreadArray([void 0], this.values)))();
-    };
-    ArrayNode.prototype.evaluate = function (scope, dom, tag) {
-        if (tag === void 0) { tag = null; }
-        return __awaiter(this, void 0, void 0, function () {
-            var arr, _i, _a, val, _b, _c;
-            return __generator(this, function (_d) {
-                switch (_d.label) {
-                    case 0:
-                        arr = new Scope_1.WrappedArray();
-                        _i = 0, _a = this.values;
-                        _d.label = 1;
-                    case 1:
-                        if (!(_i < _a.length)) return [3 /*break*/, 4];
-                        val = _a[_i];
-                        _c = (_b = arr).push;
-                        return [4 /*yield*/, val.evaluate(scope, dom, tag)];
-                    case 2:
-                        _c.apply(_b, [_d.sent()]);
-                        _d.label = 3;
-                    case 3:
-                        _i++;
-                        return [3 /*break*/, 1];
-                    case 4: return [2 /*return*/, arr];
-                }
-            });
-        });
-    };
-    ArrayNode.match = function (tokens) {
-        return tokens[0].type === TokenType.L_BRACKET;
-    };
-    ArrayNode.parse = function (lastNode, token, tokens) {
-        var valueTokens = Tree.getBlockTokens(tokens);
-        var values = [];
-        for (var _i = 0, valueTokens_2 = valueTokens; _i < valueTokens_2.length; _i++) {
-            var arg = valueTokens_2[_i];
-            values.push(Tree.processTokens(arg));
-        }
-        return new ArrayNode(values);
-    };
-    return ArrayNode;
-}(Node));
-var ObjectNode = /** @class */ (function (_super) {
-    __extends(ObjectNode, _super);
-    function ObjectNode(keys, values) {
-        var _this = _super.call(this) || this;
-        _this.keys = keys;
-        _this.values = values;
-        return _this;
-    }
-    ObjectNode.prototype._getChildNodes = function () {
-        return new (Array.bind.apply(Array, __spreadArray([void 0], this.values)))();
-    };
-    ObjectNode.prototype.evaluate = function (scope, dom, tag) {
-        if (tag === void 0) { tag = null; }
-        return __awaiter(this, void 0, void 0, function () {
-            var obj, i, key, val, _a, _b, _c;
-            return __generator(this, function (_d) {
-                switch (_d.label) {
-                    case 0:
-                        obj = new Scope_1.Scope();
-                        i = 0;
-                        _d.label = 1;
-                    case 1:
-                        if (!(i < this.values.length)) return [3 /*break*/, 5];
-                        key = this.keys[i];
-                        val = this.values[i];
-                        _b = (_a = obj).set;
-                        return [4 /*yield*/, key.evaluate(scope, dom, tag)];
-                    case 2:
-                        _c = [_d.sent()];
-                        return [4 /*yield*/, val.evaluate(scope, dom, tag)];
-                    case 3:
-                        _b.apply(_a, _c.concat([_d.sent()]));
-                        _d.label = 4;
-                    case 4:
-                        i++;
-                        return [3 /*break*/, 1];
-                    case 5: return [2 /*return*/, obj];
-                }
-            });
-        });
-    };
-    ObjectNode.match = function (tokens) {
-        return tokens[0].type === TokenType.L_BRACE;
-    };
-    ObjectNode.parse = function (lastNode, token, tokens) {
-        var valueTokens = Tree.getNextStatementTokens(tokens);
-        var keys = [];
-        var values = [];
-        while (valueTokens.length > 0) {
-            var key = Tree.getTokensUntil(valueTokens, TokenType.COLON, false);
-            if (valueTokens[0].type !== TokenType.COLON)
-                throw Error('Invalid object literal syntax. Expecting :');
-            valueTokens.splice(0, 1); // Consume :
-            var val = Tree.getTokensUntil(valueTokens, TokenType.COMMA, true, false, true, {
-                type: BlockType.STATEMENT,
-                open: null,
-                close: null,
-                openCharacter: null,
-                closeCharacter: null
-            });
-            keys.push(Tree.processTokens(key));
-            values.push(Tree.processTokens(val));
-        }
-        return new ObjectNode(keys, values);
-    };
-    return ObjectNode;
-}(Node));
-var ElementQueryNode = /** @class */ (function (_super) {
-    __extends(ElementQueryNode, _super);
-    function ElementQueryNode(query) {
-        var _this = _super.call(this) || this;
-        _this.query = query;
-        _this.requiresPrep = true;
-        return _this;
-    }
-    ElementQueryNode.prototype.evaluate = function (scope, dom, tag) {
-        if (tag === void 0) { tag = null; }
-        return __awaiter(this, void 0, void 0, function () {
-            var _a;
-            return __generator(this, function (_b) {
-                switch (_b.label) {
-                    case 0:
-                        _a = tag;
-                        if (_a) return [3 /*break*/, 2];
-                        return [4 /*yield*/, dom.getTagForScope(scope)];
-                    case 1:
-                        _a = (_b.sent());
-                        _b.label = 2;
-                    case 2:
-                        tag = _a;
-                        return [4 /*yield*/, dom.get(this.query, true, tag)];
-                    case 3: return [2 /*return*/, _b.sent()];
-                }
-            });
-        });
-    };
-    ElementQueryNode.prototype.prepare = function (scope, dom, tag) {
-        if (tag === void 0) { tag = null; }
-        return __awaiter(this, void 0, void 0, function () {
-            var _a;
-            return __generator(this, function (_b) {
-                switch (_b.label) {
-                    case 0:
-                        _a = tag;
-                        if (_a) return [3 /*break*/, 2];
-                        return [4 /*yield*/, dom.getTagForScope(scope)];
-                    case 1:
-                        _a = (_b.sent());
-                        _b.label = 2;
-                    case 2:
-                        tag = _a;
-                        return [4 /*yield*/, dom.get(this.query, true, tag)];
-                    case 3:
-                        _b.sent();
-                        return [2 /*return*/];
-                }
-            });
-        });
-    };
-    return ElementQueryNode;
-}(Node));
-var ElementAttributeNode = /** @class */ (function (_super) {
-    __extends(ElementAttributeNode, _super);
-    function ElementAttributeNode(elementRef, attr) {
-        var _this = _super.call(this) || this;
-        _this.elementRef = elementRef;
-        _this.attr = attr;
-        _this.requiresPrep = true;
-        return _this;
-    }
-    Object.defineProperty(ElementAttributeNode.prototype, "name", {
-        get: function () {
-            return new LiteralNode("@" + this.attributeName);
-        },
-        enumerable: false,
-        configurable: true
-    });
-    ElementAttributeNode.prototype._getChildNodes = function () {
-        var nodes = [];
-        if (this.elementRef)
-            nodes.push(this.elementRef);
-        return nodes;
-    };
-    Object.defineProperty(ElementAttributeNode.prototype, "attributeName", {
-        get: function () {
-            if (this.attr.startsWith('.'))
-                return this.attr.substring(2);
-            return this.attr.substring(1);
-        },
-        enumerable: false,
-        configurable: true
-    });
-    ElementAttributeNode.prototype.evaluate = function (scope, dom, tag) {
-        if (tag === void 0) { tag = null; }
-        return __awaiter(this, void 0, void 0, function () {
-            var tags;
-            var _this = this;
-            return __generator(this, function (_a) {
-                switch (_a.label) {
-                    case 0:
-                        if (!this.elementRef) return [3 /*break*/, 2];
-                        return [4 /*yield*/, this.elementRef.evaluate(scope, dom, tag)];
-                    case 1:
-                        tags = _a.sent();
-                        return [3 /*break*/, 3];
-                    case 2:
-                        if (tag) {
-                            tags = new List_1.TagList(tag);
-                        }
-                        else {
-                            return [2 /*return*/];
-                        }
-                        _a.label = 3;
-                    case 3:
-                        if (tags.length === 1)
-                            return [2 /*return*/, tags[0].scope.get("@" + this.attributeName)];
-                        return [2 /*return*/, tags.map(function (tag) { return tag.scope.get("@" + _this.attributeName); })];
-                }
-            });
-        });
-    };
-    ElementAttributeNode.prototype.prepare = function (scope, dom, tag) {
-        if (tag === void 0) { tag = null; }
-        return __awaiter(this, void 0, void 0, function () {
-            var tags, _i, tags_1, t;
-            return __generator(this, function (_a) {
-                switch (_a.label) {
-                    case 0:
-                        if (!this.elementRef) return [3 /*break*/, 7];
-                        return [4 /*yield*/, this.elementRef.prepare(scope, dom, tag)];
-                    case 1:
-                        _a.sent();
-                        return [4 /*yield*/, this.elementRef.evaluate(scope, dom, tag)];
-                    case 2:
-                        tags = _a.sent();
-                        _i = 0, tags_1 = tags;
-                        _a.label = 3;
-                    case 3:
-                        if (!(_i < tags_1.length)) return [3 /*break*/, 6];
-                        t = tags_1[_i];
-                        return [4 /*yield*/, t.watchAttribute(this.attributeName)];
-                    case 4:
-                        _a.sent();
-                        _a.label = 5;
-                    case 5:
-                        _i++;
-                        return [3 /*break*/, 3];
-                    case 6: return [3 /*break*/, 9];
-                    case 7:
-                        if (!tag) return [3 /*break*/, 9];
-                        return [4 /*yield*/, tag.watchAttribute(this.attributeName)];
-                    case 8:
-                        _a.sent();
-                        _a.label = 9;
-                    case 9: return [2 /*return*/];
-                }
-            });
-        });
-    };
-    return ElementAttributeNode;
-}(Node));
-var ElementStyleNode = /** @class */ (function (_super) {
-    __extends(ElementStyleNode, _super);
-    function ElementStyleNode(elementRef, attr) {
-        var _this = _super.call(this) || this;
-        _this.elementRef = elementRef;
-        _this.attr = attr;
-        _this.requiresPrep = true;
-        return _this;
-    }
-    Object.defineProperty(ElementStyleNode.prototype, "name", {
-        get: function () {
-            return new LiteralNode("$" + this.attributeName);
-        },
-        enumerable: false,
-        configurable: true
-    });
-    ElementStyleNode.prototype._getChildNodes = function () {
-        var nodes = [];
-        if (this.elementRef)
-            nodes.push(this.elementRef);
-        return nodes;
-    };
-    Object.defineProperty(ElementStyleNode.prototype, "attributeName", {
-        get: function () {
-            if (this.attr.startsWith('.'))
-                return this.attr.substring(2);
-            return this.attr.substring(1);
-        },
-        enumerable: false,
-        configurable: true
-    });
-    ElementStyleNode.prototype.evaluate = function (scope, dom, tag) {
-        if (tag === void 0) { tag = null; }
-        return __awaiter(this, void 0, void 0, function () {
-            var tags;
-            var _this = this;
-            return __generator(this, function (_a) {
-                switch (_a.label) {
-                    case 0:
-                        if (!this.elementRef) return [3 /*break*/, 2];
-                        return [4 /*yield*/, this.elementRef.evaluate(scope, dom, tag)];
-                    case 1:
-                        tags = _a.sent();
-                        return [3 /*break*/, 3];
-                    case 2:
-                        if (tag) {
-                            tags = new List_1.TagList(tag);
-                        }
-                        else {
-                            return [2 /*return*/];
-                        }
-                        _a.label = 3;
-                    case 3:
-                        if (tags.length === 1)
-                            return [2 /*return*/, tags[0].scope.get("$" + this.attributeName)];
-                        return [2 /*return*/, tags.map(function (tag) { return tag.scope.get("$" + _this.attributeName); })];
-                }
-            });
-        });
-    };
-    ElementStyleNode.prototype.prepare = function (scope, dom, tag) {
-        if (tag === void 0) { tag = null; }
-        return __awaiter(this, void 0, void 0, function () {
-            var tags, _i, tags_2, t;
-            return __generator(this, function (_a) {
-                switch (_a.label) {
-                    case 0:
-                        if (!this.elementRef) return [3 /*break*/, 7];
-                        return [4 /*yield*/, this.elementRef.prepare(scope, dom, tag)];
-                    case 1:
-                        _a.sent();
-                        return [4 /*yield*/, this.elementRef.evaluate(scope, dom, tag)];
-                    case 2:
-                        tags = _a.sent();
-                        _i = 0, tags_2 = tags;
-                        _a.label = 3;
-                    case 3:
-                        if (!(_i < tags_2.length)) return [3 /*break*/, 6];
-                        t = tags_2[_i];
-                        return [4 /*yield*/, t.watchStyle(this.attributeName)];
-                    case 4:
-                        _a.sent();
-                        _a.label = 5;
-                    case 5:
-                        _i++;
-                        return [3 /*break*/, 3];
-                    case 6: return [3 /*break*/, 9];
-                    case 7:
-                        if (!tag) return [3 /*break*/, 9];
-                        return [4 /*yield*/, tag.watchStyle(this.attributeName)];
-                    case 8:
-                        _a.sent();
-                        _a.label = 9;
-                    case 9: return [2 /*return*/];
-                }
-            });
-        });
-    };
-    return ElementStyleNode;
-}(Node));
 exports.AttributableNodes = [
-    RootScopeMemberNode,
-    ScopeMemberNode,
-    ElementAttributeNode
+    RootScopeMemberNode_1.RootScopeMemberNode,
+    ScopeMemberNode_1.ScopeMemberNode,
+    ElementAttributeNode_1.ElementAttributeNode
 ];
 var Tree = /** @class */ (function () {
     function Tree(code) {
@@ -1820,31 +388,31 @@ var Tree = /** @class */ (function () {
     Tree.prototype.bindToScopeChanges = function (scope, fnc, dom, tag) {
         if (tag === void 0) { tag = null; }
         return __awaiter(this, void 0, void 0, function () {
-            var _i, _a, node, _scope, name_2;
+            var _i, _a, node, _scope, name_1;
             return __generator(this, function (_b) {
                 switch (_b.label) {
                     case 0:
-                        _i = 0, _a = this.rootNode.findChildrenByTypes([RootScopeMemberNode, ScopeMemberNode, ElementAttributeNode], 'ScopeMemberNodes');
+                        _i = 0, _a = this.rootNode.findChildrenByTypes([RootScopeMemberNode_1.RootScopeMemberNode, ScopeMemberNode_1.ScopeMemberNode, ElementAttributeNode_1.ElementAttributeNode], 'ScopeMemberNodes');
                         _b.label = 1;
                     case 1:
                         if (!(_i < _a.length)) return [3 /*break*/, 8];
                         node = _a[_i];
                         _scope = scope;
-                        if (!(node instanceof ScopeMemberNode)) return [3 /*break*/, 3];
+                        if (!(node instanceof ScopeMemberNode_1.ScopeMemberNode)) return [3 /*break*/, 3];
                         return [4 /*yield*/, node.scope.evaluate(scope, dom)];
                     case 2:
                         _scope = _b.sent();
                         return [3 /*break*/, 5];
                     case 3:
-                        if (!(node instanceof ElementAttributeNode && node.elementRef)) return [3 /*break*/, 5];
+                        if (!(node instanceof ElementAttributeNode_1.ElementAttributeNode && node.elementRef)) return [3 /*break*/, 5];
                         return [4 /*yield*/, node.elementRef.evaluate(scope, dom, tag)];
                     case 4:
                         _scope = (_b.sent())[0].scope;
                         _b.label = 5;
                     case 5: return [4 /*yield*/, node.name.evaluate(scope, dom, tag)];
                     case 6:
-                        name_2 = _b.sent();
-                        _scope.on("change:" + name_2, fnc);
+                        name_1 = _b.sent();
+                        _scope.on("change:" + name_1, fnc);
                         _b.label = 7;
                     case 7:
                         _i++;
@@ -1899,56 +467,56 @@ var Tree = /** @class */ (function () {
                 tokens.splice(0, 1);
             var token = tokens[0];
             if (token.type === TokenType.NAME) {
-                node = new RootScopeMemberNode(new LiteralNode(token.value));
+                node = new RootScopeMemberNode_1.RootScopeMemberNode(new LiteralNode_1.LiteralNode(token.value));
                 tokens.splice(0, 1);
             }
             else if (token.type === TokenType.IF) {
-                node = IfStatementNode.parse(node, token, tokens);
+                node = IfStatementNode_1.IfStatementNode.parse(node, token, tokens);
                 blockNodes.push(node);
                 node = null;
             }
             else if (token.type === TokenType.FOR) {
-                node = ForStatementNode.parse(node, token, tokens);
+                node = ForStatementNode_1.ForStatementNode.parse(node, token, tokens);
                 blockNodes.push(node);
                 node = null;
             }
             else if (token.type === TokenType.STRING_LITERAL) {
-                node = new LiteralNode(token.value);
+                node = new LiteralNode_1.LiteralNode(token.value);
                 tokens.splice(0, 1);
             }
             else if (token.type === TokenType.NUMBER_LITERAL) {
-                node = new NumberLiteralNode(token.value);
+                node = new NumberLiteralNode_1.NumberLiteralNode(token.value);
                 tokens.splice(0, 1);
             }
             else if (tokens[0].type === TokenType.ELEMENT_REFERENCE) {
-                node = new ElementQueryNode(tokens[0].value);
+                node = new ElementQueryNode_1.ElementQueryNode(tokens[0].value);
                 tokens.splice(0, 1);
             }
             else if (tokens[0].type === TokenType.ELEMENT_QUERY) {
-                node = new ElementQueryNode(tokens[0].value);
+                node = new ElementQueryNode_1.ElementQueryNode(tokens[0].value);
                 tokens.splice(0, 1);
             }
             else if (tokens[0].type === TokenType.L_BRACKET) {
                 if (node) {
-                    node = IndexNode.parse(node, token, tokens);
+                    node = IndexNode_1.IndexNode.parse(node, token, tokens);
                 }
                 else {
-                    node = ArrayNode.parse(node, token, tokens);
+                    node = ArrayNode_1.ArrayNode.parse(node, token, tokens);
                 }
             }
             else if (tokens[0].type === TokenType.L_BRACE) {
-                node = ObjectNode.parse(node, token, tokens);
+                node = ObjectNode_1.ObjectNode.parse(node, token, tokens);
             }
             else if (tokens[0].type === TokenType.ELEMENT_ATTRIBUTE) {
-                node = new ElementAttributeNode(node, tokens[0].value);
+                node = new ElementAttributeNode_1.ElementAttributeNode(node, tokens[0].value);
                 tokens.splice(0, 1);
             }
             else if (tokens[0].type === TokenType.ELEMENT_STYLE) {
-                node = new ElementStyleNode(node, tokens[0].value);
+                node = new ElementStyleNode_1.ElementStyleNode(node, tokens[0].value);
                 tokens.splice(0, 1);
             }
             else if (node !== null && token.type === TokenType.PERIOD && tokens[1].type === TokenType.NAME) {
-                node = new ScopeMemberNode(node, new LiteralNode(tokens[1].value));
+                node = new ScopeMemberNode_1.ScopeMemberNode(node, new LiteralNode_1.LiteralNode(tokens[1].value));
                 tokens.splice(0, 2);
             }
             else if (tokens[0].type === TokenType.L_PAREN) {
@@ -1959,11 +527,11 @@ var Tree = /** @class */ (function () {
                     nodes.push(Tree.processTokens(arg));
                 }
                 if (node) {
-                    node = new FunctionCallNode(node, // Previous node should be a NAME
-                    new FunctionArgumentNode(nodes));
+                    node = new FunctionCallNode_1.FunctionCallNode(node, // Previous node should be a NAME
+                    new FunctionArgumentNode_1.FunctionArgumentNode(nodes));
                 }
                 else {
-                    node = new BlockNode(nodes);
+                    node = new BlockNode_1.BlockNode(nodes);
                 }
             }
             else if (tokens[0].type === TokenType.SEMI_COLON) {
@@ -1973,35 +541,35 @@ var Tree = /** @class */ (function () {
                 node = null;
                 tokens.splice(0, 1);
             }
-            else if (InNode.match(tokens)) {
-                node = InNode.parse(node, token, tokens);
+            else if (InNode_1.InNode.match(tokens)) {
+                node = InNode_1.InNode.parse(node, token, tokens);
             }
-            else if (ComparisonNode.match(tokens)) {
-                node = ComparisonNode.parse(node, token, tokens);
+            else if (ComparisonNode_1.ComparisonNode.match(tokens)) {
+                node = ComparisonNode_1.ComparisonNode.parse(node, token, tokens);
             }
-            else if (ArithmeticNode.match(tokens)) {
-                node = ArithmeticNode.parse(node, token, tokens);
+            else if (ArithmeticNode_1.ArithmeticNode.match(tokens)) {
+                node = ArithmeticNode_1.ArithmeticNode.parse(node, token, tokens);
             }
-            else if (ArithmeticAssignmentNode.match(tokens)) {
-                node = ArithmeticAssignmentNode.parse(node, token, tokens);
+            else if (ArithmeticAssignmentNode_1.ArithmeticAssignmentNode.match(tokens)) {
+                node = ArithmeticAssignmentNode_1.ArithmeticAssignmentNode.parse(node, token, tokens);
             }
             else if (tokens[0].type === TokenType.WHITESPACE) {
                 tokens.splice(0, 1);
             }
             else if (tokens[0].type === TokenType.UNIT) {
-                node = new UnitLiteralNode(tokens[0].value);
+                node = new UnitLiteralNode_1.UnitLiteralNode(tokens[0].value);
                 tokens.splice(0, 1);
             }
             else if (tokens[0].type === TokenType.BOOLEAN_LITERAL) {
-                node = new BooleanLiteralNode(tokens[0].value);
+                node = new BooleanLiteralNode_1.BooleanLiteralNode(tokens[0].value);
                 tokens.splice(0, 1);
             }
             else if (tokens[0].type === TokenType.NULL_LITERAL) {
-                node = new LiteralNode(null);
+                node = new LiteralNode_1.LiteralNode(null);
                 tokens.splice(0, 1);
             }
             else if (tokens[0].type === TokenType.EXCLAMATION_POINT) {
-                node = NotNode.parse(node, tokens[0], tokens);
+                node = NotNode_1.NotNode.parse(node, tokens[0], tokens);
             }
             else {
                 var code = Tree.toCode(tokens, 10);
@@ -2011,7 +579,7 @@ var Tree = /** @class */ (function () {
         if (node) {
             blockNodes.push(node);
         }
-        return new BlockNode(blockNodes);
+        return new BlockNode_1.BlockNode(blockNodes);
     };
     Tree.toCode = function (tokens, limit) {
         var code = '';

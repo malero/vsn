@@ -59,7 +59,7 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.List = void 0;
 var Attribute_1 = require("../Attribute");
-var Scope_1 = require("../Scope");
+var WrappedArray_1 = require("../Scope/WrappedArray");
 var AST_1 = require("../AST");
 var ElementHelper_1 = require("../helpers/ElementHelper");
 var Registry_1 = require("../Registry");
@@ -163,7 +163,7 @@ var List = /** @class */ (function (_super) {
             return __generator(this, function (_c) {
                 switch (_c.label) {
                     case 0:
-                        this.items = defaultList || new Scope_1.WrappedArray();
+                        this.items = defaultList || new WrappedArray_1.WrappedArray();
                         this.tags = [];
                         if (!defaultList) return [3 /*break*/, 4];
                         _i = 0, defaultList_1 = defaultList;
@@ -198,8 +198,8 @@ var List = /** @class */ (function (_super) {
                         _a++;
                         return [3 /*break*/, 5];
                     case 8:
-                        if (!(this.items instanceof Scope_1.WrappedArray)) {
-                            this.items = new Scope_1.WrappedArray(this.items);
+                        if (!(this.items instanceof WrappedArray_1.WrappedArray)) {
+                            this.items = new WrappedArray_1.WrappedArray(this.items);
                         }
                         this.items.on('add', function (item) {
                             _this.add(item);

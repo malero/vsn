@@ -1,5 +1,5 @@
 import {Attribute} from "../Attribute";
-import {ScopeReference} from "../Scope";
+import {ScopeReference} from "../Scope/ScopeReference";
 import {Registry} from "../Registry";
 
 @Registry.attribute('vsn-type')

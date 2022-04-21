@@ -1,7 +1,11 @@
 import { Scope } from "./Scope";
 import { DOM } from "./DOM";
-import { TagList } from "./Tag/List";
 import { Tag } from "./Tag";
+import { RootScopeMemberNode } from "./AST/RootScopeMemberNode";
+import { ScopeMemberNode } from "./AST/ScopeMemberNode";
+import { ElementAttributeNode } from "./AST/ElementAttributeNode";
+import { Node } from "./AST/Node";
+import { BlockNode } from "./AST/BlockNode";
 export interface Token {
     type: TokenType;
     value: string;
@@ -72,63 +76,6 @@ export interface TreeNode<T = any> {
     evaluate(scope: Scope, dom: DOM, tag?: Tag): any;
     prepare(scope: Scope, dom: DOM, tag?: Tag): any;
 }
-export declare abstract class Node implements TreeNode {
-    protected requiresPrep: boolean;
-    protected _isPreparationRequired: boolean;
-    protected childNodes: Node[];
-    protected nodeCache: {
-        [key: string]: Node[];
-    };
-    abstract evaluate(scope: Scope, dom: DOM, tag?: Tag): any;
-    isPreparationRequired(): boolean;
-    prepare(scope: Scope, dom: DOM, tag?: Tag): Promise<void>;
-    protected _getChildNodes(): Node[];
-    getChildNodes(): Node[];
-    findChildrenByType<T = Node>(t: any): T[];
-    findChildrenByTypes<T = Node>(types: any[], cacheKey?: string): T[];
-}
-export declare class BlockNode extends Node implements TreeNode {
-    readonly statements: Node[];
-    constructor(statements: Node[]);
-    protected _getChildNodes(): Node[];
-    evaluate(scope: Scope, dom: DOM, tag?: Tag): Promise<any>;
-}
-declare class LiteralNode<T = any> extends Node implements TreeNode {
-    readonly value: T;
-    constructor(value: T);
-    evaluate(scope: Scope, dom: DOM, tag?: Tag): Promise<T>;
-}
-declare class ScopeMemberNode extends Node implements TreeNode {
-    readonly scope: TreeNode<Scope>;
-    readonly name: TreeNode<string>;
-    constructor(scope: TreeNode<Scope>, name: TreeNode<string>);
-    protected _getChildNodes(): Node[];
-    evaluate(scope: Scope, dom: DOM, tag?: Tag): Promise<any>;
-}
-declare class RootScopeMemberNode<T = any> extends Node implements TreeNode {
-    readonly name: TreeNode<string>;
-    constructor(name: TreeNode<string>);
-    protected _getChildNodes(): Node[];
-    evaluate(scope: Scope, dom: DOM, tag?: Tag): Promise<any>;
-}
-declare class ElementQueryNode extends Node implements TreeNode {
-    readonly query: string;
-    protected requiresPrep: boolean;
-    constructor(query: string);
-    evaluate(scope: Scope, dom: DOM, tag?: Tag): Promise<TagList>;
-    prepare(scope: Scope, dom: DOM, tag?: Tag): Promise<void>;
-}
-declare class ElementAttributeNode extends Node implements TreeNode {
-    readonly elementRef: ElementQueryNode | null;
-    readonly attr: string;
-    protected requiresPrep: boolean;
-    constructor(elementRef: ElementQueryNode | null, attr: string);
-    get name(): LiteralNode<string>;
-    protected _getChildNodes(): Node[];
-    get attributeName(): string;
-    evaluate(scope: Scope, dom: DOM, tag?: Tag): Promise<any>;
-    prepare(scope: Scope, dom: DOM, tag?: Tag): Promise<void>;
-}
 export interface IBlockInfo {
     type: BlockType;
     open: TokenType;
@@ -136,7 +83,7 @@ export interface IBlockInfo {
     openCharacter: string;
     closeCharacter: string;
 }
-export declare const AttributableNodes: (typeof ScopeMemberNode | typeof RootScopeMemberNode | typeof ElementAttributeNode)[];
+export declare const AttributableNodes: (typeof RootScopeMemberNode | typeof ScopeMemberNode | typeof ElementAttributeNode)[];
 export declare class Tree {
     readonly code: string;
     protected static cache: {
@@ -158,4 +105,3 @@ export declare class Tree {
     static getTokensUntil(tokens: Token[], terminator?: TokenType, consumeTerminator?: boolean, includeTerminator?: boolean, validIfTerminatorNotFound?: boolean, blockInfo?: IBlockInfo): Token[];
     static consumeTypes(tokens: Token[], types: TokenType[]): Token[];
 }
-export {};

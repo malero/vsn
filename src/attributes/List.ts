@@ -1,6 +1,6 @@
 import {Attribute} from "../Attribute";
 import {Tag} from "../Tag";
-import {WrappedArray} from "../Scope";
+import {WrappedArray} from "../Scope/WrappedArray";
 import {Tree} from "../AST";
 import {ElementHelper} from "../helpers/ElementHelper";
 import {Registry} from "../Registry";

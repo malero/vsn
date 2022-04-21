@@ -1,4 +1,5 @@
-import {Scope, WrappedArray} from "../src/Scope";
+import {Scope} from "../src/Scope";
+import {WrappedArray} from "../src/Scope/WrappedArray";
 
 class Test {
     public testing: string = 'test';

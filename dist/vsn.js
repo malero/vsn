@@ -61,9 +61,9 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
     }
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.vision = exports.Tag = exports.Controller = exports.ScopeReference = exports.Scope = exports.WrappedArray = exports.DOM = exports.Vision = void 0;
+exports.vision = exports.Tag = exports.Controller = exports.WrappedArray = exports.ScopeReference = exports.Scope = exports.DOM = exports.Vision = void 0;
 var DOM_1 = require("./DOM");
-var Scope_1 = require("./Scope");
+var WrappedArray_1 = require("./Scope/WrappedArray");
 var Registry_1 = require("./Registry");
 require("./Types");
 require("./Formats");
@@ -86,7 +86,7 @@ var Vision = /** @class */ (function (_super) {
             console.warn('No dom, running in CLI mode.');
         }
         _this.registry.classes.register('Object', Object);
-        _this.registry.classes.register('WrappedArray', Scope_1.WrappedArray);
+        _this.registry.classes.register('WrappedArray', WrappedArray_1.WrappedArray);
         _this.registry.classes.register('DataModel', DataModel_1.DataModel);
         if (VisionHelper_1.VisionHelper.window) {
             window['Vision'] = Vision;
@@ -154,10 +154,12 @@ __exportStar(require("./Attribute"), exports);
 __exportStar(require("./AST"), exports);
 var DOM_2 = require("./DOM");
 Object.defineProperty(exports, "DOM", { enumerable: true, get: function () { return DOM_2.DOM; } });
-var Scope_2 = require("./Scope");
-Object.defineProperty(exports, "WrappedArray", { enumerable: true, get: function () { return Scope_2.WrappedArray; } });
-Object.defineProperty(exports, "Scope", { enumerable: true, get: function () { return Scope_2.Scope; } });
-Object.defineProperty(exports, "ScopeReference", { enumerable: true, get: function () { return Scope_2.ScopeReference; } });
+var Scope_1 = require("./Scope");
+Object.defineProperty(exports, "Scope", { enumerable: true, get: function () { return Scope_1.Scope; } });
+var ScopeReference_1 = require("./Scope/ScopeReference");
+Object.defineProperty(exports, "ScopeReference", { enumerable: true, get: function () { return ScopeReference_1.ScopeReference; } });
+var WrappedArray_2 = require("./Scope/WrappedArray");
+Object.defineProperty(exports, "WrappedArray", { enumerable: true, get: function () { return WrappedArray_2.WrappedArray; } });
 var Controller_1 = require("./Controller");
 Object.defineProperty(exports, "Controller", { enumerable: true, get: function () { return Controller_1.Controller; } });
 var Tag_1 = require("./Tag");

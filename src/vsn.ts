@@ -1,5 +1,5 @@
 import {DOM} from "./DOM";
-import {WrappedArray} from "./Scope";
+import {WrappedArray} from "./Scope/WrappedArray";
 import {Registry} from "./Registry";
 import "./Types";
 import "./Formats";
@@ -72,7 +72,9 @@ export * from './Registry';
 export * from './Attribute';
 export * from './AST';
 export {DOM} from './DOM';
-export {WrappedArray, Scope, ScopeReference} from './Scope';
+export {Scope} from './Scope';
+export {ScopeReference} from './Scope/ScopeReference';
+export {WrappedArray} from './Scope/WrappedArray';
 export {Controller} from './Controller';
 export {Tag} from './Tag';
 export const vision: Vision = Vision.instance;

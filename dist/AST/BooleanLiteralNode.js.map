@@ -1,0 +1,1 @@
+{"version":3,"file":"BooleanLiteralNode.js","sourceRoot":"","sources":["../../src/AST/BooleanLiteralNode.ts"],"names":[],"mappings":";;;;;;;;;;;;;;;;;;AAAA,6CAA0C;AAE1C;IAAwC,sCAAmB;IACvD,4BACoB,KAAU;QAD9B,YAGI,kBAAM,KAAK,CAAC,SAEf;QAJmB,WAAK,GAAL,KAAK,CAAK;QAG1B,KAAI,CAAC,KAAK,GAAG,KAAK,KAAK,MAAM,CAAC;;IAClC,CAAC;IACL,yBAAC;AAAD,CAAC,AAPD,CAAwC,yBAAW,GAOlD;AAPY,gDAAkB"}

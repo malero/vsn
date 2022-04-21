@@ -1,7 +1,8 @@
-import {Scope, ScopeReference} from "../Scope";
+import {Scope} from "../Scope";
 import {Attribute} from "../Attribute";
 import {Tree} from "../AST";
 import {Registry} from "../Registry";
+import {ScopeReference} from "../Scope/ScopeReference";
 
 @Registry.attribute('vsn-bind')
 export class Bind extends Attribute {

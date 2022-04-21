@@ -1,6 +1,6 @@
 import {Attribute} from "../Attribute";
 import {Tree} from "../AST";
-import {ScopeReference} from "../Scope";
+import {ScopeReference} from "../Scope/ScopeReference";
 import {Registry} from "../Registry";
 
 @Registry.attribute('vsn-scope-change')

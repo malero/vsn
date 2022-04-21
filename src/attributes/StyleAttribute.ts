@@ -1,6 +1,7 @@
 import {Registry} from "../Registry";
 import {Attribute} from "../Attribute";
-import {Scope, ScopeReference} from "../Scope";
+import {Scope} from "../Scope";
+import {ScopeReference} from "../Scope/ScopeReference";
 
 
 @Registry.attribute('vsn-styles')
