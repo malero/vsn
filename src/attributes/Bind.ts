@@ -53,7 +53,7 @@ export class Bind extends Attribute {
     public async connect() {
         if (this.doUpdateTo) {
             this.updateTo();
-            this.boundScope.bind(`change:${this.key}`, this.updateTo, this);
+            this.boundScope.on(`change:${this.key}`, this.updateTo, this);
         }
         await super.connect();
     }

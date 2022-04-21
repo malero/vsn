@@ -1,5 +1,5 @@
-import {EventDispatcher} from "simple-ts-event-dispatcher";
 import {Scope} from "../Scope";
+import {EventDispatcher} from "../EventDispatcher";
 
 export abstract class DOMObject extends EventDispatcher {
     protected _scope: Scope;

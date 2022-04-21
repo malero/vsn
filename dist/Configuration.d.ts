@@ -1,4 +1,4 @@
-import { EventDispatcher } from "simple-ts-event-dispatcher";
+import { EventDispatcher } from "./EventDispatcher";
 export declare type ConfigurationValue = string | number | boolean | null | undefined;
 export declare class Configuration extends EventDispatcher {
     protected static _instance: Configuration;

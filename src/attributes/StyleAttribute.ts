@@ -28,7 +28,7 @@ export class StyleAttribute extends Attribute {
     }
 
     public async connect() {
-        this.styleScope.bind(`change`, this.handleEvent.bind(this));
+        this.styleScope.on(`change`, this.handleEvent.bind(this));
         await super.connect();
     }
 

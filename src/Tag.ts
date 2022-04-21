@@ -122,7 +122,7 @@ export class Tag extends DOMObject {
         for (const attr of this.attributes) {
             attr.mutate(mutation);
         }
-        this.trigger('mutate', mutation);
+        this.dispatch('mutate', mutation);
     }
 
     public get(attr: string) {
@@ -348,7 +348,7 @@ export class Tag extends DOMObject {
                 if (defer && attrClass.canDefer) {
                     await attrObj.defer();
                     this.deferredAttributes.push(attrObj);
-                    attrObj.bind('state', this.onAttributeStateChange.bind(this));
+                    attrObj.on('state', this.onAttributeStateChange.bind(this));
                 }
             }
         }

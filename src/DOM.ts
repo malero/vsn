@@ -1,6 +1,5 @@
 import {Tag} from "./Tag";
 import {ElementHelper} from "./helpers/ElementHelper";
-import {EventDispatcher} from "simple-ts-event-dispatcher";
 import {Configuration} from "./Configuration";
 import {Tree} from "./AST";
 import {TagList} from "./Tag/List";
@@ -9,6 +8,7 @@ import {VisionHelper} from "./helpers/VisionHelper";
 import {WrappedWindow} from "./DOM/WrappedWindow";
 import {WrappedDocument} from "./DOM/WrappedDocument";
 import {Scope} from "./Scope";
+import {EventDispatcher} from "./EventDispatcher";
 
 export class DOM extends EventDispatcher {
     protected static _instance: DOM;
@@ -37,7 +37,7 @@ export class DOM extends EventDispatcher {
             this.buildFrom(rootElement, true);
         }
         this.evaluate();
-        Configuration.instance.bind('change', this.evaluate.bind(this));
+        Configuration.instance.on('change', this.evaluate.bind(this));
     }
 
     public get root(): Tag {
@@ -232,7 +232,7 @@ export class DOM extends EventDispatcher {
             });
         if (VisionHelper.doBenchmark) benchmarkEnd('DOM', 'observeTags');
 
-        this.trigger('built');
+        this.dispatch('built');
     }
 
     async getTagsForElements(elements: Element[], create: boolean = false) {

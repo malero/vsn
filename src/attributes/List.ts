@@ -84,10 +84,10 @@ export class List extends Attribute {
             this.items = new WrappedArray(this.items);
         }
 
-        (this.items as WrappedArray<any>).bind('add', (item) => {
+        (this.items as WrappedArray<any>).on('add', (item) => {
             this.add(item);
         });
-        (this.items as WrappedArray<any>).bind('remove', (item) => {
+        (this.items as WrappedArray<any>).on('remove', (item) => {
             this.remove(item);
         });
 
@@ -137,6 +137,6 @@ export class List extends Attribute {
             tag.wrap(obj);
         }
 
-        this.tag.trigger('add', obj);
+        this.tag.dispatch('add', obj);
     }
 }

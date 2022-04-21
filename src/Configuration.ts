@@ -1,5 +1,5 @@
-import {EventDispatcher} from "simple-ts-event-dispatcher";
 import {VisionHelper} from "./helpers/VisionHelper";
+import {EventDispatcher} from "./EventDispatcher";
 
 export type ConfigurationValue = string | number | boolean | null | undefined;
 
@@ -19,11 +19,11 @@ export class Configuration extends EventDispatcher {
     public set(key: string, value: ConfigurationValue) {
         const prev: ConfigurationValue = this.data[key];
         this.data[key] = value;
-        this.trigger(`change:${key}`, {
+        this.dispatch(`change:${key}`, {
             value: value,
             previous: prev
         });
-        this.trigger('change', {
+        this.dispatch('change', {
             key: key,
             value: value,
             previous: prev

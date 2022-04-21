@@ -31,7 +31,7 @@ export class Radio extends Attribute {
     }
 
     public async connect() {
-        this.boundScope.bind(`change:${this.key}`, this.checkSelected, this);
+        this.boundScope.on(`change:${this.key}`, this.checkSelected, this);
         this.tag.addEventHandler('change', this.getAttributeModifiers(), this.handleEvent.bind(this));
         await this.checkSelected();
         await super.connect();

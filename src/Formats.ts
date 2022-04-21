@@ -15,8 +15,8 @@ export class Formats {
                   currency: currency
                 });
             };
-            Configuration.instance.bind('change:locale', setup);
-            Configuration.instance.bind('change:currency', setup);
+            Configuration.instance.on('change:locale', setup);
+            Configuration.instance.on('change:currency', setup);
             setup();
         }
         value = `${value}`.replace(/[^0-9.]+/, '');

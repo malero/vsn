@@ -1,6 +1,6 @@
-import { EventDispatcher } from "simple-ts-event-dispatcher";
 import { Scope } from "./Scope";
 import { Tag } from "./Tag";
+import { EventDispatcher } from "./EventDispatcher";
 export declare abstract class Controller extends EventDispatcher {
     protected _scope: Scope;
     protected _tag: Tag;

@@ -1,9 +1,9 @@
 import { DOM } from "./DOM";
-import { EventDispatcher } from "simple-ts-event-dispatcher";
 import { Registry } from "./Registry";
 import "./Types";
 import "./Formats";
 import { Configuration } from "./Configuration";
+import { EventDispatcher } from "./EventDispatcher";
 export declare class Vision extends EventDispatcher {
     protected static _instance: Vision;
     protected _dom?: DOM;
@@ -22,4 +22,5 @@ export * from './AST';
 export { DOM } from './DOM';
 export { WrappedArray, Scope, ScopeReference } from './Scope';
 export { Controller } from './Controller';
+export { Tag } from './Tag';
 export declare const vision: Vision;

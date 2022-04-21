@@ -1,5 +1,5 @@
-import { EventDispatcher } from "simple-ts-event-dispatcher";
-import { IPromise } from "simple-ts-promise";
+import { EventDispatcher } from "./EventDispatcher";
+import { IPromise } from "./SimplePromise";
 export declare function register(store: string, key?: string, setup?: () => void): (target: any, _key?: string) => void;
 export declare class RegistryStore extends EventDispatcher {
     private timeouts;

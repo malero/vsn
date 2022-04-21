@@ -1,7 +1,8 @@
-import {Promise as SimplePromise, IDeferred} from 'simple-ts-promise';
+
 import {Scope, WrappedArray} from "../src/Scope";
 import {Tree} from "../src/AST";
 import {DOM} from "../src/DOM";
+import {IDeferred, SimplePromise} from "../src/SimplePromise";
 
 describe('Tree', () => {
     let scope: Scope = null,

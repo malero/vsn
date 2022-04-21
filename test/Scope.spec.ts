@@ -30,7 +30,7 @@ describe('WrappedArray', () => {
     it("should behave like an array", async () => {
         const a = new WrappedArray();
         let removes: number = 0;
-        a.bind('remove', (e) => {
+        a.on('remove', (e) => {
              removes += 1;
         });
         a.push(1);
@@ -44,7 +44,7 @@ describe('WrappedArray', () => {
     it("should trigger change events", async () => {
         const a = new WrappedArray();
         let changes: number = 0;
-        a.bind('change', (e) => {
+        a.on('change', (e) => {
              changes += 1;
         });
         a.push(1);

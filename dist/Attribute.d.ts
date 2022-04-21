@@ -1,5 +1,5 @@
 import { Tag } from "./Tag";
-import { EventDispatcher } from "simple-ts-event-dispatcher";
+import { EventDispatcher } from "./EventDispatcher";
 export declare enum AttributeState {
     Instantiated = 0,
     Deferred = 1,

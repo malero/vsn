@@ -1,9 +1,9 @@
 import { Tag } from "./Tag";
-import { EventDispatcher } from "simple-ts-event-dispatcher";
 import { TagList } from "./Tag/List";
 import { WrappedWindow } from "./DOM/WrappedWindow";
 import { WrappedDocument } from "./DOM/WrappedDocument";
 import { Scope } from "./Scope";
+import { EventDispatcher } from "./EventDispatcher";
 export declare class DOM extends EventDispatcher {
     protected rootElement: Document;
     protected debug: boolean;

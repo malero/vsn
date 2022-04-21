@@ -18,7 +18,7 @@ export abstract class ScopeChange extends Attribute {
     public async connect() {
         const binding = this.getAttributeBinding();
         const ref: ScopeReference = this.tag.scope.getReference(binding, false);
-        (await ref.getScope()).bind(`change:${await ref.getKey()}`, this.handleEvent.bind(this));
+        (await ref.getScope()).on(`change:${await ref.getKey()}`, this.handleEvent.bind(this));
         await super.connect();
     }
 

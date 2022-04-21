@@ -1,5 +1,5 @@
-import { DataModel } from "simple-ts-models";
-import { EventCallback, EventDispatcher, EventDispatcherCallback } from "simple-ts-event-dispatcher";
+import { EventDispatcher, EventDispatcherCallback } from "./EventDispatcher";
+import { DataModel } from "./Model/DataModel";
 export declare class ScopeReference {
     private _scope;
     private _key;
@@ -24,22 +24,19 @@ export declare class ScopeVariableType {
     static readonly String: string;
 }
 export declare class WrappedArray<T> extends Array<T> {
-    private _listeners;
-    private _lastKey;
+    private dispatcher;
     readonly $wrapped: boolean;
     constructor(...items: T[]);
+    dispatch(event: string, ...args: any[]): void;
+    on(event: string, callback: EventDispatcherCallback): void;
+    off(event: string, key?: number): void;
+    once(event: string, callback: EventDispatcherCallback): void;
     push(...items: T[]): number;
     splice(start: number, deleteCount?: number): T[];
     get(key: string): any;
     get length(): number;
     set length(num: number);
     setLength(num: number): void;
-    bind(event: string, fct: EventDispatcherCallback, context?: any, once?: boolean): number;
-    once(event: string, fct: EventDispatcherCallback, context?: any): number;
-    unbind(event: string, key?: number): boolean;
-    unbindWithContext(event: string, context: any): number;
-    getListener(event: string, key: number): EventCallback | undefined;
-    trigger(event: string, ...args: any[]): void;
 }
 export declare class Scope extends EventDispatcher {
     wrapped: any;

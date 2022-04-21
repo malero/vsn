@@ -1,7 +1,5 @@
 import {DOM} from "./DOM";
-import {EventDispatcher} from "simple-ts-event-dispatcher";
 import {WrappedArray} from "./Scope";
-import {DataModel} from "simple-ts-models";
 import {Registry} from "./Registry";
 import "./Types";
 import "./Formats";
@@ -9,6 +7,8 @@ import {Configuration} from "./Configuration";
 import {VisionHelper} from "./helpers/VisionHelper";
 import {Tree} from "./AST";
 import {Query} from "./Query";
+import {EventDispatcher} from "./EventDispatcher";
+import {DataModel} from "./Model/DataModel";
 
 export class Vision extends EventDispatcher {
     protected static _instance: Vision;
@@ -74,4 +74,5 @@ export * from './AST';
 export {DOM} from './DOM';
 export {WrappedArray, Scope, ScopeReference} from './Scope';
 export {Controller} from './Controller';
+export {Tag} from './Tag';
 export const vision: Vision = Vision.instance;

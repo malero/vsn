@@ -22,7 +22,7 @@ export class StandardAttribute extends Attribute {
     }
 
     public async connect() {
-        this.tag.scope.bind(`change:${this.key}`, this.updateTo.bind(this));
+        this.tag.scope.on(`change:${this.key}`, this.updateTo.bind(this));
         await super.connect();
     }
 

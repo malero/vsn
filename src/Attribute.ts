@@ -1,6 +1,6 @@
 import {Tag} from "./Tag";
 import {VisionHelper} from "./helpers/VisionHelper";
-import {EventDispatcher} from "simple-ts-event-dispatcher";
+import {EventDispatcher} from "./EventDispatcher";
 
 export enum AttributeState {
     Instantiated,
@@ -83,7 +83,7 @@ export abstract class Attribute extends EventDispatcher {
     private setState(state: AttributeState) {
         const previousState = this._state;
         this._state = state;
-        this.trigger('state', {
+        this.dispatch('state', {
             state: state,
             previousState: previousState,
             attribute: this

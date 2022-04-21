@@ -74,7 +74,7 @@ describe('ListItem', () => {
             const controller: ListItemController = list.scope.get('controller').wrapped;
             const listAttr: List = await list.getAttribute('vsn-list') as List;
 
-            list.bind('add', () => {
+            list.on('add', () => {
                 const listItem = listAttr.tags[0];
 
                 expect(listItem.scope.wrapped instanceof ListItemSpecTestItem).toBeTrue();

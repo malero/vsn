@@ -1090,7 +1090,7 @@ class ArithmeticAssignmentNode extends Node implements TreeNode {
          We have to trigger a change manually here. Setting the variable on the scope with an array won't trigger
          it since we are modifying values inside of the array instance.
          */
-        scope.trigger(`change:${key}`);
+        scope.dispatch(`change:${key}`);
 
         return left;
     }
@@ -1444,7 +1444,7 @@ export class Tree {
             }
 
             const name = await node.name.evaluate(scope, dom, tag);
-            _scope.bind(`change:${name}`, fnc);
+            _scope.on(`change:${name}`, fnc);
         }
     }
 

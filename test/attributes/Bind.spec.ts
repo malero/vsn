@@ -60,7 +60,7 @@ describe('Bind', () => {
             const test = document.getElementById('test');
             const tag = await dom.getTagForElement(test);
 
-            tag.scope.bind('change:id', () => {
+            tag.scope.on('change:id', () => {
                 expect(test.getAttribute('id')).toBe('new-id');
                 expect(tag.scope.get('id')).toBe('new-id');
                 done();
@@ -81,7 +81,7 @@ describe('Bind', () => {
             const tag = await dom.getTagForElement(test);
             expect(tag.scope.get('val')).toBe('testing');
 
-            tag.scope.get('test').bind('change:val', () => {
+            tag.scope.get('test').on('change:val', () => {
                 expect(tag.scope.get('val')).toBe('new-val');
                 done();
             });
@@ -102,7 +102,7 @@ describe('Bind', () => {
             const tag = await dom.getTagForElement(test);
             expect(tag.scope.get('val')).toBe('testing');
 
-            tag.scope.get('test').bind('change:val', () => {
+            tag.scope.get('test').on('change:val', () => {
                 expect(tag.scope.get('val')).toBe('new-val');
                 done();
             });
@@ -127,7 +127,7 @@ describe('Bind', () => {
             const tag = await dom.getTagForElement(test);
             expect(tag.scope.get('val')).toBe('testing');
 
-             tag.scope.get('test').bind('change:val', () => {
+             tag.scope.get('test').on('change:val', () => {
                 expect(test.innerHTML).toBe('new-val');
                 done();
             });
@@ -148,7 +148,7 @@ describe('Bind', () => {
             const tag = await dom.getTagForElement(test);
             expect(tag.scope.get('val')).toBe('testing');
 
-            tag.bind('mutate', () => {
+            tag.on('mutate', () => {
                 expect(test.getAttribute('value')).toBe('new-val');
                 done();
             });
