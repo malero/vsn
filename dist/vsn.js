@@ -21,6 +21,12 @@ var __createBinding = (this && this.__createBinding) || (Object.create ? (functi
     if (k2 === undefined) k2 = k;
     o[k2] = m[k];
 }));
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
 var __exportStar = (this && this.__exportStar) || function(m, exports) {
     for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 };
@@ -61,7 +67,7 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
     }
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.vision = exports.Tag = exports.Controller = exports.WrappedArray = exports.ScopeReference = exports.Scope = exports.DOM = exports.Vision = void 0;
+exports.vision = exports.Tag = exports.property = exports.Property = exports.Controller = exports.WrappedArray = exports.ScopeReference = exports.Scope = exports.DOM = exports.Vision = void 0;
 var DOM_1 = require("./DOM");
 var WrappedArray_1 = require("./Scope/WrappedArray");
 var Registry_1 = require("./Registry");
@@ -72,7 +78,9 @@ var VisionHelper_1 = require("./helpers/VisionHelper");
 var AST_1 = require("./AST");
 var Query_1 = require("./Query");
 var EventDispatcher_1 = require("./EventDispatcher");
-var DataModel_1 = require("./Model/DataModel");
+var DynamicScopeData_1 = require("./Scope/DynamicScopeData");
+var Controller_1 = require("./Controller");
+var Property_1 = require("./Scope/properties/Property");
 var Vision = /** @class */ (function (_super) {
     __extends(Vision, _super);
     function Vision() {
@@ -87,7 +95,7 @@ var Vision = /** @class */ (function (_super) {
         }
         _this.registry.classes.register('Object', Object);
         _this.registry.classes.register('WrappedArray', WrappedArray_1.WrappedArray);
-        _this.registry.classes.register('DataModel', DataModel_1.DataModel);
+        _this.registry.classes.register('Data', DynamicScopeData_1.DynamicScopeData);
         if (VisionHelper_1.VisionHelper.window) {
             window['Vision'] = Vision;
             window['Registry'] = Registry_1.Registry;
@@ -148,6 +156,22 @@ var Vision = /** @class */ (function (_super) {
     return Vision;
 }(EventDispatcher_1.EventDispatcher));
 exports.Vision = Vision;
+var TestController = /** @class */ (function (_super) {
+    __extends(TestController, _super);
+    function TestController() {
+        return _super !== null && _super.apply(this, arguments) || this;
+    }
+    TestController.prototype.isValid = function () {
+        return this.test === 'test';
+    };
+    __decorate([
+        Property_1.property()
+    ], TestController.prototype, "test", void 0);
+    TestController = __decorate([
+        Registry_1.Registry.controller('ControllerTestController')
+    ], TestController);
+    return TestController;
+}(Controller_1.Controller));
 __exportStar(require("./attributes/_imports"), exports);
 __exportStar(require("./Registry"), exports);
 __exportStar(require("./Attribute"), exports);
@@ -160,8 +184,11 @@ var ScopeReference_1 = require("./Scope/ScopeReference");
 Object.defineProperty(exports, "ScopeReference", { enumerable: true, get: function () { return ScopeReference_1.ScopeReference; } });
 var WrappedArray_2 = require("./Scope/WrappedArray");
 Object.defineProperty(exports, "WrappedArray", { enumerable: true, get: function () { return WrappedArray_2.WrappedArray; } });
-var Controller_1 = require("./Controller");
-Object.defineProperty(exports, "Controller", { enumerable: true, get: function () { return Controller_1.Controller; } });
+var Controller_2 = require("./Controller");
+Object.defineProperty(exports, "Controller", { enumerable: true, get: function () { return Controller_2.Controller; } });
+var Property_2 = require("./Scope/properties/Property");
+Object.defineProperty(exports, "Property", { enumerable: true, get: function () { return Property_2.Property; } });
+Object.defineProperty(exports, "property", { enumerable: true, get: function () { return Property_2.property; } });
 var Tag_1 = require("./Tag");
 Object.defineProperty(exports, "Tag", { enumerable: true, get: function () { return Tag_1.Tag; } });
 exports.vision = Vision.instance;

@@ -16,7 +16,7 @@ var __extends = (this && this.__extends) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Controller = void 0;
-var EventDispatcher_1 = require("./EventDispatcher");
+var ScopeData_1 = require("./Scope/ScopeData");
 var Controller = /** @class */ (function (_super) {
     __extends(Controller, _super);
     function Controller() {
@@ -48,7 +48,15 @@ var Controller = /** @class */ (function (_super) {
         this._tag = tag;
         this._element = element;
     };
+    Controller.prototype.get = function (key) {
+        var _a;
+        return (_a = this._scope) === null || _a === void 0 ? void 0 : _a.get(key);
+    };
+    Controller.prototype.set = function (key, value) {
+        var _a;
+        (_a = this._scope) === null || _a === void 0 ? void 0 : _a.set(key, value);
+    };
     return Controller;
-}(EventDispatcher_1.EventDispatcher));
+}(ScopeData_1.ScopeData));
 exports.Controller = Controller;
 //# sourceMappingURL=Controller.js.map

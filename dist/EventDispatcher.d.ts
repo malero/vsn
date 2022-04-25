@@ -14,9 +14,12 @@ export declare type EventDispatcherCallback = (...args: any[]) => any;
 export declare class EventDispatcher {
     private static sources;
     private readonly _listeners;
+    private readonly _relays;
     private _lastKey;
     constructor();
-    deconstructor(): void;
+    deconstruct(): void;
+    addRelay(relay: EventDispatcher): void;
+    removeRelay(relay: EventDispatcher): void;
     on(event: string, fct: EventDispatcherCallback, context?: any, once?: boolean): number;
     once(event: string, fct: EventDispatcherCallback, context?: any): number;
     off(event: string, key?: number): boolean;

@@ -10,10 +10,11 @@ import {ElementQueryNode} from "./ElementQueryNode";
 import {ElementAttributeNode} from "./ElementAttributeNode";
 import {ElementStyleNode} from "./ElementStyleNode";
 import {UnitLiteral} from "./UnitLiteralNode";
+import {Controller} from "../vsn";
 
 export class ArithmeticAssignmentNode extends Node implements TreeNode {
     constructor(
-        public readonly left: RootScopeMemberNode,
+        public readonly left: RootScopeMemberNode | ScopeMemberNode,
         public readonly right: TreeNode,
         public readonly type: TokenType
     ) {
@@ -35,8 +36,12 @@ export class ArithmeticAssignmentNode extends Node implements TreeNode {
             const inner = await this.left.scope.evaluate(scope, dom, tag);
             if (this.left.scope instanceof ElementQueryNode) {
                 scopes.push(...inner);
-            } else {
+            } else if (inner instanceof Scope) {
                 scopes.push(inner);
+            } else if (inner instanceof Controller) {
+                scopes.push(inner.scope);
+            } else {
+                scopes.push(scope)
             }
         } else if ((this.left instanceof ElementAttributeNode || this.left instanceof ElementStyleNode) && this.left.elementRef) {
             scopes = await this.left.elementRef.evaluate(scope, dom, tag);
@@ -48,11 +53,13 @@ export class ArithmeticAssignmentNode extends Node implements TreeNode {
             if (localScope instanceof DOMObject) {
                 await this.handleDOMObject(name, dom, localScope, tag);
             } else {
-                if (localScope['$wrapped'] && localScope['$scope'])
+                if (localScope['$wrapped'] && localScope['$scope']) {
                     localScope = localScope['$scope'];
+                }
 
-                let left: number | Array<any> | string = await this.left.evaluate(localScope, dom, tag);
-                let right: number | Array<any> | string = await this.right.evaluate(localScope, dom, tag);
+                // We get the values from the passed scope, but set the value on the local scope
+                let left: number | Array<any> | string = await this.left.evaluate(scope, dom, tag);
+                let right: number | Array<any> | string = await this.right.evaluate(scope, dom, tag);
 
                 if (left instanceof Array) {
                     left = this.handleArray(name, left, right, localScope);

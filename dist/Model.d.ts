@@ -1,9 +1,10 @@
-import { ModelAbstract, ModelData } from "./Model/ModelAbstract";
 import MessageList from "./MessageList";
-export declare class Model extends ModelAbstract {
+import { ScopeData } from "./Scope/ScopeData";
+import { IScopeData } from "./Scope/ScopeDataAbstract";
+export declare class Model extends ScopeData {
     _errors: MessageList;
     _hasErrors: boolean;
-    constructor(data?: ModelData | null | undefined);
+    constructor(data?: IScopeData | null | undefined);
     _constructor(): void;
     validate(): MessageList;
     hasErrors(): boolean;

@@ -1,7 +1,7 @@
 import {DOM} from "../../src/DOM";
 import {Query} from "../../src/Query";
 import {TagList} from "../../src/Tag/List";
-import {DOMObject} from "../../dist/DOM/DOMObject";
+import {DOMObject} from "../../src/DOM/DOMObject";
 
 describe('TagList', () => {
     it("should be able to fail properly", (done) => {

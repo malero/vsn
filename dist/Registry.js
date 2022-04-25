@@ -79,11 +79,17 @@ var Registry = /** @class */ (function (_super) {
         _this.models = new RegistryStore(w['$models'] || {});
         _this.templates = new RegistryStore(w['$templates'] || {});
         _this.types = new RegistryStore(w['$types'] || {});
+        _this.validators = new RegistryStore(w['$validators'] || {});
         _this.formats = new RegistryStore(w['$formats'] || {});
         _this.attributes = new RegistryStore(w['$attributes'] || {});
         return _this;
     }
     Registry.class = function (key, setup) {
+        if (key === void 0) { key = null; }
+        if (setup === void 0) { setup = null; }
+        return register('classes', key, setup);
+    };
+    Registry.controller = function (key, setup) {
         if (key === void 0) { key = null; }
         if (setup === void 0) { setup = null; }
         return register('classes', key, setup);
@@ -102,6 +108,11 @@ var Registry = /** @class */ (function (_super) {
         if (key === void 0) { key = null; }
         if (setup === void 0) { setup = null; }
         return register('types', key, setup);
+    };
+    Registry.validator = function (key, setup) {
+        if (key === void 0) { key = null; }
+        if (setup === void 0) { setup = null; }
+        return register('validators', key, setup);
     };
     Registry.format = function (key, setup) {
         if (key === void 0) { key = null; }

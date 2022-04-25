@@ -5,11 +5,12 @@ import { DOMObject } from "../DOM/DOMObject";
 import { Token, TokenType, TreeNode } from "../AST";
 import { Node } from "./Node";
 import { RootScopeMemberNode } from "./RootScopeMemberNode";
+import { ScopeMemberNode } from "./ScopeMemberNode";
 export declare class ArithmeticAssignmentNode extends Node implements TreeNode {
-    readonly left: RootScopeMemberNode;
+    readonly left: RootScopeMemberNode | ScopeMemberNode;
     readonly right: TreeNode;
     readonly type: TokenType;
-    constructor(left: RootScopeMemberNode, right: TreeNode, type: TokenType);
+    constructor(left: RootScopeMemberNode | ScopeMemberNode, right: TreeNode, type: TokenType);
     protected _getChildNodes(): Node[];
     evaluate(scope: Scope, dom: DOM, tag?: Tag): Promise<any>;
     handleNumber(key: any, left: any, right: any, scope: any): any;

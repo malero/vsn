@@ -2,7 +2,7 @@ import { EventDispatcher } from "./EventDispatcher";
 export interface IDeferred<T> {
     [key: string]: any;
     promise: SimplePromise<T>;
-    resolve(result: T): void;
+    resolve(result?: T): void;
     reject(reason: string): void;
 }
 export declare type TResolve<T> = (result: T) => void;
@@ -29,7 +29,7 @@ export declare class SimplePromise<T> extends EventDispatcher implements IPromis
     get state(): EPromiseStates;
     get result(): TResult<T>;
     static defer<T>(): IDeferred<T>;
-    static resolve<T>(result: T): IPromise<T>;
+    static resolve<T>(result?: T): IPromise<T>;
     static reject(reason: string): IPromise<void>;
     static all<T>(iter: IPromise<T>[]): IPromise<T[]>;
     static poolResults<T>(iter: IPromise<T>[], deferred: IDeferred<T[]>): void;

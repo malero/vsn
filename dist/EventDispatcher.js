@@ -31,13 +31,24 @@ var EventCallback = /** @class */ (function () {
 exports.EventCallback = EventCallback;
 var EventDispatcher = /** @class */ (function () {
     function EventDispatcher() {
+        this._relays = [];
         this._lastKey = 0;
         this._listeners = {};
         EventDispatcher.sources.push(this);
     }
-    EventDispatcher.prototype.deconstructor = function () {
+    EventDispatcher.prototype.deconstruct = function () {
         this.dispatch('deconstruct', this);
         EventDispatcher.sources.splice(EventDispatcher.sources.indexOf(this), 1);
+        for (var k in this._listeners) {
+            delete this._listeners[k];
+        }
+    };
+    EventDispatcher.prototype.addRelay = function (relay) {
+        this._relays.push(relay);
+    };
+    EventDispatcher.prototype.removeRelay = function (relay) {
+        if (this._relays.indexOf(relay) > -1)
+            this._relays.splice(this._relays.indexOf(relay), 1);
     };
     EventDispatcher.prototype.on = function (event, fct, context, once) {
         once = once || false;
@@ -96,18 +107,22 @@ var EventDispatcher = /** @class */ (function () {
         for (var _i = 1; _i < arguments.length; _i++) {
             args[_i - 1] = arguments[_i];
         }
-        if (!(event in this._listeners))
-            return;
-        for (var i = 0; i < this._listeners[event].length; i++) {
-            var cb = this._listeners[event][i];
-            // We need to unbind callbacks before they're called to prevent
-            // infinite loops if the event is somehow triggered within the
-            // callback
-            if (cb.once) {
-                this.off(event, cb.key);
-                i--;
+        if (event in this._listeners) {
+            for (var i = 0; i < this._listeners[event].length; i++) {
+                var cb = this._listeners[event][i];
+                // We need to unbind callbacks before they're called to prevent
+                // infinite loops if the event is somehow triggered within the
+                // callback
+                if (cb.once) {
+                    this.off(event, cb.key);
+                    i--;
+                }
+                cb.call(args);
             }
-            cb.call(args);
+        }
+        for (var _a = 0, _b = this._relays; _a < _b.length; _a++) {
+            var relay = _b[_a];
+            relay.dispatch.apply(relay, __spreadArray([event], args));
         }
     };
     EventDispatcher.sources = [];

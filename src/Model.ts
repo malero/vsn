@@ -1,28 +1,14 @@
-
-import {ModelAbstract, ModelData} from "./Model/ModelAbstract";
 import MessageList from "./MessageList";
+import {ScopeData} from "./Scope/ScopeData";
+import {IScopeData} from "./Scope/ScopeDataAbstract";
 
 
-export class Model extends ModelAbstract {
+export class Model extends ScopeData {
     _errors!: MessageList;
     _hasErrors: boolean;
 
-    constructor(data: ModelData | null | undefined = null) {
+    constructor(data: IScopeData | null | undefined = null) {
         super();
-        const fields = this.__fields__.splice(0, this.__fields__.length);
-        for(const field of fields) {
-            (function(_self, field) {
-                if(!_self['__'+field+'__'])
-                    return;
-
-                _self.__fields__.push(field);
-                const _field = _self['__'+field+'__'],
-                    fieldType = _field[0],
-                    config = _field[1] || {};
-
-                _self.createField(field, fieldType, config);
-            })(this, field);
-        }
 
         this._hasErrors = false;
         if (data)
@@ -36,10 +22,10 @@ export class Model extends ModelAbstract {
     validate(): MessageList {
         this._hasErrors = false;
         this._errors = new MessageList;
-        for(const field of this.getFields()) {
-            const errors = this['__'+field].validate();
+        for(const property of this.getProperties()) {
+            const errors = this['__'+property].validate();
             if(errors.length > 0) {
-                this._errors.add(field, errors, true);
+                this._errors.add(property, errors, true);
                 this._hasErrors = true;
             }
         }

@@ -24,5 +24,6 @@ export { Scope } from './Scope';
 export { ScopeReference } from './Scope/ScopeReference';
 export { WrappedArray } from './Scope/WrappedArray';
 export { Controller } from './Controller';
+export { Property, property } from './Scope/properties/Property';
 export { Tag } from './Tag';
 export declare const vision: Vision;

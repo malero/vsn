@@ -8,7 +8,9 @@ import {VisionHelper} from "./helpers/VisionHelper";
 import {Tree} from "./AST";
 import {Query} from "./Query";
 import {EventDispatcher} from "./EventDispatcher";
-import {DataModel} from "./Model/DataModel";
+import {DynamicScopeData} from "./Scope/DynamicScopeData";
+import {Controller} from "./Controller";
+import {property} from "./Scope/properties/Property";
 
 export class Vision extends EventDispatcher {
     protected static _instance: Vision;
@@ -28,7 +30,7 @@ export class Vision extends EventDispatcher {
         }
         this.registry.classes.register('Object', Object);
         this.registry.classes.register('WrappedArray', WrappedArray);
-        this.registry.classes.register('DataModel', DataModel);
+        this.registry.classes.register('Data', DynamicScopeData);
 
         if (VisionHelper.window) {
             window['Vision'] = Vision;
@@ -67,6 +69,17 @@ export class Vision extends EventDispatcher {
     }
 }
 
+
+@Registry.controller('ControllerTestController')
+class TestController extends Controller {
+    @property()
+    public test: string;
+
+    isValid(): boolean {
+        return this.test === 'test';
+    }
+}
+
 export * from "./attributes/_imports";
 export * from './Registry';
 export * from './Attribute';
@@ -76,5 +89,6 @@ export {Scope} from './Scope';
 export {ScopeReference} from './Scope/ScopeReference';
 export {WrappedArray} from './Scope/WrappedArray';
 export {Controller} from './Controller';
+export {Property, property} from './Scope/properties/Property';
 export {Tag} from './Tag';
 export const vision: Vision = Vision.instance;

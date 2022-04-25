@@ -1,7 +1,7 @@
 import { Scope } from "./Scope";
 import { Tag } from "./Tag";
-import { EventDispatcher } from "./EventDispatcher";
-export declare abstract class Controller extends EventDispatcher {
+import { ScopeData } from "./Scope/ScopeData";
+export declare abstract class Controller extends ScopeData {
     protected _scope: Scope;
     protected _tag: Tag;
     protected _element: HTMLElement;
@@ -9,4 +9,6 @@ export declare abstract class Controller extends EventDispatcher {
     get tag(): Tag;
     get element(): HTMLElement;
     init(scope: Scope, tag: Tag, element: HTMLElement): void;
+    get(key: string): any;
+    set(key: string, value: any): void;
 }

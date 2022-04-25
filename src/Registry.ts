@@ -57,6 +57,7 @@ export class Registry extends EventDispatcher {
     public readonly models: RegistryStore;
     public readonly templates: RegistryStore;
     public readonly types: RegistryStore;
+    public readonly validators: RegistryStore;
     public readonly formats: RegistryStore;
     public readonly attributes: RegistryStore;
 
@@ -68,11 +69,16 @@ export class Registry extends EventDispatcher {
         this.models = new RegistryStore(w['$models'] || {});
         this.templates = new RegistryStore(w['$templates'] || {});
         this.types = new RegistryStore(w['$types'] || {});
+        this.validators = new RegistryStore(w['$validators'] || {});
         this.formats = new RegistryStore(w['$formats'] || {});
         this.attributes = new RegistryStore(w['$attributes'] || {});
     }
 
     public static class(key: string = null, setup = null) {
+        return register('classes', key, setup);
+    }
+
+    public static controller(key: string = null, setup = null) {
         return register('classes', key, setup);
     }
 
@@ -86,6 +92,10 @@ export class Registry extends EventDispatcher {
 
     public static type(key: string = null, setup = null) {
         return register('types', key, setup);
+    }
+
+    public static validator(key: string = null, setup = null) {
+        return register('validators', key, setup);
     }
 
     public static format(key: string = null, setup = null) {

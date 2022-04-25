@@ -23,12 +23,12 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.Scope = void 0;
 var Registry_1 = require("./Registry");
 var EventDispatcher_1 = require("./EventDispatcher");
-var DataModel_1 = require("./Model/DataModel");
-var Model_1 = require("./Model");
 var ScopeReference_1 = require("./Scope/ScopeReference");
 var QueryReference_1 = require("./Scope/QueryReference");
 var ScopedVariableType_1 = require("./Scope/ScopedVariableType");
 var WrappedArray_1 = require("./Scope/WrappedArray");
+var ScopeData_1 = require("./Scope/ScopeData");
+var DynamicScopeData_1 = require("./Scope/DynamicScopeData");
 var Scope = /** @class */ (function (_super) {
     __extends(Scope, _super);
     function Scope(parent) {
@@ -37,7 +37,8 @@ var Scope = /** @class */ (function (_super) {
         if (parent)
             _this.parentScope = parent;
         _this.children = [];
-        _this.data = new DataModel_1.DataModel({});
+        _this.data = new DynamicScopeData_1.DynamicScopeData({});
+        _this.data.addRelay(_this);
         _this._keys = [];
         return _this;
     }
@@ -93,8 +94,8 @@ var Scope = /** @class */ (function (_super) {
         return value;
     };
     Scope.prototype.set = function (key, value) {
-        if (this.data[key] === undefined)
-            this.data.createField(key);
+        if (!this.data.hasProperty(key))
+            this.data.createProperty(key);
         if (typeof value === 'string') {
             var valueType = this.getType(key);
             var caster = Registry_1.Registry.instance.types.getSynchronous(valueType);
@@ -105,17 +106,7 @@ var Scope = /** @class */ (function (_super) {
                 value = null;
             }
         }
-        if (this.data[key] !== value) {
-            var previousValue = this.data[key];
-            this.data[key] = value;
-            var event_1 = {
-                value: value,
-                previousValue: previousValue,
-                key: key
-            };
-            this.dispatch("change:" + key, event_1);
-            this.dispatch('change', key, event_1);
-        }
+        this.data[key] = value;
         if (this._keys.indexOf(key) === -1)
             this._keys.push(key);
     };
@@ -159,8 +150,14 @@ var Scope = /** @class */ (function (_super) {
         var _this = this;
         if (triggerUpdates === void 0) { triggerUpdates = false; }
         if (updateFromWrapped === void 0) { updateFromWrapped = true; }
-        if (toWrap instanceof Model_1.Model) {
+        if (toWrap instanceof ScopeData_1.ScopeData) {
+            if (this.data instanceof EventDispatcher_1.EventDispatcher) {
+                this.data.removeRelay(this);
+                this.data.deconstruct();
+            }
+            this.wrapped = toWrap;
             this.data = toWrap;
+            this.data.addRelay(this);
             return;
         }
         if (toWrap instanceof Scope)
@@ -224,9 +221,9 @@ var Scope = /** @class */ (function (_super) {
         }
         this.wrapped.get = this.get.bind(this);
         this.wrapped.set = this.set.bind(this);
-        this.wrapped.bind = this.on.bind(this);
+        this.wrapped.on = this.on.bind(this);
         this.wrapped.once = this.once.bind(this);
-        this.wrapped.unbind = this.off.bind(this);
+        this.wrapped.off = this.off.bind(this);
     };
     Scope.prototype.unwrap = function () {
         if (!this.wrapped)

@@ -254,11 +254,11 @@ export class Tag extends DOMObject {
         if (obj instanceof Controller) {
             obj.init(this.scope, this, this.element);
         } else {
-            this.scope.wrap(obj, triggerUpdates, updateFromWrapped);
             obj['$scope'] = this.scope;
             obj['$tag'] = this;
             obj['$el'] = this.element;
         }
+        this.scope.wrap(obj, triggerUpdates, updateFromWrapped);
         return obj;
     }
 

@@ -52,6 +52,7 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ArithmeticAssignmentNode = void 0;
+var Scope_1 = require("../Scope");
 var DOMObject_1 = require("../DOM/DOMObject");
 var AST_1 = require("../AST");
 var Node_1 = require("./Node");
@@ -61,6 +62,7 @@ var ElementQueryNode_1 = require("./ElementQueryNode");
 var ElementAttributeNode_1 = require("./ElementAttributeNode");
 var ElementStyleNode_1 = require("./ElementStyleNode");
 var UnitLiteralNode_1 = require("./UnitLiteralNode");
+var vsn_1 = require("../vsn");
 var ArithmeticAssignmentNode = /** @class */ (function (_super) {
     __extends(ArithmeticAssignmentNode, _super);
     function ArithmeticAssignmentNode(left, right, type) {
@@ -94,8 +96,14 @@ var ArithmeticAssignmentNode = /** @class */ (function (_super) {
                         if (this.left.scope instanceof ElementQueryNode_1.ElementQueryNode) {
                             scopes.push.apply(scopes, inner);
                         }
-                        else {
+                        else if (inner instanceof Scope_1.Scope) {
                             scopes.push(inner);
+                        }
+                        else if (inner instanceof vsn_1.Controller) {
+                            scopes.push(inner.scope);
+                        }
+                        else {
+                            scopes.push(scope);
                         }
                         return [3 /*break*/, 6];
                     case 3:
@@ -120,12 +128,13 @@ var ArithmeticAssignmentNode = /** @class */ (function (_super) {
                         _a.sent();
                         return [3 /*break*/, 12];
                     case 9:
-                        if (localScope['$wrapped'] && localScope['$scope'])
+                        if (localScope['$wrapped'] && localScope['$scope']) {
                             localScope = localScope['$scope'];
-                        return [4 /*yield*/, this.left.evaluate(localScope, dom, tag)];
+                        }
+                        return [4 /*yield*/, this.left.evaluate(scope, dom, tag)];
                     case 10:
                         left = _a.sent();
-                        return [4 /*yield*/, this.right.evaluate(localScope, dom, tag)];
+                        return [4 /*yield*/, this.right.evaluate(scope, dom, tag)];
                     case 11:
                         right = _a.sent();
                         if (left instanceof Array) {

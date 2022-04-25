@@ -1,8 +1,8 @@
 import {Scope} from "./Scope";
 import {Tag} from "./Tag";
-import {EventDispatcher} from "./EventDispatcher";
+import {ScopeData} from "./Scope/ScopeData";
 
-export abstract class Controller extends EventDispatcher {
+export abstract class Controller extends ScopeData {
     protected _scope: Scope;
     protected _tag: Tag;
     protected _element: HTMLElement;
@@ -23,5 +23,13 @@ export abstract class Controller extends EventDispatcher {
         this._scope = scope;
         this._tag = tag;
         this._element = element;
+    }
+
+    public get(key: string): any {
+        return this._scope?.get(key);
+    }
+
+    public set(key: string, value: any): void {
+        this._scope?.set(key, value);
     }
 }

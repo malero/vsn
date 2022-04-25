@@ -758,6 +758,19 @@ var Tree = /** @class */ (function () {
         tokens.splice(0, matching.length);
         return matching;
     };
+    Tree.apply = function (code, scope, dom, tag) {
+        return __awaiter(this, void 0, void 0, function () {
+            var t;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0:
+                        t = new Tree(code);
+                        return [4 /*yield*/, t.evaluate(scope, dom, tag)];
+                    case 1: return [2 /*return*/, _a.sent()];
+                }
+            });
+        });
+    };
     Tree.cache = {};
     return Tree;
 }());

@@ -31,6 +31,7 @@ export type EventDispatcherCallback = (...args: any[]) => any;
 export class EventDispatcher  {
     private static sources: EventDispatcher[] = [];
     private readonly _listeners: EventCallbackList;
+    private readonly _relays: EventDispatcher[] = [];
     private _lastKey: number;
 
     constructor() {
@@ -39,9 +40,21 @@ export class EventDispatcher  {
         EventDispatcher.sources.push(this);
     }
 
-    deconstructor() {
+    deconstruct() {
         this.dispatch('deconstruct', this);
         EventDispatcher.sources.splice(EventDispatcher.sources.indexOf(this), 1);
+        for (const k in this._listeners) {
+            delete this._listeners[k];
+        }
+    }
+
+    addRelay(relay: EventDispatcher) {
+        this._relays.push(relay);
+    }
+
+    removeRelay(relay: EventDispatcher) {
+        if (this._relays.indexOf(relay) > -1)
+            this._relays.splice(this._relays.indexOf(relay), 1);
     }
 
     on(event: string, fct: EventDispatcherCallback, context?: any, once?: boolean): number {
@@ -98,20 +111,24 @@ export class EventDispatcher  {
     }
 
     dispatch(event: string, ...args: any[]): void {
-        if(!(event in this._listeners)) return;
+        if(event in this._listeners) {
+            for (let i = 0; i < this._listeners[event].length; i++) {
+                const cb: EventCallback = this._listeners[event][i];
 
-        for(let i = 0; i < this._listeners[event].length; i++) {
-            const cb: EventCallback = this._listeners[event][i];
+                // We need to unbind callbacks before they're called to prevent
+                // infinite loops if the event is somehow triggered within the
+                // callback
+                if (cb.once) {
+                    this.off(event, cb.key);
+                    i--;
+                }
 
-            // We need to unbind callbacks before they're called to prevent
-            // infinite loops if the event is somehow triggered within the
-            // callback
-            if(cb.once) {
-                this.off(event, cb.key);
-                i--;
+                cb.call(args);
             }
+        }
 
-            cb.call(args);
+        for (const relay of this._relays) {
+            relay.dispatch(event, ...args);
         }
     }
 }

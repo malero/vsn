@@ -1,9 +1,9 @@
 import { EventDispatcher } from "./EventDispatcher";
-import { DataModel } from "./Model/DataModel";
 import { ScopeReference } from "./Scope/ScopeReference";
+import { ScopeData } from "./Scope/ScopeData";
 export declare class Scope extends EventDispatcher {
     wrapped: any;
-    protected data: DataModel;
+    protected data: ScopeData;
     protected types: {
         [key: string]: string;
     };

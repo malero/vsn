@@ -1,6 +1,11 @@
 import {Registry} from "./Registry";
 
 export class Types {
+    @Registry.type('any')
+    public static any(value: any): any {
+        return value as any;
+    }
+
     @Registry.type('string')
     public static string(value: string) {
         return value;

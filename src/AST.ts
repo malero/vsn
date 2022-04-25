@@ -712,4 +712,9 @@ export class Tree {
         tokens.splice(0, matching.length);
         return matching;
     }
+
+    static async apply(code: string, scope: Scope, dom: DOM, tag: Tag) {
+        const t = new Tree(code);
+        return await t.evaluate(scope, dom, tag);
+    }
 }

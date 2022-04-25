@@ -3,7 +3,7 @@ import {EventDispatcher} from "./EventDispatcher";
 export interface IDeferred<T> {
     [key: string]: any;
     promise: SimplePromise<T>;
-    resolve(result: T): void;
+    resolve(result?: T): void;
     reject(reason: string): void;
 }
 
@@ -67,7 +67,7 @@ export class SimplePromise<T> extends EventDispatcher implements IPromise<T> {
      * promise will be fulfilled with the value. Generally, if you don't know if a value is a promise or not,
      * Promise.resolve(value) it instead and work with the return value as a promise.
      */
-    public static resolve<T>(result: T): IPromise<T> {
+    public static resolve<T>(result?: T): IPromise<T> {
         return new SimplePromise<T>((resolve: TResolve<T>): void => {
             if (result instanceof SimplePromise) {
                 result.then((innerResult: T) => {

@@ -11,6 +11,9 @@ var Registry_1 = require("./Registry");
 var Types = /** @class */ (function () {
     function Types() {
     }
+    Types.any = function (value) {
+        return value;
+    };
     Types.string = function (value) {
         return value;
     };
@@ -27,6 +30,9 @@ var Types = /** @class */ (function () {
     Types.date = function (value) {
         return new Date(Date.parse(value));
     };
+    __decorate([
+        Registry_1.Registry.type('any')
+    ], Types, "any", null);
     __decorate([
         Registry_1.Registry.type('string')
     ], Types, "string", null);

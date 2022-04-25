@@ -104,4 +104,5 @@ export declare class Tree {
     static getBlockTokens(tokens: Token[], groupBy?: TokenType | null): Token[][];
     static getTokensUntil(tokens: Token[], terminator?: TokenType, consumeTerminator?: boolean, includeTerminator?: boolean, validIfTerminatorNotFound?: boolean, blockInfo?: IBlockInfo): Token[];
     static consumeTypes(tokens: Token[], types: TokenType[]): Token[];
+    static apply(code: string, scope: Scope, dom: DOM, tag: Tag): Promise<any>;
 }

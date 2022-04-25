@@ -1,16 +1,16 @@
 import {Registry} from "./Registry";
 import {EventDispatcher} from "./EventDispatcher";
-import {DataModel} from "./Model/DataModel";
-import {Model} from "./Model";
 import {ScopeReference} from "./Scope/ScopeReference";
 import {QueryReference} from "./Scope/QueryReference";
 import {ScopeVariableType} from "./Scope/ScopedVariableType";
 import {WrappedArray} from "./Scope/WrappedArray";
+import {ScopeData} from "./Scope/ScopeData";
+import {DynamicScopeData} from "./Scope/DynamicScopeData";
 
 
 export class Scope extends EventDispatcher {
     public wrapped: any;
-    protected data: DataModel;
+    protected data: ScopeData;
     protected types: {[key: string]: string;} = {};
     protected children: Scope[];
     protected _keys: string[];
@@ -23,7 +23,8 @@ export class Scope extends EventDispatcher {
         if (parent)
             this.parentScope = parent;
         this.children = [];
-        this.data = new DataModel({});
+        this.data = new DynamicScopeData({});
+        this.data.addRelay(this);
         this._keys = [];
     }
 
@@ -84,8 +85,8 @@ export class Scope extends EventDispatcher {
     }
 
     set(key: string, value: any) {
-        if (this.data[key] === undefined)
-            this.data.createField(key);
+        if (!this.data.hasProperty(key))
+            this.data.createProperty(key);
 
         if (typeof value === 'string') {
             const valueType = this.getType(key);
@@ -99,18 +100,7 @@ export class Scope extends EventDispatcher {
             }
         }
 
-        if (this.data[key] !== value) {
-            const previousValue = this.data[key];
-            this.data[key] = value;
-            const event = {
-                value: value,
-                previousValue: previousValue,
-                key: key
-            };
-
-            this.dispatch(`change:${key}`, event);
-            this.dispatch('change', key, event);
-        }
+        this.data[key] = value;
 
         if (this._keys.indexOf(key) === -1)
             this._keys.push(key);
@@ -153,8 +143,14 @@ export class Scope extends EventDispatcher {
     }
 
     public wrap(toWrap: any, triggerUpdates: boolean = false, updateFromWrapped: boolean = true) {
-        if (toWrap instanceof Model) {
+        if (toWrap instanceof ScopeData) {
+            if (this.data instanceof EventDispatcher) {
+                this.data.removeRelay(this);
+                this.data.deconstruct();
+            }
+            this.wrapped = toWrap;
             this.data = toWrap;
+            this.data.addRelay(this);
             return;
         }
 
@@ -224,9 +220,9 @@ export class Scope extends EventDispatcher {
 
         this.wrapped.get = this.get.bind(this);
         this.wrapped.set = this.set.bind(this);
-        this.wrapped.bind = this.on.bind(this);
+        this.wrapped.on = this.on.bind(this);
         this.wrapped.once = this.once.bind(this);
-        this.wrapped.unbind = this.off.bind(this);
+        this.wrapped.off = this.off.bind(this);
     }
 
     public unwrap(): void {
