@@ -15,7 +15,8 @@ var Types = /** @class */ (function () {
         return value;
     };
     Types.string = function (value) {
-        return value;
+        console.log(value, "" + value);
+        return "" + value;
     };
     Types.integer = function (value) {
         return parseInt(value);

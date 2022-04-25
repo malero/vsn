@@ -6,7 +6,6 @@ import {DOMObject} from "../DOM/DOMObject";
 import {TreeNode} from "../AST";
 import {Node} from "./Node";
 import {ElementQueryNode} from "./ElementQueryNode";
-import {Controller} from "../vsn";
 
 export class ScopeMemberNode extends Node implements TreeNode {
     constructor(

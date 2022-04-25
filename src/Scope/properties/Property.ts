@@ -30,7 +30,7 @@ export interface IPropertyConfig {
 }
 
 export class Property extends EventDispatcher {
-    type: string = 'any';
+    _type: string = 'any';
     _value: any;
     config: IPropertyConfig;
 
@@ -64,5 +64,16 @@ export class Property extends EventDispatcher {
 
     getData() {
         return this.value;
+    }
+
+    set type(type: string) {
+        if (this._type != type) {
+            this._type = type;
+            this.value = this.value; // Need to reset value to have it cast to the new type
+        }
+    }
+
+    get type(): string {
+        return this._type;
     }
 }

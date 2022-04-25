@@ -1,8 +1,6 @@
-import {Registry} from "./Registry";
 import {EventDispatcher} from "./EventDispatcher";
 import {ScopeReference} from "./Scope/ScopeReference";
 import {QueryReference} from "./Scope/QueryReference";
-import {ScopeVariableType} from "./Scope/ScopedVariableType";
 import {WrappedArray} from "./Scope/WrappedArray";
 import {ScopeData} from "./Scope/ScopeData";
 import {DynamicScopeData} from "./Scope/DynamicScopeData";
@@ -11,9 +9,7 @@ import {DynamicScopeData} from "./Scope/DynamicScopeData";
 export class Scope extends EventDispatcher {
     public wrapped: any;
     protected data: ScopeData;
-    protected types: {[key: string]: string;} = {};
     protected children: Scope[];
-    protected _keys: string[];
     protected _parentScope: Scope;
 
     constructor(
@@ -25,7 +21,6 @@ export class Scope extends EventDispatcher {
         this.children = [];
         this.data = new DynamicScopeData({});
         this.data.addRelay(this);
-        this._keys = [];
     }
 
     public get parentScope(): Scope {
@@ -88,40 +83,27 @@ export class Scope extends EventDispatcher {
         if (!this.data.hasProperty(key))
             this.data.createProperty(key);
 
-        if (typeof value === 'string') {
-            const valueType = this.getType(key);
-            const caster = Registry.instance.types.getSynchronous(valueType);
-            if (caster) {
-                value = caster(value);
-            }
-
-            if ([ScopeVariableType.Integer, ScopeVariableType.Float].indexOf(valueType) > -1 && isNaN(value)) {
-                value = null;
-            }
-        }
-
         this.data[key] = value;
-
-        if (this._keys.indexOf(key) === -1)
-            this._keys.push(key);
     }
 
     get keys(): string[] {
-        return [...this._keys];
+        return this.data.keys;
     }
 
     has(key: string): boolean {
-        return this._keys.indexOf(key) > -1;
+        return this.data.hasProperty(key);
     }
 
     setType(key: string, type: string) {
-        this.types[key] = type;
+        const property = this.data.getProperty(key, true);
+        property.type = type;
         if (this.has(key))
             this.set(key, this.get(key));
     }
 
     getType(key: string): string {
-        return this.types[key] || ScopeVariableType.String;
+        const property = this.data.getProperty(key);
+        return property.type;
     }
 
     extend(data) {
@@ -131,7 +113,7 @@ export class Scope extends EventDispatcher {
     }
 
     clear() {
-        for (const key of this._keys) {
+        for (const key of this.data.keys) {
             if (['function', 'object'].indexOf(typeof this.get(key)) > -1) continue;
             this.set(key, null);
         }

@@ -17,10 +17,37 @@ var Validators = /** @class */ (function () {
             errors.push('Please enter a valid email address');
         return errors;
     };
+    Validators.required = function (value) {
+        var errors = [];
+        if (value == null || value.length == 0)
+            errors.push('This field is required');
+        return errors;
+    };
+    Validators.positive = function (value) {
+        var errors = [];
+        if (value != null && value < 0)
+            errors.push('Please enter a positive number');
+        return errors;
+    };
+    Validators.negative = function (value) {
+        var errors = [];
+        if (value != null && value > 0)
+            errors.push('Please enter a negative number');
+        return errors;
+    };
     Validators._emailRegex = /^(([^<>()\[\]\.,;:\s@\"]+(\.[^<>()\[\]\.,;:\s@\"]+)*)|(\".+\"))@(([^<>()[\]\.,;:\s@\"]+\.)+[^<>()[\]\.,;:\s@\"]{2,})$/i;
     __decorate([
         Registry_1.Registry.validator('email')
     ], Validators, "email", null);
+    __decorate([
+        Registry_1.Registry.validator('required')
+    ], Validators, "required", null);
+    __decorate([
+        Registry_1.Registry.validator('positive')
+    ], Validators, "positive", null);
+    __decorate([
+        Registry_1.Registry.validator('negative')
+    ], Validators, "negative", null);
     return Validators;
 }());
 exports.Validators = Validators;

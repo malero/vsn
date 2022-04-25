@@ -44,7 +44,7 @@ var Property = /** @class */ (function (_super) {
     __extends(Property, _super);
     function Property(value, config) {
         var _this = _super.call(this) || this;
-        _this.type = 'any';
+        _this._type = 'any';
         _this.config = config;
         _this.type = config.type || 'any';
         _this.value = value;
@@ -74,6 +74,19 @@ var Property = /** @class */ (function (_super) {
     Property.prototype.getData = function () {
         return this.value;
     };
+    Object.defineProperty(Property.prototype, "type", {
+        get: function () {
+            return this._type;
+        },
+        set: function (type) {
+            if (this._type != type) {
+                this._type = type;
+                this.value = this.value; // Need to reset value to have it cast to the new type
+            }
+        },
+        enumerable: false,
+        configurable: true
+    });
     return Property;
 }(EventDispatcher_1.EventDispatcher));
 exports.Property = Property;

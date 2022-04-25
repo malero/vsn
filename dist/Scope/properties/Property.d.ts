@@ -5,7 +5,7 @@ export interface IPropertyConfig {
     default?: any;
 }
 export declare class Property extends EventDispatcher {
-    type: string;
+    _type: string;
     _value: any;
     config: IPropertyConfig;
     constructor(value?: any, config?: IPropertyConfig);
@@ -13,4 +13,6 @@ export declare class Property extends EventDispatcher {
     set value(v: any);
     get value(): any;
     getData(): any;
+    set type(type: string);
+    get type(): string;
 }

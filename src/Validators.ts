@@ -12,4 +12,34 @@ export class Validators {
 
         return errors;
     }
+
+    @Registry.validator('required')
+    public static required(value: any): string[] {
+        const errors: string[] = [];
+
+        if(value == null || value.length == 0)
+            errors.push('This field is required');
+
+        return errors;
+    }
+
+    @Registry.validator('positive')
+    public static positive(value: any): string[] {
+        const errors: string[] = [];
+
+        if(value != null && value < 0)
+            errors.push('Please enter a positive number');
+
+        return errors;
+    }
+
+    @Registry.validator('negative')
+    public static negative(value: any): string[] {
+        const errors: string[] = [];
+
+        if(value != null && value > 0)
+            errors.push('Please enter a negative number');
+
+        return errors;
+    }
 }

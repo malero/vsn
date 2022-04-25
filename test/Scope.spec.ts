@@ -55,4 +55,15 @@ describe('WrappedArray', () => {
         expect(changes).toBe(6);
         expect(a.length).toBe(0);
     });
+
+    it("should set types correctly", async () => {
+        const scope = new Scope();
+        scope.setType('test', 'integer');
+        scope.set('test', '1');
+        expect(scope.get('test')).toBe(1);
+
+        scope.setType('testing', 'string');
+        scope.set('testing', 2);
+        expect(scope.get('testing')).toBe('2');
+    });
 });

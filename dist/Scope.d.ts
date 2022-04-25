@@ -4,11 +4,7 @@ import { ScopeData } from "./Scope/ScopeData";
 export declare class Scope extends EventDispatcher {
     wrapped: any;
     protected data: ScopeData;
-    protected types: {
-        [key: string]: string;
-    };
     protected children: Scope[];
-    protected _keys: string[];
     protected _parentScope: Scope;
     constructor(parent?: Scope);
     get parentScope(): Scope;

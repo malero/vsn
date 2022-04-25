@@ -21,11 +21,9 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Scope = void 0;
-var Registry_1 = require("./Registry");
 var EventDispatcher_1 = require("./EventDispatcher");
 var ScopeReference_1 = require("./Scope/ScopeReference");
 var QueryReference_1 = require("./Scope/QueryReference");
-var ScopedVariableType_1 = require("./Scope/ScopedVariableType");
 var WrappedArray_1 = require("./Scope/WrappedArray");
 var ScopeData_1 = require("./Scope/ScopeData");
 var DynamicScopeData_1 = require("./Scope/DynamicScopeData");
@@ -33,13 +31,11 @@ var Scope = /** @class */ (function (_super) {
     __extends(Scope, _super);
     function Scope(parent) {
         var _this = _super.call(this) || this;
-        _this.types = {};
         if (parent)
             _this.parentScope = parent;
         _this.children = [];
         _this.data = new DynamicScopeData_1.DynamicScopeData({});
         _this.data.addRelay(_this);
-        _this._keys = [];
         return _this;
     }
     Object.defineProperty(Scope.prototype, "parentScope", {
@@ -96,37 +92,27 @@ var Scope = /** @class */ (function (_super) {
     Scope.prototype.set = function (key, value) {
         if (!this.data.hasProperty(key))
             this.data.createProperty(key);
-        if (typeof value === 'string') {
-            var valueType = this.getType(key);
-            var caster = Registry_1.Registry.instance.types.getSynchronous(valueType);
-            if (caster) {
-                value = caster(value);
-            }
-            if ([ScopedVariableType_1.ScopeVariableType.Integer, ScopedVariableType_1.ScopeVariableType.Float].indexOf(valueType) > -1 && isNaN(value)) {
-                value = null;
-            }
-        }
         this.data[key] = value;
-        if (this._keys.indexOf(key) === -1)
-            this._keys.push(key);
     };
     Object.defineProperty(Scope.prototype, "keys", {
         get: function () {
-            return __spreadArray([], this._keys);
+            return this.data.keys;
         },
         enumerable: false,
         configurable: true
     });
     Scope.prototype.has = function (key) {
-        return this._keys.indexOf(key) > -1;
+        return this.data.hasProperty(key);
     };
     Scope.prototype.setType = function (key, type) {
-        this.types[key] = type;
+        var property = this.data.getProperty(key, true);
+        property.type = type;
         if (this.has(key))
             this.set(key, this.get(key));
     };
     Scope.prototype.getType = function (key) {
-        return this.types[key] || ScopedVariableType_1.ScopeVariableType.String;
+        var property = this.data.getProperty(key);
+        return property.type;
     };
     Scope.prototype.extend = function (data) {
         for (var _i = 0, data_1 = data; _i < data_1.length; _i++) {
@@ -135,7 +121,7 @@ var Scope = /** @class */ (function (_super) {
         }
     };
     Scope.prototype.clear = function () {
-        for (var _i = 0, _a = this._keys; _i < _a.length; _i++) {
+        for (var _i = 0, _a = this.data.keys; _i < _a.length; _i++) {
             var key = _a[_i];
             if (['function', 'object'].indexOf(typeof this.get(key)) > -1)
                 continue;

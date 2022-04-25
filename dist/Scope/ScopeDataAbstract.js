@@ -67,6 +67,13 @@ var ScopeDataAbstract = /** @class */ (function (_super) {
     ScopeDataAbstract.prototype.hasProperty = function (name) {
         return this.__properties__.indexOf(name) !== -1;
     };
+    Object.defineProperty(ScopeDataAbstract.prototype, "keys", {
+        get: function () {
+            return __spreadArray([], this.__properties__);
+        },
+        enumerable: false,
+        configurable: true
+    });
     ScopeDataAbstract.prototype.setData = function (data) {
         var properties = this.getProperties();
         for (var key in data) {
@@ -89,8 +96,13 @@ var ScopeDataAbstract = /** @class */ (function (_super) {
     ScopeDataAbstract.prototype.getProperties = function () {
         return this.__properties__;
     };
-    ScopeDataAbstract.prototype.getProperty = function (name) {
-        return this['__' + name];
+    ScopeDataAbstract.prototype.getProperty = function (name, create) {
+        if (create === void 0) { create = false; }
+        var property = this['__' + name];
+        if (create && !property) {
+            property = this.createProperty(name);
+        }
+        return property;
     };
     ScopeDataAbstract.prototype.bindToProperties = function (event, properties, callback) {
         for (var _i = 0, properties_1 = properties; _i < properties_1.length; _i++) {

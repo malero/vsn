@@ -8,7 +8,8 @@ export class Types {
 
     @Registry.type('string')
     public static string(value: string) {
-        return value;
+        console.log(value, `${value}`);
+        return `${value}`;
     }
 
     @Registry.type('integer')

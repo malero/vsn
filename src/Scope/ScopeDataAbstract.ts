@@ -56,6 +56,10 @@ export class ScopeDataAbstract extends EventDispatcher {
         return this.__properties__.indexOf(name) !== -1;
     }
 
+    get keys(): string[] {
+        return [...this.__properties__];
+    }
+
     setData(data: IScopeData) {
         const properties = this.getProperties();
         for (const key in data) {
@@ -81,8 +85,12 @@ export class ScopeDataAbstract extends EventDispatcher {
         return this.__properties__;
     }
 
-    getProperty(name: string): Property {
-        return this['__'+name];
+    getProperty(name: string, create: boolean = false): Property {
+        let property = this['__'+name];
+        if (create && !property) {
+            property = this.createProperty(name);
+        }
+        return property;
     }
 
     bindToProperties(event:string, properties:string[], callback: (...args: any[]) => any) {

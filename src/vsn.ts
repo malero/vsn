@@ -69,17 +69,6 @@ export class Vision extends EventDispatcher {
     }
 }
 
-
-@Registry.controller('ControllerTestController')
-class TestController extends Controller {
-    @property()
-    public test: string;
-
-    isValid(): boolean {
-        return this.test === 'test';
-    }
-}
-
 export * from "./attributes/_imports";
 export * from './Registry';
 export * from './Attribute';
