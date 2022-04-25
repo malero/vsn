@@ -8,7 +8,6 @@ export class Types {
 
     @Registry.type('string')
     public static string(value: string) {
-        console.log(value, `${value}`);
         return `${value}`;
     }
 
