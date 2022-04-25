@@ -93,7 +93,7 @@ var Bind = /** @class */ (function (_super) {
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
-                        this.property = this.getAttributeBinding();
+                        this.property = this.getAttributeBinding(this.property);
                         mods = this.getAttributeModifiers();
                         if (mods.length) {
                             if (mods.indexOf('from') > -1) {

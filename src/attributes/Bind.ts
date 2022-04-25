@@ -20,7 +20,7 @@ export class Bind extends Attribute {
     }
 
     public async setup() {
-        this.property = this.getAttributeBinding();
+        this.property = this.getAttributeBinding(this.property);
         const mods = this.getAttributeModifiers();
         if (mods.length) {
             if (mods.indexOf('from') > -1) {
@@ -91,7 +91,6 @@ export class Bind extends Attribute {
 
     public mutate(mutation: MutationRecord) {
         super.mutate(mutation);
-
         if (!this.doUpdateFrom) return;
 
         // Element innerText binding

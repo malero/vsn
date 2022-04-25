@@ -75,7 +75,7 @@ var ClassConstructor = /** @class */ (function (_super) {
                         if (!parentScope)
                             return [2 /*return*/];
                         this.attributeKey = this.getAttributeBinding();
-                        this.className = this.getAttributeValue();
+                        this.className = this.getAttributeValue(this.defaultClassName);
                         return [4 /*yield*/, Registry_1.Registry.instance.classes.get(this.className)];
                     case 1:
                         cls = _a.sent();

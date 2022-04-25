@@ -2,7 +2,7 @@ export interface IMessageHash {
     [key: string]: string[] | null | undefined;
 }
 
-export default class MessageList {
+export class MessageList {
     [key: string]: any; // We're trying to mimic a basic object
 
     private _cachedList: IMessageHash | undefined;
@@ -77,5 +77,9 @@ export default class MessageList {
 
     get length(): number {
         return this.keys.length;
+    }
+
+    get isEmpty(): boolean {
+        return this.length === 0;
     }
 }

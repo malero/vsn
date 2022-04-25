@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.MessageList = void 0;
 var MessageList = /** @class */ (function () {
     function MessageList(messages) {
         this.reset();
@@ -82,7 +83,14 @@ var MessageList = /** @class */ (function () {
         enumerable: false,
         configurable: true
     });
+    Object.defineProperty(MessageList.prototype, "isEmpty", {
+        get: function () {
+            return this.length === 0;
+        },
+        enumerable: false,
+        configurable: true
+    });
     return MessageList;
 }());
-exports.default = MessageList;
+exports.MessageList = MessageList;
 //# sourceMappingURL=MessageList.js.map

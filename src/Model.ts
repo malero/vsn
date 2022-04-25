@@ -1,4 +1,4 @@
-import MessageList from "./MessageList";
+import {MessageList} from "./MessageList";
 import {ScopeData} from "./Scope/ScopeData";
 import {IScopeData} from "./Scope/ScopeDataAbstract";
 

@@ -33,7 +33,7 @@ var Model = /** @class */ (function (_super) {
     Model.prototype._constructor = function () { };
     Model.prototype.validate = function () {
         this._hasErrors = false;
-        this._errors = new MessageList_1.default;
+        this._errors = new MessageList_1.MessageList;
         for (var _i = 0, _a = this.getProperties(); _i < _a.length; _i++) {
             var property = _a[_i];
             var errors = this['__' + property].validate();

@@ -4,6 +4,7 @@ export declare class ClassConstructor extends Attribute {
     static readonly scoped: boolean;
     protected attributeKey: string;
     protected className: string;
+    protected defaultClassName: string;
     setup(): Promise<void>;
     protected instantiateClass(cls: any): void;
 }

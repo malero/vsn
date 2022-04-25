@@ -1,7 +1,7 @@
 export interface IMessageHash {
     [key: string]: string[] | null | undefined;
 }
-export default class MessageList {
+export declare class MessageList {
     [key: string]: any;
     private _cachedList;
     constructor(messages?: IMessageHash);
@@ -11,4 +11,5 @@ export default class MessageList {
     get list(): IMessageHash;
     get keys(): string[];
     get length(): number;
+    get isEmpty(): boolean;
 }
