@@ -179,6 +179,9 @@ var Attribute = /** @class */ (function (_super) {
             attribute: this
         });
     };
+    Attribute.create = function (tag, attributeName, cls) {
+        return new cls(tag, attributeName);
+    };
     Attribute.scoped = false;
     Attribute.canDefer = true;
     return Attribute;

@@ -342,7 +342,7 @@ export class Tag extends DOMObject {
             if (attrClass) {
                 if (attrClass.scoped)
                     requiresScope = true;
-                const attrObj = new attrClass(this, attr)
+                const attrObj = attrClass.create(this, attr, attrClass);
                 this.attributes.push(attrObj);
 
                 if (defer && attrClass.canDefer) {

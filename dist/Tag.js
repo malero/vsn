@@ -460,7 +460,7 @@ var Tag = /** @class */ (function (_super) {
                         if (!attrClass) return [3 /*break*/, 4];
                         if (attrClass.scoped)
                             requiresScope = true;
-                        attrObj = new attrClass(this, attr);
+                        attrObj = attrClass.create(this, attr, attrClass);
                         this.attributes.push(attrObj);
                         if (!(defer && attrClass.canDefer)) return [3 /*break*/, 4];
                         return [4 /*yield*/, attrObj.defer()];

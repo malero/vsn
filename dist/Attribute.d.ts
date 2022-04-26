@@ -32,4 +32,5 @@ export declare abstract class Attribute extends EventDispatcher {
     set value(value: string);
     get value(): string;
     private setState;
+    static create(tag: Tag, attributeName: string, cls: any): Attribute;
 }

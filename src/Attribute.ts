@@ -89,4 +89,8 @@ export abstract class Attribute extends EventDispatcher {
             attribute: this
         });
     }
+
+    public static create(tag: Tag, attributeName: string, cls: any): Attribute {
+        return new cls(tag, attributeName);
+    }
 }
