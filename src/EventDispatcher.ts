@@ -31,6 +31,7 @@ export type EventDispatcherCallback = (...args: any[]) => any;
 export class EventDispatcher  {
     private static sources: EventDispatcher[] = [];
     private readonly _listeners: EventCallbackList;
+    private readonly _allListeners: EventCallback[] = [];
     private readonly _relays: EventDispatcher[] = [];
     private _lastKey: number;
 
@@ -110,6 +111,40 @@ export class EventDispatcher  {
         }
     }
 
+    all(fct: EventDispatcherCallback, context?: any, once?: boolean): number {
+        once = once || false;
+        this._lastKey++;
+        this._allListeners.push(new EventCallback(fct, this._lastKey, once, context));
+        return this._lastKey;
+    }
+
+    none(key: number): boolean {
+        for(const cb of this._allListeners) {
+            if(key == cb.key) {
+                this._allListeners.splice(this._allListeners.indexOf(cb), 1);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    noneWithContext(context: any): number {
+        let toRemove: EventCallback[] = [],
+            cnt = 0;
+
+        for(const cb of this._allListeners) {
+            if(context == cb.context) {
+                toRemove.push(cb);
+            }
+        }
+
+        for(const cb of toRemove) {
+            this._allListeners.splice(this._allListeners.indexOf(cb), 1);
+            cnt++;
+        }
+        return cnt;
+    }
+
     dispatch(event: string, ...args: any[]): void {
         if(event in this._listeners) {
             for (let i = 0; i < this._listeners[event].length; i++) {
@@ -125,6 +160,13 @@ export class EventDispatcher  {
 
                 cb.call(args);
             }
+        }
+
+        for (const cb of this._allListeners) {
+            if (cb.once) {
+                this.none(cb.key);
+            }
+            cb.call(args);
         }
 
         for (const relay of this._relays) {

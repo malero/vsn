@@ -14,6 +14,7 @@ export declare type EventDispatcherCallback = (...args: any[]) => any;
 export declare class EventDispatcher {
     private static sources;
     private readonly _listeners;
+    private readonly _allListeners;
     private readonly _relays;
     private _lastKey;
     constructor();
@@ -25,5 +26,8 @@ export declare class EventDispatcher {
     off(event: string, key?: number): boolean;
     offWithContext(event: string, context: any): number;
     getListener(event: string, key: number): EventCallback | undefined;
+    all(fct: EventDispatcherCallback, context?: any, once?: boolean): number;
+    none(key: number): boolean;
+    noneWithContext(context: any): number;
     dispatch(event: string, ...args: any[]): void;
 }

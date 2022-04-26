@@ -14,6 +14,11 @@ var __extends = (this && this.__extends) || (function () {
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
     };
 })();
+var __spreadArray = (this && this.__spreadArray) || function (to, from) {
+    for (var i = 0, il = from.length, j = to.length; i < il; i++, j++)
+        to[j] = from[i];
+    return to;
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ArrayProperty = void 0;
 var Property_1 = require("./Property");
@@ -22,10 +27,23 @@ var ArrayProperty = /** @class */ (function (_super) {
     __extends(ArrayProperty, _super);
     function ArrayProperty(value, config) {
         var _this = _super.call(this, new WrappedArray_1.WrappedArray(), config) || this;
-        _this._value.dispatcher.addRelay(_this);
-        _this.value = value;
+        _this.allKey = _this._value.dispatcher.all(_this.relayEvent, _this);
+        if (value !== undefined) {
+            _this.value = value;
+        }
         return _this;
     }
+    ArrayProperty.prototype.deconstruct = function () {
+        this._value.dispatcher.none(this.allKey);
+        _super.prototype.deconstruct.call(this);
+    };
+    ArrayProperty.prototype.relayEvent = function (event) {
+        var args = [];
+        for (var _i = 1; _i < arguments.length; _i++) {
+            args[_i - 1] = arguments[_i];
+        }
+        this.dispatch.apply(this, __spreadArray(['change'], args));
+    };
     Object.defineProperty(ArrayProperty.prototype, "value", {
         get: function () {
             return this._value;

@@ -3,11 +3,23 @@ import {WrappedArray} from "../WrappedArray";
 
 export class ArrayProperty<T = any> extends Property<WrappedArray<T>> {
     _value: WrappedArray<T>;
+    allKey: number;
 
     constructor(value?: any, config?: IPropertyConfig) {
         super(new WrappedArray<any>(), config);
-        this._value.dispatcher.addRelay(this);
-        this.value = value;
+        this.allKey = this._value.dispatcher.all(this.relayEvent, this);
+        if (value !== undefined) {
+            this.value = value;
+        }
+    }
+
+    deconstruct() {
+        this._value.dispatcher.none(this.allKey);
+        super.deconstruct();
+    }
+
+    relayEvent(event, ...args) {
+        this.dispatch('change', ...args);
     }
 
     set value(v: any) {

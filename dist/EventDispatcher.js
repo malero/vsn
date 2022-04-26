@@ -31,6 +31,7 @@ var EventCallback = /** @class */ (function () {
 exports.EventCallback = EventCallback;
 var EventDispatcher = /** @class */ (function () {
     function EventDispatcher() {
+        this._allListeners = [];
         this._relays = [];
         this._lastKey = 0;
         this._listeners = {};
@@ -102,6 +103,37 @@ var EventDispatcher = /** @class */ (function () {
                 return cb;
         }
     };
+    EventDispatcher.prototype.all = function (fct, context, once) {
+        once = once || false;
+        this._lastKey++;
+        this._allListeners.push(new EventCallback(fct, this._lastKey, once, context));
+        return this._lastKey;
+    };
+    EventDispatcher.prototype.none = function (key) {
+        for (var _i = 0, _a = this._allListeners; _i < _a.length; _i++) {
+            var cb = _a[_i];
+            if (key == cb.key) {
+                this._allListeners.splice(this._allListeners.indexOf(cb), 1);
+                return true;
+            }
+        }
+        return false;
+    };
+    EventDispatcher.prototype.noneWithContext = function (context) {
+        var toRemove = [], cnt = 0;
+        for (var _i = 0, _a = this._allListeners; _i < _a.length; _i++) {
+            var cb = _a[_i];
+            if (context == cb.context) {
+                toRemove.push(cb);
+            }
+        }
+        for (var _b = 0, toRemove_2 = toRemove; _b < toRemove_2.length; _b++) {
+            var cb = toRemove_2[_b];
+            this._allListeners.splice(this._allListeners.indexOf(cb), 1);
+            cnt++;
+        }
+        return cnt;
+    };
     EventDispatcher.prototype.dispatch = function (event) {
         var args = [];
         for (var _i = 1; _i < arguments.length; _i++) {
@@ -120,8 +152,15 @@ var EventDispatcher = /** @class */ (function () {
                 cb.call(args);
             }
         }
-        for (var _a = 0, _b = this._relays; _a < _b.length; _a++) {
-            var relay = _b[_a];
+        for (var _a = 0, _b = this._allListeners; _a < _b.length; _a++) {
+            var cb = _b[_a];
+            if (cb.once) {
+                this.none(cb.key);
+            }
+            cb.call(args);
+        }
+        for (var _c = 0, _d = this._relays; _c < _d.length; _c++) {
+            var relay = _d[_c];
             relay.dispatch.apply(relay, __spreadArray([event], args));
         }
     };
