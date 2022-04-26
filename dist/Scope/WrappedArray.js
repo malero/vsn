@@ -79,6 +79,25 @@ var WrappedArray = /** @class */ (function (_super) {
         }
         return removed;
     };
+    WrappedArray.prototype.concat = function () {
+        var items = [];
+        for (var _i = 0; _i < arguments.length; _i++) {
+            items[_i] = arguments[_i];
+        }
+        var concat = _super.prototype.concat.apply(this, items);
+        this.dispatch('change', {
+            'added': concat
+        });
+        for (var _a = 0, concat_1 = concat; _a < concat_1.length; _a++) {
+            var item = concat_1[_a];
+            this.dispatch('add', item);
+        }
+        return concat;
+    };
+    WrappedArray.prototype.filter = function (callback, thisArg) {
+        var filtered = _super.prototype.filter.call(this, callback, thisArg);
+        return new (WrappedArray.bind.apply(WrappedArray, __spreadArray([void 0], filtered)))();
+    };
     WrappedArray.prototype.get = function (key) {
         var keys = [
             'length'

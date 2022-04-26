@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.TypeAttribute = exports.Template = exports.StyleAttribute = exports.StandardAttribute = exports.SetAttribute = exports.ScopeChange = exports.ScopeAttribute = exports.RootAttribute = exports.Referenced = exports.Radio = exports.On = exports.Name = exports.ModelAttribute = exports.ListItemModel = exports.ListItem = exports.List = exports.KeyUp = exports.KeyDown = exports.JSONAttribute = exports.If = exports.Format = exports.Exec = exports.DisableIf = exports.ControllerAttribute = exports.ClickToggleClass = exports.ClickRemoveClass = exports.Bind = exports.AddClassIf = void 0;
+exports.TypeAttribute = exports.Template = exports.StyleAttribute = exports.StandardAttribute = exports.SetAttribute = exports.ScopeChange = exports.ScopeAttribute = exports.RootAttribute = exports.Referenced = exports.On = exports.Name = exports.ModelAttribute = exports.ListItemModel = exports.ListItem = exports.List = exports.KeyUp = exports.KeyDown = exports.JSONAttribute = exports.If = exports.Format = exports.Exec = exports.DisableIf = exports.ControllerAttribute = exports.ClickToggleClass = exports.ClickRemoveClass = exports.Bind = exports.AddClassIf = void 0;
 var AddClassIf_1 = require("./AddClassIf");
 Object.defineProperty(exports, "AddClassIf", { enumerable: true, get: function () { return AddClassIf_1.AddClassIf; } });
 var Bind_1 = require("./Bind");
@@ -37,8 +37,6 @@ var Name_1 = require("./Name");
 Object.defineProperty(exports, "Name", { enumerable: true, get: function () { return Name_1.Name; } });
 var On_1 = require("./On");
 Object.defineProperty(exports, "On", { enumerable: true, get: function () { return On_1.On; } });
-var Radio_1 = require("./Radio");
-Object.defineProperty(exports, "Radio", { enumerable: true, get: function () { return Radio_1.Radio; } });
 var Referenced_1 = require("./Referenced");
 Object.defineProperty(exports, "Referenced", { enumerable: true, get: function () { return Referenced_1.Referenced; } });
 var RootAttribute_1 = require("./RootAttribute");

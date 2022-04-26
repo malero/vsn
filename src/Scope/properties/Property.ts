@@ -24,9 +24,12 @@ export function property(propertyType = Property, config: {} | null = {}) {
     }
 }
 
+export type TValidator = (value: any) => string[];
+
 export interface IPropertyConfig {
     type?: string;
     default?: any;
+    validators?: TValidator[];
 }
 
 export class Property extends EventDispatcher {
@@ -75,5 +78,14 @@ export class Property extends EventDispatcher {
 
     get type(): string {
         return this._type;
+    }
+
+    validate() {
+        const errors = [];
+        for(const validator of this.config.validators || []) {
+            errors.concat(validator(this.value));
+        }
+
+        return errors;
     }
 }

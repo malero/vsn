@@ -61,7 +61,7 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
     }
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.vision = exports.Tag = exports.SimplePromise = exports.MessageList = exports.EventDispatcher = exports.Model = exports.Field = exports.property = exports.Property = exports.Controller = exports.WrappedArray = exports.ScopeReference = exports.Scope = exports.DOM = exports.Vision = void 0;
+exports.vision = exports.Tag = exports.SimplePromise = exports.MessageList = exports.EventDispatcher = exports.Model = exports.Controller = exports.WrappedArray = exports.ScopeReference = exports.Scope = exports.DOM = exports.Vision = void 0;
 var DOM_1 = require("./DOM");
 var WrappedArray_1 = require("./Scope/WrappedArray");
 var Registry_1 = require("./Registry");
@@ -149,6 +149,7 @@ var Vision = /** @class */ (function (_super) {
 }(EventDispatcher_1.EventDispatcher));
 exports.Vision = Vision;
 __exportStar(require("./attributes/_imports"), exports);
+__exportStar(require("./Scope/properties/_imports"), exports);
 __exportStar(require("./Registry"), exports);
 __exportStar(require("./Attribute"), exports);
 __exportStar(require("./AST"), exports);
@@ -162,11 +163,6 @@ var WrappedArray_2 = require("./Scope/WrappedArray");
 Object.defineProperty(exports, "WrappedArray", { enumerable: true, get: function () { return WrappedArray_2.WrappedArray; } });
 var Controller_1 = require("./Controller");
 Object.defineProperty(exports, "Controller", { enumerable: true, get: function () { return Controller_1.Controller; } });
-var Property_1 = require("./Scope/properties/Property");
-Object.defineProperty(exports, "Property", { enumerable: true, get: function () { return Property_1.Property; } });
-Object.defineProperty(exports, "property", { enumerable: true, get: function () { return Property_1.property; } });
-var Field_1 = require("./Model/Field");
-Object.defineProperty(exports, "Field", { enumerable: true, get: function () { return Field_1.Field; } });
 var Model_1 = require("./Model");
 Object.defineProperty(exports, "Model", { enumerable: true, get: function () { return Model_1.Model; } });
 var EventDispatcher_2 = require("./EventDispatcher");

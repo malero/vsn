@@ -1,7 +1,7 @@
 import {EventDispatcher, EventDispatcherCallback} from "../EventDispatcher";
 
 export class WrappedArray<T> extends Array<T> {
-    private dispatcher: EventDispatcher;
+    public readonly dispatcher: EventDispatcher;
     public readonly $wrapped: boolean = true;
 
     constructor(...items: T[]) {
@@ -50,6 +50,23 @@ export class WrappedArray<T> extends Array<T> {
         }
 
         return removed;
+    }
+
+    concat(...items: any[]): T[] {
+        const concat: T[] = super.concat(...items);
+
+        this.dispatch('change', {
+            'added': concat
+        });
+        for (const item of concat) {
+            this.dispatch('add', item);
+        }
+        return concat;
+    }
+
+    filter(callback: (value: T, index: number, array: T[]) => boolean, thisArg?: any): T[] {
+        const filtered: T[] = super.filter(callback, thisArg);
+        return new WrappedArray(...filtered);
     }
 
     get(key: string) {

@@ -87,6 +87,14 @@ var Property = /** @class */ (function (_super) {
         enumerable: false,
         configurable: true
     });
+    Property.prototype.validate = function () {
+        var errors = [];
+        for (var _i = 0, _a = this.config.validators || []; _i < _a.length; _i++) {
+            var validator = _a[_i];
+            errors.concat(validator(this.value));
+        }
+        return errors;
+    };
     return Property;
 }(EventDispatcher_1.EventDispatcher));
 exports.Property = Property;

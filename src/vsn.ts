@@ -10,7 +10,6 @@ import {Query} from "./Query";
 import {EventDispatcher} from "./EventDispatcher";
 import {DynamicScopeData} from "./Scope/DynamicScopeData";
 import {Controller} from "./Controller";
-import {property} from "./Scope/properties/Property";
 
 export class Vision extends EventDispatcher {
     protected static _instance: Vision;
@@ -70,6 +69,7 @@ export class Vision extends EventDispatcher {
 }
 
 export * from "./attributes/_imports";
+export * from './Scope/properties/_imports';
 export * from './Registry';
 export * from './Attribute';
 export * from './AST';
@@ -78,8 +78,6 @@ export {Scope} from './Scope';
 export {ScopeReference} from './Scope/ScopeReference';
 export {WrappedArray} from './Scope/WrappedArray';
 export {Controller} from './Controller';
-export {Property, property} from './Scope/properties/Property';
-export {Field} from './Model/Field';
 export {Model} from './Model';
 export {EventDispatcher} from './EventDispatcher';
 export {MessageList} from './MessageList';
