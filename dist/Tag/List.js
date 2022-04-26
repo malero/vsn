@@ -56,12 +56,20 @@ var TagList = /** @class */ (function (_super) {
         enumerable: false,
         configurable: true
     });
-    TagList.prototype.next = function () {
-        return this.map(function (e) { return e.element.nextElementSibling; }).filter(function (e) { return e != null; });
-    };
-    TagList.prototype.prev = function () {
-        return this.map(function (e) { return e.element.previousElementSibling; }).filter(function (e) { return e != null; });
-    };
+    Object.defineProperty(TagList.prototype, "first", {
+        get: function () {
+            return this[0];
+        },
+        enumerable: false,
+        configurable: true
+    });
+    Object.defineProperty(TagList.prototype, "last", {
+        get: function () {
+            return this[this.length - 1];
+        },
+        enumerable: false,
+        configurable: true
+    });
     TagList.prototype.removeClass = function (className) {
         this.forEach(function (e) { return e.element.classList.remove(className); });
         return this;

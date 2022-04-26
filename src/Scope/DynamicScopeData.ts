@@ -4,7 +4,6 @@ export class DynamicScopeData extends ScopeDataAbstract {
     constructor(data: IScopeData | string[]) {
         super();
         if(data instanceof Array) {
-            this.__properties__ = data;
             for (const field of data)
                 this.createProperty(field);
         } else {
@@ -14,8 +13,7 @@ export class DynamicScopeData extends ScopeDataAbstract {
 
     setData(data: IScopeData) {
         for(const field of Object.keys(data))
-            if(this.__properties__.indexOf(field) == -1) {
-                this.__properties__.push(field);
+            if(!this.hasProperty(field)) {
                 this.createProperty(field);
             }
         super.setData(data);

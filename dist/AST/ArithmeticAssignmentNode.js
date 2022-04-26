@@ -81,7 +81,7 @@ var ArithmeticAssignmentNode = /** @class */ (function (_super) {
     ArithmeticAssignmentNode.prototype.evaluate = function (scope, dom, tag) {
         if (tag === void 0) { tag = null; }
         return __awaiter(this, void 0, void 0, function () {
-            var scopes, name, inner, values, _i, scopes_1, localScope, left, right;
+            var scopes, name, inner, elements, values, _i, scopes_1, localScope, left, right;
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
@@ -94,7 +94,12 @@ var ArithmeticAssignmentNode = /** @class */ (function (_super) {
                     case 2:
                         inner = _a.sent();
                         if (this.left.scope instanceof ElementQueryNode_1.ElementQueryNode) {
-                            scopes.push.apply(scopes, inner);
+                            if (this.left.scope.first) {
+                                scopes.push(inner);
+                            }
+                            else {
+                                scopes.push.apply(scopes, inner);
+                            }
                         }
                         else if (inner instanceof Scope_1.Scope) {
                             scopes.push(inner);
@@ -110,7 +115,13 @@ var ArithmeticAssignmentNode = /** @class */ (function (_super) {
                         if (!((this.left instanceof ElementAttributeNode_1.ElementAttributeNode || this.left instanceof ElementStyleNode_1.ElementStyleNode) && this.left.elementRef)) return [3 /*break*/, 5];
                         return [4 /*yield*/, this.left.elementRef.evaluate(scope, dom, tag)];
                     case 4:
-                        scopes = _a.sent();
+                        elements = _a.sent();
+                        if (this.left.elementRef.first) {
+                            scopes.push(elements);
+                        }
+                        else {
+                            scopes = elements;
+                        }
                         return [3 /*break*/, 6];
                     case 5:
                         scopes.push(scope);

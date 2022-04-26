@@ -29,12 +29,12 @@ export class TagList extends Array<DOMObject> {
         return this.map(e => e.element);
     }
 
-    next() {
-        return this.map(e => e.element.nextElementSibling).filter(e => e != null)
+    get first(): DOMObject {
+        return this[0];
     }
 
-    prev() {
-        return this.map(e => e.element.previousElementSibling).filter(e => e != null)
+    get last(): DOMObject {
+        return this[this.length - 1];
     }
 
     removeClass(className) {

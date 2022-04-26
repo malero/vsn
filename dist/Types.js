@@ -25,7 +25,7 @@ var Types = /** @class */ (function () {
         return parseFloat(value);
     };
     Types.boolean = function (value) {
-        return [0, '0', 'false', ''].indexOf(value) === -1;
+        return [0, '0', false, 'false', ''].indexOf(value) === -1;
     };
     Types.date = function (value) {
         return new Date(Date.parse(value));

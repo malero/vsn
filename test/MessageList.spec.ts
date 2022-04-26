@@ -1,4 +1,4 @@
-import MessageList from "../src/MessageList";
+import {MessageList} from "../src/MessageList";
 
 describe('MessageList', () => {
     it("should reset properly", () => {

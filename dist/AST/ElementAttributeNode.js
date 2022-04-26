@@ -95,7 +95,7 @@ var ElementAttributeNode = /** @class */ (function (_super) {
                 switch (_a.label) {
                     case 0:
                         if (!this.elementRef) return [3 /*break*/, 2];
-                        return [4 /*yield*/, this.elementRef.evaluate(scope, dom, tag)];
+                        return [4 /*yield*/, this.elementRef.evaluate(scope, dom, tag, true)];
                     case 1:
                         tags = _a.sent();
                         return [3 /*break*/, 3];
@@ -126,7 +126,7 @@ var ElementAttributeNode = /** @class */ (function (_super) {
                         return [4 /*yield*/, this.elementRef.prepare(scope, dom, tag)];
                     case 1:
                         _a.sent();
-                        return [4 /*yield*/, this.elementRef.evaluate(scope, dom, tag)];
+                        return [4 /*yield*/, this.elementRef.evaluate(scope, dom, tag, true)];
                     case 2:
                         tags = _a.sent();
                         _i = 0, tags_1 = tags;

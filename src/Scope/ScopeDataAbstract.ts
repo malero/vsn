@@ -23,6 +23,7 @@ export class ScopeDataAbstract extends EventDispatcher {
         const instance = new propertyType(config.default, config),
             propDesc = Object.getOwnPropertyDescriptor(this, name);
         this['__'+name] = instance;
+        this.__properties__.push(name);
 
         // property getter
         const propertyGetter = function() {

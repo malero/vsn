@@ -489,7 +489,7 @@ var Tree = /** @class */ (function () {
                 tokens.splice(0, 1);
             }
             else if (tokens[0].type === TokenType.ELEMENT_REFERENCE) {
-                node = new ElementQueryNode_1.ElementQueryNode(tokens[0].value);
+                node = new ElementQueryNode_1.ElementQueryNode(tokens[0].value, true);
                 tokens.splice(0, 1);
             }
             else if (tokens[0].type === TokenType.ELEMENT_QUERY) {

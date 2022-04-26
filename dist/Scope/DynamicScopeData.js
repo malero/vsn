@@ -22,7 +22,6 @@ var DynamicScopeData = /** @class */ (function (_super) {
     function DynamicScopeData(data) {
         var _this = _super.call(this) || this;
         if (data instanceof Array) {
-            _this.__properties__ = data;
             for (var _i = 0, data_1 = data; _i < data_1.length; _i++) {
                 var field = data_1[_i];
                 _this.createProperty(field);
@@ -36,8 +35,7 @@ var DynamicScopeData = /** @class */ (function (_super) {
     DynamicScopeData.prototype.setData = function (data) {
         for (var _i = 0, _a = Object.keys(data); _i < _a.length; _i++) {
             var field = _a[_i];
-            if (this.__properties__.indexOf(field) == -1) {
-                this.__properties__.push(field);
+            if (!this.hasProperty(field)) {
                 this.createProperty(field);
             }
         }

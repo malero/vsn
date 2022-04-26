@@ -27,7 +27,12 @@ export class ScopeMemberNode extends Node implements TreeNode {
         const values = [];
 
         if (this.scope instanceof ElementQueryNode) {
-            scopes = await this.scope.evaluate(scope, dom, tag);
+            const elements = await this.scope.evaluate(scope, dom, tag);
+            if (this.scope.first) {
+                scopes.push(elements);
+            } else {
+                scopes = elements;
+            }
         } else {
             const evalScope = await this.scope.evaluate(scope, dom, tag);
             if (evalScope instanceof TagList) {

@@ -55,16 +55,19 @@ exports.ElementQueryNode = void 0;
 var Node_1 = require("./Node");
 var ElementQueryNode = /** @class */ (function (_super) {
     __extends(ElementQueryNode, _super);
-    function ElementQueryNode(query) {
+    function ElementQueryNode(query, first) {
+        if (first === void 0) { first = false; }
         var _this = _super.call(this) || this;
         _this.query = query;
+        _this.first = first;
         _this.requiresPrep = true;
         return _this;
     }
-    ElementQueryNode.prototype.evaluate = function (scope, dom, tag) {
+    ElementQueryNode.prototype.evaluate = function (scope, dom, tag, forceList) {
         if (tag === void 0) { tag = null; }
+        if (forceList === void 0) { forceList = false; }
         return __awaiter(this, void 0, void 0, function () {
-            var _a;
+            var _a, elements;
             return __generator(this, function (_b) {
                 switch (_b.label) {
                     case 0:
@@ -77,7 +80,9 @@ var ElementQueryNode = /** @class */ (function (_super) {
                     case 2:
                         tag = _a;
                         return [4 /*yield*/, dom.get(this.query, true, tag)];
-                    case 3: return [2 /*return*/, _b.sent()];
+                    case 3:
+                        elements = _b.sent();
+                        return [2 /*return*/, this.first && !forceList ? elements[0] : elements];
                 }
             });
         });

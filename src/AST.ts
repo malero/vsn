@@ -454,7 +454,7 @@ export class Tree {
                 node = new NumberLiteralNode(token.value);
                 tokens.splice(0, 1);
             } else if (tokens[0].type === TokenType.ELEMENT_REFERENCE) {
-                node = new ElementQueryNode(tokens[0].value);
+                node = new ElementQueryNode(tokens[0].value, true);
                 tokens.splice(0, 1);
             } else if (tokens[0].type === TokenType.ELEMENT_QUERY) {
                 node = new ElementQueryNode(tokens[0].value);

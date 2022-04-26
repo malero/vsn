@@ -37,7 +37,7 @@ export class ElementAttributeNode extends Node implements TreeNode {
     async evaluate(scope: Scope, dom: DOM, tag: Tag = null) {
         let tags: TagList;
         if (this.elementRef) {
-            tags = await this.elementRef.evaluate(scope, dom, tag);
+            tags = await this.elementRef.evaluate(scope, dom, tag, true);
         } else if (tag) {
             tags = new TagList(tag)
         } else {
@@ -53,7 +53,7 @@ export class ElementAttributeNode extends Node implements TreeNode {
     async prepare(scope: Scope, dom: DOM, tag: Tag = null) {
         if (this.elementRef) {
             await this.elementRef.prepare(scope, dom, tag);
-            const tags: TagList = await this.elementRef.evaluate(scope, dom, tag);
+            const tags: TagList = await this.elementRef.evaluate(scope, dom, tag, true);
             for (const t of tags)
                 await t.watchAttribute(this.attributeName);
         } else if(tag) {

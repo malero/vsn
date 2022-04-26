@@ -82,7 +82,6 @@ export class Scope extends EventDispatcher {
     set(key: string, value: any) {
         if (!this.data.hasProperty(key))
             this.data.createProperty(key);
-
         this.data[key] = value;
     }
 

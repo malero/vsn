@@ -31,11 +31,14 @@ export class ArithmeticAssignmentNode extends Node implements TreeNode {
     async evaluate(scope: Scope, dom: DOM, tag: Tag = null) {
         let scopes = [];
         const name: string = await this.left.name.evaluate(scope, dom, tag);
-
         if (this.left instanceof ScopeMemberNode) {
             const inner = await this.left.scope.evaluate(scope, dom, tag);
             if (this.left.scope instanceof ElementQueryNode) {
-                scopes.push(...inner);
+                if (this.left.scope.first) {
+                    scopes.push(inner);
+                } else {
+                    scopes.push(...inner);
+                }
             } else if (inner instanceof Scope) {
                 scopes.push(inner);
             } else if (inner instanceof Controller) {
@@ -44,7 +47,12 @@ export class ArithmeticAssignmentNode extends Node implements TreeNode {
                 scopes.push(scope)
             }
         } else if ((this.left instanceof ElementAttributeNode || this.left instanceof ElementStyleNode) && this.left.elementRef) {
-            scopes = await this.left.elementRef.evaluate(scope, dom, tag);
+            const elements = await this.left.elementRef.evaluate(scope, dom, tag);
+            if (this.left.elementRef.first) {
+                scopes.push(elements);
+            } else {
+                scopes = elements;
+            }
         } else
             scopes.push(scope);
 
@@ -123,7 +131,6 @@ export class ArithmeticAssignmentNode extends Node implements TreeNode {
                 left /= right;
                 break;
         }
-
         scope.set(key, left);
         return left;
     }

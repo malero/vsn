@@ -24,7 +24,7 @@ export class Types {
 
     @Registry.type('boolean')
     public static boolean(value: string) {
-        return [0, '0', 'false', ''].indexOf(value) === -1;
+        return [0, '0', false, 'false', ''].indexOf(value) === -1;
     }
 
     @Registry.type('date')

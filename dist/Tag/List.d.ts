@@ -5,8 +5,8 @@ export declare class TagList extends Array<DOMObject> {
     get scope(): Scope;
     on(event: any, cbOrSelector: any, cb: any): this;
     get elements(): HTMLElement[];
-    next(): Element[];
-    prev(): Element[];
+    get first(): DOMObject;
+    get last(): DOMObject;
     removeClass(className: any): this;
     addClass(className: any): this;
     css(property: any, value: any): this;

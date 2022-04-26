@@ -74,7 +74,7 @@ var ScopeMemberNode = /** @class */ (function (_super) {
     ScopeMemberNode.prototype.evaluate = function (scope, dom, tag) {
         if (tag === void 0) { tag = null; }
         return __awaiter(this, void 0, void 0, function () {
-            var scopes, values, evalScope, _i, scopes_1, parent_1, _a, _b, name_1, value;
+            var scopes, values, elements, evalScope, _i, scopes_1, parent_1, _a, _b, name_1, value;
             return __generator(this, function (_c) {
                 switch (_c.label) {
                     case 0:
@@ -83,7 +83,13 @@ var ScopeMemberNode = /** @class */ (function (_super) {
                         if (!(this.scope instanceof ElementQueryNode_1.ElementQueryNode)) return [3 /*break*/, 2];
                         return [4 /*yield*/, this.scope.evaluate(scope, dom, tag)];
                     case 1:
-                        scopes = _c.sent();
+                        elements = _c.sent();
+                        if (this.scope.first) {
+                            scopes.push(elements);
+                        }
+                        else {
+                            scopes = elements;
+                        }
                         return [3 /*break*/, 4];
                     case 2: return [4 /*yield*/, this.scope.evaluate(scope, dom, tag)];
                     case 3:
