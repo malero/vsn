@@ -14,10 +14,14 @@ export class ArrayProperty<T = any> extends Property<WrappedArray<T>> {
         if (!(v instanceof Array))
             v = [v];
 
-        this._value.splice(0, this._value.length);
+        if (this._value instanceof WrappedArray) {
+            this._value.splice(0, this._value.length);
 
-        for (let i = 0; i < v.length; i++)
-            this._value.push(v[i]);
+            for (let i = 0; i < v.length; i++)
+                this._value.push(v[i]);
+        } else if (v instanceof WrappedArray) {
+            this._value = v;
+        }
     }
 
     get value() {

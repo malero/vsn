@@ -8,7 +8,7 @@ export declare class ScopeDataAbstract extends EventDispatcher {
     __properties__: string[];
     protected _lastData: any;
     constructor();
-    createProperty(name: string, propertyType?: typeof Property, config?: IPropertyConfig): Property;
+    createProperty(name: string, propertyType?: any, config?: IPropertyConfig): any;
     hasProperty(name: string): boolean;
     get keys(): string[];
     setData(data: IScopeData): void;

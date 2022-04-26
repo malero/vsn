@@ -70,7 +70,7 @@ export class EventDispatcher  {
     }
 
     off(event: string, key?: number): boolean {
-        if(event in this._listeners === false) return false;
+        if(!(event in this._listeners)) return false;
         if(key) {
             for(const cb of this._listeners[event]) {
                 if(key == cb.key) {

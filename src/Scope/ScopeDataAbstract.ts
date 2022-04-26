@@ -18,7 +18,7 @@ export class ScopeDataAbstract extends EventDispatcher {
             this.__properties__ = [];
     }
 
-    createProperty(name: string, propertyType = Property, config?: IPropertyConfig): Property {
+    createProperty(name: string, propertyType: any = Property, config?: IPropertyConfig): any {
         config = config || {};
         const instance = new propertyType(config.default, config),
             propDesc = Object.getOwnPropertyDescriptor(this, name);

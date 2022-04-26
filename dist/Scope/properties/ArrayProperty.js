@@ -33,9 +33,14 @@ var ArrayProperty = /** @class */ (function (_super) {
         set: function (v) {
             if (!(v instanceof Array))
                 v = [v];
-            this._value.splice(0, this._value.length);
-            for (var i = 0; i < v.length; i++)
-                this._value.push(v[i]);
+            if (this._value instanceof WrappedArray_1.WrappedArray) {
+                this._value.splice(0, this._value.length);
+                for (var i = 0; i < v.length; i++)
+                    this._value.push(v[i]);
+            }
+            else if (v instanceof WrappedArray_1.WrappedArray) {
+                this._value = v;
+            }
         },
         enumerable: false,
         configurable: true

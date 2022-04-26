@@ -61,7 +61,7 @@ var EventDispatcher = /** @class */ (function () {
         return this.on(event, fct, context, true);
     };
     EventDispatcher.prototype.off = function (event, key) {
-        if (event in this._listeners === false)
+        if (!(event in this._listeners))
             return false;
         if (key) {
             for (var _i = 0, _a = this._listeners[event]; _i < _a.length; _i++) {
