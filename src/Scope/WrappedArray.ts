@@ -39,6 +39,15 @@ export class WrappedArray<T> extends Array<T> {
         return num;
     }
 
+    remove(item: T): boolean {
+        const index: number = this.indexOf(item);
+        if (index === -1) {
+            return false;
+        }
+        this.splice(index, 1);
+        return true;
+    }
+
     splice(start: number, deleteCount?: number): T[] {
         const removed: T[] = super.splice(start, deleteCount);
 

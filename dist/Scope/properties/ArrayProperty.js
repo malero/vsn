@@ -20,9 +20,8 @@ var Property_1 = require("./Property");
 var WrappedArray_1 = require("../WrappedArray");
 var ArrayProperty = /** @class */ (function (_super) {
     __extends(ArrayProperty, _super);
-    function ArrayProperty(name, value) {
-        var _this = _super.call(this, name, value) || this;
-        _this._value = new WrappedArray_1.WrappedArray();
+    function ArrayProperty(value, config) {
+        var _this = _super.call(this, new WrappedArray_1.WrappedArray(), config) || this;
         _this._value.dispatcher.addRelay(_this);
         _this.value = value;
         return _this;

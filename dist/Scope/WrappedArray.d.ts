@@ -8,6 +8,7 @@ export declare class WrappedArray<T> extends Array<T> {
     off(event: string, key?: number): void;
     once(event: string, callback: EventDispatcherCallback): void;
     push(...items: T[]): number;
+    remove(item: T): boolean;
     splice(start: number, deleteCount?: number): T[];
     concat(...items: any[]): T[];
     filter(callback: (value: T, index: number, array: T[]) => boolean, thisArg?: any): T[];

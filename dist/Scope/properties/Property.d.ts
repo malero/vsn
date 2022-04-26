@@ -6,11 +6,11 @@ export interface IPropertyConfig {
     default?: any;
     validators?: TValidator[];
 }
-export declare class Property extends EventDispatcher {
+export declare class Property<T = any> extends EventDispatcher {
     _type: string;
-    _value: any;
+    _value: T;
     config: IPropertyConfig;
-    constructor(value?: any, config?: IPropertyConfig);
+    constructor(value?: T, config?: IPropertyConfig);
     castType(value: any): any;
     set value(v: any);
     get value(): any;

@@ -1,8 +1,8 @@
-import { Property } from "./Property";
+import { IPropertyConfig, Property } from "./Property";
 import { WrappedArray } from "../WrappedArray";
-export declare class ArrayProperty<T = any> extends Property {
+export declare class ArrayProperty<T = any> extends Property<WrappedArray<T>> {
     _value: WrappedArray<T>;
-    constructor(name: string, value: any);
+    constructor(value?: any, config?: IPropertyConfig);
     set value(v: any);
     get value(): any;
 }

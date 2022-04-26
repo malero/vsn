@@ -32,16 +32,15 @@ export interface IPropertyConfig {
     validators?: TValidator[];
 }
 
-export class Property extends EventDispatcher {
+export class Property<T = any> extends EventDispatcher {
     _type: string = 'any';
-    _value: any;
+    _value: T;
     config: IPropertyConfig;
 
-    constructor(value?:any, config?: IPropertyConfig) {
+    constructor(value?: T, config?: IPropertyConfig) {
         super();
         this.config = config;
         this.type = config.type || 'any';
-
         this.value = value;
     }
 

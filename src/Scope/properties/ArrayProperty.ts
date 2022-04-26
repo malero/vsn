@@ -1,18 +1,16 @@
-import {Property} from "./Property";
+import {IPropertyConfig, Property} from "./Property";
 import {WrappedArray} from "../WrappedArray";
 
-export class ArrayProperty<T = any> extends Property {
+export class ArrayProperty<T = any> extends Property<WrappedArray<T>> {
     _value: WrappedArray<T>;
 
-    constructor(name: string, value: any) {
-        super(name, value);
-
-        this._value = new WrappedArray<any>();
+    constructor(value?: any, config?: IPropertyConfig) {
+        super(new WrappedArray<any>(), config);
         this._value.dispatcher.addRelay(this);
         this.value = value;
     }
 
-    set value(v:any) {
+    set value(v: any) {
         if (!(v instanceof Array))
             v = [v];
 

@@ -68,6 +68,14 @@ var WrappedArray = /** @class */ (function (_super) {
         }
         return num;
     };
+    WrappedArray.prototype.remove = function (item) {
+        var index = this.indexOf(item);
+        if (index === -1) {
+            return false;
+        }
+        this.splice(index, 1);
+        return true;
+    };
     WrappedArray.prototype.splice = function (start, deleteCount) {
         var removed = _super.prototype.splice.call(this, start, deleteCount);
         this.dispatch('change', {
