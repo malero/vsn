@@ -112,7 +112,7 @@ var Scope = /** @class */ (function (_super) {
     };
     Scope.prototype.getType = function (key) {
         var property = this.data.getProperty(key);
-        return property.type;
+        return property === null || property === void 0 ? void 0 : property.type;
     };
     Scope.prototype.extend = function (data) {
         for (var _i = 0, data_1 = data; _i < data_1.length; _i++) {

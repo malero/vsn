@@ -30,6 +30,7 @@ export interface IPropertyConfig {
     type?: string;
     default?: any;
     validators?: TValidator[];
+    tags?: string[];
 }
 
 export class Property<T = any> extends EventDispatcher {
@@ -86,5 +87,9 @@ export class Property<T = any> extends EventDispatcher {
         }
 
         return errors;
+    }
+
+    hasTag(tag: string) {
+        return this.config.tags?.indexOf(tag) !== -1;
     }
 }

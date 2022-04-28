@@ -76,6 +76,24 @@ var WrappedArray = /** @class */ (function (_super) {
         this.splice(index, 1);
         return true;
     };
+    WrappedArray.prototype.pop = function () {
+        var item = _super.prototype.pop.call(this);
+        this.dispatch('pop', item);
+        this.dispatch('change', {
+            'removed': [item]
+        });
+        this.dispatch('remove', item);
+        return item;
+    };
+    WrappedArray.prototype.shift = function () {
+        var item = _super.prototype.shift.call(this);
+        this.dispatch('shift', item);
+        this.dispatch('change', {
+            'removed': [item]
+        });
+        this.dispatch('remove', item);
+        return item;
+    };
     WrappedArray.prototype.splice = function (start, deleteCount) {
         var removed = _super.prototype.splice.call(this, start, deleteCount);
         this.dispatch('change', {

@@ -102,7 +102,7 @@ export class Scope extends EventDispatcher {
 
     getType(key: string): string {
         const property = this.data.getProperty(key);
-        return property.type;
+        return property?.type;
     }
 
     extend(data) {

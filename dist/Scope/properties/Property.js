@@ -95,6 +95,10 @@ var Property = /** @class */ (function (_super) {
         }
         return errors;
     };
+    Property.prototype.hasTag = function (tag) {
+        var _a;
+        return ((_a = this.config.tags) === null || _a === void 0 ? void 0 : _a.indexOf(tag)) !== -1;
+    };
     return Property;
 }(EventDispatcher_1.EventDispatcher));
 exports.Property = Property;

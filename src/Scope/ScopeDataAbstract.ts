@@ -70,10 +70,15 @@ export class ScopeDataAbstract extends EventDispatcher {
         }
     }
 
-    getData(): IScopeData {
+    getData(...tags: string[]): IScopeData {
         const data: IScopeData = {};
-        for (const key of this.getProperties()) {
+        propLoop: for (const key of this.getProperties()) {
             const property = this['__'+key];
+            for (const tag of tags) {
+                if (!property.hasTag(tag))
+                    continue propLoop;
+            }
+
             if(this[key] == null || !property)
                 continue;
 

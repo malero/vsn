@@ -7,7 +7,7 @@ export class ArrayProperty<T = any> extends Property<WrappedArray<T>> {
 
     constructor(value?: any, config?: IPropertyConfig) {
         super(new WrappedArray<any>(), config);
-        this.allKey = this._value.dispatcher.all(this.relayEvent, this);
+        this.allKey = this._value.dispatcher.all(this.relayEvent.bind(this), this);
         if (value !== undefined) {
             this.value = value;
         }

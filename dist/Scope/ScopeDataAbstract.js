@@ -84,10 +84,19 @@ var ScopeDataAbstract = /** @class */ (function (_super) {
         }
     };
     ScopeDataAbstract.prototype.getData = function () {
+        var tags = [];
+        for (var _i = 0; _i < arguments.length; _i++) {
+            tags[_i] = arguments[_i];
+        }
         var data = {};
-        for (var _i = 0, _a = this.getProperties(); _i < _a.length; _i++) {
-            var key = _a[_i];
+        propLoop: for (var _a = 0, _b = this.getProperties(); _a < _b.length; _a++) {
+            var key = _b[_a];
             var property = this['__' + key];
+            for (var _c = 0, tags_1 = tags; _c < tags_1.length; _c++) {
+                var tag = tags_1[_c];
+                if (!property.hasTag(tag))
+                    continue propLoop;
+            }
             if (this[key] == null || !property)
                 continue;
             data[key] = property.getData();

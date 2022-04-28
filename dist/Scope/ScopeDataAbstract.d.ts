@@ -12,7 +12,7 @@ export declare class ScopeDataAbstract extends EventDispatcher {
     hasProperty(name: string): boolean;
     get keys(): string[];
     setData(data: IScopeData): void;
-    getData(): IScopeData;
+    getData(...tags: string[]): IScopeData;
     getProperties(): string[];
     getProperty(name: string, create?: boolean): Property;
     bindToProperties(event: string, properties: string[], callback: (...args: any[]) => any): void;

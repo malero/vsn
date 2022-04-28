@@ -48,6 +48,26 @@ export class WrappedArray<T> extends Array<T> {
         return true;
     }
 
+    pop(): T {
+        const item: T = super.pop();
+        this.dispatch('pop', item);
+        this.dispatch('change', {
+            'removed': [item]
+        });
+        this.dispatch('remove', item);
+        return item;
+    }
+
+    shift(): T {
+        const item: T = super.shift();
+        this.dispatch('shift', item);
+        this.dispatch('change', {
+            'removed': [item]
+        });
+        this.dispatch('remove', item);
+        return item;
+    }
+
     splice(start: number, deleteCount?: number): T[] {
         const removed: T[] = super.splice(start, deleteCount);
 

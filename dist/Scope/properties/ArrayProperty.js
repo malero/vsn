@@ -27,7 +27,7 @@ var ArrayProperty = /** @class */ (function (_super) {
     __extends(ArrayProperty, _super);
     function ArrayProperty(value, config) {
         var _this = _super.call(this, new WrappedArray_1.WrappedArray(), config) || this;
-        _this.allKey = _this._value.dispatcher.all(_this.relayEvent, _this);
+        _this.allKey = _this._value.dispatcher.all(_this.relayEvent.bind(_this), _this);
         if (value !== undefined) {
             _this.value = value;
         }
