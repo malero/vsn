@@ -19,5 +19,7 @@ export declare class Property<T = any> extends EventDispatcher {
     set type(type: string);
     get type(): string;
     validate(): any[];
+    addTag(tag: string): void;
+    removeTag(tag: string): void;
     hasTag(tag: string): boolean;
 }

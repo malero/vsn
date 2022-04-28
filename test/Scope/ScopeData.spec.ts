@@ -38,5 +38,21 @@ describe('ScopeData', () => {
             test_int: 1,
             not_test: 'not_test'
         });
+
+        const notTestProp = data.getProperty('not_test');
+        notTestProp.addTag('test');
+        const taggedNotTestData2 = data.getData('test');
+        expect(taggedNotTestData2).toEqual({
+            test: 'test',
+            test_int: 1,
+            not_test: 'not_test'
+        });
+
+        notTestProp.removeTag('test');
+        const taggedNotTestData3 = data.getData('test');
+        expect(taggedNotTestData3).toEqual({
+            test: 'test',
+            test_int: 1
+        });
     });
 });

@@ -89,6 +89,25 @@ export class Property<T = any> extends EventDispatcher {
         return errors;
     }
 
+    addTag(tag: string) {
+        if(this.config.tags == undefined) {
+            this.config.tags = [];
+        }
+        if(this.config.tags.indexOf(tag) == -1) {
+            this.config.tags.push(tag);
+        }
+    }
+
+    removeTag(tag: string) {
+        if(this.config.tags == undefined) {
+            return;
+        }
+        const index = this.config.tags.indexOf(tag);
+        if(index != -1) {
+            this.config.tags.splice(index, 1);
+        }
+    }
+
     hasTag(tag: string) {
         return this.config.tags?.indexOf(tag) !== -1;
     }

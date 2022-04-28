@@ -95,6 +95,23 @@ var Property = /** @class */ (function (_super) {
         }
         return errors;
     };
+    Property.prototype.addTag = function (tag) {
+        if (this.config.tags == undefined) {
+            this.config.tags = [];
+        }
+        if (this.config.tags.indexOf(tag) == -1) {
+            this.config.tags.push(tag);
+        }
+    };
+    Property.prototype.removeTag = function (tag) {
+        if (this.config.tags == undefined) {
+            return;
+        }
+        var index = this.config.tags.indexOf(tag);
+        if (index != -1) {
+            this.config.tags.splice(index, 1);
+        }
+    };
     Property.prototype.hasTag = function (tag) {
         var _a;
         return ((_a = this.config.tags) === null || _a === void 0 ? void 0 : _a.indexOf(tag)) !== -1;
