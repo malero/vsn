@@ -258,9 +258,26 @@ var Tag = /** @class */ (function (_super) {
         enumerable: false,
         configurable: true
     });
+    Object.defineProperty(Tag.prototype, "isSelect", {
+        get: function () {
+            return this.element.tagName.toLowerCase() === 'select';
+        },
+        enumerable: false,
+        configurable: true
+    });
+    Object.defineProperty(Tag.prototype, "isMultipleSelect", {
+        get: function () {
+            return this.isSelect && this.element.hasAttribute('multiple');
+        },
+        enumerable: false,
+        configurable: true
+    });
     Object.defineProperty(Tag.prototype, "value", {
         get: function () {
             if (this.isInput) {
+                if (this.isMultipleSelect) {
+                    return Array.from(this.element.options).filter(function (o) { return o.selected; }).map(function (o) { return o.value; });
+                }
                 return this.element.value;
             }
             else {
@@ -269,8 +286,16 @@ var Tag = /** @class */ (function (_super) {
         },
         set: function (value) {
             if (this.isInput) {
-                this.element.setAttribute('value', value);
-                this.element.value = value;
+                if (this.isMultipleSelect) {
+                    for (var _i = 0, _a = Array.from(this.element.options); _i < _a.length; _i++) {
+                        var option = _a[_i];
+                        option.selected = value.indexOf(option.value) > -1;
+                    }
+                }
+                else {
+                    this.element.setAttribute('value', value);
+                    this.element.value = value;
+                }
             }
             else {
                 this.element.innerText = value;
@@ -601,7 +626,26 @@ var Tag = /** @class */ (function (_super) {
         });
     };
     Tag.prototype.inputMutation = function (e) {
-        this.element.setAttribute('value', e.target.value);
+        if (this.isSelect) {
+            var selected = this.element.selectedOptions;
+            var values = [];
+            for (var i = 0; i < selected.length; i++) {
+                values.push(selected[i].value);
+            }
+            for (var _i = 0, _a = Array.from(this.element.options); _i < _a.length; _i++) {
+                var option = _a[_i];
+                if (values.indexOf(option.value) > -1) {
+                    option.setAttribute('selected', '');
+                }
+                else {
+                    option.removeAttribute('selected');
+                }
+            }
+            this.element.setAttribute('value', values.join(','));
+        }
+        else {
+            this.element.setAttribute('value', e.target.value);
+        }
     };
     Tag.prototype.finalize = function () {
         this._state = TagState.Built;

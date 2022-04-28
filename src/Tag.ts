@@ -168,17 +168,35 @@ export class Tag extends DOMObject {
         return this.inputTags.indexOf(this.element.tagName.toLowerCase()) > -1;
     }
 
-    set value(value) {
+    get isSelect(): boolean {
+        return this.element.tagName.toLowerCase() === 'select';
+    }
+
+    get isMultipleSelect(): boolean {
+        return this.isSelect && this.element.hasAttribute('multiple');
+    }
+
+    set value(value: string | string[]) {
         if (this.isInput) {
-            this.element.setAttribute('value', value);
-            (this.element as any).value = value;
+            if (this.isMultipleSelect) {
+                for (const option of Array.from((this.element as HTMLSelectElement).options)) {
+                    option.selected = value.indexOf(option.value) > -1;
+                }
+            } else {
+                this.element.setAttribute('value', value as string);
+                (this.element as any).value = value;
+            }
+
         } else {
-            this.element.innerText = value;
+            this.element.innerText = value as string;
         }
     }
 
-    get value(): string {
+    get value(): string | string[] {
         if (this.isInput) {
+            if (this.isMultipleSelect) {
+                return Array.from((this.element as HTMLSelectElement).options).filter((o) => o.selected).map((o) => o.value);
+            }
             return (this.element as any).value;
         } else {
             return this.element.textContent;
@@ -407,7 +425,23 @@ export class Tag extends DOMObject {
     }
 
     public inputMutation(e) {
-        this.element.setAttribute('value', e.target.value);
+        if (this.isSelect) {
+            const selected = (this.element as HTMLSelectElement).selectedOptions;
+            const values = [];
+            for (let i = 0; i < selected.length; i++) {
+                values.push(selected[i].value);
+            }
+            for (const option of Array.from((this.element as HTMLSelectElement).options)) {
+                if (values.indexOf(option.value) > -1) {
+                    option.setAttribute('selected', '');
+                } else {
+                    option.removeAttribute('selected');
+                }
+            }
+            this.element.setAttribute('value', values.join(','));
+        } else {
+            this.element.setAttribute('value', e.target.value);
+        }
     }
 
     public finalize(): void {

@@ -47,8 +47,10 @@ export declare class Tag extends DOMObject {
     getAttributeBinding(attr: string): string;
     getAttributeModifiers(attr: string): string[];
     get isInput(): boolean;
-    set value(value: string);
-    get value(): string;
+    get isSelect(): boolean;
+    get isMultipleSelect(): boolean;
+    set value(value: string | string[]);
+    get value(): string | string[];
     set checked(value: boolean);
     get checked(): boolean;
     addChild(tag: Tag): void;
