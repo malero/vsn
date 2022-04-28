@@ -8,7 +8,7 @@ import {DynamicScopeData} from "./Scope/DynamicScopeData";
 
 export class Scope extends EventDispatcher {
     public wrapped: any;
-    protected data: ScopeData;
+    protected _data: ScopeData;
     protected children: Scope[];
     protected _parentScope: Scope;
 
@@ -19,8 +19,12 @@ export class Scope extends EventDispatcher {
         if (parent)
             this.parentScope = parent;
         this.children = [];
-        this.data = new DynamicScopeData({});
-        this.data.addRelay(this);
+        this._data = new DynamicScopeData({});
+        this._data.addRelay(this);
+    }
+
+    public get data(): ScopeData {
+        return this._data;
     }
 
     public get parentScope(): Scope {
@@ -68,7 +72,7 @@ export class Scope extends EventDispatcher {
     }
 
     get(key: string, searchParents: boolean = true): any {
-        const value: any = this.data[key];
+        const value: any = this._data[key];
         if (value === undefined) {
             if (searchParents && this.parentScope)
                 return this.parentScope.get(key, searchParents);
@@ -80,28 +84,28 @@ export class Scope extends EventDispatcher {
     }
 
     set(key: string, value: any) {
-        if (!this.data.hasProperty(key))
-            this.data.createProperty(key);
-        this.data[key] = value;
+        if (!this._data.hasProperty(key))
+            this._data.createProperty(key);
+        this._data[key] = value;
     }
 
     get keys(): string[] {
-        return this.data.keys;
+        return this._data.keys;
     }
 
     has(key: string): boolean {
-        return this.data.hasProperty(key);
+        return this._data.hasProperty(key);
     }
 
     setType(key: string, type: string) {
-        const property = this.data.getProperty(key, true);
+        const property = this._data.getProperty(key, true);
         property.type = type;
         if (this.has(key))
             this.set(key, this.get(key));
     }
 
     getType(key: string): string {
-        const property = this.data.getProperty(key);
+        const property = this._data.getProperty(key);
         return property?.type;
     }
 
@@ -112,7 +116,7 @@ export class Scope extends EventDispatcher {
     }
 
     clear() {
-        for (const key of this.data.keys) {
+        for (const key of this._data.keys) {
             if (['function', 'object'].indexOf(typeof this.get(key)) > -1) continue;
             this.set(key, null);
         }
@@ -125,18 +129,18 @@ export class Scope extends EventDispatcher {
 
     public wrap(toWrap: any, triggerUpdates: boolean = false, updateFromWrapped: boolean = true) {
         if (toWrap instanceof ScopeData) {
-            if (this.data instanceof EventDispatcher) {
-                this.data.removeRelay(this);
-                this.data.deconstruct();
+            if (this._data instanceof EventDispatcher) {
+                this._data.removeRelay(this);
+                this._data.deconstruct();
             }
             this.wrapped = toWrap;
-            this.data = toWrap;
-            this.data.addRelay(this);
+            this._data = toWrap;
+            this._data.addRelay(this);
             return;
         }
 
         if (toWrap instanceof Scope)
-            toWrap = toWrap.data;
+            toWrap = toWrap._data;
 
         if ([null, undefined].indexOf(this.wrapped) === -1)
             throw Error("A scope can only wrap a single object");

@@ -3,10 +3,11 @@ import { ScopeReference } from "./Scope/ScopeReference";
 import { ScopeData } from "./Scope/ScopeData";
 export declare class Scope extends EventDispatcher {
     wrapped: any;
-    protected data: ScopeData;
+    protected _data: ScopeData;
     protected children: Scope[];
     protected _parentScope: Scope;
     constructor(parent?: Scope);
+    get data(): ScopeData;
     get parentScope(): Scope;
     set parentScope(scope: Scope);
     addChild(scope: Scope): void;

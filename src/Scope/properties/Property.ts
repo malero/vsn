@@ -109,6 +109,6 @@ export class Property<T = any> extends EventDispatcher {
     }
 
     hasTag(tag: string) {
-        return this.config.tags?.indexOf(tag) !== -1;
+        return this.config.tags instanceof Array ? this.config.tags.indexOf(tag) !== -1 : false;
     }
 }

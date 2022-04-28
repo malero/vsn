@@ -34,10 +34,17 @@ var Scope = /** @class */ (function (_super) {
         if (parent)
             _this.parentScope = parent;
         _this.children = [];
-        _this.data = new DynamicScopeData_1.DynamicScopeData({});
-        _this.data.addRelay(_this);
+        _this._data = new DynamicScopeData_1.DynamicScopeData({});
+        _this._data.addRelay(_this);
         return _this;
     }
+    Object.defineProperty(Scope.prototype, "data", {
+        get: function () {
+            return this._data;
+        },
+        enumerable: false,
+        configurable: true
+    });
     Object.defineProperty(Scope.prototype, "parentScope", {
         get: function () {
             return this._parentScope;
@@ -81,7 +88,7 @@ var Scope = /** @class */ (function (_super) {
     };
     Scope.prototype.get = function (key, searchParents) {
         if (searchParents === void 0) { searchParents = true; }
-        var value = this.data[key];
+        var value = this._data[key];
         if (value === undefined) {
             if (searchParents && this.parentScope)
                 return this.parentScope.get(key, searchParents);
@@ -90,28 +97,28 @@ var Scope = /** @class */ (function (_super) {
         return value;
     };
     Scope.prototype.set = function (key, value) {
-        if (!this.data.hasProperty(key))
-            this.data.createProperty(key);
-        this.data[key] = value;
+        if (!this._data.hasProperty(key))
+            this._data.createProperty(key);
+        this._data[key] = value;
     };
     Object.defineProperty(Scope.prototype, "keys", {
         get: function () {
-            return this.data.keys;
+            return this._data.keys;
         },
         enumerable: false,
         configurable: true
     });
     Scope.prototype.has = function (key) {
-        return this.data.hasProperty(key);
+        return this._data.hasProperty(key);
     };
     Scope.prototype.setType = function (key, type) {
-        var property = this.data.getProperty(key, true);
+        var property = this._data.getProperty(key, true);
         property.type = type;
         if (this.has(key))
             this.set(key, this.get(key));
     };
     Scope.prototype.getType = function (key) {
-        var property = this.data.getProperty(key);
+        var property = this._data.getProperty(key);
         return property === null || property === void 0 ? void 0 : property.type;
     };
     Scope.prototype.extend = function (data) {
@@ -121,7 +128,7 @@ var Scope = /** @class */ (function (_super) {
         }
     };
     Scope.prototype.clear = function () {
-        for (var _i = 0, _a = this.data.keys; _i < _a.length; _i++) {
+        for (var _i = 0, _a = this._data.keys; _i < _a.length; _i++) {
             var key = _a[_i];
             if (['function', 'object'].indexOf(typeof this.get(key)) > -1)
                 continue;
@@ -137,17 +144,17 @@ var Scope = /** @class */ (function (_super) {
         if (triggerUpdates === void 0) { triggerUpdates = false; }
         if (updateFromWrapped === void 0) { updateFromWrapped = true; }
         if (toWrap instanceof ScopeData_1.ScopeData) {
-            if (this.data instanceof EventDispatcher_1.EventDispatcher) {
-                this.data.removeRelay(this);
-                this.data.deconstruct();
+            if (this._data instanceof EventDispatcher_1.EventDispatcher) {
+                this._data.removeRelay(this);
+                this._data.deconstruct();
             }
             this.wrapped = toWrap;
-            this.data = toWrap;
-            this.data.addRelay(this);
+            this._data = toWrap;
+            this._data.addRelay(this);
             return;
         }
         if (toWrap instanceof Scope)
-            toWrap = toWrap.data;
+            toWrap = toWrap._data;
         if ([null, undefined].indexOf(this.wrapped) === -1)
             throw Error("A scope can only wrap a single object");
         if (!toWrap) {

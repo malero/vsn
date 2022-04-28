@@ -113,8 +113,7 @@ var Property = /** @class */ (function (_super) {
         }
     };
     Property.prototype.hasTag = function (tag) {
-        var _a;
-        return ((_a = this.config.tags) === null || _a === void 0 ? void 0 : _a.indexOf(tag)) !== -1;
+        return this.config.tags instanceof Array ? this.config.tags.indexOf(tag) !== -1 : false;
     };
     return Property;
 }(EventDispatcher_1.EventDispatcher));
