@@ -61,6 +61,17 @@ export class ScopeDataAbstract extends EventDispatcher {
         return [...this.__properties__];
     }
 
+    getKeys(...tags: string[]): string[] {
+        const keys = [];
+        for (const key of this.keys) {
+            const property = this.getProperty(key);
+            if (property.hasTags(tags)) {
+                keys.push(key);
+            }
+        }
+        return keys;
+    }
+
     setData(data: IScopeData) {
         const properties = this.getProperties();
         for (const key in data) {

@@ -41,6 +41,8 @@ export class Property<T = any> extends EventDispatcher {
     constructor(value?: T, config?: IPropertyConfig) {
         super();
         this.config = config;
+        if (!this.config.tags)
+            this.config.tags = [];
         this.type = config.type || 'any';
         this.value = value;
     }
@@ -109,6 +111,15 @@ export class Property<T = any> extends EventDispatcher {
     }
 
     hasTag(tag: string) {
-        return this.config.tags instanceof Array ? this.config.tags.indexOf(tag) !== -1 : false;
+        return this.config.tags.indexOf(tag) !== -1;
+    }
+
+    hasTags(tags: string[]) {
+        for(const tag of tags) {
+            if(!this.hasTag(tag)) {
+                return false;
+            }
+        }
+        return true;
     }
 }

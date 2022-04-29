@@ -46,6 +46,8 @@ var Property = /** @class */ (function (_super) {
         var _this = _super.call(this) || this;
         _this._type = 'any';
         _this.config = config;
+        if (!_this.config.tags)
+            _this.config.tags = [];
         _this.type = config.type || 'any';
         _this.value = value;
         return _this;
@@ -113,7 +115,16 @@ var Property = /** @class */ (function (_super) {
         }
     };
     Property.prototype.hasTag = function (tag) {
-        return this.config.tags instanceof Array ? this.config.tags.indexOf(tag) !== -1 : false;
+        return this.config.tags.indexOf(tag) !== -1;
+    };
+    Property.prototype.hasTags = function (tags) {
+        for (var _i = 0, tags_1 = tags; _i < tags_1.length; _i++) {
+            var tag = tags_1[_i];
+            if (!this.hasTag(tag)) {
+                return false;
+            }
+        }
+        return true;
     };
     return Property;
 }(EventDispatcher_1.EventDispatcher));

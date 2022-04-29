@@ -11,6 +11,7 @@ export declare class ScopeDataAbstract extends EventDispatcher {
     createProperty(name: string, propertyType?: any, config?: IPropertyConfig): any;
     hasProperty(name: string): boolean;
     get keys(): string[];
+    getKeys(...tags: string[]): string[];
     setData(data: IScopeData): void;
     getData(...tags: string[]): IScopeData;
     getProperties(): string[];

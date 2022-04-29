@@ -382,6 +382,7 @@ var Tag = /** @class */ (function (_super) {
         }
         if (obj instanceof Controller_1.Controller) {
             obj.init(this.scope, this, this.element);
+            this.controller = obj;
         }
         else {
             obj['$scope'] = this.scope;

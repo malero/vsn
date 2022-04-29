@@ -75,6 +75,21 @@ var ScopeDataAbstract = /** @class */ (function (_super) {
         enumerable: false,
         configurable: true
     });
+    ScopeDataAbstract.prototype.getKeys = function () {
+        var tags = [];
+        for (var _i = 0; _i < arguments.length; _i++) {
+            tags[_i] = arguments[_i];
+        }
+        var keys = [];
+        for (var _a = 0, _b = this.keys; _a < _b.length; _a++) {
+            var key = _b[_a];
+            var property = this.getProperty(key);
+            if (property.hasTags(tags)) {
+                keys.push(key);
+            }
+        }
+        return keys;
+    };
     ScopeDataAbstract.prototype.setData = function (data) {
         var properties = this.getProperties();
         for (var key in data) {

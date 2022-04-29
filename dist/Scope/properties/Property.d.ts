@@ -22,4 +22,5 @@ export declare class Property<T = any> extends EventDispatcher {
     addTag(tag: string): void;
     removeTag(tag: string): void;
     hasTag(tag: string): boolean;
+    hasTags(tags: string[]): boolean;
 }

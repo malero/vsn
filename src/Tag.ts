@@ -271,6 +271,7 @@ export class Tag extends DOMObject {
 
         if (obj instanceof Controller) {
             obj.init(this.scope, this, this.element);
+            this.controller = obj;
         } else {
             obj['$scope'] = this.scope;
             obj['$tag'] = this;
