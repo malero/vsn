@@ -73,7 +73,7 @@ var Property = /** @class */ (function (_super) {
         enumerable: false,
         configurable: true
     });
-    Property.prototype.getData = function () {
+    Property.prototype.clean = function () {
         return this.value;
     };
     Object.defineProperty(Property.prototype, "type", {

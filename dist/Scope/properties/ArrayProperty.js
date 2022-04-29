@@ -63,6 +63,9 @@ var ArrayProperty = /** @class */ (function (_super) {
         enumerable: false,
         configurable: true
     });
+    ArrayProperty.prototype.clean = function () {
+        return Array.from(this._value);
+    };
     return ArrayProperty;
 }(Property_1.Property));
 exports.ArrayProperty = ArrayProperty;

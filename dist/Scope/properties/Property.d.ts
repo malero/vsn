@@ -15,7 +15,7 @@ export declare class Property<T = any> extends EventDispatcher {
     castType(value: any): any;
     set value(v: any);
     get value(): any;
-    getData(): any;
+    clean(): any;
     set type(type: string);
     get type(): string;
     validate(): any[];

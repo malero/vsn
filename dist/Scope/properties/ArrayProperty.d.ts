@@ -8,4 +8,5 @@ export declare class ArrayProperty<T = any> extends Property<WrappedArray<T>> {
     relayEvent(event: any, ...args: any[]): void;
     set value(v: any);
     get value(): any;
+    clean(): T[];
 }

@@ -67,7 +67,7 @@ export class Property<T = any> extends EventDispatcher {
         return this._value;
     }
 
-    getData() {
+    clean() {
         return this.value;
     }
 

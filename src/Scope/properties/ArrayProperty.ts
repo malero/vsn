@@ -39,4 +39,8 @@ export class ArrayProperty<T = any> extends Property<WrappedArray<T>> {
     get value() {
         return this._value;
     }
+
+    clean() {
+        return Array.from(this._value);
+    }
 }

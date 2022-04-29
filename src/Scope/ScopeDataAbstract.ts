@@ -93,7 +93,7 @@ export class ScopeDataAbstract extends EventDispatcher {
             if(this[key] == null || !property)
                 continue;
 
-            data[key] = property.getData();
+            data[key] = property.clean();
         }
         return data;
     }

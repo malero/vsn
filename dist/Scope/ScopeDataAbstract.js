@@ -114,7 +114,7 @@ var ScopeDataAbstract = /** @class */ (function (_super) {
             }
             if (this[key] == null || !property)
                 continue;
-            data[key] = property.getData();
+            data[key] = property.clean();
         }
         return data;
     };
