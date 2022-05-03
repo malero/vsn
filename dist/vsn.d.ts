@@ -1,7 +1,5 @@
 import { DOM } from "./DOM";
 import { Registry } from "./Registry";
-import "./Types";
-import "./Formats";
 import { Configuration } from "./Configuration";
 import { EventDispatcher } from "./EventDispatcher";
 export declare class Vision extends EventDispatcher {
@@ -30,4 +28,7 @@ export { EventDispatcher } from './EventDispatcher';
 export { MessageList } from './MessageList';
 export { SimplePromise } from './SimplePromise';
 export { Tag } from './Tag';
+export { Formats } from './Formats';
+export { Types } from './Types';
+export { Validators } from './Validators';
 export declare const vision: Vision;

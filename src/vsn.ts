@@ -1,8 +1,6 @@
 import {DOM} from "./DOM";
 import {WrappedArray} from "./Scope/WrappedArray";
 import {Registry} from "./Registry";
-import "./Types";
-import "./Formats";
 import {Configuration} from "./Configuration";
 import {VisionHelper} from "./helpers/VisionHelper";
 import {Tree} from "./AST";
@@ -83,4 +81,7 @@ export {EventDispatcher} from './EventDispatcher';
 export {MessageList} from './MessageList';
 export {SimplePromise} from './SimplePromise';
 export {Tag} from './Tag';
+export {Formats} from './Formats';
+export {Types} from './Types';
+export {Validators} from './Validators';
 export const vision: Vision = Vision.instance;
