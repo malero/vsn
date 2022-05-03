@@ -99,19 +99,23 @@ var Property = /** @class */ (function (_super) {
         }
         return errors;
     };
-    Property.prototype.addValidator = function (validator) {
-        if (typeof validator == 'string')
-            validator = Registry_1.Registry.instance.validators.getSynchronous(validator);
+    Property.prototype.getValidator = function (id) {
+        var validator = Registry_1.Registry.instance.validators.getSynchronous(id);
         if (!validator)
-            throw new Error('Invalid validator');
+            throw new Error("Invalid validator " + id);
+        return validator;
+    };
+    Property.prototype.addValidator = function (validator) {
+        if (typeof validator == 'string') {
+            validator = this.getValidator(validator);
+        }
         if (this.config.validators.indexOf(validator) == -1)
             this.config.validators.push(validator);
     };
     Property.prototype.removeValidator = function (validator) {
-        if (typeof validator == 'string')
-            validator = Registry_1.Registry.instance.validators.getSynchronous(validator);
-        if (!validator)
-            throw new Error('Invalid validator');
+        if (typeof validator == 'string') {
+            validator = this.getValidator(validator);
+        }
         var index = this.config.validators.indexOf(validator);
         if (index != -1)
             this.config.validators.splice(index, 1);

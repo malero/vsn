@@ -93,28 +93,32 @@ export class Property<T = any> extends EventDispatcher {
         return errors;
     }
 
-    addValidator(validator: TValidator | string) {
-        if (typeof validator == 'string')
-            validator = Registry.instance.validators.getSynchronous(validator) as TValidator;
-
+    getValidator(id: string) {
+        const validator = Registry.instance.validators.getSynchronous(id) as TValidator;
         if (!validator)
-            throw new Error('Invalid validator');
+            throw new Error(`Invalid validator ${id}`);
+        return validator;
+    }
+
+    addValidator(validator: TValidator | string) {
+        if (typeof validator == 'string') {
+            validator = this.getValidator(validator);
+        }
 
         if (this.config.validators.indexOf(validator) == -1)
             this.config.validators.push(validator);
     }
 
     removeValidator(validator: TValidator | string) {
-        if (typeof validator == 'string')
-            validator = Registry.instance.validators.getSynchronous(validator) as TValidator;
-
-        if (!validator)
-            throw new Error('Invalid validator');
+        if (typeof validator == 'string') {
+            validator = this.getValidator(validator);
+        }
 
         const index = this.config.validators.indexOf(validator);
         if (index != -1)
             this.config.validators.splice(index, 1);
     }
+
 
     addTag(tag: string) {
         if(this.config.tags == undefined) {
