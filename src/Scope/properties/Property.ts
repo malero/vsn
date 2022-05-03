@@ -30,7 +30,7 @@ export interface IPropertyConfig {
     type?: string;
     default?: any;
     validators?: TValidator[];
-    tags?: string[];
+    labels?: string[];
 }
 
 export class Property<T = any> extends EventDispatcher {
@@ -41,8 +41,8 @@ export class Property<T = any> extends EventDispatcher {
     constructor(value?: T, config?: IPropertyConfig) {
         super();
         this.config = config;
-        if (!this.config.tags)
-            this.config.tags = [];
+        if (!this.config.labels)
+            this.config.labels = [];
         if (!this.config.validators)
             this.config.validators = [];
         this.type = config.type || 'any';
@@ -109,43 +109,32 @@ export class Property<T = any> extends EventDispatcher {
             this.config.validators.push(validator);
     }
 
-    removeValidator(validator: TValidator | string) {
-        if (typeof validator == 'string') {
-            validator = this.getValidator(validator);
+    addLabel(label: string) {
+        if(this.config.labels == undefined) {
+            this.config.labels = [];
         }
-
-        const index = this.config.validators.indexOf(validator);
-        if (index != -1)
-            this.config.validators.splice(index, 1);
-    }
-
-
-    addTag(tag: string) {
-        if(this.config.tags == undefined) {
-            this.config.tags = [];
-        }
-        if(this.config.tags.indexOf(tag) == -1) {
-            this.config.tags.push(tag);
+        if(this.config.labels.indexOf(label) == -1) {
+            this.config.labels.push(label);
         }
     }
 
-    removeTag(tag: string) {
-        if(this.config.tags == undefined) {
+    removeLabel(label: string) {
+        if(this.config.labels == undefined) {
             return;
         }
-        const index = this.config.tags.indexOf(tag);
+        const index = this.config.labels.indexOf(label);
         if(index != -1) {
-            this.config.tags.splice(index, 1);
+            this.config.labels.splice(index, 1);
         }
     }
 
-    hasTag(tag: string) {
-        return this.config.tags.indexOf(tag) !== -1;
+    hasLabel(label: string) {
+        return this.config.labels.indexOf(label) !== -1;
     }
 
-    hasTags(tags: string[]) {
-        for(const tag of tags) {
-            if(!this.hasTag(tag)) {
+    hasLabels(labels: string[]) {
+        for(const label of labels) {
+            if(!this.hasLabel(label)) {
                 return false;
             }
         }

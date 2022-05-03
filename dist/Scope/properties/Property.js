@@ -46,8 +46,8 @@ var Property = /** @class */ (function (_super) {
         var _this = _super.call(this) || this;
         _this._type = 'any';
         _this.config = config;
-        if (!_this.config.tags)
-            _this.config.tags = [];
+        if (!_this.config.labels)
+            _this.config.labels = [];
         if (!_this.config.validators)
             _this.config.validators = [];
         _this.type = config.type || 'any';
@@ -112,38 +112,30 @@ var Property = /** @class */ (function (_super) {
         if (this.config.validators.indexOf(validator) == -1)
             this.config.validators.push(validator);
     };
-    Property.prototype.removeValidator = function (validator) {
-        if (typeof validator == 'string') {
-            validator = this.getValidator(validator);
+    Property.prototype.addLabel = function (label) {
+        if (this.config.labels == undefined) {
+            this.config.labels = [];
         }
-        var index = this.config.validators.indexOf(validator);
-        if (index != -1)
-            this.config.validators.splice(index, 1);
-    };
-    Property.prototype.addTag = function (tag) {
-        if (this.config.tags == undefined) {
-            this.config.tags = [];
-        }
-        if (this.config.tags.indexOf(tag) == -1) {
-            this.config.tags.push(tag);
+        if (this.config.labels.indexOf(label) == -1) {
+            this.config.labels.push(label);
         }
     };
-    Property.prototype.removeTag = function (tag) {
-        if (this.config.tags == undefined) {
+    Property.prototype.removeLabel = function (label) {
+        if (this.config.labels == undefined) {
             return;
         }
-        var index = this.config.tags.indexOf(tag);
+        var index = this.config.labels.indexOf(label);
         if (index != -1) {
-            this.config.tags.splice(index, 1);
+            this.config.labels.splice(index, 1);
         }
     };
-    Property.prototype.hasTag = function (tag) {
-        return this.config.tags.indexOf(tag) !== -1;
+    Property.prototype.hasLabel = function (label) {
+        return this.config.labels.indexOf(label) !== -1;
     };
-    Property.prototype.hasTags = function (tags) {
-        for (var _i = 0, tags_1 = tags; _i < tags_1.length; _i++) {
-            var tag = tags_1[_i];
-            if (!this.hasTag(tag)) {
+    Property.prototype.hasLabels = function (labels) {
+        for (var _i = 0, labels_1 = labels; _i < labels_1.length; _i++) {
+            var label = labels_1[_i];
+            if (!this.hasLabel(label)) {
                 return false;
             }
         }

@@ -5,7 +5,7 @@ export interface IPropertyConfig {
     type?: string;
     default?: any;
     validators?: TValidator[];
-    tags?: string[];
+    labels?: string[];
 }
 export declare class Property<T = any> extends EventDispatcher {
     _type: string;
@@ -21,9 +21,8 @@ export declare class Property<T = any> extends EventDispatcher {
     validate(): any[];
     getValidator(id: string): TValidator;
     addValidator(validator: TValidator | string): void;
-    removeValidator(validator: TValidator | string): void;
-    addTag(tag: string): void;
-    removeTag(tag: string): void;
-    hasTag(tag: string): boolean;
-    hasTags(tags: string[]): boolean;
+    addLabel(label: string): void;
+    removeLabel(label: string): void;
+    hasLabel(label: string): boolean;
+    hasLabels(labels: string[]): boolean;
 }

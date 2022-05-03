@@ -11,6 +11,7 @@ export declare class RegistryStore extends EventDispatcher {
 }
 export declare class Registry extends EventDispatcher {
     protected static _instance: Registry;
+    readonly components: RegistryStore;
     readonly classes: RegistryStore;
     readonly models: RegistryStore;
     readonly templates: RegistryStore;
@@ -19,6 +20,7 @@ export declare class Registry extends EventDispatcher {
     readonly formats: RegistryStore;
     readonly attributes: RegistryStore;
     constructor();
+    static component(key?: string, setup?: any): (target: any, _key?: string) => void;
     static class(key?: string, setup?: any): (target: any, _key?: string) => void;
     static controller(key?: string, setup?: any): (target: any, _key?: string) => void;
     static model(key?: string, setup?: any): (target: any, _key?: string) => void;

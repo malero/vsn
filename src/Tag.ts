@@ -72,12 +72,7 @@ export class Tag extends DOMObject {
         if (this._nonDeferredAttributes.length > 0)
             return this._nonDeferredAttributes;
 
-        const attrs: Attribute[] = [];
-        for (const attribute of this.attributes) {
-            if (attribute.state === AttributeState.Deferred)
-                continue;
-            attrs.push(attribute);
-        }
+        const attrs: Attribute[] = this.attributes.filter(attr => attr.state !== AttributeState.Deferred);
         this._nonDeferredAttributes = attrs;
         return attrs;
     }
@@ -119,9 +114,7 @@ export class Tag extends DOMObject {
     }
 
     mutate(mutation: MutationRecord): void {
-        for (const attr of this.attributes) {
-            attr.mutate(mutation);
-        }
+        this.attributes.map(attr => attr.mutate(mutation));
         this.dispatch('mutate', mutation);
     }
 

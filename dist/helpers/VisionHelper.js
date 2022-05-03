@@ -65,6 +65,23 @@ var VisionHelper = /** @class */ (function () {
             setTimeout(callback, timeout);
         }
     };
+    Object.defineProperty(VisionHelper, "wasmSupport", {
+        get: function () {
+            try {
+                if (typeof WebAssembly === "object"
+                    && typeof WebAssembly.instantiate === "function") {
+                    var module_1 = new WebAssembly.Module(Uint8Array.of(0x0, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00));
+                    if (module_1 instanceof WebAssembly.Module)
+                        return new WebAssembly.Instance(module_1) instanceof WebAssembly.Instance;
+                }
+            }
+            catch (e) {
+            }
+            return false;
+        },
+        enumerable: false,
+        configurable: true
+    });
     return VisionHelper;
 }());
 exports.VisionHelper = VisionHelper;

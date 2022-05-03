@@ -65,7 +65,7 @@ export class ScopeDataAbstract extends EventDispatcher {
         const keys = [];
         for (const key of this.keys) {
             const property = this.getProperty(key);
-            if (property.hasTags(tags)) {
+            if (property.hasLabels(tags)) {
                 keys.push(key);
             }
         }
@@ -86,7 +86,7 @@ export class ScopeDataAbstract extends EventDispatcher {
         propLoop: for (const key of this.getProperties()) {
             const property = this['__'+key];
             for (const tag of tags) {
-                if (!property.hasTag(tag))
+                if (!property.hasLabel(tag))
                     continue propLoop;
             }
 

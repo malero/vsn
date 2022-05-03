@@ -62,8 +62,6 @@ var ElementHelper_1 = require("./helpers/ElementHelper");
 var Configuration_1 = require("./Configuration");
 var AST_1 = require("./AST");
 var List_1 = require("./Tag/List");
-var Bencmark_1 = require("./Bencmark");
-var VisionHelper_1 = require("./helpers/VisionHelper");
 var WrappedWindow_1 = require("./DOM/WrappedWindow");
 var WrappedDocument_1 = require("./DOM/WrappedDocument");
 var EventDispatcher_1 = require("./EventDispatcher");
@@ -241,9 +239,10 @@ var DOM = /** @class */ (function (_super) {
     DOM.prototype.buildFrom = function (ele, isRoot) {
         if (isRoot === void 0) { isRoot = false; }
         return __awaiter(this, void 0, void 0, function () {
-            var allElements, _i, _a, tag, newTags, toBuild, toSkip, _b, _c, element, _d, toBuild_1, element, tag, _e, _f, newTags_1, tag, _g, newTags_2, tag, _h, newTags_3, tag, parentElement, foundParent, _j, _k, newTags_4, tag, _l, newTags_5, tag, _m, newTags_6, tag, _o, newTags_7, tag, _p, newTags_8, tag;
-            return __generator(this, function (_r) {
-                switch (_r.label) {
+            var allElements, _i, _a, tag, newTags, toBuild, toSkip, _b, _c, element, _d, toBuild_1, element, tag, _e, _f, newTags_1, tag, _g, newTags_2, tag, _h, newTags_3, tag, parentElement, foundParent, _j, _k, newTags_4, tag, _l, newTags_5, tag, _m, newTags_6, tag, _o, newTags_7, tag;
+            var _this = this;
+            return __generator(this, function (_p) {
+                switch (_p.label) {
                     case 0:
                         allElements = [];
                         if (isRoot) {
@@ -257,8 +256,6 @@ var DOM = /** @class */ (function (_super) {
                         newTags = [];
                         toBuild = [];
                         toSkip = [];
-                        if (VisionHelper_1.VisionHelper.doBenchmark)
-                            Bencmark_1.benchmarkStart('DOM', 'findElements');
                         if (ele && ele.querySelectorAll) {
                             for (_b = 0, _c = Array.from(ele.querySelectorAll("*")); _b < _c.length; _b++) { // Don't build items more than once
                                 element = _c[_b];
@@ -274,10 +271,6 @@ var DOM = /** @class */ (function (_super) {
                                 toBuild.push(element);
                             }
                         }
-                        if (VisionHelper_1.VisionHelper.doBenchmark)
-                            Bencmark_1.benchmarkEnd('DOM', 'findElements');
-                        if (VisionHelper_1.VisionHelper.doBenchmark)
-                            Bencmark_1.benchmarkStart('DOM', 'buildTags');
                         for (_d = 0, toBuild_1 = toBuild; _d < toBuild_1.length; _d++) {
                             element = toBuild_1[_d];
                             if (allElements.indexOf(element) > -1)
@@ -287,54 +280,41 @@ var DOM = /** @class */ (function (_super) {
                             newTags.push(tag);
                             allElements.push(element);
                         }
-                        if (VisionHelper_1.VisionHelper.doBenchmark)
-                            Bencmark_1.benchmarkEnd('DOM', 'buildTags');
                         if (!isRoot) return [3 /*break*/, 2];
                         _e = this;
                         return [4 /*yield*/, this.getTagForElement(document.body)];
                     case 1:
-                        _e._root = _r.sent();
-                        _r.label = 2;
+                        _e._root = _p.sent();
+                        _p.label = 2;
                     case 2:
-                        // Configure, setup & execute attributes
-                        if (VisionHelper_1.VisionHelper.doBenchmark)
-                            Bencmark_1.benchmarkStart('DOM', 'buildTagAttributes');
                         _f = 0, newTags_1 = newTags;
-                        _r.label = 3;
+                        _p.label = 3;
                     case 3:
                         if (!(_f < newTags_1.length)) return [3 /*break*/, 6];
                         tag = newTags_1[_f];
                         return [4 /*yield*/, tag.buildAttributes()];
                     case 4:
-                        _r.sent();
-                        _r.label = 5;
+                        _p.sent();
+                        _p.label = 5;
                     case 5:
                         _f++;
                         return [3 /*break*/, 3];
                     case 6:
-                        if (VisionHelper_1.VisionHelper.doBenchmark)
-                            Bencmark_1.benchmarkEnd('DOM', 'buildTagAttributes');
-                        if (VisionHelper_1.VisionHelper.inDevelopment)
-                            Bencmark_1.benchmarkStart('DOM', 'compileAttributes');
                         _g = 0, newTags_2 = newTags;
-                        _r.label = 7;
+                        _p.label = 7;
                     case 7:
                         if (!(_g < newTags_2.length)) return [3 /*break*/, 10];
                         tag = newTags_2[_g];
                         return [4 /*yield*/, tag.compileAttributes()];
                     case 8:
-                        _r.sent();
-                        _r.label = 9;
+                        _p.sent();
+                        _p.label = 9;
                     case 9:
                         _g++;
                         return [3 /*break*/, 7];
                     case 10:
-                        if (VisionHelper_1.VisionHelper.doBenchmark)
-                            Bencmark_1.benchmarkEnd('DOM', 'compileAttributes');
-                        if (VisionHelper_1.VisionHelper.doBenchmark)
-                            Bencmark_1.benchmarkStart('DOM', 'buildTree');
                         _h = 0, newTags_3 = newTags;
-                        _r.label = 11;
+                        _p.label = 11;
                     case 11:
                         if (!(_h < newTags_3.length)) return [3 /*break*/, 17];
                         tag = newTags_3[_h];
@@ -342,7 +322,7 @@ var DOM = /** @class */ (function (_super) {
                             return [3 /*break*/, 16];
                         parentElement = tag.element.parentElement;
                         foundParent = false;
-                        _r.label = 12;
+                        _p.label = 12;
                     case 12:
                         if (!parentElement) return [3 /*break*/, 15];
                         if (!(allElements.indexOf(parentElement) > -1)) return [3 /*break*/, 14];
@@ -350,7 +330,7 @@ var DOM = /** @class */ (function (_super) {
                         _j = tag;
                         return [4 /*yield*/, this.getTagForElement(parentElement)];
                     case 13:
-                        _j.parentTag = _r.sent();
+                        _j.parentTag = _p.sent();
                         return [3 /*break*/, 15];
                     case 14:
                         parentElement = parentElement.parentElement;
@@ -358,95 +338,70 @@ var DOM = /** @class */ (function (_super) {
                     case 15:
                         if (!foundParent)
                             console.error('Could not find parent for ', tag);
-                        _r.label = 16;
+                        _p.label = 16;
                     case 16:
                         _h++;
                         return [3 /*break*/, 11];
                     case 17:
-                        if (VisionHelper_1.VisionHelper.doBenchmark)
-                            Bencmark_1.benchmarkEnd('DOM', 'buildTree');
-                        if (VisionHelper_1.VisionHelper.doBenchmark)
-                            Bencmark_1.benchmarkStart('DOM', 'setupAttributes');
                         _k = 0, newTags_4 = newTags;
-                        _r.label = 18;
+                        _p.label = 18;
                     case 18:
                         if (!(_k < newTags_4.length)) return [3 /*break*/, 21];
                         tag = newTags_4[_k];
                         return [4 /*yield*/, tag.setupAttributes()];
                     case 19:
-                        _r.sent();
-                        _r.label = 20;
+                        _p.sent();
+                        _p.label = 20;
                     case 20:
                         _k++;
                         return [3 /*break*/, 18];
                     case 21:
-                        if (VisionHelper_1.VisionHelper.doBenchmark)
-                            Bencmark_1.benchmarkEnd('DOM', 'setupAttributes');
-                        if (VisionHelper_1.VisionHelper.doBenchmark)
-                            Bencmark_1.benchmarkStart('DOM', 'extractAttributes');
                         _l = 0, newTags_5 = newTags;
-                        _r.label = 22;
+                        _p.label = 22;
                     case 22:
                         if (!(_l < newTags_5.length)) return [3 /*break*/, 25];
                         tag = newTags_5[_l];
                         return [4 /*yield*/, tag.extractAttributes()];
                     case 23:
-                        _r.sent();
-                        _r.label = 24;
+                        _p.sent();
+                        _p.label = 24;
                     case 24:
                         _l++;
                         return [3 /*break*/, 22];
                     case 25:
-                        if (VisionHelper_1.VisionHelper.doBenchmark)
-                            Bencmark_1.benchmarkEnd('DOM', 'extractAttributes');
-                        if (VisionHelper_1.VisionHelper.doBenchmark)
-                            Bencmark_1.benchmarkStart('DOM', 'connectAttributes');
                         _m = 0, newTags_6 = newTags;
-                        _r.label = 26;
+                        _p.label = 26;
                     case 26:
                         if (!(_m < newTags_6.length)) return [3 /*break*/, 29];
                         tag = newTags_6[_m];
                         return [4 /*yield*/, tag.connectAttributes()];
                     case 27:
-                        _r.sent();
-                        _r.label = 28;
+                        _p.sent();
+                        _p.label = 28;
                     case 28:
                         _m++;
                         return [3 /*break*/, 26];
                     case 29:
-                        if (VisionHelper_1.VisionHelper.doBenchmark)
-                            Bencmark_1.benchmarkEnd('DOM', 'connectAttributes');
-                        if (VisionHelper_1.VisionHelper.doBenchmark)
-                            Bencmark_1.benchmarkStart('DOM', 'finalizeTags');
                         _o = 0, newTags_7 = newTags;
-                        _r.label = 30;
+                        _p.label = 30;
                     case 30:
                         if (!(_o < newTags_7.length)) return [3 /*break*/, 33];
                         tag = newTags_7[_o];
                         return [4 /*yield*/, tag.finalize()];
                     case 31:
-                        _r.sent();
+                        _p.sent();
                         this.queued.splice(this.queued.indexOf(tag.element), 1);
-                        _r.label = 32;
+                        _p.label = 32;
                     case 32:
                         _o++;
                         return [3 /*break*/, 30];
                     case 33:
-                        if (VisionHelper_1.VisionHelper.doBenchmark)
-                            Bencmark_1.benchmarkEnd('DOM', 'finalizeTags');
-                        if (VisionHelper_1.VisionHelper.doBenchmark)
-                            Bencmark_1.benchmarkStart('DOM', 'observeTags');
-                        for (_p = 0, newTags_8 = newTags; _p < newTags_8.length; _p++) {
-                            tag = newTags_8[_p];
-                            this.observer.observe(tag.element, {
-                                attributes: true,
-                                characterData: true,
-                                childList: true,
-                                subtree: true
-                            });
-                        }
-                        if (VisionHelper_1.VisionHelper.doBenchmark)
-                            Bencmark_1.benchmarkEnd('DOM', 'observeTags');
+                        newTags.forEach(function (tag) { return _this.observer.observe(tag.element, {
+                            attributes: true,
+                            characterData: true,
+                            childList: true,
+                            subtree: true
+                        }); });
                         this.dispatch('built');
                         return [2 /*return*/];
                 }

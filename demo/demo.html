@@ -96,11 +96,11 @@
 <button vsn-on:click="show = !show" vsn-set:show="false|boolean">Toggle</button>
 <span vsn-bind="show"></span>
 
-<a vsn-on:click="if(@text != clicktext){@text=clicktext}else{@text='Click Me'}" vsn-set:clicktext="Clicked!">Click Me</a>
+<a vsn-on:click="if(@text != @clicktext){@text=@clicktext}else{@text='Click Me'}" clicktext="Clicked!">Click Me</a>
 
 <h2>? Operator</h2>
 <p>Add/remove class to list of elements on click.</p>
-<p>
+<p id="toggle-container" vsn-exec="toggles = ?(#list-add-remove-class-example li)">
     <button vsn-on:click="?(#list-add-remove-class-example li).@class += 'active'">Add</button> <button vsn-on:click="?(#list-add-remove-class-example li).@class -= 'active'">Remove</button> <button vsn-on:click="?(#list-add-remove-class-example li).@class ~ 'active'">Toggle</button>
     <ul id="list-add-remove-class-example" vsn-list initial-items="5" template="?(#query-operator-example-item)"></ul>
 </p>

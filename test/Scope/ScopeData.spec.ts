@@ -6,15 +6,15 @@ describe('ScopeData', () => {
     it("should set tags correctly", async () => {
         const data = new ScopeData();
         data.createProperty('test', Property, {
-            tags: ['test']
+            labels: ['test']
         });
 
         data.createProperty('test_int', Property, {
-            tags: ['test']
+            labels: ['test']
         });
 
         data.createProperty('not_test', Property, {
-            tags: ['not_test']
+            labels: ['not_test']
         });
 
         data['test'] = 'test';
@@ -40,7 +40,7 @@ describe('ScopeData', () => {
         });
 
         const notTestProp = data.getProperty('not_test');
-        notTestProp.addTag('test');
+        notTestProp.addLabel('test');
         const taggedNotTestData2 = data.getData('test');
         expect(taggedNotTestData2).toEqual({
             test: 'test',
@@ -48,7 +48,7 @@ describe('ScopeData', () => {
             not_test: 'not_test'
         });
 
-        notTestProp.removeTag('test');
+        notTestProp.removeLabel('test');
         const taggedNotTestData3 = data.getData('test');
         expect(taggedNotTestData3).toEqual({
             test: 'test',

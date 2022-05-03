@@ -7,4 +7,5 @@ export declare class VisionHelper {
     static get doBenchmark(): boolean;
     static get inLegacy(): boolean;
     static nice(callback: any, timeout?: number): void;
+    static get wasmSupport(): boolean;
 }

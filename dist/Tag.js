@@ -126,13 +126,7 @@ var Tag = /** @class */ (function (_super) {
         get: function () {
             if (this._nonDeferredAttributes.length > 0)
                 return this._nonDeferredAttributes;
-            var attrs = [];
-            for (var _i = 0, _a = this.attributes; _i < _a.length; _i++) {
-                var attribute = _a[_i];
-                if (attribute.state === Attribute_1.AttributeState.Deferred)
-                    continue;
-                attrs.push(attribute);
-            }
+            var attrs = this.attributes.filter(function (attr) { return attr.state !== Attribute_1.AttributeState.Deferred; });
             this._nonDeferredAttributes = attrs;
             return attrs;
         },
@@ -210,10 +204,7 @@ var Tag = /** @class */ (function (_super) {
         });
     };
     Tag.prototype.mutate = function (mutation) {
-        for (var _i = 0, _a = this.attributes; _i < _a.length; _i++) {
-            var attr = _a[_i];
-            attr.mutate(mutation);
-        }
+        this.attributes.map(function (attr) { return attr.mutate(mutation); });
         this.dispatch('mutate', mutation);
     };
     Tag.prototype.get = function (attr) {

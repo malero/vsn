@@ -1,4 +1,3 @@
-import {VisionHelper} from "./helpers/VisionHelper";
 import {EventDispatcher} from "./EventDispatcher";
 import {IDeferred, IPromise, SimplePromise} from "./SimplePromise";
 
@@ -53,6 +52,7 @@ export class RegistryStore extends EventDispatcher {
 
 export class Registry extends EventDispatcher {
     protected static _instance: Registry;
+    public readonly components: RegistryStore;
     public readonly classes: RegistryStore;
     public readonly models: RegistryStore;
     public readonly templates: RegistryStore;
@@ -63,15 +63,18 @@ export class Registry extends EventDispatcher {
 
     constructor() {
         super();
+        this.components = new RegistryStore();
+        this.classes = new RegistryStore();
+        this.models = new RegistryStore();
+        this.templates = new RegistryStore();
+        this.types = new RegistryStore();
+        this.validators = new RegistryStore();
+        this.formats = new RegistryStore();
+        this.attributes = new RegistryStore();
+    }
 
-        const w = VisionHelper.window || {};
-        this.classes = new RegistryStore(w['$classes'] || {});
-        this.models = new RegistryStore(w['$models'] || {});
-        this.templates = new RegistryStore(w['$templates'] || {});
-        this.types = new RegistryStore(w['$types'] || {});
-        this.validators = new RegistryStore(w['$validators'] || {});
-        this.formats = new RegistryStore(w['$formats'] || {});
-        this.attributes = new RegistryStore(w['$attributes'] || {});
+    public static component(key: string = null, setup = null) {
+        return register('components', key, setup);
     }
 
     public static class(key: string = null, setup = null) {

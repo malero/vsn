@@ -16,7 +16,6 @@ var __extends = (this && this.__extends) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Registry = exports.RegistryStore = exports.register = void 0;
-var VisionHelper_1 = require("./helpers/VisionHelper");
 var EventDispatcher_1 = require("./EventDispatcher");
 var SimplePromise_1 = require("./SimplePromise");
 function register(store, key, setup) {
@@ -74,16 +73,21 @@ var Registry = /** @class */ (function (_super) {
     __extends(Registry, _super);
     function Registry() {
         var _this = _super.call(this) || this;
-        var w = VisionHelper_1.VisionHelper.window || {};
-        _this.classes = new RegistryStore(w['$classes'] || {});
-        _this.models = new RegistryStore(w['$models'] || {});
-        _this.templates = new RegistryStore(w['$templates'] || {});
-        _this.types = new RegistryStore(w['$types'] || {});
-        _this.validators = new RegistryStore(w['$validators'] || {});
-        _this.formats = new RegistryStore(w['$formats'] || {});
-        _this.attributes = new RegistryStore(w['$attributes'] || {});
+        _this.components = new RegistryStore();
+        _this.classes = new RegistryStore();
+        _this.models = new RegistryStore();
+        _this.templates = new RegistryStore();
+        _this.types = new RegistryStore();
+        _this.validators = new RegistryStore();
+        _this.formats = new RegistryStore();
+        _this.attributes = new RegistryStore();
         return _this;
     }
+    Registry.component = function (key, setup) {
+        if (key === void 0) { key = null; }
+        if (setup === void 0) { setup = null; }
+        return register('components', key, setup);
+    };
     Registry.class = function (key, setup) {
         if (key === void 0) { key = null; }
         if (setup === void 0) { setup = null; }

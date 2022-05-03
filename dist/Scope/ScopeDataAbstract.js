@@ -84,7 +84,7 @@ var ScopeDataAbstract = /** @class */ (function (_super) {
         for (var _a = 0, _b = this.keys; _a < _b.length; _a++) {
             var key = _b[_a];
             var property = this.getProperty(key);
-            if (property.hasTags(tags)) {
+            if (property.hasLabels(tags)) {
                 keys.push(key);
             }
         }
@@ -109,7 +109,7 @@ var ScopeDataAbstract = /** @class */ (function (_super) {
             var property = this['__' + key];
             for (var _c = 0, tags_1 = tags; _c < tags_1.length; _c++) {
                 var tag = tags_1[_c];
-                if (!property.hasTag(tag))
+                if (!property.hasLabel(tag))
                     continue propLoop;
             }
             if (this[key] == null || !property)
