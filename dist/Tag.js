@@ -407,10 +407,25 @@ var Tag = /** @class */ (function (_super) {
     Tag.prototype.show = function () {
         this.element.hidden = false;
     };
-    Tag.prototype.findAncestorByAttribute = function (attr) {
-        if (this.hasAttribute(attr))
+    Tag.prototype.findAncestorByAttribute = function (attr, includeSelf) {
+        if (includeSelf === void 0) { includeSelf = false; }
+        if (includeSelf && this.hasAttribute(attr))
             return this;
-        return this.parentTag ? this.parentTag.findAncestorByAttribute(attr) : null;
+        return this.parentTag ? this.parentTag.findAncestorByAttribute(attr, true) : null;
+    };
+    Tag.prototype.findDescendantsByAttribute = function (attr, includeSelf) {
+        if (includeSelf === void 0) { includeSelf = false; }
+        var tags = [];
+        if (includeSelf && this.hasAttribute(attr))
+            tags.push(this);
+        for (var _i = 0, _a = this.children; _i < _a.length; _i++) {
+            var child = _a[_i];
+            tags.concat(child.findDescendantsByAttribute(attr, true));
+        }
+        return tags;
+    };
+    Tag.prototype.findChildrenByAttribute = function (attr) {
+        return this.children.filter(function (child) { return child.hasAttribute(attr); });
     };
     Tag.prototype.hasAttribute = function (attr) {
         return !!this.parsedAttributes[attr];

@@ -48,6 +48,8 @@ var Property = /** @class */ (function (_super) {
         _this.config = config;
         if (!_this.config.tags)
             _this.config.tags = [];
+        if (!_this.config.validators)
+            _this.config.validators = [];
         _this.type = config.type || 'any';
         _this.value = value;
         return _this;
@@ -96,6 +98,23 @@ var Property = /** @class */ (function (_super) {
             errors.concat(validator(this.value));
         }
         return errors;
+    };
+    Property.prototype.addValidator = function (validator) {
+        if (typeof validator == 'string')
+            validator = Registry_1.Registry.instance.validators.getSynchronous(validator);
+        if (!validator)
+            throw new Error('Invalid validator');
+        if (this.config.validators.indexOf(validator) == -1)
+            this.config.validators.push(validator);
+    };
+    Property.prototype.removeValidator = function (validator) {
+        if (typeof validator == 'string')
+            validator = Registry_1.Registry.instance.validators.getSynchronous(validator);
+        if (!validator)
+            throw new Error('Invalid validator');
+        var index = this.config.validators.indexOf(validator);
+        if (index != -1)
+            this.config.validators.splice(index, 1);
     };
     Property.prototype.addTag = function (tag) {
         if (this.config.tags == undefined) {

@@ -43,6 +43,8 @@ export class Property<T = any> extends EventDispatcher {
         this.config = config;
         if (!this.config.tags)
             this.config.tags = [];
+        if (!this.config.validators)
+            this.config.validators = [];
         this.type = config.type || 'any';
         this.value = value;
     }
@@ -89,6 +91,29 @@ export class Property<T = any> extends EventDispatcher {
         }
 
         return errors;
+    }
+
+    addValidator(validator: TValidator | string) {
+        if (typeof validator == 'string')
+            validator = Registry.instance.validators.getSynchronous(validator) as TValidator;
+
+        if (!validator)
+            throw new Error('Invalid validator');
+
+        if (this.config.validators.indexOf(validator) == -1)
+            this.config.validators.push(validator);
+    }
+
+    removeValidator(validator: TValidator | string) {
+        if (typeof validator == 'string')
+            validator = Registry.instance.validators.getSynchronous(validator) as TValidator;
+
+        if (!validator)
+            throw new Error('Invalid validator');
+
+        const index = this.config.validators.indexOf(validator);
+        if (index != -1)
+            this.config.validators.splice(index, 1);
     }
 
     addTag(tag: string) {

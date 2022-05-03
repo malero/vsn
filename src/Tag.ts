@@ -301,11 +301,27 @@ export class Tag extends DOMObject {
         this.element.hidden = false;
     }
 
-    public findAncestorByAttribute(attr: string): Tag {
-        if (this.hasAttribute(attr))
+    public findAncestorByAttribute(attr: string, includeSelf: boolean = false): Tag {
+        if (includeSelf && this.hasAttribute(attr))
             return this;
 
-        return this.parentTag ? this.parentTag.findAncestorByAttribute(attr) : null;
+        return this.parentTag ? this.parentTag.findAncestorByAttribute(attr, true) : null;
+    }
+
+    public findDescendantsByAttribute(attr: string, includeSelf: boolean = false): Tag[] {
+        const tags = [];
+        if (includeSelf && this.hasAttribute(attr))
+            tags.push(this);
+
+        for (const child of this.children) {
+            tags.concat(child.findDescendantsByAttribute(attr, true))
+        }
+
+        return tags;
+    }
+
+    public findChildrenByAttribute(attr: string): Tag[] {
+        return this.children.filter((child) => child.hasAttribute(attr));
     }
 
     public hasAttribute(attr: string): boolean {

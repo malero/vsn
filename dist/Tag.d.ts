@@ -66,7 +66,9 @@ export declare class Tag extends DOMObject {
     addToParentElement(): void;
     hide(): void;
     show(): void;
-    findAncestorByAttribute(attr: string): Tag;
+    findAncestorByAttribute(attr: string, includeSelf?: boolean): Tag;
+    findDescendantsByAttribute(attr: string, includeSelf?: boolean): Tag[];
+    findChildrenByAttribute(attr: string): Tag[];
     hasAttribute(attr: string): boolean;
     getAttribute<T = Attribute>(key: string): Promise<T>;
     getRawAttributeValue(key: string, fallback?: any): any;
