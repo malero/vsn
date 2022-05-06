@@ -12,4 +12,5 @@ export declare abstract class DOMObject extends EventDispatcher {
     set scope(scope: Scope);
     watchAttribute(attr: string): void;
     watchStyle(style: string): void;
+    deconstruct(): void;
 }

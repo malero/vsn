@@ -815,6 +815,13 @@ var Tag = /** @class */ (function (_super) {
             });
         });
     };
+    Tag.prototype.deconstruct = function () {
+        this.attributes.forEach(function (attr) { return attr.deconstruct(); });
+        this.attributes.length = 0;
+        this._children.forEach(function (child) { return child.deconstruct(); });
+        this._children.length = 0;
+        _super.prototype.deconstruct.call(this);
+    };
     return Tag;
 }(DOMObject_1.DOMObject));
 exports.Tag = Tag;

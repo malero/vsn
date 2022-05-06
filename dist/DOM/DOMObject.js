@@ -41,6 +41,12 @@ var DOMObject = /** @class */ (function (_super) {
     };
     DOMObject.prototype.watchStyle = function (style) {
     };
+    DOMObject.prototype.deconstruct = function () {
+        var _a;
+        if (this._uniqueScope)
+            (_a = this.scope) === null || _a === void 0 ? void 0 : _a.deconstruct();
+        _super.prototype.deconstruct.call(this);
+    };
     return DOMObject;
 }(EventDispatcher_1.EventDispatcher));
 exports.DOMObject = DOMObject;

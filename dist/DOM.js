@@ -214,26 +214,40 @@ var DOM = /** @class */ (function (_super) {
     };
     DOM.prototype.mutation = function (mutations) {
         return __awaiter(this, void 0, void 0, function () {
-            var _i, mutations_1, mutation, tag;
-            return __generator(this, function (_a) {
-                switch (_a.label) {
+            var _i, mutations_1, mutation, tag, _a, _b, ele, toRemove;
+            return __generator(this, function (_c) {
+                switch (_c.label) {
                     case 0:
                         _i = 0, mutations_1 = mutations;
-                        _a.label = 1;
+                        _c.label = 1;
                     case 1:
-                        if (!(_i < mutations_1.length)) return [3 /*break*/, 4];
+                        if (!(_i < mutations_1.length)) return [3 /*break*/, 7];
                         mutation = mutations_1[_i];
                         return [4 /*yield*/, this.getTagForElement(mutation.target)];
                     case 2:
-                        tag = _a.sent();
+                        tag = _c.sent();
                         if (tag) {
                             tag.mutate(mutation);
                         }
-                        _a.label = 3;
+                        _a = 0, _b = Array.from(mutation.removedNodes);
+                        _c.label = 3;
                     case 3:
+                        if (!(_a < _b.length)) return [3 /*break*/, 6];
+                        ele = _b[_a];
+                        return [4 /*yield*/, this.getTagForElement(ele)];
+                    case 4:
+                        toRemove = _c.sent();
+                        if (toRemove) {
+                            toRemove.deconstruct();
+                        }
+                        _c.label = 5;
+                    case 5:
+                        _a++;
+                        return [3 /*break*/, 3];
+                    case 6:
                         _i++;
                         return [3 /*break*/, 1];
-                    case 4: return [2 /*return*/];
+                    case 7: return [2 /*return*/];
                 }
             });
         });

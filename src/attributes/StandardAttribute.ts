@@ -1,4 +1,5 @@
 import {Attribute} from "../Attribute";
+import {DOM} from "../DOM";
 
 export class StandardAttribute extends Attribute {
     public static readonly canDefer: boolean = false;
@@ -66,9 +67,10 @@ export class StandardAttribute extends Attribute {
     public set value(value: any) {
         if (this.key === '@text')
             this.tag.element.innerText = value;
-        else if (this.key === '@html')
+        else if (this.key === '@html') {
             this.tag.element.innerHTML = value;
-        else if (this.key === '@value')
+            DOM.instance.buildFrom(this.tag.element);
+        } else if (this.key === '@value')
             this.tag.value = value;
         else if (this.key === '@class' && value) {
             this.tag.element.classList.remove(...Array.from(this.tag.element.classList));

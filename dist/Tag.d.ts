@@ -90,4 +90,5 @@ export declare class Tag extends DOMObject {
     watchStyle(styleName: string): Promise<StyleAttribute>;
     private setupAttribute;
     private setupDeferredAttributes;
+    deconstruct(): void;
 }

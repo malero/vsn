@@ -31,4 +31,10 @@ export abstract class DOMObject extends EventDispatcher {
     public watchStyle(style: string) {
 
     }
+
+    public deconstruct() {
+        if (this._uniqueScope)
+            this.scope?.deconstruct();
+        super.deconstruct();
+    }
 }

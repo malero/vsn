@@ -572,4 +572,12 @@ export class Tag extends DOMObject {
             await this.setupAttribute(attr);
         this.deferredAttributes.length = 0;
     }
+
+    deconstruct() {
+        this.attributes.forEach(attr => attr.deconstruct());
+        this.attributes.length = 0;
+        this._children.forEach(child => child.deconstruct());
+        this._children.length = 0;
+        super.deconstruct();
+    }
 }

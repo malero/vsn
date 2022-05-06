@@ -53,6 +53,7 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.StandardAttribute = void 0;
 var Attribute_1 = require("../Attribute");
+var DOM_1 = require("../DOM");
 var StandardAttribute = /** @class */ (function (_super) {
     __extends(StandardAttribute, _super);
     function StandardAttribute() {
@@ -157,8 +158,10 @@ var StandardAttribute = /** @class */ (function (_super) {
             var _a, _b;
             if (this.key === '@text')
                 this.tag.element.innerText = value;
-            else if (this.key === '@html')
+            else if (this.key === '@html') {
                 this.tag.element.innerHTML = value;
+                DOM_1.DOM.instance.buildFrom(this.tag.element);
+            }
             else if (this.key === '@value')
                 this.tag.value = value;
             else if (this.key === '@class' && value) {

@@ -119,6 +119,13 @@ export class DOM extends EventDispatcher {
             if (tag) {
                 tag.mutate(mutation);
             }
+
+            for (const ele of Array.from(mutation.removedNodes)) {
+                const toRemove: Tag = await this.getTagForElement(ele as HTMLElement);
+                if (toRemove) {
+                    toRemove.deconstruct();
+                }
+            }
         }
     }
 
