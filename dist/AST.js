@@ -59,6 +59,8 @@ var ArithmeticAssignmentNode_1 = require("./AST/ArithmeticAssignmentNode");
 var UnitLiteralNode_1 = require("./AST/UnitLiteralNode");
 var BooleanLiteralNode_1 = require("./AST/BooleanLiteralNode");
 var NotNode_1 = require("./AST/NotNode");
+var XHRNode_1 = require("./AST/XHRNode");
+var StringFormatNode_1 = require("./AST/StringFormatNode");
 function lower(str) {
     return str ? str.toLowerCase() : null;
 }
@@ -71,65 +73,87 @@ var BlockType;
 })(BlockType = exports.BlockType || (exports.BlockType = {}));
 var TokenType;
 (function (TokenType) {
-    TokenType[TokenType["WHITESPACE"] = 0] = "WHITESPACE";
-    TokenType[TokenType["TYPE_INT"] = 1] = "TYPE_INT";
-    TokenType[TokenType["TYPE_UINT"] = 2] = "TYPE_UINT";
-    TokenType[TokenType["TYPE_FLOAT"] = 3] = "TYPE_FLOAT";
-    TokenType[TokenType["TYPE_STRING"] = 4] = "TYPE_STRING";
-    TokenType[TokenType["RETURN"] = 5] = "RETURN";
-    TokenType[TokenType["NOT"] = 6] = "NOT";
-    TokenType[TokenType["OF"] = 7] = "OF";
-    TokenType[TokenType["IN"] = 8] = "IN";
-    TokenType[TokenType["FOR"] = 9] = "FOR";
-    TokenType[TokenType["IF"] = 10] = "IF";
-    TokenType[TokenType["ELSE_IF"] = 11] = "ELSE_IF";
-    TokenType[TokenType["ELSE"] = 12] = "ELSE";
-    TokenType[TokenType["NAME"] = 13] = "NAME";
-    TokenType[TokenType["L_BRACE"] = 14] = "L_BRACE";
-    TokenType[TokenType["R_BRACE"] = 15] = "R_BRACE";
-    TokenType[TokenType["L_BRACKET"] = 16] = "L_BRACKET";
-    TokenType[TokenType["R_BRACKET"] = 17] = "R_BRACKET";
-    TokenType[TokenType["L_PAREN"] = 18] = "L_PAREN";
-    TokenType[TokenType["R_PAREN"] = 19] = "R_PAREN";
-    TokenType[TokenType["TILDE"] = 20] = "TILDE";
-    TokenType[TokenType["PERIOD"] = 21] = "PERIOD";
-    TokenType[TokenType["COMMA"] = 22] = "COMMA";
-    TokenType[TokenType["COLON"] = 23] = "COLON";
-    TokenType[TokenType["SEMI_COLON"] = 24] = "SEMI_COLON";
-    TokenType[TokenType["STRING_LITERAL"] = 25] = "STRING_LITERAL";
-    TokenType[TokenType["NUMBER_LITERAL"] = 26] = "NUMBER_LITERAL";
-    TokenType[TokenType["BOOLEAN_LITERAL"] = 27] = "BOOLEAN_LITERAL";
-    TokenType[TokenType["NULL_LITERAL"] = 28] = "NULL_LITERAL";
-    TokenType[TokenType["STRICT_EQUALS"] = 29] = "STRICT_EQUALS";
-    TokenType[TokenType["STRICT_NOT_EQUALS"] = 30] = "STRICT_NOT_EQUALS";
-    TokenType[TokenType["EQUALS"] = 31] = "EQUALS";
-    TokenType[TokenType["NOT_EQUALS"] = 32] = "NOT_EQUALS";
-    TokenType[TokenType["GREATER_THAN_EQUAL"] = 33] = "GREATER_THAN_EQUAL";
-    TokenType[TokenType["LESS_THAN_EQUAL"] = 34] = "LESS_THAN_EQUAL";
-    TokenType[TokenType["GREATER_THAN"] = 35] = "GREATER_THAN";
-    TokenType[TokenType["LESS_THAN"] = 36] = "LESS_THAN";
-    TokenType[TokenType["ASSIGN"] = 37] = "ASSIGN";
-    TokenType[TokenType["AND"] = 38] = "AND";
-    TokenType[TokenType["OR"] = 39] = "OR";
-    TokenType[TokenType["ADD"] = 40] = "ADD";
-    TokenType[TokenType["SUBTRACT"] = 41] = "SUBTRACT";
-    TokenType[TokenType["MULTIPLY"] = 42] = "MULTIPLY";
-    TokenType[TokenType["DIVIDE"] = 43] = "DIVIDE";
-    TokenType[TokenType["ADD_ASSIGN"] = 44] = "ADD_ASSIGN";
-    TokenType[TokenType["SUBTRACT_ASSIGN"] = 45] = "SUBTRACT_ASSIGN";
-    TokenType[TokenType["MULTIPLY_ASSIGN"] = 46] = "MULTIPLY_ASSIGN";
-    TokenType[TokenType["DIVIDE_ASSIGN"] = 47] = "DIVIDE_ASSIGN";
-    TokenType[TokenType["EXCLAMATION_POINT"] = 48] = "EXCLAMATION_POINT";
-    TokenType[TokenType["ELEMENT_REFERENCE"] = 49] = "ELEMENT_REFERENCE";
-    TokenType[TokenType["ELEMENT_ATTRIBUTE"] = 50] = "ELEMENT_ATTRIBUTE";
-    TokenType[TokenType["ELEMENT_STYLE"] = 51] = "ELEMENT_STYLE";
-    TokenType[TokenType["ELEMENT_QUERY"] = 52] = "ELEMENT_QUERY";
-    TokenType[TokenType["UNIT"] = 53] = "UNIT";
+    TokenType[TokenType["NULL"] = 0] = "NULL";
+    TokenType[TokenType["WHITESPACE"] = 1] = "WHITESPACE";
+    TokenType[TokenType["TYPE_INT"] = 2] = "TYPE_INT";
+    TokenType[TokenType["TYPE_UINT"] = 3] = "TYPE_UINT";
+    TokenType[TokenType["TYPE_FLOAT"] = 4] = "TYPE_FLOAT";
+    TokenType[TokenType["TYPE_STRING"] = 5] = "TYPE_STRING";
+    TokenType[TokenType["RETURN"] = 6] = "RETURN";
+    TokenType[TokenType["NOT"] = 7] = "NOT";
+    TokenType[TokenType["OF"] = 8] = "OF";
+    TokenType[TokenType["IN"] = 9] = "IN";
+    TokenType[TokenType["FOR"] = 10] = "FOR";
+    TokenType[TokenType["IF"] = 11] = "IF";
+    TokenType[TokenType["ELSE_IF"] = 12] = "ELSE_IF";
+    TokenType[TokenType["ELSE"] = 13] = "ELSE";
+    TokenType[TokenType["NAME"] = 14] = "NAME";
+    TokenType[TokenType["L_BRACE"] = 15] = "L_BRACE";
+    TokenType[TokenType["R_BRACE"] = 16] = "R_BRACE";
+    TokenType[TokenType["L_BRACKET"] = 17] = "L_BRACKET";
+    TokenType[TokenType["R_BRACKET"] = 18] = "R_BRACKET";
+    TokenType[TokenType["L_PAREN"] = 19] = "L_PAREN";
+    TokenType[TokenType["R_PAREN"] = 20] = "R_PAREN";
+    TokenType[TokenType["TILDE"] = 21] = "TILDE";
+    TokenType[TokenType["PERIOD"] = 22] = "PERIOD";
+    TokenType[TokenType["COMMA"] = 23] = "COMMA";
+    TokenType[TokenType["COLON"] = 24] = "COLON";
+    TokenType[TokenType["SEMICOLON"] = 25] = "SEMICOLON";
+    TokenType[TokenType["STRING_FORMAT"] = 26] = "STRING_FORMAT";
+    TokenType[TokenType["STRING_LITERAL"] = 27] = "STRING_LITERAL";
+    TokenType[TokenType["NUMBER_LITERAL"] = 28] = "NUMBER_LITERAL";
+    TokenType[TokenType["BOOLEAN_LITERAL"] = 29] = "BOOLEAN_LITERAL";
+    TokenType[TokenType["NULL_LITERAL"] = 30] = "NULL_LITERAL";
+    TokenType[TokenType["STRICT_EQUALS"] = 31] = "STRICT_EQUALS";
+    TokenType[TokenType["STRICT_NOT_EQUALS"] = 32] = "STRICT_NOT_EQUALS";
+    TokenType[TokenType["EQUALS"] = 33] = "EQUALS";
+    TokenType[TokenType["NOT_EQUALS"] = 34] = "NOT_EQUALS";
+    TokenType[TokenType["GREATER_THAN_EQUAL"] = 35] = "GREATER_THAN_EQUAL";
+    TokenType[TokenType["LESS_THAN_EQUAL"] = 36] = "LESS_THAN_EQUAL";
+    TokenType[TokenType["GREATER_THAN"] = 37] = "GREATER_THAN";
+    TokenType[TokenType["LESS_THAN"] = 38] = "LESS_THAN";
+    TokenType[TokenType["ASSIGN"] = 39] = "ASSIGN";
+    TokenType[TokenType["AND"] = 40] = "AND";
+    TokenType[TokenType["OR"] = 41] = "OR";
+    TokenType[TokenType["ADD"] = 42] = "ADD";
+    TokenType[TokenType["SUBTRACT"] = 43] = "SUBTRACT";
+    TokenType[TokenType["MULTIPLY"] = 44] = "MULTIPLY";
+    TokenType[TokenType["DIVIDE"] = 45] = "DIVIDE";
+    TokenType[TokenType["ADD_ASSIGN"] = 46] = "ADD_ASSIGN";
+    TokenType[TokenType["SUBTRACT_ASSIGN"] = 47] = "SUBTRACT_ASSIGN";
+    TokenType[TokenType["MULTIPLY_ASSIGN"] = 48] = "MULTIPLY_ASSIGN";
+    TokenType[TokenType["DIVIDE_ASSIGN"] = 49] = "DIVIDE_ASSIGN";
+    TokenType[TokenType["EXCLAMATION_POINT"] = 50] = "EXCLAMATION_POINT";
+    TokenType[TokenType["ELEMENT_REFERENCE"] = 51] = "ELEMENT_REFERENCE";
+    TokenType[TokenType["ELEMENT_ATTRIBUTE"] = 52] = "ELEMENT_ATTRIBUTE";
+    TokenType[TokenType["ELEMENT_STYLE"] = 53] = "ELEMENT_STYLE";
+    TokenType[TokenType["ELEMENT_QUERY"] = 54] = "ELEMENT_QUERY";
+    TokenType[TokenType["UNIT"] = 55] = "UNIT";
+    TokenType[TokenType["XHR_GET"] = 56] = "XHR_GET";
+    TokenType[TokenType["XHR_POST"] = 57] = "XHR_POST";
+    TokenType[TokenType["XHR_PUT"] = 58] = "XHR_PUT";
+    TokenType[TokenType["XHR_DELETE"] = 59] = "XHR_DELETE";
 })(TokenType = exports.TokenType || (exports.TokenType = {}));
 var TOKEN_PATTERNS = [
     {
         type: TokenType.WHITESPACE,
         pattern: /^[\s\n\r]+/
+    },
+    {
+        type: TokenType.XHR_POST,
+        pattern: /^>>/
+    },
+    {
+        type: TokenType.XHR_PUT,
+        pattern: /^<>/
+    },
+    {
+        type: TokenType.XHR_GET,
+        pattern: /^<</
+    },
+    {
+        type: TokenType.XHR_DELETE,
+        pattern: /^></
     },
     {
         type: TokenType.TYPE_INT,
@@ -280,8 +304,12 @@ var TOKEN_PATTERNS = [
         pattern: /^:/
     },
     {
-        type: TokenType.SEMI_COLON,
+        type: TokenType.SEMICOLON,
         pattern: /^;/
+    },
+    {
+        type: TokenType.STRING_FORMAT,
+        pattern: /^`([^`]*)`/
     },
     {
         type: TokenType.STRING_LITERAL,
@@ -349,23 +377,28 @@ var Tree = /** @class */ (function () {
     function Tree(code) {
         this.code = code;
         if (Tree.cache[code]) {
-            this.rootNode = Tree.cache[code];
+            this._root = Tree.cache[code];
         }
         else {
             this.parse();
-            Tree.cache[code] = this.rootNode;
+            Tree.cache[code] = this._root;
         }
     }
+    Object.defineProperty(Tree.prototype, "root", {
+        get: function () { return this._root; },
+        enumerable: false,
+        configurable: true
+    });
     Tree.prototype.parse = function () {
         var tokens = Tree.tokenize(this.code);
-        this.rootNode = Tree.processTokens(tokens);
+        this._root = Tree.processTokens(tokens);
     };
     Tree.prototype.evaluate = function (scope, dom, tag) {
         if (tag === void 0) { tag = null; }
         return __awaiter(this, void 0, void 0, function () {
             return __generator(this, function (_a) {
                 switch (_a.label) {
-                    case 0: return [4 /*yield*/, this.rootNode.evaluate(scope, dom, tag)];
+                    case 0: return [4 /*yield*/, this._root.evaluate(scope, dom, tag)];
                     case 1: return [2 /*return*/, _a.sent()];
                 }
             });
@@ -377,9 +410,9 @@ var Tree = /** @class */ (function () {
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
-                        if (!this.rootNode.isPreparationRequired())
+                        if (!this._root.isPreparationRequired())
                             return [2 /*return*/];
-                        return [4 /*yield*/, this.rootNode.prepare(scope, dom, tag)];
+                        return [4 /*yield*/, this._root.prepare(scope, dom, tag)];
                     case 1: return [2 /*return*/, _a.sent()];
                 }
             });
@@ -392,7 +425,7 @@ var Tree = /** @class */ (function () {
             return __generator(this, function (_b) {
                 switch (_b.label) {
                     case 0:
-                        _i = 0, _a = this.rootNode.findChildrenByTypes([RootScopeMemberNode_1.RootScopeMemberNode, ScopeMemberNode_1.ScopeMemberNode, ElementAttributeNode_1.ElementAttributeNode], 'ScopeMemberNodes');
+                        _i = 0, _a = this._root.findChildrenByTypes([RootScopeMemberNode_1.RootScopeMemberNode, ScopeMemberNode_1.ScopeMemberNode, ElementAttributeNode_1.ElementAttributeNode], 'ScopeMemberNodes');
                         _b.label = 1;
                     case 1:
                         if (!(_i < _a.length)) return [3 /*break*/, 8];
@@ -464,11 +497,14 @@ var Tree = /** @class */ (function () {
             if (count > 1000)
                 break; // Limit to 1000 iterations while in development
             if (tokens[0].type === TokenType.RETURN)
-                tokens.splice(0, 1);
+                tokens.shift();
             var token = tokens[0];
             if (token.type === TokenType.NAME) {
                 node = new RootScopeMemberNode_1.RootScopeMemberNode(new LiteralNode_1.LiteralNode(token.value));
-                tokens.splice(0, 1);
+                tokens.shift();
+            }
+            else if (XHRNode_1.XHRNode.match(tokens)) {
+                node = XHRNode_1.XHRNode.parse(node, tokens[0], tokens);
             }
             else if (token.type === TokenType.IF) {
                 node = IfStatementNode_1.IfStatementNode.parse(node, token, tokens);
@@ -480,21 +516,24 @@ var Tree = /** @class */ (function () {
                 blockNodes.push(node);
                 node = null;
             }
+            else if (StringFormatNode_1.StringFormatNode.match(tokens)) {
+                node = StringFormatNode_1.StringFormatNode.parse(node, tokens[0], tokens);
+            }
             else if (token.type === TokenType.STRING_LITERAL) {
                 node = new LiteralNode_1.LiteralNode(token.value);
-                tokens.splice(0, 1);
+                tokens.shift();
             }
             else if (token.type === TokenType.NUMBER_LITERAL) {
                 node = new NumberLiteralNode_1.NumberLiteralNode(token.value);
-                tokens.splice(0, 1);
+                tokens.shift();
             }
             else if (tokens[0].type === TokenType.ELEMENT_REFERENCE) {
                 node = new ElementQueryNode_1.ElementQueryNode(tokens[0].value, true);
-                tokens.splice(0, 1);
+                tokens.shift();
             }
             else if (tokens[0].type === TokenType.ELEMENT_QUERY) {
                 node = new ElementQueryNode_1.ElementQueryNode(tokens[0].value);
-                tokens.splice(0, 1);
+                tokens.shift();
             }
             else if (tokens[0].type === TokenType.L_BRACKET) {
                 if (node) {
@@ -509,11 +548,11 @@ var Tree = /** @class */ (function () {
             }
             else if (tokens[0].type === TokenType.ELEMENT_ATTRIBUTE) {
                 node = new ElementAttributeNode_1.ElementAttributeNode(node, tokens[0].value);
-                tokens.splice(0, 1);
+                tokens.shift();
             }
             else if (tokens[0].type === TokenType.ELEMENT_STYLE) {
                 node = new ElementStyleNode_1.ElementStyleNode(node, tokens[0].value);
-                tokens.splice(0, 1);
+                tokens.shift();
             }
             else if (node !== null && token.type === TokenType.PERIOD && tokens[1].type === TokenType.NAME) {
                 node = new ScopeMemberNode_1.ScopeMemberNode(node, new LiteralNode_1.LiteralNode(tokens[1].value));
@@ -534,12 +573,12 @@ var Tree = /** @class */ (function () {
                     node = new BlockNode_1.BlockNode(nodes);
                 }
             }
-            else if (tokens[0].type === TokenType.SEMI_COLON) {
+            else if (tokens[0].type === TokenType.SEMICOLON) {
                 if (node) {
                     blockNodes.push(node);
                 }
                 node = null;
-                tokens.splice(0, 1);
+                tokens.shift();
             }
             else if (InNode_1.InNode.match(tokens)) {
                 node = InNode_1.InNode.parse(node, token, tokens);
@@ -554,19 +593,19 @@ var Tree = /** @class */ (function () {
                 node = ArithmeticAssignmentNode_1.ArithmeticAssignmentNode.parse(node, token, tokens);
             }
             else if (tokens[0].type === TokenType.WHITESPACE) {
-                tokens.splice(0, 1);
+                tokens.shift();
             }
             else if (tokens[0].type === TokenType.UNIT) {
                 node = new UnitLiteralNode_1.UnitLiteralNode(tokens[0].value);
-                tokens.splice(0, 1);
+                tokens.shift();
             }
             else if (tokens[0].type === TokenType.BOOLEAN_LITERAL) {
                 node = new BooleanLiteralNode_1.BooleanLiteralNode(tokens[0].value);
-                tokens.splice(0, 1);
+                tokens.shift();
             }
             else if (tokens[0].type === TokenType.NULL_LITERAL) {
                 node = new LiteralNode_1.LiteralNode(null);
-                tokens.splice(0, 1);
+                tokens.shift();
             }
             else if (tokens[0].type === TokenType.EXCLAMATION_POINT) {
                 node = NotNode_1.NotNode.parse(node, tokens[0], tokens);
@@ -627,7 +666,7 @@ var Tree = /** @class */ (function () {
                 break;
             default:
                 open = null;
-                close = TokenType.SEMI_COLON;
+                close = TokenType.SEMICOLON;
                 openCharacter = null;
                 closeCharacter = ';';
                 break;
@@ -647,7 +686,7 @@ var Tree = /** @class */ (function () {
         var blockInfo = Tree.getBlockInfo(tokens);
         // Consume opening block token
         if (consumeOpeningToken && tokens[0].type === blockInfo.open) {
-            tokens.splice(0, 1);
+            tokens.shift();
         }
         return Tree.getTokensUntil(tokens, blockInfo.close, consumeClosingToken, includeClosingToken);
     };
@@ -677,7 +716,7 @@ var Tree = /** @class */ (function () {
                 arg.push(token);
             }
             // Consume token
-            tokens.splice(0, 1);
+            tokens.shift();
             i--;
             if (openBlocks === 0) {
                 if (arg.length > 0)
@@ -688,7 +727,7 @@ var Tree = /** @class */ (function () {
         throw Error("Invalid Syntax, missing " + blockInfo.closeCharacter);
     };
     Tree.getTokensUntil = function (tokens, terminator, consumeTerminator, includeTerminator, validIfTerminatorNotFound, blockInfo) {
-        if (terminator === void 0) { terminator = TokenType.SEMI_COLON; }
+        if (terminator === void 0) { terminator = TokenType.SEMICOLON; }
         if (consumeTerminator === void 0) { consumeTerminator = true; }
         if (includeTerminator === void 0) { includeTerminator = false; }
         if (validIfTerminatorNotFound === void 0) { validIfTerminatorNotFound = false; }
@@ -726,8 +765,9 @@ var Tree = /** @class */ (function () {
                 else if (token.type === terminator && openParens === 0 && openBraces === 0 && openBrackets === 0) {
                     if (includeTerminator)
                         statementTokens.push(token);
-                    if ((includeTerminator || consumeTerminator) && token.type !== TokenType.SEMI_COLON)
-                        tokens.splice(0, 1); // Consume end of block
+                    //if (consumeTerminator && token.type !== TokenType.SEMICOLON)
+                    if ((includeTerminator || consumeTerminator) && token.type !== TokenType.SEMICOLON)
+                        tokens.shift(); // Consume end of block
                     break;
                 }
                 else if (token.type === terminator && (openParens > 0 || openBraces > 0 || openBrackets > 0)) {
@@ -739,7 +779,7 @@ var Tree = /** @class */ (function () {
                 }
             }
             statementTokens.push(token);
-            tokens.splice(0, 1); // Consume part of statement
+            tokens.shift(); // Consume part of statement
             i--;
         }
         return statementTokens;

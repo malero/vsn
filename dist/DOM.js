@@ -104,14 +104,16 @@ var DOM = /** @class */ (function (_super) {
                         switch (_a) {
                             case 'window': return [3 /*break*/, 1];
                             case 'document': return [3 /*break*/, 2];
+                            case 'body': return [3 /*break*/, 3];
                         }
-                        return [3 /*break*/, 3];
+                        return [3 /*break*/, 4];
                     case 1: return [2 /*return*/, new List_1.TagList(this.window)];
                     case 2: return [2 /*return*/, new List_1.TagList(this.document)];
-                    case 3:
+                    case 3: return [2 /*return*/, new List_1.TagList(this.root)];
+                    case 4:
                         nodes = this.querySelectorAll(selector, tag);
                         return [4 /*yield*/, this.getTagsForElements(Array.from(nodes), create)];
-                    case 4: return [2 /*return*/, _b.sent()];
+                    case 5: return [2 /*return*/, _b.sent()];
                 }
             });
         });

@@ -14,12 +14,6 @@ var __extends = (this && this.__extends) || (function () {
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
     };
 })();
-var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
-    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
-    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
-    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
-    return c > 3 && r && Object.defineProperty(target, key, r), r;
-};
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -57,58 +51,64 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
     }
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.ClickRemoveClass = void 0;
-var Attribute_1 = require("../Attribute");
-var Registry_1 = require("../Registry");
-var ClickRemoveClass = /** @class */ (function (_super) {
-    __extends(ClickRemoveClass, _super);
-    function ClickRemoveClass() {
-        var _this = _super !== null && _super.apply(this, arguments) || this;
-        _this.cssClass = '';
-        _this.target = null;
+exports.StringFormatNode = void 0;
+var Node_1 = require("./Node");
+var AST_1 = require("../AST");
+var StringFormatNode = /** @class */ (function (_super) {
+    __extends(StringFormatNode, _super);
+    function StringFormatNode(segments, value) {
+        var _this = _super.call(this) || this;
+        _this.segments = segments;
+        _this.value = value;
         return _this;
     }
-    ClickRemoveClass.prototype.setup = function () {
+    StringFormatNode.prototype.getChildNodes = function () {
+        return this.segments && Object.values(this.segments) || [];
+    };
+    StringFormatNode.prototype.evaluate = function (scope, dom, tag) {
         return __awaiter(this, void 0, void 0, function () {
-            return __generator(this, function (_a) {
-                switch (_a.label) {
+            var value, _a, _b, _i, key, segment, segmentValue;
+            return __generator(this, function (_c) {
+                switch (_c.label) {
                     case 0:
-                        this.cssClass = this.getAttributeBinding('active');
-                        this.target = this.getAttributeValue();
-                        return [4 /*yield*/, _super.prototype.setup.call(this)];
+                        value = this.value;
+                        _a = [];
+                        for (_b in this.segments)
+                            _a.push(_b);
+                        _i = 0;
+                        _c.label = 1;
                     case 1:
-                        _a.sent();
-                        return [2 /*return*/];
+                        if (!(_i < _a.length)) return [3 /*break*/, 4];
+                        key = _a[_i];
+                        segment = this.segments[key];
+                        return [4 /*yield*/, segment.evaluate(scope, dom, tag)];
+                    case 2:
+                        segmentValue = _c.sent();
+                        value = value.replace("${" + key + "}", segmentValue);
+                        _c.label = 3;
+                    case 3:
+                        _i++;
+                        return [3 /*break*/, 1];
+                    case 4: return [2 /*return*/, value];
                 }
             });
         });
     };
-    ClickRemoveClass.prototype.connect = function () {
-        return __awaiter(this, void 0, void 0, function () {
-            return __generator(this, function (_a) {
-                switch (_a.label) {
-                    case 0:
-                        this.tag.addEventHandler('click', this.getAttributeModifiers(), this.onClick.bind(this));
-                        return [4 /*yield*/, _super.prototype.connect.call(this)];
-                    case 1:
-                        _a.sent();
-                        return [2 /*return*/];
-                }
-            });
-        });
-    };
-    ClickRemoveClass.prototype.onClick = function (e) {
-        var element = this.tag.element;
-        if (!!this.target) {
-            element = document.getElementById(this.target);
+    StringFormatNode.parse = function (node, token, tokens) {
+        var segments = {};
+        for (var _i = 0, _a = Array.from(new Set(token.value.match(/\$\{([^}]+)}/g))); _i < _a.length; _i++) {
+            var segment = _a[_i];
+            var _b = segment.split(/\$\{|}/), code = _b[1];
+            var tree = new AST_1.Tree(code);
+            segments[code] = tree.root;
         }
-        if (element)
-            element.classList.remove(this.cssClass);
+        tokens.shift();
+        return new StringFormatNode(segments, token.value);
     };
-    ClickRemoveClass = __decorate([
-        Registry_1.Registry.attribute('vsn-click-remove-class')
-    ], ClickRemoveClass);
-    return ClickRemoveClass;
-}(Attribute_1.Attribute));
-exports.ClickRemoveClass = ClickRemoveClass;
-//# sourceMappingURL=ClickRemoveClass.js.map
+    StringFormatNode.match = function (tokens) {
+        return tokens[0].type === AST_1.TokenType.STRING_FORMAT;
+    };
+    return StringFormatNode;
+}(Node_1.Node));
+exports.StringFormatNode = StringFormatNode;
+//# sourceMappingURL=StringFormatNode.js.map

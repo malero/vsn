@@ -1,5 +1,3 @@
-import {SimplePromise} from "../../src/SimplePromise";
-import {DOM} from "../../src/DOM";
 import {Tree} from "../../src/AST";
 import {Scope} from "../../src/Scope";
 

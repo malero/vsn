@@ -1,7 +1,5 @@
 export { AddClassIf } from "./AddClassIf";
 export { Bind } from "./Bind";
-export { ClickRemoveClass } from "./ClickRemoveClass";
-export { ClickToggleClass } from "./ClickToggleClass";
 export { ControllerAttribute } from "./ControllerAttribute";
 export { DisableIf } from "./DisableIf";
 export { Exec } from "./Exec";

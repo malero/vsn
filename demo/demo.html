@@ -92,6 +92,10 @@
     }
 </script>
 
+<div id="test-container"></div>
+<a href="./markup.html" vsn-on:click|preventdefault="#test-container.@html = << @href">Fill Container</a>
+<a vsn-on:click|preventdefault="#test-container.@html = ''">Clear Container</a>
+
 <h2>On Click</h2>
 <button vsn-on:click="show = !show" vsn-set:show="false|boolean">Toggle</button>
 <span vsn-bind="show"></span>

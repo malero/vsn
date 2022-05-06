@@ -315,7 +315,14 @@ var ArithmeticAssignmentNode = /** @class */ (function (_super) {
             throw SyntaxError("Invalid assignment syntax near " + AST_1.Tree.toCode(tokens.splice(0, 10)));
         }
         tokens.splice(0, 1); // consume =
-        var assignmentTokens = AST_1.Tree.getNextStatementTokens(tokens, false, false, true);
+        //const assignmentTokens: Token[] = Tree.getNextStatementTokens(tokens, false, false, true);
+        var assignmentTokens = AST_1.Tree.getTokensUntil(tokens, AST_1.TokenType.SEMICOLON, false, true, true, {
+            type: AST_1.BlockType.STATEMENT,
+            open: AST_1.TokenType.NULL,
+            close: AST_1.TokenType.SEMICOLON,
+            openCharacter: '',
+            closeCharacter: ';',
+        });
         return new ArithmeticAssignmentNode(lastNode, AST_1.Tree.processTokens(assignmentTokens), token.type);
     };
     return ArithmeticAssignmentNode;

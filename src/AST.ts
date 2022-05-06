@@ -24,6 +24,8 @@ import {ArithmeticAssignmentNode} from "./AST/ArithmeticAssignmentNode";
 import {UnitLiteralNode} from "./AST/UnitLiteralNode";
 import {BooleanLiteralNode} from "./AST/BooleanLiteralNode";
 import {NotNode} from "./AST/NotNode";
+import {XHRNode} from "./AST/XHRNode";
+import {StringFormatNode} from "./AST/StringFormatNode";
 
 function lower(str: string): string {
     return str ? str.toLowerCase() : null;
@@ -47,6 +49,7 @@ export enum BlockType {
 }
 
 export enum TokenType {
+    NULL,
     WHITESPACE,
     TYPE_INT,
     TYPE_UINT,
@@ -71,7 +74,8 @@ export enum TokenType {
     PERIOD,
     COMMA,
     COLON,
-    SEMI_COLON,
+    SEMICOLON,
+    STRING_FORMAT,
     STRING_LITERAL,
     NUMBER_LITERAL,
     BOOLEAN_LITERAL,
@@ -101,12 +105,32 @@ export enum TokenType {
     ELEMENT_STYLE,
     ELEMENT_QUERY,
     UNIT,
+    XHR_GET,
+    XHR_POST,
+    XHR_PUT,
+    XHR_DELETE,
 }
 
 const TOKEN_PATTERNS: TokenPattern[] = [
     {
         type: TokenType.WHITESPACE,
         pattern: /^[\s\n\r]+/
+    },
+    {
+        type: TokenType.XHR_POST,
+        pattern: /^>>/
+    },
+    {
+        type: TokenType.XHR_PUT,
+        pattern: /^<>/
+    },
+    {
+        type: TokenType.XHR_GET,
+        pattern: /^<</
+    },
+    {
+        type: TokenType.XHR_DELETE,
+        pattern: /^></
     },
     {
         type: TokenType.TYPE_INT,
@@ -257,8 +281,12 @@ const TOKEN_PATTERNS: TokenPattern[] = [
         pattern: /^:/
     },
     {
-        type: TokenType.SEMI_COLON,
+        type: TokenType.SEMICOLON,
         pattern: /^;/
+    },
+    {
+        type: TokenType.STRING_FORMAT,
+        pattern: /^`([^`]*)`/
     },
     {
         type: TokenType.STRING_LITERAL,
@@ -341,36 +369,38 @@ export const AttributableNodes = [
 
 export class Tree {
     protected static cache: { [key: string]: Node } = {};
-    protected rootNode: Node;
+    protected _root: Node;
 
     constructor(
         public readonly code: string
     ) {
         if (Tree.cache[code]) {
-            this.rootNode = Tree.cache[code];
+            this._root = Tree.cache[code];
         } else {
             this.parse();
-            Tree.cache[code] = this.rootNode;
+            Tree.cache[code] = this._root;
         }
     }
 
+    public get root(): Node { return this._root; }
+
     public parse() {
         const tokens = Tree.tokenize(this.code);
-        this.rootNode = Tree.processTokens(tokens);
+        this._root = Tree.processTokens(tokens);
     }
 
     async evaluate(scope: Scope, dom: DOM, tag: Tag = null) {
-        return await this.rootNode.evaluate(scope, dom, tag);
+        return await this._root.evaluate(scope, dom, tag);
     }
 
     async prepare(scope: Scope, dom: DOM, tag: Tag = null) {
-        if (!this.rootNode.isPreparationRequired())
+        if (!this._root.isPreparationRequired())
             return;
-        return await this.rootNode.prepare(scope, dom, tag);
+        return await this._root.prepare(scope, dom, tag);
     }
 
     async bindToScopeChanges(scope, fnc, dom: DOM, tag: Tag = null) {
-        for (const node of this.rootNode.findChildrenByTypes<ScopeMemberNode | ElementAttributeNode>([RootScopeMemberNode, ScopeMemberNode, ElementAttributeNode], 'ScopeMemberNodes')) {
+        for (const node of this._root.findChildrenByTypes<ScopeMemberNode | ElementAttributeNode>([RootScopeMemberNode, ScopeMemberNode, ElementAttributeNode], 'ScopeMemberNodes')) {
             let _scope: Scope = scope;
             if (node instanceof ScopeMemberNode)
                 _scope = await node.scope.evaluate(scope, dom);
@@ -431,14 +461,16 @@ export class Tree {
             if (count > 1000) break; // Limit to 1000 iterations while in development
 
             if (tokens[0].type === TokenType.RETURN)
-                tokens.splice(0, 1);
+                tokens.shift()
 
             const token: Token = tokens[0];
             if (token.type === TokenType.NAME) {
                 node = new RootScopeMemberNode<string>(
                     new LiteralNode<string>(token.value)
                 );
-                tokens.splice(0, 1);
+                tokens.shift()
+            } else if (XHRNode.match(tokens)) {
+                node = XHRNode.parse(node, tokens[0], tokens);
             } else if (token.type === TokenType.IF) {
                 node = IfStatementNode.parse(node, token, tokens);
                 blockNodes.push(node);
@@ -447,18 +479,20 @@ export class Tree {
                 node = ForStatementNode.parse(node, token, tokens);
                 blockNodes.push(node);
                 node = null;
+            } else if (StringFormatNode.match(tokens)) {
+                node = StringFormatNode.parse(node, tokens[0], tokens);
             } else if (token.type === TokenType.STRING_LITERAL) {
                 node = new LiteralNode(token.value);
-                tokens.splice(0, 1);
+                tokens.shift()
             } else if (token.type === TokenType.NUMBER_LITERAL) {
                 node = new NumberLiteralNode(token.value);
-                tokens.splice(0, 1);
+                tokens.shift()
             } else if (tokens[0].type === TokenType.ELEMENT_REFERENCE) {
                 node = new ElementQueryNode(tokens[0].value, true);
-                tokens.splice(0, 1);
+                tokens.shift()
             } else if (tokens[0].type === TokenType.ELEMENT_QUERY) {
                 node = new ElementQueryNode(tokens[0].value);
-                tokens.splice(0, 1);
+                tokens.shift()
             } else if (tokens[0].type === TokenType.L_BRACKET) {
                 if (node) {
                     node = IndexNode.parse(node, token, tokens);
@@ -469,10 +503,10 @@ export class Tree {
                 node = ObjectNode.parse(node, token, tokens);
             } else if (tokens[0].type === TokenType.ELEMENT_ATTRIBUTE) {
                 node = new ElementAttributeNode(node as any, tokens[0].value);
-                tokens.splice(0, 1);
+                tokens.shift()
             } else if (tokens[0].type === TokenType.ELEMENT_STYLE) {
                 node = new ElementStyleNode(node as any, tokens[0].value);
-                tokens.splice(0, 1);
+                tokens.shift()
             } else if (node !== null && token.type === TokenType.PERIOD && tokens[1].type === TokenType.NAME) {
                 node = new ScopeMemberNode(
                     node,
@@ -493,12 +527,12 @@ export class Tree {
                 } else {
                     node = new BlockNode(nodes);
                 }
-            } else if (tokens[0].type === TokenType.SEMI_COLON) {
+            } else if (tokens[0].type === TokenType.SEMICOLON) {
                 if (node) {
                     blockNodes.push(node);
                 }
                 node = null;
-                tokens.splice(0, 1);
+                tokens.shift()
             } else if (InNode.match(tokens)) {
                 node = InNode.parse(node, token, tokens);
             } else if (ComparisonNode.match(tokens)) {
@@ -508,16 +542,16 @@ export class Tree {
             } else if (ArithmeticAssignmentNode.match(tokens)) {
                 node = ArithmeticAssignmentNode.parse(node, token, tokens);
             } else if (tokens[0].type === TokenType.WHITESPACE) {
-                tokens.splice(0, 1);
+                tokens.shift()
             } else if (tokens[0].type === TokenType.UNIT) {
                 node = new UnitLiteralNode(tokens[0].value);
-                tokens.splice(0, 1);
+                tokens.shift()
             } else if (tokens[0].type === TokenType.BOOLEAN_LITERAL) {
                 node = new BooleanLiteralNode(tokens[0].value);
-                tokens.splice(0, 1);
+                tokens.shift()
             } else if (tokens[0].type === TokenType.NULL_LITERAL) {
                 node = new LiteralNode(null);
-                tokens.splice(0, 1);
+                tokens.shift()
             } else if (tokens[0].type === TokenType.EXCLAMATION_POINT) {
                 node = NotNode.parse(node, tokens[0], tokens);
             } else {
@@ -583,7 +617,7 @@ export class Tree {
                 break;
             default:
                 open = null;
-                close = TokenType.SEMI_COLON;
+                close = TokenType.SEMICOLON;
                 openCharacter = null;
                 closeCharacter = ';';
                 break;
@@ -603,7 +637,7 @@ export class Tree {
 
         // Consume opening block token
         if (consumeOpeningToken && tokens[0].type === blockInfo.open) {
-            tokens.splice(0, 1);
+            tokens.shift()
         }
 
         return Tree.getTokensUntil(tokens, blockInfo.close, consumeClosingToken, includeClosingToken);
@@ -632,7 +666,7 @@ export class Tree {
             }
 
             // Consume token
-            tokens.splice(0, 1);
+            tokens.shift()
             i--;
             if (openBlocks === 0) {
                 if (arg.length > 0)
@@ -644,7 +678,7 @@ export class Tree {
         throw Error(`Invalid Syntax, missing ${blockInfo.closeCharacter}`);
     }
 
-    public static getTokensUntil(tokens: Token[], terminator: TokenType = TokenType.SEMI_COLON, consumeTerminator: boolean = true, includeTerminator: boolean = false, validIfTerminatorNotFound: boolean = false, blockInfo: IBlockInfo = null): Token[] {
+    public static getTokensUntil(tokens: Token[], terminator: TokenType = TokenType.SEMICOLON, consumeTerminator: boolean = true, includeTerminator: boolean = false, validIfTerminatorNotFound: boolean = false, blockInfo: IBlockInfo = null): Token[] {
         const statementTokens: Token[] = [];
         blockInfo = blockInfo || Tree.getBlockInfo(tokens);
 
@@ -681,8 +715,9 @@ export class Tree {
                     if (includeTerminator)
                         statementTokens.push(token);
 
-                    if ((includeTerminator || consumeTerminator) && token.type !== TokenType.SEMI_COLON)
-                        tokens.splice(0, 1); // Consume end of block
+                    //if (consumeTerminator && token.type !== TokenType.SEMICOLON)
+                    if ((includeTerminator || consumeTerminator) && token.type !== TokenType.SEMICOLON)
+                        tokens.shift() // Consume end of block
                     break;
                 } else if (token.type === terminator && (openParens > 0 || openBraces > 0 || openBrackets > 0)) {
                 } else {
@@ -693,7 +728,7 @@ export class Tree {
             }
 
             statementTokens.push(token);
-            tokens.splice(0, 1); // Consume part of statement
+            tokens.shift() // Consume part of statement
             i--;
         }
         return statementTokens;

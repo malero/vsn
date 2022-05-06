@@ -1,14 +1,10 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.TypeAttribute = exports.Template = exports.StyleAttribute = exports.StandardAttribute = exports.SetAttribute = exports.ScopeChange = exports.ScopeAttribute = exports.RootAttribute = exports.Referenced = exports.On = exports.Name = exports.ModelAttribute = exports.ListItemModel = exports.ListItem = exports.List = exports.KeyUp = exports.KeyDown = exports.JSONAttribute = exports.If = exports.Format = exports.Exec = exports.DisableIf = exports.ControllerAttribute = exports.ClickToggleClass = exports.ClickRemoveClass = exports.Bind = exports.AddClassIf = void 0;
+exports.TypeAttribute = exports.Template = exports.StyleAttribute = exports.StandardAttribute = exports.SetAttribute = exports.ScopeChange = exports.ScopeAttribute = exports.RootAttribute = exports.Referenced = exports.On = exports.Name = exports.ModelAttribute = exports.ListItemModel = exports.ListItem = exports.List = exports.KeyUp = exports.KeyDown = exports.JSONAttribute = exports.If = exports.Format = exports.Exec = exports.DisableIf = exports.ControllerAttribute = exports.Bind = exports.AddClassIf = void 0;
 var AddClassIf_1 = require("./AddClassIf");
 Object.defineProperty(exports, "AddClassIf", { enumerable: true, get: function () { return AddClassIf_1.AddClassIf; } });
 var Bind_1 = require("./Bind");
 Object.defineProperty(exports, "Bind", { enumerable: true, get: function () { return Bind_1.Bind; } });
-var ClickRemoveClass_1 = require("./ClickRemoveClass");
-Object.defineProperty(exports, "ClickRemoveClass", { enumerable: true, get: function () { return ClickRemoveClass_1.ClickRemoveClass; } });
-var ClickToggleClass_1 = require("./ClickToggleClass");
-Object.defineProperty(exports, "ClickToggleClass", { enumerable: true, get: function () { return ClickToggleClass_1.ClickToggleClass; } });
 var ControllerAttribute_1 = require("./ControllerAttribute");
 Object.defineProperty(exports, "ControllerAttribute", { enumerable: true, get: function () { return ControllerAttribute_1.ControllerAttribute; } });
 var DisableIf_1 = require("./DisableIf");

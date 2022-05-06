@@ -3,8 +3,6 @@ import {ElementHelper} from "./helpers/ElementHelper";
 import {Configuration} from "./Configuration";
 import {Tree} from "./AST";
 import {TagList} from "./Tag/List";
-import {benchmarkEnd, benchmarkStart} from "./Bencmark";
-import {VisionHelper} from "./helpers/VisionHelper";
 import {WrappedWindow} from "./DOM/WrappedWindow";
 import {WrappedDocument} from "./DOM/WrappedDocument";
 import {Scope} from "./Scope";
@@ -50,6 +48,8 @@ export class DOM extends EventDispatcher {
                 return new TagList(this.window);
             case 'document':
                 return new TagList(this.document);
+            case 'body':
+                return new TagList(this.root);
             default:
                 const nodes = this.querySelectorAll(selector, tag);
                 return await this.getTagsForElements(Array.from(nodes) as Element[], create);

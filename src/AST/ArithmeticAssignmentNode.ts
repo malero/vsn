@@ -2,7 +2,7 @@ import {Scope} from "../Scope";
 import {DOM} from "../DOM";
 import {Tag} from "../Tag";
 import {DOMObject} from "../DOM/DOMObject";
-import {Token, TokenType, Tree, TreeNode} from "../AST";
+import {BlockType, Token, TokenType, Tree, TreeNode} from "../AST";
 import {Node} from "./Node";
 import {RootScopeMemberNode} from "./RootScopeMemberNode";
 import {ScopeMemberNode} from "./ScopeMemberNode";
@@ -232,7 +232,14 @@ export class ArithmeticAssignmentNode extends Node implements TreeNode {
             throw SyntaxError(`Invalid assignment syntax near ${Tree.toCode(tokens.splice(0, 10))}`);
         }
         tokens.splice(0, 1); // consume =
-        const assignmentTokens: Token[] = Tree.getNextStatementTokens(tokens, false, false, true);
+        //const assignmentTokens: Token[] = Tree.getNextStatementTokens(tokens, false, false, true);
+        const assignmentTokens: Token[] = Tree.getTokensUntil(tokens, TokenType.SEMICOLON, false, true, true, {
+            type: BlockType.STATEMENT,
+            open: TokenType.NULL,
+            close: TokenType.SEMICOLON,
+            openCharacter: '',
+            closeCharacter: ';',
+        });
 
         return new ArithmeticAssignmentNode(
             lastNode as RootScopeMemberNode,
