@@ -26,7 +26,7 @@ export abstract class On extends Attribute {
     }
 
     async handleEvent(e) {
-        if (this.hasModifier('preventdefault'))
+        if (this.hasModifier('preventdefault') && e.cancelable)
             e.preventDefault();
         await this.handler.evaluate(this.tag.scope, this.tag.dom, this.tag);
     }

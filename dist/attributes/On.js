@@ -90,7 +90,7 @@ var On = /** @class */ (function (_super) {
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
-                        if (this.hasModifier('preventdefault'))
+                        if (this.hasModifier('preventdefault') && e.cancelable)
                             e.preventDefault();
                         return [4 /*yield*/, this.handler.evaluate(this.tag.scope, this.tag.dom, this.tag)];
                     case 1:

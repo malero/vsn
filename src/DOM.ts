@@ -135,7 +135,7 @@ export class DOM extends EventDispatcher {
 
         if (isRoot) {
             document.body.setAttribute('vsn-root', '');
-            document.ondragover = (e) => e.preventDefault();  // Allow dragging over document
+            document.ondragover = (e) => e.cancelable && e.preventDefault();  // Allow dragging over document
         }
 
         for (const tag of this.tags)

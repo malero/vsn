@@ -263,7 +263,7 @@ var DOM = /** @class */ (function (_super) {
                         allElements = [];
                         if (isRoot) {
                             document.body.setAttribute('vsn-root', '');
-                            document.ondragover = function (e) { return e.preventDefault(); }; // Allow dragging over document
+                            document.ondragover = function (e) { return e.cancelable && e.preventDefault(); }; // Allow dragging over document
                         }
                         for (_i = 0, _a = this.tags; _i < _a.length; _i++) {
                             tag = _a[_i];
