@@ -56,7 +56,7 @@ var Property = /** @class */ (function (_super) {
     }
     Property.prototype.castType = function (value) {
         var caster = Registry_1.Registry.instance.types.getSynchronous(this.type);
-        return caster(value);
+        return caster ? caster(value) : value;
     };
     Object.defineProperty(Property.prototype, "value", {
         get: function () {

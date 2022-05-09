@@ -13,11 +13,14 @@ export declare class Vision extends EventDispatcher {
     setup(): Promise<void>;
     static get instance(): Vision;
 }
+export * from './Registry';
 export * from "./attributes/_imports";
 export * from './Scope/properties/_imports';
-export * from './Registry';
 export * from './Attribute';
 export * from './AST';
+export { Formats } from './Formats';
+export { Types } from './Types';
+export { Validators } from './Validators';
 export { DOM } from './DOM';
 export { Scope } from './Scope';
 export { ScopeReference } from './Scope/ScopeReference';
@@ -28,7 +31,4 @@ export { EventDispatcher } from './EventDispatcher';
 export { MessageList } from './MessageList';
 export { SimplePromise } from './SimplePromise';
 export { Tag } from './Tag';
-export { Formats } from './Formats';
-export { Types } from './Types';
-export { Validators } from './Validators';
 export declare const vision: Vision;

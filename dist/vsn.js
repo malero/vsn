@@ -61,7 +61,7 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
     }
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.vision = exports.Validators = exports.Types = exports.Formats = exports.Tag = exports.SimplePromise = exports.MessageList = exports.EventDispatcher = exports.Model = exports.Controller = exports.WrappedArray = exports.ScopeReference = exports.Scope = exports.DOM = exports.Vision = void 0;
+exports.vision = exports.Tag = exports.SimplePromise = exports.MessageList = exports.EventDispatcher = exports.Model = exports.Controller = exports.WrappedArray = exports.ScopeReference = exports.Scope = exports.DOM = exports.Validators = exports.Types = exports.Formats = exports.Vision = void 0;
 var DOM_1 = require("./DOM");
 var WrappedArray_1 = require("./Scope/WrappedArray");
 var Registry_1 = require("./Registry");
@@ -146,11 +146,17 @@ var Vision = /** @class */ (function (_super) {
     return Vision;
 }(EventDispatcher_1.EventDispatcher));
 exports.Vision = Vision;
+__exportStar(require("./Registry"), exports);
 __exportStar(require("./attributes/_imports"), exports);
 __exportStar(require("./Scope/properties/_imports"), exports);
-__exportStar(require("./Registry"), exports);
 __exportStar(require("./Attribute"), exports);
 __exportStar(require("./AST"), exports);
+var Formats_1 = require("./Formats");
+Object.defineProperty(exports, "Formats", { enumerable: true, get: function () { return Formats_1.Formats; } });
+var Types_1 = require("./Types");
+Object.defineProperty(exports, "Types", { enumerable: true, get: function () { return Types_1.Types; } });
+var Validators_1 = require("./Validators");
+Object.defineProperty(exports, "Validators", { enumerable: true, get: function () { return Validators_1.Validators; } });
 var DOM_2 = require("./DOM");
 Object.defineProperty(exports, "DOM", { enumerable: true, get: function () { return DOM_2.DOM; } });
 var Scope_1 = require("./Scope");
@@ -171,11 +177,5 @@ var SimplePromise_1 = require("./SimplePromise");
 Object.defineProperty(exports, "SimplePromise", { enumerable: true, get: function () { return SimplePromise_1.SimplePromise; } });
 var Tag_1 = require("./Tag");
 Object.defineProperty(exports, "Tag", { enumerable: true, get: function () { return Tag_1.Tag; } });
-var Formats_1 = require("./Formats");
-Object.defineProperty(exports, "Formats", { enumerable: true, get: function () { return Formats_1.Formats; } });
-var Types_1 = require("./Types");
-Object.defineProperty(exports, "Types", { enumerable: true, get: function () { return Types_1.Types; } });
-var Validators_1 = require("./Validators");
-Object.defineProperty(exports, "Validators", { enumerable: true, get: function () { return Validators_1.Validators; } });
 exports.vision = Vision.instance;
 //# sourceMappingURL=vsn.js.map

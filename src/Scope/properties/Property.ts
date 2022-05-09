@@ -51,7 +51,7 @@ export class Property<T = any> extends EventDispatcher {
 
     castType(value) {
         const caster = Registry.instance.types.getSynchronous(this.type);
-        return caster(value);
+        return caster ? caster(value) : value;
     }
 
     set value(v:any) {
