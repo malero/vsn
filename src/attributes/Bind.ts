@@ -81,7 +81,7 @@ export class Bind extends Attribute {
     get valueFromElement(): string {
         let value;
         if (this.property) {
-            value = this.tag.element.getAttribute(this.property);
+            value = this.tag.getElementAttribute(this.property);
         } else {
             value = this.tag.value;
         }
@@ -131,7 +131,7 @@ export class Bind extends Attribute {
         if (!this.doUpdateTo) return;
         const value = this.formatter(this.value);
         if (this.property) {
-            this.tag.element.setAttribute(this.property, value);
+            this.tag.setElementAttribute(this.property, value);
         } else {
             this.tag.value = value;
         }

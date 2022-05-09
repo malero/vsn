@@ -29,6 +29,7 @@ export declare class Tag extends DOMObject {
     protected _parentTag: Tag;
     protected _children: Tag[];
     protected _controller: Controller;
+    static readonly magicAttributes: string[];
     protected inputTags: string[];
     get uniqueScope(): boolean;
     constructor(element: HTMLElement, dom: DOM, ...props: any[]);
@@ -71,6 +72,9 @@ export declare class Tag extends DOMObject {
     findChildrenByAttribute(attr: string): Tag[];
     hasAttribute(attr: string): boolean;
     getAttribute<T = Attribute>(key: string): Promise<T>;
+    isMagicAttribute(key: string): boolean;
+    setElementAttribute(key: string, value: any): void;
+    getElementAttribute(key: string): any;
     getRawAttributeValue(key: string, fallback?: any): any;
     hasRawAttribute(mod: string): boolean;
     getParsedAttributeValue(key: string, index?: number, fallback?: any): any;

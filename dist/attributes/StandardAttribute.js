@@ -53,7 +53,6 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.StandardAttribute = void 0;
 var Attribute_1 = require("../Attribute");
-var DOM_1 = require("../DOM");
 var StandardAttribute = /** @class */ (function (_super) {
     __extends(StandardAttribute, _super);
     function StandardAttribute() {
@@ -64,7 +63,7 @@ var StandardAttribute = /** @class */ (function (_super) {
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
-                        if (StandardAttribute.magicAttributes.indexOf(this.key) === -1 && !this.tag.element.hasAttribute(this.attributeName)) {
+                        if (!this.tag.isMagicAttribute(this.key) && !this.tag.element.hasAttribute(this.attributeName)) {
                             this.tag.element.setAttribute(this.attributeName, '');
                         }
                         return [4 /*yield*/, _super.prototype.setup.call(this)];
@@ -127,7 +126,7 @@ var StandardAttribute = /** @class */ (function (_super) {
     });
     StandardAttribute.prototype.updateTo = function () {
         if (this.needsToBeSynced)
-            this.value = this.tag.scope.get("@" + this.attributeName);
+            this.value = this.tag.scope.get(this.key);
     };
     StandardAttribute.prototype.updateFrom = function () {
         if (this.needsToBeSynced)
@@ -142,47 +141,15 @@ var StandardAttribute = /** @class */ (function (_super) {
     });
     Object.defineProperty(StandardAttribute.prototype, "value", {
         get: function () {
-            if (this.key === '@text')
-                return this.tag.element.innerText;
-            else if (this.key === '@html')
-                return this.tag.element.innerHTML;
-            else if (this.key === '@value')
-                return this.tag.value;
-            else if (this.key === '@class') {
-                return Array.from(this.tag.element.classList);
-            }
-            else
-                return this.tag.element.getAttribute(this.attributeName);
+            return this.tag.getElementAttribute(this.tag.isMagicAttribute(this.key) ? this.key : this.attributeName);
         },
         set: function (value) {
-            var _a, _b;
-            if (this.key === '@text')
-                this.tag.element.innerText = value;
-            else if (this.key === '@html') {
-                this.tag.element.innerHTML = value;
-                DOM_1.DOM.instance.buildFrom(this.tag.element);
-            }
-            else if (this.key === '@value')
-                this.tag.value = value;
-            else if (this.key === '@class' && value) {
-                (_a = this.tag.element.classList).remove.apply(_a, Array.from(this.tag.element.classList));
-                var classes = value instanceof Array ? value : [value];
-                if (classes.length)
-                    (_b = this.tag.element.classList).add.apply(_b, classes);
-            }
-            else
-                this.tag.element.setAttribute(this.attributeName, value);
+            this.tag.setElementAttribute(this.tag.isMagicAttribute(this.key) ? this.key : this.attributeName, value);
         },
         enumerable: false,
         configurable: true
     });
     StandardAttribute.canDefer = false;
-    StandardAttribute.magicAttributes = [
-        '@text',
-        '@html',
-        '@class',
-        '@value'
-    ];
     return StandardAttribute;
 }(Attribute_1.Attribute));
 exports.StandardAttribute = StandardAttribute;

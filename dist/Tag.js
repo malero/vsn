@@ -59,6 +59,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.Tag = exports.TagState = void 0;
 var Scope_1 = require("./Scope");
 var Attribute_1 = require("./Attribute");
+var DOM_1 = require("./DOM");
 var Controller_1 = require("./Controller");
 var VisionHelper_1 = require("./helpers/VisionHelper");
 var StandardAttribute_1 = require("./attributes/StandardAttribute");
@@ -441,6 +442,45 @@ var Tag = /** @class */ (function (_super) {
             });
         });
     };
+    Tag.prototype.isMagicAttribute = function (key) {
+        return Tag.magicAttributes.indexOf(key) > -1;
+    };
+    Tag.prototype.setElementAttribute = function (key, value) {
+        var _a, _b;
+        if (this.isMagicAttribute(key)) {
+            if (key === '@text')
+                this.element.innerText = value;
+            else if (key === '@html') {
+                this.element.innerHTML = value;
+                DOM_1.DOM.instance.buildFrom(this.element);
+            }
+            else if (key === '@value')
+                this.value = value;
+            else if (key === '@class' && value) {
+                (_a = this.element.classList).remove.apply(_a, Array.from(this.element.classList));
+                var classes = value instanceof Array ? value : [value];
+                if (classes.length)
+                    (_b = this.element.classList).add.apply(_b, classes);
+            }
+        }
+        else {
+            this.element.setAttribute(key, value);
+        }
+    };
+    Tag.prototype.getElementAttribute = function (key) {
+        if (this.isMagicAttribute(key)) {
+            if (key === '@text')
+                return this.element.innerText;
+            else if (key === '@html')
+                return this.element.innerHTML;
+            else if (key === '@value')
+                return this.value;
+            else if (key === '@class') {
+                return Array.from(this.element.classList);
+            }
+        }
+        return this.element.getAttribute(key);
+    };
     Tag.prototype.getRawAttributeValue = function (key, fallback) {
         if (fallback === void 0) { fallback = null; }
         return this.rawAttributes[key] ? this.rawAttributes[key] : fallback;
@@ -822,6 +862,12 @@ var Tag = /** @class */ (function (_super) {
         this._children.length = 0;
         _super.prototype.deconstruct.call(this);
     };
+    Tag.magicAttributes = [
+        '@text',
+        '@html',
+        '@class',
+        '@value'
+    ];
     return Tag;
 }(DOMObject_1.DOMObject));
 exports.Tag = Tag;

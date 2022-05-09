@@ -74,6 +74,11 @@
     <span>Hello, world!</span>
 </template>
 
+<div>
+    <textarea id="example-code" rows="10" cols="50"></textarea>
+    <div id="example-output" vsn-bind:@html="#example-code.@value"></div>
+</div>
+
 <template vsn-template id="query-operator-example-item">
     <li vsn-list-item>
         <span vsn-if="'active' in ?(:parent).@class">active</span>
@@ -83,14 +88,6 @@
         <button vsn-on:click="?(:parent).@class ~ 'active'">~</button>
     </li>
 </template>
-
-<script>
-    function bindings () {
-        $('#something').on('click', function () {
-            $('#something').text('Hello, world!');
-        });
-    }
-</script>
 
 <div id="test-container"></div>
 <a href="./markup.html" vsn-on:click|preventdefault="#test-container.@html = << @href">Fill Container</a>

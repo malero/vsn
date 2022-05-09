@@ -32,6 +32,13 @@ export class Tag extends DOMObject {
     protected _children: Tag[] = [];
     protected _controller: Controller;
 
+    public static readonly magicAttributes: string[] = [
+        '@text',
+        '@html',
+        '@class',
+        '@value'
+    ];
+
     protected inputTags: string[] = [
         'input',
         'select',
@@ -327,6 +334,45 @@ export class Tag extends DOMObject {
         for (const attr of this.attributes)
             if (attr instanceof cls)
                 return attr as any as T;
+    }
+
+    public isMagicAttribute(key: string): boolean {
+        return Tag.magicAttributes.indexOf(key) > -1;
+    }
+
+    public setElementAttribute(key: string, value: any) {
+        if (this.isMagicAttribute(key)) {
+            if (key === '@text')
+                this.element.innerText = value;
+            else if (key === '@html') {
+                this.element.innerHTML = value;
+                DOM.instance.buildFrom(this.element);
+            } else if (key === '@value')
+                this.value = value;
+            else if (key === '@class' && value) {
+                this.element.classList.remove(...Array.from(this.element.classList));
+                const classes: string[] = value instanceof Array ? value : [value];
+                if (classes.length)
+                    this.element.classList.add(...classes);
+            }
+        } else {
+            this.element.setAttribute(key, value);
+        }
+    }
+
+    public getElementAttribute(key: string): any {
+        if (this.isMagicAttribute(key)) {
+            if (key === '@text')
+                return this.element.innerText;
+            else if (key === '@html')
+                return this.element.innerHTML;
+            else if (key === '@value')
+                return this.value;
+            else if (key === '@class') {
+                return Array.from(this.element.classList);
+            }
+        }
+        return this.element.getAttribute(key);
     }
 
     public getRawAttributeValue(key: string, fallback: any = null) {

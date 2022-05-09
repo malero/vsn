@@ -196,7 +196,7 @@ var Bind = /** @class */ (function (_super) {
         get: function () {
             var value;
             if (this.property) {
-                value = this.tag.element.getAttribute(this.property);
+                value = this.tag.getElementAttribute(this.property);
             }
             else {
                 value = this.tag.value;
@@ -253,7 +253,7 @@ var Bind = /** @class */ (function (_super) {
             return;
         var value = this.formatter(this.value);
         if (this.property) {
-            this.tag.element.setAttribute(this.property, value);
+            this.tag.setElementAttribute(this.property, value);
         }
         else {
             this.tag.value = value;

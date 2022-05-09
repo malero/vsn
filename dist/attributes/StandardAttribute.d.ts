@@ -1,7 +1,6 @@
 import { Attribute } from "../Attribute";
 export declare class StandardAttribute extends Attribute {
     static readonly canDefer: boolean;
-    protected static readonly magicAttributes: string[];
     setup(): Promise<void>;
     extract(): Promise<void>;
     connect(): Promise<void>;
