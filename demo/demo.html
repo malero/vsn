@@ -81,11 +81,11 @@
 
 <template vsn-template id="query-operator-example-item">
     <li vsn-list-item>
-        <span vsn-if="'active' in ?(:parent).@class">active</span>
-        <span vsn-if:not="'active' not in ?(:parent).@class">inactive</span>
-        <button vsn-on:click="?(:parent).@class += 'active'">+</button>
-        <button vsn-on:click="?(:parent).@class -= 'active'">-</button>
-        <button vsn-on:click="?(:parent).@class ~ 'active'">~</button>
+        <span vsn-if="'active' in ?>(:parent).@class">active</span>
+        <span vsn-if:not="'active' not in ?>(:parent).@class">inactive</span>
+        <button vsn-on:click="?>(:parent).@class += 'active'">+</button>
+        <button vsn-on:click="?>(:parent).@class -= 'active'">-</button>
+        <button vsn-on:click="?>(:parent).@class ~ 'active'">~</button>
     </li>
 </template>
 

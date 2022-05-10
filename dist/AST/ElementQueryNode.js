@@ -55,11 +55,13 @@ exports.ElementQueryNode = void 0;
 var Node_1 = require("./Node");
 var ElementQueryNode = /** @class */ (function (_super) {
     __extends(ElementQueryNode, _super);
-    function ElementQueryNode(query, first) {
+    function ElementQueryNode(query, first, global) {
         if (first === void 0) { first = false; }
+        if (global === void 0) { global = false; }
         var _this = _super.call(this) || this;
         _this.query = query;
         _this.first = first;
+        _this.global = global;
         _this.requiresPrep = true;
         return _this;
     }
@@ -79,7 +81,7 @@ var ElementQueryNode = /** @class */ (function (_super) {
                         _b.label = 2;
                     case 2:
                         tag = _a;
-                        return [4 /*yield*/, dom.get(this.query, true, tag)];
+                        return [4 /*yield*/, dom.get(this.query, true, this.global ? null : tag)];
                     case 3:
                         elements = _b.sent();
                         return [2 /*return*/, this.first && !forceList ? elements[0] : elements];
@@ -109,6 +111,10 @@ var ElementQueryNode = /** @class */ (function (_super) {
                 }
             });
         });
+    };
+    ElementQueryNode.parse = function (lastNode, token, tokens) {
+        tokens.shift();
+        return new ElementQueryNode(token.value, false, !token.full.startsWith('?>'));
     };
     return ElementQueryNode;
 }(Node_1.Node));

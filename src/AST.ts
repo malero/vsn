@@ -38,7 +38,9 @@ interface TokenPattern {
 
 export interface Token {
     type: TokenType,
-    value: string
+    value: string,
+    full: string,
+    groups: string[]
 }
 
 export enum BlockType {
@@ -206,7 +208,7 @@ const TOKEN_PATTERNS: TokenPattern[] = [
     },
     {
         type: TokenType.ELEMENT_QUERY,
-        pattern: /^\?\(([#.\[\]:,=\-_a-zA-Z0-9*\s]*[\]_a-zA-Z0-9*])\)/
+        pattern: /^\?>?\(([#.\[\]:,=\-_a-zA-Z0-9*\s]*[\]_a-zA-Z0-9*])\)/
     },
     {
         type: TokenType.NAME,
@@ -426,7 +428,9 @@ export class Tree {
                 if (match) {
                     tokens.push({
                         type: tp.type,
-                        value: match[match.length - 1]
+                        value: match[match.length - 1],
+                        full: match[0],
+                        groups: match
                     });
 
                     code = code.substring(match[0].length);
@@ -491,8 +495,7 @@ export class Tree {
                 node = new ElementQueryNode(tokens[0].value, true);
                 tokens.shift()
             } else if (tokens[0].type === TokenType.ELEMENT_QUERY) {
-                node = new ElementQueryNode(tokens[0].value);
-                tokens.shift()
+                node = ElementQueryNode.parse(node, tokens[0], tokens);
             } else if (tokens[0].type === TokenType.L_BRACKET) {
                 if (node) {
                     node = IndexNode.parse(node, token, tokens);

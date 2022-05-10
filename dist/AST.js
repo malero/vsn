@@ -229,7 +229,7 @@ var TOKEN_PATTERNS = [
     },
     {
         type: TokenType.ELEMENT_QUERY,
-        pattern: /^\?\(([#.\[\]:,=\-_a-zA-Z0-9*\s]*[\]_a-zA-Z0-9*])\)/
+        pattern: /^\?>?\(([#.\[\]:,=\-_a-zA-Z0-9*\s]*[\]_a-zA-Z0-9*])\)/
     },
     {
         type: TokenType.NAME,
@@ -468,7 +468,9 @@ var Tree = /** @class */ (function () {
                 if (match) {
                     tokens.push({
                         type: tp.type,
-                        value: match[match.length - 1]
+                        value: match[match.length - 1],
+                        full: match[0],
+                        groups: match
                     });
                     code = code.substring(match[0].length);
                     foundToken = true;
@@ -532,8 +534,7 @@ var Tree = /** @class */ (function () {
                 tokens.shift();
             }
             else if (tokens[0].type === TokenType.ELEMENT_QUERY) {
-                node = new ElementQueryNode_1.ElementQueryNode(tokens[0].value);
-                tokens.shift();
+                node = ElementQueryNode_1.ElementQueryNode.parse(node, tokens[0], tokens);
             }
             else if (tokens[0].type === TokenType.L_BRACKET) {
                 if (node) {

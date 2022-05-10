@@ -9,6 +9,8 @@ import { BlockNode } from "./AST/BlockNode";
 export interface Token {
     type: TokenType;
     value: string;
+    full: string;
+    groups: string[];
 }
 export declare enum BlockType {
     BRACE = 0,
