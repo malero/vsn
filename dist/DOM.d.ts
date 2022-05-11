@@ -24,7 +24,7 @@ export declare class DOM extends EventDispatcher {
     querySelectorAll(q: string, tag?: Tag): NodeList | HTMLElement[];
     querySelectorElement(element: HTMLElement | Document, q: string): NodeList | HTMLElement[];
     querySelector(q: string): Element;
-    eval(code: string): Promise<any>;
+    exec(code: string): Promise<any>;
     evaluate(): Promise<void>;
     mutation(mutations: MutationRecord[]): Promise<void>;
     buildFrom(ele: any, isRoot?: boolean): Promise<void>;

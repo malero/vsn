@@ -35,7 +35,7 @@ describe('Styles', () => {
         `;
         const dom = new DOM(document);
         dom.once('built', async () => {
-            await dom.eval('?(#styling).$marginTop = "50px"');
+            await dom.exec('?(#styling).$marginTop = "50px"');
             expect((await dom.get('#styling'))[0].element.style.marginTop).toBe('50px');
             done();
         });

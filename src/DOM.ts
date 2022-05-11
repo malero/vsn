@@ -100,7 +100,7 @@ export class DOM extends EventDispatcher {
         return this.rootElement.querySelector(q);
     }
 
-    public async eval(code: string) {
+    public async exec(code: string) {
         const tree = new Tree(code);
         await tree.prepare(this.root.scope, this);
         return await tree.evaluate(this.root.scope, this);

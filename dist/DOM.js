@@ -172,7 +172,7 @@ var DOM = /** @class */ (function (_super) {
     DOM.prototype.querySelector = function (q) {
         return this.rootElement.querySelector(q);
     };
-    DOM.prototype.eval = function (code) {
+    DOM.prototype.exec = function (code) {
         return __awaiter(this, void 0, void 0, function () {
             var tree;
             return __generator(this, function (_a) {

@@ -109,7 +109,7 @@ var List = /** @class */ (function (_super) {
                         return [3 /*break*/, 3];
                     case 1:
                         if (!this.tag.hasRawAttribute('template')) return [3 /*break*/, 3];
-                        return [4 /*yield*/, DOM_1.DOM.instance.eval(this.tag.getRawAttributeValue('template'))];
+                        return [4 /*yield*/, DOM_1.DOM.instance.exec(this.tag.getRawAttributeValue('template'))];
                     case 2:
                         templateNode = _a.sent();
                         if (templateNode instanceof Array && templateNode.length === 1)

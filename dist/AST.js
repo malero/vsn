@@ -317,7 +317,7 @@ var TOKEN_PATTERNS = [
     },
     {
         type: TokenType.STRING_LITERAL,
-        pattern: /^'([^']*)'/ // Try to make this work: /^(?<!\\)(?:\\\\)*"([^(?<!\\)(?:\\\\)*"]*)(?<!\\)(?:\\\\)*"/
+        pattern: /^'([^']*)'/
     },
     {
         type: TokenType.AND,

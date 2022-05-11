@@ -28,8 +28,8 @@ describe('DOM', () => {
         `;
         const dom = new DOM(document);
         dom.once('built', async () => {
-            expect(await dom.eval('?(#parent).asd')).toBe(123);
-            expect(await dom.eval('?(#testing).asd')).toBe(345);
+            expect(await dom.exec('?(#parent).asd')).toBe(123);
+            expect(await dom.exec('?(#testing).asd')).toBe(345);
             done();
         });
     });

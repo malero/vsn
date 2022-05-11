@@ -165,7 +165,7 @@ var Tag = /** @class */ (function (_super) {
             }
         }
     };
-    Tag.prototype.eval = function (code) {
+    Tag.prototype.exec = function (code) {
         return __awaiter(this, void 0, void 0, function () {
             var tree;
             return __generator(this, function (_a) {
@@ -747,6 +747,28 @@ var Tag = /** @class */ (function (_super) {
         }
         this.onEventHandlers[eventType].push(handler);
     };
+    Tag.prototype.removeEventHandler = function (eventType, handler) {
+        if (!this.onEventHandlers[eventType])
+            return;
+        var index = this.onEventHandlers[eventType].indexOf(handler);
+        if (index > -1) {
+            this.onEventHandlers[eventType].splice(index, 1);
+            if (this.onEventHandlers[eventType].length === 0) {
+                this.element.removeEventListener(eventType, this.handleEvent.bind(this, eventType));
+            }
+        }
+    };
+    Tag.prototype.createScope = function () {
+        // Standard attribute requires a unique scope
+        // @todo: Does this cause any issues with attribute bindings on the parent scope prior to having its own scope? hmm...
+        if (!this.uniqueScope) {
+            this._uniqueScope = true;
+            this._scope = new Scope_1.Scope();
+            if (this.parentTag) {
+                this.scope.parentScope = this.parentTag.scope;
+            }
+        }
+    };
     Tag.prototype.watchAttribute = function (attributeName) {
         return __awaiter(this, void 0, void 0, function () {
             var _i, _a, attribute, standardAttribute;
@@ -759,15 +781,7 @@ var Tag = /** @class */ (function (_super) {
                                 return [2 /*return*/, attribute];
                             }
                         }
-                        // Standard attribute requires a unique scope
-                        // @todo: Does this cause any issues with attribute bindings on the parent scope prior to having its own scope? hmm...
-                        if (!this.uniqueScope) {
-                            this._uniqueScope = true;
-                            this._scope = new Scope_1.Scope();
-                            if (this.parentTag) {
-                                this.scope.parentScope = this.parentTag.scope;
-                            }
-                        }
+                        this.createScope();
                         standardAttribute = new StandardAttribute_1.StandardAttribute(this, attributeName);
                         this.attributes.push(standardAttribute);
                         return [4 /*yield*/, this.setupAttribute(standardAttribute)];
@@ -790,15 +804,7 @@ var Tag = /** @class */ (function (_super) {
                                 return [2 /*return*/, attribute];
                             }
                         }
-                        // Standard attribute requires a unique scope
-                        // @todo: Does this cause any issues with attribute bindings on the parent scope prior to having its own scope? hmm...
-                        if (!this.uniqueScope) {
-                            this._uniqueScope = true;
-                            this._scope = new Scope_1.Scope();
-                            if (this.parentTag) {
-                                this.scope.parentScope = this.parentTag.scope;
-                            }
-                        }
+                        this.createScope();
                         styleAttribute = new StyleAttribute_1.StyleAttribute(this, 'style');
                         this.attributes.push(styleAttribute);
                         return [4 /*yield*/, this.setupAttribute(styleAttribute)];

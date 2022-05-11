@@ -40,6 +40,25 @@ export class VisionHelper {
         return process.env.BUILD_TARGET === 'es5';
     }
 
+    public static getUriWithParams(
+        url: string,
+        params: Record<string, any>
+    ): string {
+        let base = window.location.origin;
+        if (url.startsWith('.') || !url.startsWith('/')) {
+            base += window.location.pathname;
+        }
+        const _url = new URL(url, base);
+        const urlParams: URLSearchParams = new URLSearchParams(_url.search);
+        for (const key in params) {
+            if (params[key] !== undefined) {
+                urlParams.set(key, params[key]);
+            }
+        }
+        _url.search = urlParams.toString();
+        return _url.toString();
+    }
+
     public static nice(callback, timeout: number = 100) {
         if (VisionHelper.window && window['requestIdleCallback']) {
             window['requestIdleCallback'](callback);

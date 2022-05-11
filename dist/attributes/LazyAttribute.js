@@ -14,6 +14,12 @@ var __extends = (this && this.__extends) || (function () {
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
     };
 })();
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -51,53 +57,64 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
     }
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.QueryReference = void 0;
-var DOM_1 = require("../DOM");
-var ScopeReference_1 = require("./ScopeReference");
-var QueryReference = /** @class */ (function (_super) {
-    __extends(QueryReference, _super);
-    function QueryReference(path, scope) {
-        var _this = _super.call(this) || this;
-        _this.path = path;
-        _this.scope = scope;
+exports.LazyAttribute = void 0;
+var Registry_1 = require("../Registry");
+var On_1 = require("./On");
+var LazyAttribute = /** @class */ (function (_super) {
+    __extends(LazyAttribute, _super);
+    function LazyAttribute() {
+        var _this = _super !== null && _super.apply(this, arguments) || this;
+        _this.loaded = false;
         return _this;
     }
-    QueryReference.prototype.getScope = function () {
+    LazyAttribute.prototype.setup = function () {
         return __awaiter(this, void 0, void 0, function () {
-            var parts, qResult;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0: return [4 /*yield*/, _super.prototype.setup.call(this)];
+                    case 1:
+                        _a.sent();
+                        this.eleTop = this.tag.element.getBoundingClientRect().top;
+                        return [2 /*return*/];
+                }
+            });
+        });
+    };
+    LazyAttribute.prototype.connect = function () {
+        return __awaiter(this, void 0, void 0, function () {
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
-                        parts = this.path.split('.');
-                        parts = parts.splice(0, parts.length - 1);
-                        return [4 /*yield*/, DOM_1.DOM.instance.exec(parts.join('.'))];
+                        this.tag.addEventHandler('scroll', ['passive'], this.handleEvent.bind(this));
+                        return [4 /*yield*/, this.handleEvent()];
                     case 1:
-                        qResult = _a.sent();
-                        return [2 /*return*/, qResult.length === 1 ? qResult[0].scope : qResult.map(function (dobj) { return dobj.scope; })];
+                        _a.sent();
+                        return [2 /*return*/];
                 }
             });
         });
     };
-    QueryReference.prototype.getKey = function () {
-        return __awaiter(this, void 0, void 0, function () {
-            var parts;
-            return __generator(this, function (_a) {
-                parts = this.path.split('.');
-                return [2 /*return*/, parts[parts.length - 1]];
-            });
-        });
-    };
-    QueryReference.prototype.getValue = function () {
+    LazyAttribute.prototype.handleEvent = function (e) {
         return __awaiter(this, void 0, void 0, function () {
             return __generator(this, function (_a) {
                 switch (_a.label) {
-                    case 0: return [4 /*yield*/, DOM_1.DOM.instance.exec(this.path)];
-                    case 1: return [2 /*return*/, _a.sent()];
+                    case 0:
+                        if (!(!this.loaded && window.scrollY + window.outerHeight >= this.eleTop)) return [3 /*break*/, 2];
+                        this.loaded = true;
+                        return [4 /*yield*/, this.handler.evaluate(this.tag.scope, this.tag.dom, this.tag)];
+                    case 1:
+                        _a.sent();
+                        this.tag.removeEventHandler('scroll', this.handleEvent.bind(this));
+                        _a.label = 2;
+                    case 2: return [2 /*return*/];
                 }
             });
         });
     };
-    return QueryReference;
-}(ScopeReference_1.ScopeReference));
-exports.QueryReference = QueryReference;
-//# sourceMappingURL=QueryReference.js.map
+    LazyAttribute = __decorate([
+        Registry_1.Registry.attribute('vsn-lazy')
+    ], LazyAttribute);
+    return LazyAttribute;
+}(On_1.On));
+exports.LazyAttribute = LazyAttribute;
+//# sourceMappingURL=LazyAttribute.js.map

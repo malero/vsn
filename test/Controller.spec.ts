@@ -33,10 +33,10 @@ describe('Controller', () => {
         const dom = new DOM(document);
         const deferred = SimplePromise.defer();
         dom.once('built', async () => {
-            expect(await dom.eval('test.test')).toBe('notTest');
-            expect(await dom.eval('test.isValid()')).toBe(false);
-            await dom.eval('test.test = "test"');
-            expect(await dom.eval('test.isValid()')).toBe(true);
+            expect(await dom.exec('test.test')).toBe('notTest');
+            expect(await dom.exec('test.isValid()')).toBe(false);
+            await dom.exec('test.test = "test"');
+            expect(await dom.exec('test.isValid()')).toBe(true);
             deferred.resolve();
         });
         await deferred.promise;

@@ -4,6 +4,7 @@ import {Scope} from "../Scope";
 import {DOM} from "../DOM";
 import {Tag} from "../Tag";
 import {ScopeDataAbstract} from "../Scope/ScopeDataAbstract";
+import {VisionHelper} from "../helpers/VisionHelper";
 
 export class XHRNode extends Node implements TreeNode {
     constructor(
@@ -22,7 +23,7 @@ export class XHRNode extends Node implements TreeNode {
     }
 
     async evaluate(scope: Scope, dom: DOM, tag?: Tag) {
-        const url = await this.url.evaluate(scope, dom, tag);
+        let url = await this.url.evaluate(scope, dom, tag);
         let method: string;
         let data = this.left ? await this.left.evaluate(scope, dom, tag) : {};
 
@@ -51,7 +52,7 @@ export class XHRNode extends Node implements TreeNode {
         };
 
         if (request.method === 'GET') {
-
+            url = VisionHelper.getUriWithParams(url, data);
         } else {
             request['body'] = (typeof data === "string") ? data : JSON.stringify(data);
         }

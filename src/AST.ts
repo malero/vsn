@@ -296,7 +296,7 @@ const TOKEN_PATTERNS: TokenPattern[] = [
     },
     {
         type: TokenType.STRING_LITERAL,
-        pattern: /^'([^']*)'/ // Try to make this work: /^(?<!\\)(?:\\\\)*"([^(?<!\\)(?:\\\\)*"]*)(?<!\\)(?:\\\\)*"/
+        pattern: /^'([^']*)'/
     },
     {
         type: TokenType.AND,
@@ -353,7 +353,6 @@ export interface TreeNode<T = any> {
 
     prepare(scope: Scope, dom: DOM, tag?: Tag);
 }
-
 
 export interface IBlockInfo {
     type: BlockType,

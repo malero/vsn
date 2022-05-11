@@ -37,7 +37,7 @@ export class List extends Attribute {
             }
         } else {
             if (this.tag.hasRawAttribute('template')) {
-                let templateNode = await DOM.instance.eval(this.tag.getRawAttributeValue('template'));
+                let templateNode = await DOM.instance.exec(this.tag.getRawAttributeValue('template'));
                 if (templateNode instanceof Array && templateNode.length === 1)
                     templateNode = templateNode[0];
 

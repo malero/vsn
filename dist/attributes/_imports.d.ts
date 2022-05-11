@@ -8,6 +8,7 @@ export { If } from "./If";
 export { JSONAttribute } from "./JSONAttribute";
 export { KeyDown } from "./KeyDown";
 export { KeyUp } from "./KeyUp";
+export { LazyAttribute } from "./LazyAttribute";
 export { List } from "./List";
 export { ListItem } from "./ListItem";
 export { ListItemModel } from "./ListItemModel";

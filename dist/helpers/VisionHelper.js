@@ -56,6 +56,21 @@ var VisionHelper = /** @class */ (function () {
         enumerable: false,
         configurable: true
     });
+    VisionHelper.getUriWithParams = function (url, params) {
+        var base = window.location.origin;
+        if (url.startsWith('.') || !url.startsWith('/')) {
+            base += window.location.pathname;
+        }
+        var _url = new URL(url, base);
+        var urlParams = new URLSearchParams(_url.search);
+        for (var key in params) {
+            if (params[key] !== undefined) {
+                urlParams.set(key, params[key]);
+            }
+        }
+        _url.search = urlParams.toString();
+        return _url.toString();
+    };
     VisionHelper.nice = function (callback, timeout) {
         if (timeout === void 0) { timeout = 100; }
         if (VisionHelper.window && window['requestIdleCallback']) {

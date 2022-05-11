@@ -44,7 +44,7 @@ export class Vision extends EventDispatcher {
     }
 
     public async eval(code: string) {
-        return await this._dom.eval(code);
+        return await this._dom.exec(code);
     }
 
     public async setup() {

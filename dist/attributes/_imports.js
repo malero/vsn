@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.TypeAttribute = exports.Template = exports.StyleAttribute = exports.StandardAttribute = exports.SetAttribute = exports.ScopeChange = exports.ScopeAttribute = exports.RootAttribute = exports.Referenced = exports.On = exports.Name = exports.ModelAttribute = exports.ListItemModel = exports.ListItem = exports.List = exports.KeyUp = exports.KeyDown = exports.JSONAttribute = exports.If = exports.Format = exports.Exec = exports.DisableIf = exports.ControllerAttribute = exports.Bind = exports.AddClassIf = void 0;
+exports.TypeAttribute = exports.Template = exports.StyleAttribute = exports.StandardAttribute = exports.SetAttribute = exports.ScopeChange = exports.ScopeAttribute = exports.RootAttribute = exports.Referenced = exports.On = exports.Name = exports.ModelAttribute = exports.ListItemModel = exports.ListItem = exports.List = exports.LazyAttribute = exports.KeyUp = exports.KeyDown = exports.JSONAttribute = exports.If = exports.Format = exports.Exec = exports.DisableIf = exports.ControllerAttribute = exports.Bind = exports.AddClassIf = void 0;
 var AddClassIf_1 = require("./AddClassIf");
 Object.defineProperty(exports, "AddClassIf", { enumerable: true, get: function () { return AddClassIf_1.AddClassIf; } });
 var Bind_1 = require("./Bind");
@@ -21,6 +21,8 @@ var KeyDown_1 = require("./KeyDown");
 Object.defineProperty(exports, "KeyDown", { enumerable: true, get: function () { return KeyDown_1.KeyDown; } });
 var KeyUp_1 = require("./KeyUp");
 Object.defineProperty(exports, "KeyUp", { enumerable: true, get: function () { return KeyUp_1.KeyUp; } });
+var LazyAttribute_1 = require("./LazyAttribute");
+Object.defineProperty(exports, "LazyAttribute", { enumerable: true, get: function () { return LazyAttribute_1.LazyAttribute; } });
 var List_1 = require("./List");
 Object.defineProperty(exports, "List", { enumerable: true, get: function () { return List_1.List; } });
 var ListItem_1 = require("./ListItem");

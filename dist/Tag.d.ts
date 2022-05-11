@@ -38,7 +38,7 @@ export declare class Tag extends DOMObject {
     get style(): CSSStyleDeclaration;
     get computedStyle(): CSSStyleDeclaration;
     analyzeElementAttributes(): void;
-    eval(code: string): Promise<any>;
+    exec(code: string): Promise<any>;
     evaluate(): Promise<void>;
     mutate(mutation: MutationRecord): void;
     get(attr: string): void;
@@ -90,6 +90,8 @@ export declare class Tag extends DOMObject {
     hasModifier(attribute: string, modifier: string): boolean;
     stripModifier(attribute: string, modifier: string): string;
     addEventHandler(eventType: string, modifiers: string[], handler: any): void;
+    removeEventHandler(eventType: string, handler: any): void;
+    createScope(): void;
     watchAttribute(attributeName: string): Promise<StandardAttribute>;
     watchStyle(styleName: string): Promise<StyleAttribute>;
     private setupAttribute;

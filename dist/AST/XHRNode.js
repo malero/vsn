@@ -56,6 +56,7 @@ var Node_1 = require("./Node");
 var AST_1 = require("../AST");
 var Scope_1 = require("../Scope");
 var ScopeDataAbstract_1 = require("../Scope/ScopeDataAbstract");
+var VisionHelper_1 = require("../helpers/VisionHelper");
 var XHRNode = /** @class */ (function (_super) {
     __extends(XHRNode, _super);
     function XHRNode(left, requestType, url) {
@@ -110,6 +111,7 @@ var XHRNode = /** @class */ (function (_super) {
                             method: method
                         };
                         if (request.method === 'GET') {
+                            url = VisionHelper_1.VisionHelper.getUriWithParams(url, data);
                         }
                         else {
                             request['body'] = (typeof data === "string") ? data : JSON.stringify(data);

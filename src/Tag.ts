@@ -108,7 +108,7 @@ export class Tag extends DOMObject {
         }
     }
 
-    public async eval(code: string) {
+    public async exec(code: string) {
         const tree = new Tree(code);
         await tree.prepare(this.scope, this.dom, this);
         return await tree.evaluate(this.scope, this.dom, this);
@@ -556,13 +556,20 @@ export class Tag extends DOMObject {
         this.onEventHandlers[eventType].push(handler);
     }
 
-    async watchAttribute(attributeName: string) {
-        for (const attribute of this.attributes) {
-            if (attribute instanceof StandardAttribute && attribute.attributeName == attributeName) {
-                return attribute;
+    public removeEventHandler(eventType: string, handler) {
+        if (!this.onEventHandlers[eventType])
+            return;
+
+        const index = this.onEventHandlers[eventType].indexOf(handler);
+        if (index > -1) {
+            this.onEventHandlers[eventType].splice(index, 1);
+            if (this.onEventHandlers[eventType].length === 0) {
+                this.element.removeEventListener(eventType, this.handleEvent.bind(this, eventType));
             }
         }
+    }
 
+    public createScope() {
         // Standard attribute requires a unique scope
         // @todo: Does this cause any issues with attribute bindings on the parent scope prior to having its own scope? hmm...
         if (!this.uniqueScope) {
@@ -573,6 +580,16 @@ export class Tag extends DOMObject {
                 this.scope.parentScope = this.parentTag.scope;
             }
         }
+    }
+
+    async watchAttribute(attributeName: string) {
+        for (const attribute of this.attributes) {
+            if (attribute instanceof StandardAttribute && attribute.attributeName == attributeName) {
+                return attribute;
+            }
+        }
+
+        this.createScope();
 
         const standardAttribute = new StandardAttribute(this, attributeName);
         this.attributes.push(standardAttribute);
@@ -588,16 +605,7 @@ export class Tag extends DOMObject {
             }
         }
 
-        // Standard attribute requires a unique scope
-        // @todo: Does this cause any issues with attribute bindings on the parent scope prior to having its own scope? hmm...
-        if (!this.uniqueScope) {
-            this._uniqueScope = true;
-            this._scope = new Scope();
-
-            if (this.parentTag) {
-                this.scope.parentScope = this.parentTag.scope;
-            }
-        }
+        this.createScope();
 
         const styleAttribute = new StyleAttribute(this, 'style');
         this.attributes.push(styleAttribute);
