@@ -4,7 +4,7 @@ import "../../src/attributes/_imports";
 
 
 describe('ScopeAttribute', () => {
-    it("vsn-styles to just work", (done) => {
+    it("vsn-scope should set simple values correctly", (done) => {
         document.body.innerHTML = `
             <div vsn-scope="{'asd':123, 'sdf': 'asd'}">
                 <span vsn-bind="asd"></span>
