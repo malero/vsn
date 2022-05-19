@@ -91,7 +91,7 @@ export declare class Tag extends DOMObject {
     stripModifier(attribute: string, modifier: string): string;
     addEventHandler(eventType: string, modifiers: string[], handler: any): void;
     removeEventHandler(eventType: string, handler: any): void;
-    createScope(): void;
+    createScope(force?: boolean): Scope;
     watchAttribute(attributeName: string): Promise<StandardAttribute>;
     watchStyle(styleName: string): Promise<StyleAttribute>;
     private setupAttribute;

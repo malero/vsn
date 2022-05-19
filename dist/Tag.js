@@ -349,6 +349,8 @@ var Tag = /** @class */ (function (_super) {
         get: function () {
             if (!!this._scope)
                 return this._scope;
+            if (this.uniqueScope)
+                return this.createScope();
             if (!!this._parentTag)
                 return this._parentTag.scope;
             return null;
@@ -549,7 +551,6 @@ var Tag = /** @class */ (function (_super) {
                             requiresScope = true;
                         if (requiresScope && !this.uniqueScope) {
                             this._uniqueScope = true;
-                            this._scope = new Scope_1.Scope();
                         }
                         this._state = TagState.AttributesBuilt;
                         return [2 /*return*/];
@@ -758,16 +759,19 @@ var Tag = /** @class */ (function (_super) {
             }
         }
     };
-    Tag.prototype.createScope = function () {
+    Tag.prototype.createScope = function (force) {
+        if (force === void 0) { force = false; }
         // Standard attribute requires a unique scope
         // @todo: Does this cause any issues with attribute bindings on the parent scope prior to having its own scope? hmm...
-        if (!this.uniqueScope) {
+        if ((!this.uniqueScope && force) || this.uniqueScope) {
             this._uniqueScope = true;
             this._scope = new Scope_1.Scope();
             if (this.parentTag) {
                 this.scope.parentScope = this.parentTag.scope;
             }
+            return this._scope;
         }
+        return null;
     };
     Tag.prototype.watchAttribute = function (attributeName) {
         return __awaiter(this, void 0, void 0, function () {
@@ -781,7 +785,7 @@ var Tag = /** @class */ (function (_super) {
                                 return [2 /*return*/, attribute];
                             }
                         }
-                        this.createScope();
+                        this.createScope(true);
                         standardAttribute = new StandardAttribute_1.StandardAttribute(this, attributeName);
                         this.attributes.push(standardAttribute);
                         return [4 /*yield*/, this.setupAttribute(standardAttribute)];
@@ -804,7 +808,7 @@ var Tag = /** @class */ (function (_super) {
                                 return [2 /*return*/, attribute];
                             }
                         }
-                        this.createScope();
+                        this.createScope(true);
                         styleAttribute = new StyleAttribute_1.StyleAttribute(this, 'style');
                         this.attributes.push(styleAttribute);
                         return [4 /*yield*/, this.setupAttribute(styleAttribute)];

@@ -69,15 +69,19 @@ var ScopeAttribute = /** @class */ (function (_super) {
     }
     ScopeAttribute.prototype.compile = function () {
         return __awaiter(this, void 0, void 0, function () {
+            var code;
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
-                        this.tree = new AST_1.Tree(this.getAttributeValue());
+                        code = this.getAttributeValue();
+                        if (!code) return [3 /*break*/, 2];
+                        this.tree = new AST_1.Tree(code);
                         return [4 /*yield*/, this.tree.prepare(this.tag.scope, this.tag.dom, this.tag)];
                     case 1:
                         _a.sent();
-                        return [4 /*yield*/, _super.prototype.compile.call(this)];
-                    case 2:
+                        _a.label = 2;
+                    case 2: return [4 /*yield*/, _super.prototype.compile.call(this)];
+                    case 3:
                         _a.sent();
                         return [2 /*return*/];
                 }
@@ -89,16 +93,22 @@ var ScopeAttribute = /** @class */ (function (_super) {
             var value, _i, _a, key;
             return __generator(this, function (_b) {
                 switch (_b.label) {
-                    case 0: return [4 /*yield*/, this.tree.evaluate(this.tag.scope, this.tag.dom, this.tag)];
+                    case 0:
+                        if (!this.tree) return [3 /*break*/, 2];
+                        return [4 /*yield*/, this.tree.evaluate(this.tag.scope, this.tag.dom, this.tag)];
                     case 1:
                         value = _b.sent();
                         if (!(value instanceof Scope_1.Scope)) {
-                            throw new Error("Scope value must be an object, got " + typeof value);
+                            throw new Error("vsn-scope value must be an object, got " + typeof value);
                         }
                         for (_i = 0, _a = value.data.keys; _i < _a.length; _i++) {
                             key = _a[_i];
                             this.tag.scope.set(key, value.data[key]);
                         }
+                        _b.label = 2;
+                    case 2: return [4 /*yield*/, _super.prototype.extract.call(this)];
+                    case 3:
+                        _b.sent();
                         return [2 /*return*/];
                 }
             });
