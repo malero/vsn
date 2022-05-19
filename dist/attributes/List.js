@@ -90,14 +90,18 @@ var List = /** @class */ (function (_super) {
     };
     List.prototype.setup = function () {
         return __awaiter(this, void 0, void 0, function () {
-            var template, templateNode;
+            var template, templateTag, templateNode;
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
-                        if (!(this.tag.element.children.length > 0)) return [3 /*break*/, 1];
+                        if (!(this.tag.element.children.length > 0)) return [3 /*break*/, 2];
                         template = this.tag.element.children[0];
+                        return [4 /*yield*/, this.tag.dom.getTagForElement(template)];
+                    case 1:
+                        templateTag = _a.sent();
                         if (template) {
                             if (template.hasAttribute('vsn-template')) {
+                                templateTag.parentTag = this.tag; // Set parentTag before removing from DOM
                                 template.removeAttribute('vsn-template');
                                 this.tag.element.removeChild(template);
                                 this.template = template;
@@ -106,18 +110,18 @@ var List = /** @class */ (function (_super) {
                                 this.template = template.cloneNode(true);
                             }
                         }
-                        return [3 /*break*/, 3];
-                    case 1:
-                        if (!this.tag.hasRawAttribute('template')) return [3 /*break*/, 3];
-                        return [4 /*yield*/, DOM_1.DOM.instance.exec(this.tag.getRawAttributeValue('template'))];
+                        return [3 /*break*/, 4];
                     case 2:
+                        if (!this.tag.hasRawAttribute('template')) return [3 /*break*/, 4];
+                        return [4 /*yield*/, DOM_1.DOM.instance.exec(this.tag.getRawAttributeValue('template'))];
+                    case 3:
                         templateNode = _a.sent();
                         if (templateNode instanceof Array && templateNode.length === 1)
                             templateNode = templateNode[0];
                         this.template = templateNode.element.content.cloneNode(true);
-                        _a.label = 3;
-                    case 3: return [4 /*yield*/, _super.prototype.setup.call(this)];
-                    case 4:
+                        _a.label = 4;
+                    case 4: return [4 /*yield*/, _super.prototype.setup.call(this)];
+                    case 5:
                         _a.sent();
                         return [2 /*return*/];
                 }
@@ -245,9 +249,7 @@ var List = /** @class */ (function (_super) {
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
-                        console.log('PRE CLONE');
                         clone = this.template.cloneNode(true);
-                        console.log('POST CLONE');
                         if (clone instanceof DocumentFragment) {
                             element = clone.children[0];
                         }

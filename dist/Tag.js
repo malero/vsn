@@ -421,7 +421,6 @@ var Tag = /** @class */ (function (_super) {
         if (includeSelf === void 0) { includeSelf = false; }
         if (includeSelf && this.hasAttribute(attr))
             return this;
-        console.log('parentTag', this.parentTag);
         return this.parentTag ? this.parentTag.findAncestorByAttribute(attr, true) : null;
     };
     Tag.prototype.findDescendantsByAttribute = function (attr, includeSelf) {

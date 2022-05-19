@@ -296,7 +296,6 @@ var DOM = /** @class */ (function (_super) {
                             newTags.push(tag);
                             allElements.push(element);
                         }
-                        console.log('All tags built');
                         if (!isRoot) return [3 /*break*/, 2];
                         _e = this;
                         return [4 /*yield*/, this.getTagForElement(document.body)];
@@ -317,7 +316,6 @@ var DOM = /** @class */ (function (_super) {
                         _f++;
                         return [3 /*break*/, 3];
                     case 6:
-                        console.log('All tag attributes built');
                         _g = 0, newTags_2 = newTags;
                         _m.label = 7;
                     case 7:
