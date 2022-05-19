@@ -250,6 +250,9 @@ export class Tag extends DOMObject {
         if (!!this._scope)
             return this._scope;
 
+        if (this.uniqueScope)
+            return this.createScope();
+
         if (!!this._parentTag)
             return this._parentTag.scope;
 
@@ -432,7 +435,6 @@ export class Tag extends DOMObject {
 
         if (requiresScope && !this.uniqueScope) {
             this._uniqueScope = true;
-            this._scope = new Scope();
         }
 
         this._state = TagState.AttributesBuilt;
@@ -569,17 +571,21 @@ export class Tag extends DOMObject {
         }
     }
 
-    public createScope() {
+    public createScope(force: boolean = false): Scope {
         // Standard attribute requires a unique scope
         // @todo: Does this cause any issues with attribute bindings on the parent scope prior to having its own scope? hmm...
-        if (!this.uniqueScope) {
+        if ((!this.uniqueScope && force) || this.uniqueScope) {
             this._uniqueScope = true;
             this._scope = new Scope();
 
             if (this.parentTag) {
                 this.scope.parentScope = this.parentTag.scope;
             }
+
+            return this._scope;
         }
+
+        return null;
     }
 
     async watchAttribute(attributeName: string) {
@@ -589,7 +595,7 @@ export class Tag extends DOMObject {
             }
         }
 
-        this.createScope();
+        this.createScope(true);
 
         const standardAttribute = new StandardAttribute(this, attributeName);
         this.attributes.push(standardAttribute);
@@ -605,7 +611,7 @@ export class Tag extends DOMObject {
             }
         }
 
-        this.createScope();
+        this.createScope(true);
 
         const styleAttribute = new StyleAttribute(this, 'style');
         this.attributes.push(styleAttribute);
