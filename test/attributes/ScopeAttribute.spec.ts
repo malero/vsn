@@ -20,4 +20,16 @@ describe('ScopeAttribute', () => {
             done();
         });
     });
+
+    it("vsn-scope should allow empty value to create a scope", (done) => {
+        document.body.innerHTML = `
+            <div vsn-scope></div>
+        `;
+        const dom = new DOM(document);
+        dom.once('built', async () => {
+            const element = (await dom.exec('?(div)'))[0];
+            expect(element.uniqueScope).toBe(true);
+            done();
+        });
+    });
 });

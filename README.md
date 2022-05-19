@@ -1,4 +1,4 @@
-[![npm version](https://badge.fury.io/js/vsn.svg)](https://badge.fury.io/js/vsn) [![Build Status](https://travis-ci.org/malero/vsn.svg?branch=master)](https://travis-ci.org/malero/vsn) [![codecov](https://codecov.io/gh/malero/vsn/branch/master/graph/badge.svg)](https://codecov.io/gh/malero/vsn) [![npm](https://img.shields.io/npm/dw/vsn.svg)]()
+[![npm version](https://badge.fury.io/js/vsn.svg)](https://badge.fury.io/js/vsn) [![Build Status](https://travis-ci.org/malero/vsn.svg?branch=master)](https://travis-ci.org/malero/vsn) [![codecov](https://codecov.io/gh/malero/vsn/branch/master/graph/badge.svg)](https://codecov.io/gh/malero/vsn) [![npm](https://img.shields.io/npm/dw/vsn.svg)]() [![gzip bundle size](http://img.badgesize.io/https://unpkg.com/vsn@latest/dist/?compression=gzip&style=flat-square)](https://unpkg.com/vsn)
 
 # VisionJS Framework
 
@@ -12,4 +12,4 @@ Use NPM to install VisionJS with the following command:
 
 ## Usage
 
-Please visit the [docs](https://vsnjs.org) for more information.
+Please visit the [docs](https://www.vsnjs.org) for more information.

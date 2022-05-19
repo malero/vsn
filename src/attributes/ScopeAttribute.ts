@@ -10,18 +10,24 @@ export class ScopeAttribute extends Attribute {
     protected tree: Tree;
 
     public async compile() {
-        this.tree = new Tree(this.getAttributeValue());
-        await this.tree.prepare(this.tag.scope, this.tag.dom, this.tag);
+        const code = this.getAttributeValue();
+        if (code) {
+            this.tree = new Tree(code);
+            await this.tree.prepare(this.tag.scope, this.tag.dom, this.tag);
+        }
         await super.compile();
     }
 
     public async extract() {
-        const value = await this.tree.evaluate(this.tag.scope, this.tag.dom, this.tag);
-        if (!(value instanceof Scope)) {
-            throw new Error(`Scope value must be an object, got ${typeof value}`);
+        if (this.tree) {
+            const value = await this.tree.evaluate(this.tag.scope, this.tag.dom, this.tag);
+            if (!(value instanceof Scope)) {
+                throw new Error(`vsn-scope value must be an object, got ${typeof value}`);
+            }
+            for (const key of value.data.keys) {
+                this.tag.scope.set(key, value.data[key]);
+            }
         }
-        for (const key of value.data.keys) {
-            this.tag.scope.set(key, value.data[key]);
-        }
+        await super.extract();
     }
 }
