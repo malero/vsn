@@ -79,6 +79,7 @@ var ListItem = /** @class */ (function (_super) {
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
+                        console.log('ListItem.setup()');
                         this._list = this.tag.findAncestorByAttribute('vsn-list');
                         if (!this._list)
                             throw Error(ListItem_1.ERROR_NO_PARENT);

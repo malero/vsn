@@ -68,6 +68,7 @@ describe('ListItem', () => {
                 </ul>
             </div>
         `;
+        console.log('########### test');
         const dom = new DOM(document);
         dom.once('built', async () => {
             const list = await dom.getTagForElement(document.getElementById('test'));

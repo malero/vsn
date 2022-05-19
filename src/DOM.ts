@@ -177,26 +177,6 @@ export class DOM extends EventDispatcher {
         for (const tag of newTags)
             await tag.compileAttributes();
 
-        for (const tag of newTags) {
-            if (tag === this.root)
-                continue;
-
-            // Find the closest ancestor
-            let parentElement: HTMLElement = tag.element.parentElement as HTMLElement;
-            let foundParent = false;
-            while (parentElement) {
-                if (allElements.indexOf(parentElement) > -1) {
-                    foundParent = true;
-                    tag.parentTag = await this.getTagForElement(parentElement);
-                    break;
-                }
-
-                parentElement = parentElement.parentElement as HTMLElement;
-            }
-            if (!foundParent)
-                console.error('Could not find parent for ', tag);
-        }
-
         for (const tag of newTags)
             await tag.setupAttributes();
 

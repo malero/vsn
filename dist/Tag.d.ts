@@ -14,6 +14,7 @@ export declare enum TagState {
     AttributesConnected = 5,
     Built = 6
 }
+export declare const TaggedVariable: string;
 export declare class Tag extends DOMObject {
     readonly dom: DOM;
     readonly rawAttributes: {

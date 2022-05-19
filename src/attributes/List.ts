@@ -25,9 +25,11 @@ export class List extends Attribute {
     public async setup() {
         if (this.tag.element.children.length > 0) {
             const template = this.tag.element.children[0];
+            const templateTag: Tag = await this.tag.dom.getTagForElement(template);
 
             if (template) {
                 if (template.hasAttribute('vsn-template')) {
+                    templateTag.parentTag = this.tag; // Set parentTag before removing from DOM
                     template.removeAttribute('vsn-template');
                     this.tag.element.removeChild(template);
                     this.template = template;

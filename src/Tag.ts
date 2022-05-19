@@ -21,6 +21,8 @@ export enum TagState {
     Built,
 }
 
+export const TaggedVariable:string = '_vsn_tag';
+
 export class Tag extends DOMObject {
     public readonly rawAttributes: { [key: string]: string; };
     public readonly parsedAttributes: { [key: string]: string[]; };
@@ -55,6 +57,7 @@ export class Tag extends DOMObject {
         ...props
     ) {
         super(element, props);
+        element[TaggedVariable] = this;
         this.rawAttributes = {};
         this.parsedAttributes = {};
         this.attributes = [];
@@ -232,6 +235,23 @@ export class Tag extends DOMObject {
     }
 
     public get parentTag(): Tag {
+        if (!this._parentTag) {
+            let parentElement: HTMLElement = this.element.parentElement as HTMLElement;
+            let foundParent = false;
+            while (parentElement) {
+                if (parentElement[TaggedVariable]) {
+                    foundParent = true;
+                    this.parentTag = parentElement[TaggedVariable];
+                    break;
+                }
+
+                parentElement = parentElement.parentElement as HTMLElement;
+            }
+
+            if (!foundParent && DOM.instance.root !== this)
+                return DOM.instance.root;
+        }
+
         return this._parentTag;
     }
 
@@ -253,8 +273,8 @@ export class Tag extends DOMObject {
         if (this.uniqueScope)
             return this.createScope();
 
-        if (!!this._parentTag)
-            return this._parentTag.scope;
+        if (!!this.parentTag)
+            return this.parentTag.scope;
 
         return null;
     }
@@ -293,7 +313,7 @@ export class Tag extends DOMObject {
     }
 
     public addToParentElement() {
-        this._parentTag.element.appendChild(this.element)
+        this.parentTag.element.appendChild(this.element)
     }
 
     public hide() {
@@ -307,7 +327,6 @@ export class Tag extends DOMObject {
     public findAncestorByAttribute(attr: string, includeSelf: boolean = false): Tag {
         if (includeSelf && this.hasAttribute(attr))
             return this;
-
         return this.parentTag ? this.parentTag.findAncestorByAttribute(attr, true) : null;
     }
 
