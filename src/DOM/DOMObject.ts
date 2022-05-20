@@ -1,9 +1,15 @@
 import {Scope} from "../Scope";
 import {EventDispatcher} from "../EventDispatcher";
 
+export interface IEventHandler {
+    event: string;
+    handler: (...args: any[]) => any;
+    context?: any;
+}
+
 export abstract class DOMObject extends EventDispatcher {
     protected _scope: Scope;
-    protected onEventHandlers: {[key:string]:any[]};
+    protected onEventHandlers: {[key:string]: IEventHandler[]};
     protected _uniqueScope: boolean = false;
 
     constructor(

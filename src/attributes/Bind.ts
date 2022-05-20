@@ -60,6 +60,7 @@ export class Bind extends Attribute {
     }
 
     public async evaluate() {
+        console.log('evaluate', this.tag.value);
         const elementValue = this.valueFromElement;
         if (!!elementValue)
             this.updateFrom();

@@ -667,7 +667,7 @@ var Tag = /** @class */ (function (_super) {
                 switch (_b.label) {
                     case 0:
                         if (this.isInput) {
-                            this.addEventHandler('input', [], this.inputMutation.bind(this));
+                            this.addEventHandler('input', [], this.inputMutation, this);
                         }
                         _i = 0, _a = this.nonDeferredAttributes;
                         _b.label = 1;
@@ -690,6 +690,7 @@ var Tag = /** @class */ (function (_super) {
         });
     };
     Tag.prototype.inputMutation = function (e) {
+        console.log('input mutation', e);
         if (this.isSelect) {
             var selected = this.element.selectedOptions;
             var values = [];
@@ -737,7 +738,7 @@ var Tag = /** @class */ (function (_super) {
         this.scope.set('$value', this.value);
         for (var _i = 0, _a = this.onEventHandlers[eventType]; _i < _a.length; _i++) {
             var handler = _a[_i];
-            handler(e);
+            handler.handler.call(handler.context, e);
         }
     };
     Tag.prototype.hasModifier = function (attribute, modifier) {
@@ -746,7 +747,8 @@ var Tag = /** @class */ (function (_super) {
     Tag.prototype.stripModifier = function (attribute, modifier) {
         return attribute.replace("|" + modifier, '');
     };
-    Tag.prototype.addEventHandler = function (eventType, modifiers, handler) {
+    Tag.prototype.addEventHandler = function (eventType, modifiers, handler, context) {
+        if (context === void 0) { context = null; }
         var passiveValue = null;
         if (modifiers.indexOf('active') > -1) {
             passiveValue = false;
@@ -762,14 +764,19 @@ var Tag = /** @class */ (function (_super) {
                 opts['passive'] = passiveValue === null && true || passiveValue;
             element.addEventListener(eventType, this.handleEvent.bind(this, eventType), opts);
         }
-        this.onEventHandlers[eventType].push(handler);
+        this.onEventHandlers[eventType].push({
+            handler: handler,
+            event: eventType,
+            context: context,
+        });
     };
-    Tag.prototype.removeEventHandler = function (eventType, handler) {
+    Tag.prototype.removeEventHandler = function (eventType, handler, context) {
+        if (context === void 0) { context = null; }
         if (!this.onEventHandlers[eventType])
             return;
-        var index = this.onEventHandlers[eventType].indexOf(handler);
-        if (index > -1) {
-            this.onEventHandlers[eventType].splice(index, 1);
+        var _handler = this.onEventHandlers[eventType].find(function (h) { return h.handler === handler && h.context === context; });
+        if (_handler) {
+            this.onEventHandlers[eventType].splice(this.onEventHandlers[eventType].indexOf(_handler), 1);
             if (this.onEventHandlers[eventType].length === 0) {
                 this.element.removeEventListener(eventType, this.handleEvent.bind(this, eventType));
             }

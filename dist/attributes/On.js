@@ -105,7 +105,7 @@ var On = /** @class */ (function (_super) {
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
-                        this.tag.addEventHandler(this.getAttributeBinding(), this.getAttributeModifiers(), this.handleEvent.bind(this));
+                        this.tag.addEventHandler(this.getAttributeBinding(), this.getAttributeModifiers(), this.handleEvent, this);
                         return [4 /*yield*/, _super.prototype.connect.call(this)];
                     case 1:
                         _a.sent();

@@ -85,7 +85,7 @@ var LazyAttribute = /** @class */ (function (_super) {
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
-                        this.tag.addEventHandler('scroll', ['passive'], this.handleEvent.bind(this));
+                        this.tag.addEventHandler('scroll', ['passive'], this.handleEvent, this);
                         return [4 /*yield*/, this.handleEvent()];
                     case 1:
                         _a.sent();
@@ -104,7 +104,7 @@ var LazyAttribute = /** @class */ (function (_super) {
                         return [4 /*yield*/, this.handler.evaluate(this.tag.scope, this.tag.dom, this.tag)];
                     case 1:
                         _a.sent();
-                        this.tag.removeEventHandler('scroll', this.handleEvent.bind(this));
+                        this.tag.removeEventHandler('scroll', this.handleEvent, this);
                         _a.label = 2;
                     case 2: return [2 /*return*/];
                 }

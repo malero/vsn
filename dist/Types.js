@@ -21,7 +21,7 @@ var Types = /** @class */ (function () {
         return parseInt(value);
     };
     Types.float = function (value) {
-        value = ("" + value).replace(/[^0-9.]+/, '');
+        value = ("" + value).replace(/[^\d.]+/, '');
         return parseFloat(value);
     };
     Types.boolean = function (value) {

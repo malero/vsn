@@ -90,8 +90,8 @@ export declare class Tag extends DOMObject {
     protected handleEvent(eventType: string, e: any): void;
     hasModifier(attribute: string, modifier: string): boolean;
     stripModifier(attribute: string, modifier: string): string;
-    addEventHandler(eventType: string, modifiers: string[], handler: any): void;
-    removeEventHandler(eventType: string, handler: any): void;
+    addEventHandler(eventType: string, modifiers: string[], handler: any, context?: any): void;
+    removeEventHandler(eventType: string, handler: any, context?: any): void;
     createScope(force?: boolean): Scope;
     watchAttribute(attributeName: string): Promise<StandardAttribute>;
     watchStyle(styleName: string): Promise<StyleAttribute>;

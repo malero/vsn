@@ -12,7 +12,7 @@ export class LazyAttribute extends On {
     }
 
     public async connect() {
-        this.tag.addEventHandler('scroll', ['passive'], this.handleEvent.bind(this));
+        this.tag.addEventHandler('scroll', ['passive'], this.handleEvent, this);
         await this.handleEvent();
     }
 
@@ -20,7 +20,7 @@ export class LazyAttribute extends On {
         if (!this.loaded && window.scrollY + window.outerHeight >= this.eleTop) {
             this.loaded = true;
             await this.handler.evaluate(this.tag.scope, this.tag.dom, this.tag);
-            this.tag.removeEventHandler('scroll', this.handleEvent.bind(this));
+            this.tag.removeEventHandler('scroll', this.handleEvent, this);
         }
     }
 }

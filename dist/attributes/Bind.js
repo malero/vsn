@@ -166,6 +166,7 @@ var Bind = /** @class */ (function (_super) {
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
+                        console.log('evaluate', this.tag.value);
                         elementValue = this.valueFromElement;
                         if (!!elementValue)
                             this.updateFrom();

@@ -491,7 +491,7 @@ export class Tag extends DOMObject {
 
     public async connectAttributes() {
         if (this.isInput) {
-            this.addEventHandler('input', [], this.inputMutation.bind(this));
+            this.addEventHandler('input', [], this.inputMutation, this);
         }
 
         for (const attr of this.nonDeferredAttributes) {
@@ -502,6 +502,7 @@ export class Tag extends DOMObject {
     }
 
     public inputMutation(e) {
+        console.log('input mutation', e);
         if (this.isSelect) {
             const selected = (this.element as HTMLSelectElement).selectedOptions;
             const values = [];
@@ -538,13 +539,14 @@ export class Tag extends DOMObject {
     protected handleEvent(eventType: string, e) {
         if (e)
             e.stopPropagation();
+
         if (!this.onEventHandlers[eventType])
             return;
 
         this.scope.set('$event', e);
         this.scope.set('$value', this.value);
         for (const handler of this.onEventHandlers[eventType]) {
-            handler(e);
+            handler.handler.call(handler.context, e);
         }
     }
 
@@ -556,7 +558,7 @@ export class Tag extends DOMObject {
         return attribute.replace(`|${modifier}`, '');
     }
 
-    public addEventHandler(eventType: string, modifiers: string[], handler) {
+    public addEventHandler(eventType: string, modifiers: string[], handler, context: any = null) {
         let passiveValue: boolean = null;
         if (modifiers.indexOf('active') > -1) {
             passiveValue = false;
@@ -574,16 +576,20 @@ export class Tag extends DOMObject {
             element.addEventListener(eventType, this.handleEvent.bind(this, eventType), opts);
         }
 
-        this.onEventHandlers[eventType].push(handler);
+        this.onEventHandlers[eventType].push({
+            handler: handler,
+            event: eventType,
+            context: context,
+        });
     }
 
-    public removeEventHandler(eventType: string, handler) {
+    public removeEventHandler(eventType: string, handler, context: any = null) {
         if (!this.onEventHandlers[eventType])
             return;
 
-        const index = this.onEventHandlers[eventType].indexOf(handler);
-        if (index > -1) {
-            this.onEventHandlers[eventType].splice(index, 1);
+        const _handler = this.onEventHandlers[eventType].find(h => h.handler === handler && h.context === context);
+        if (_handler) {
+            this.onEventHandlers[eventType].splice(this.onEventHandlers[eventType].indexOf(_handler), 1);
             if (this.onEventHandlers[eventType].length === 0) {
                 this.element.removeEventListener(eventType, this.handleEvent.bind(this, eventType));
             }

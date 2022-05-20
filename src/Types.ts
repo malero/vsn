@@ -18,7 +18,7 @@ export class Types {
 
     @Registry.type('float')
     public static float(value: string) {
-        value = `${value}`.replace(/[^0-9.]+/, '');
+        value = `${value}`.replace(/[^\d.]+/, '');
         return parseFloat(value);
     }
 

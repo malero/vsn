@@ -15,7 +15,7 @@
   "scripts": {
     "build": "rm -rf ./dist/ && tsc",
     "build_dev": "rm -rf ./dist/ && webpack --env BUILD=development BENCHMARK=1",
-    "demo": "rm -rf ./dist/ && webpack --env BUILD=production BENCHMARK=1 && cp ./dist/vsn.min.js ./demo/vsn.js",
+    "demo": "webpack --env BUILD=production BENCHMARK=1 && cp ./dist/vsn.min.js ./demo/vsn.js",
     "clean": "rm -rf ./dist/",
     "test": "karma start --single-run",
     "posttest": "codecov",
