@@ -1,5 +1,6 @@
 const path = require('path');
 const webpack = require("webpack");
+const TerserPlugin = require("terser-webpack-plugin");
 
 const defaultConfiguration = {
   entry: './src/vsn.ts',
@@ -20,6 +21,15 @@ const defaultConfiguration = {
     filename: 'vsn.min.js',
     path: path.resolve(__dirname, 'dist'),
   },
+  optimization: {
+    minimizer: [new TerserPlugin({
+    terserOptions: {
+      format: {
+        preamble: `/* Copyright ${new Date().getUTCFullYear()}, VSNjs. ${require('./package.json').name} ${require('./package.json').version} (${new Date().toUTCString()}) */if (window) window['VSN_VERSION']='${require('./package.json').version}';`
+      }
+    }
+  })],
+  }
 };
 
 function buildConfig(env) {

@@ -43,7 +43,7 @@ export class Vision extends EventDispatcher {
         return this._dom;
     }
 
-    public async eval(code: string) {
+    public async exec(code: string) {
         return await this._dom.exec(code);
     }
 
@@ -55,7 +55,7 @@ export class Vision extends EventDispatcher {
         await this._dom.buildFrom(document, true);
         const now = (new Date()).getTime();
         const setupTime = now - startTime;
-        console.warn(`Took ${setupTime}ms to start up VisionJS. https://www.vsnjs.com/`);
+        console.warn(`Took ${setupTime}ms to start up VisionJS. https://www.vsnjs.com/`, window ? `v${window['VSN_VERSION']}` : null);
     }
 
     public static get instance() {

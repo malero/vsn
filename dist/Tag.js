@@ -690,7 +690,6 @@ var Tag = /** @class */ (function (_super) {
         });
     };
     Tag.prototype.inputMutation = function (e) {
-        console.log('input mutation', e);
         if (this.isSelect) {
             var selected = this.element.selectedOptions;
             var values = [];
@@ -706,10 +705,13 @@ var Tag = /** @class */ (function (_super) {
                     option.removeAttribute('selected');
                 }
             }
-            this.element.setAttribute('value', values.join(','));
+            //this.element.setAttribute('value', );
+            this.value = values.join(',');
         }
         else {
-            this.element.setAttribute('value', e.target.value);
+            //this.element.setAttribute('value', e.target.value);
+            //(this.element as any).value = e.target.value;
+            this.value = e.target.value;
         }
     };
     Tag.prototype.finalize = function () {

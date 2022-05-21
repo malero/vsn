@@ -502,7 +502,6 @@ export class Tag extends DOMObject {
     }
 
     public inputMutation(e) {
-        console.log('input mutation', e);
         if (this.isSelect) {
             const selected = (this.element as HTMLSelectElement).selectedOptions;
             const values = [];
@@ -516,9 +515,12 @@ export class Tag extends DOMObject {
                     option.removeAttribute('selected');
                 }
             }
-            this.element.setAttribute('value', values.join(','));
+            //this.element.setAttribute('value', );
+            this.value = values.join(',');
         } else {
-            this.element.setAttribute('value', e.target.value);
+            //this.element.setAttribute('value', e.target.value);
+            //(this.element as any).value = e.target.value;
+            this.value = e.target.value;
         }
     }
 

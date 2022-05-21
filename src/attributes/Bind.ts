@@ -44,7 +44,6 @@ export class Bind extends Attribute {
 
         this.key = await ref.getKey();
         this.boundScope = await ref.getScope();
-
         if (!!this.valueFromElement)
             this.updateFrom();
 
@@ -60,7 +59,6 @@ export class Bind extends Attribute {
     }
 
     public async evaluate() {
-        console.log('evaluate', this.tag.value);
         const elementValue = this.valueFromElement;
         if (!!elementValue)
             this.updateFrom();
@@ -81,12 +79,12 @@ export class Bind extends Attribute {
 
     get valueFromElement(): string {
         let value;
+
         if (this.property) {
             value = this.tag.getElementAttribute(this.property);
         } else {
             value = this.tag.value;
         }
-
         return value;
     }
 

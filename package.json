@@ -1,6 +1,6 @@
 {
   "name": "vsn",
-  "version": "0.1.56",
+  "version": "0.1.57",
   "description": "SEO Friendly Javascript/Typescript Framework",
   "keywords": [
     "framework",
@@ -16,10 +16,9 @@
     "build": "rm -rf ./dist/ && tsc",
     "build_dev": "rm -rf ./dist/ && webpack --env BUILD=development BENCHMARK=1",
     "demo": "webpack --env BUILD=production BENCHMARK=1 && cp ./dist/vsn.min.js ./demo/vsn.js",
-    "clean": "rm -rf ./dist/",
     "test": "karma start --single-run",
     "posttest": "codecov",
-    "sample": "rm -rf sample/dist/ && tsc -p sample/ && node sample/dist/sample/index.js"
+    "clean": "rm -rf ./dist/"
   },
   "license": "MIT",
   "dependencies": {},

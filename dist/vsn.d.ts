@@ -9,7 +9,7 @@ export declare class Vision extends EventDispatcher {
     readonly config: Configuration;
     constructor();
     get dom(): DOM;
-    eval(code: string): Promise<any>;
+    exec(code: string): Promise<any>;
     setup(): Promise<void>;
     static get instance(): Vision;
 }

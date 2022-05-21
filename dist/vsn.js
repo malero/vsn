@@ -103,7 +103,7 @@ var Vision = /** @class */ (function (_super) {
         enumerable: false,
         configurable: true
     });
-    Vision.prototype.eval = function (code) {
+    Vision.prototype.exec = function (code) {
         return __awaiter(this, void 0, void 0, function () {
             return __generator(this, function (_a) {
                 switch (_a.label) {
@@ -128,7 +128,7 @@ var Vision = /** @class */ (function (_super) {
                         _a.sent();
                         now = (new Date()).getTime();
                         setupTime = now - startTime;
-                        console.warn("Took " + setupTime + "ms to start up VisionJS. https://www.vsnjs.com/");
+                        console.warn("Took " + setupTime + "ms to start up VisionJS. https://www.vsnjs.com/", window ? "v" + window['VSN_VERSION'] : null);
                         return [2 /*return*/];
                 }
             });

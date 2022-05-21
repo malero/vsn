@@ -2,79 +2,200 @@
 <html lang="en">
 <head>
     <meta charset="utf-8">
-    <title>SEO Javascript Demo</title>
+    <title>SEO Javascript Test</title>
 
-    <style>
-        .example {
-            border: 1px solid #ccc;
-            padding: 10px;
-            margin: 10px;
-            display: flex;
-            flex-direction: row;
-            flex-wrap: nowrap;
-            align-content: center;
-            justify-content: space-around;
-            align-items: center;
-        }
-        .code,
-        .result {
-            width: 50%;
-            padding: 10px;
-        }
+    <style></style>
+    <script type="text/javascript">
+        var TestController = (function () {
+            function TestController() {
+                this.items = [];
+                this.name = null;
+                this.age = null;
+                this.obj = null;
+                this.array = null;
+            }
 
-        .code textarea {
-            width: 100%;
+            TestController.prototype.reset = function () {
+                this.name = '';
+                this.age = '';
+            };
+
+            TestController.prototype.add = function () {
+                this.items.push(new TestItem(this.name, this.age));
+                this.reset();
+            };
+
+            return TestController;
+        }());
+
+        var TestItem = (function () {
+            function TestItem(name = null, age = null) {
+                this.name = name;
+                this.age = age;
+            }
+
+            TestItem.prototype.reset = function () {
+                this.name = '';
+                this.age = '';
+            };
+            return TestItem;
+        }());
+
+        var MVal = (function () {
+            function MVal(v) {
+                this.v = v;
+            }
+            return MVal;
+        }());
+
+        var Controller = (function () {
+            function Controller() {
+                this.on = false;
+            }
+
+            Controller.prototype.doSomething = function ($event, value) {
+                $event.preventDefault();
+                this.on = value;
+            };
+            return Controller;
+        }());
+    </script>
+
+    <script type="vsn">
+        class Test {
+            helloWorld() {
+                print('Hello, world!');
+            }
         }
-    </style>
+    </script>
 </head>
 <body>
-<div id="testing"></div>
-<h2>Input Binding</h2>
-<div class="example">
-    <div class="code">
-        <textarea id="input-binding" rows="1"><input id="test" value="initial" /><span vsn-bind="#test.@value"></span></textarea>
-    </div>
-    <div class="result"><div vsn-bind:@html="#input-binding.@value"></div></div>
+<template vsn-template id="vsn-template">
+    <span>Hello, world!</span>
+</template>
+
+<div>
+    <textarea id="example-code" rows="10" cols="50"></textarea>
+    <input type="text" id="example-input" value="hmm" />
+    <div id="example-output" vsn-bind:@html="#example-code.@value"></div>
 </div>
 
-<h2>DOM Events</h2>
-<div class="example">
-    <div class="code">
-        <textarea id="dom-events" rows="3">
-<button vsn-on:click="counter.v -= 1">-</button>
-<span vsn-name="counter" vsn-set:v="0|integer" vsn-bind="v"></span>
-<button vsn-on:click="counter.v += 1">+</button>
-        </textarea>
-    </div>
-    <div class="result"><div vsn-bind:@html="#dom-events.@value"></div></div>
+<template vsn-template id="query-operator-example-item">
+    <li vsn-list-item>
+        <span vsn-if="'active' in ?>(:parent).@class">active</span>
+        <span vsn-if:not="'active' not in ?>(:parent).@class">inactive</span>
+        <button vsn-on:click="?>(:parent).@class += 'active'">+</button>
+        <button vsn-on:click="?>(:parent).@class -= 'active'">-</button>
+        <button vsn-on:click="?>(:parent).@class ~ 'active'">~</button>
+    </li>
+</template>
+
+<div id="test-container"></div>
+<a href="./markup.html" vsn-on:click|preventdefault="#test-container.@html = << @href">Fill Container</a>
+<a vsn-on:click|preventdefault="#test-container.@html = ''">Clear Container</a>
+
+<h2>On Click</h2>
+<button vsn-on:click="show = !show" vsn-set:show="false|boolean">Toggle</button>
+<span vsn-bind="show"></span>
+
+<a vsn-on:click="if(@text != @clicktext){@text=@clicktext}else{@text='Click Me'}" clicktext="Clicked!">Click Me</a>
+
+<h2>? Operator</h2>
+<p>Add/remove class to list of elements on click.</p>
+<p id="toggle-container" vsn-exec="toggles = ?(#list-add-remove-class-example li)">
+    <button vsn-on:click="?(#list-add-remove-class-example li).@class += 'active'">Add</button> <button vsn-on:click="?(#list-add-remove-class-example li).@class -= 'active'">Remove</button> <button vsn-on:click="?(#list-add-remove-class-example li).@class ~ 'active'">Toggle</button>
+    <ul id="list-add-remove-class-example" vsn-list initial-items="5" template="?(#query-operator-example-item)"></ul>
+</p>
+
+<h2>@ Operator</h2>
+<p></p>
+<p>
+    <input type="text" value="testing" id="at-attribute" /> <input type="button" vsn-on:click="?(#at-attribute).@type = 'password'" value="Button" /> <input type="button" vsn-on:click="?(#at-attribute).@type = 'text'" value="Button" />
+</p>
+
+<p>Bind to window attributes. </p>
+<p>window.scrollX,Y <span vsn-bind="?(window).@scrollX"></span>, <span vsn-bind="?(window).@scrollY"></span></p>
+
+<h2>Attribute Binding</h2>
+<a href="/index.html" id="link" vsn-name="link_test">Home</a>
+<input type="text" vsn-bind="#link.@text"/>
+<input type="text" vsn-bind="#link.@href"/>
+
+<h2>Attribute Formatters</h2>
+<h3>Currency</h3>
+<span vsn-bind="currency_format" vsn-type:currency_format="float" vsn-format="currency" id="formatter">1.5</span>
+<input type="text" vsn-bind="#formatter.currency_format" />
+<br />
+<h3>Date</h3>
+<span vsn-bind="date_format" vsn-type:date_format="date" vsn-format="date" id="date-formatter">Aug 11, 2021 01:03:00 PM PDT</span>
+<input type="text" vsn-bind:|to="?(#date-formatter).date_format" />
+<input type="text" vsn-on:keyup="?(#date-formatter).date_format = $value" value="Aug 11, 2021 01:03:00 PM PDT" />
+
+<h2>$ Operator</h2>
+<p></p>
+<p>
+    <input type="text" vsn-bind="$marginTop" id="style-attribute" /> <input type="button" vsn-on:click="?(#style-attribute).$marginTop = $padding;$padding += 1px" vsn-on:contextmenu|preventdefault="$padding -= 1px" value="Button" /> <input type="button" vsn-on:click="?(#style-attribute).$marginTop = '0'" value="Button" />
+</p>
+
+<h2>Conditional Elements</h2>
+<button vsn-on:click="show = !show">Toggle</button>
+<span vsn-if="show">Show is true</span>
+<span vsn-if="!show">Show is false</span>
+
+<h2>Controllers</h2>
+<div vsn-controller:controller="Controller">
+    <span vsn-if="controller.on">It's on!</span>
+    <span vsn-if="!controller.on">It's off...</span>
+    <a href="/" vsn-on:click="controller.doSomething($event, !controller.on)">Click Me</a>
 </div>
 
-<h2>Query Operators & Conditionals</h2>
-<div class="example">
-    <div class="code">
-        <textarea id="query-operator" rows="7">
-<div class="active">
-  <button vsn-on:click="?>(:parent).@class -= 'active'">-</button>
-  <button vsn-on:click="?>(:parent).@class ~ 'active'">~</button>
-  <button vsn-on:click="?>(:parent).@class += 'active'">+</button>
-  <span vsn-if="'active' not in ?>(:parent).@class">Inactive</span>
-  <span vsn-if="'active' in ?>(:parent).@class">Active</span>
+<h2>Lists</h2>
+<div vsn-controller:test="TestController" id="testing">
+    <h3>Value: <span vsn-bind="test.name">Testing</span> <span vsn-bind="test.age">32</span></h3>
+    <input type="text" vsn-bind="test.name"/>
+    <input type="text" vsn-bind="test.age"/>
+    <button vsn-on:click="test.reset()" vsn-if="test.name">Reset</button>
+    <button vsn-on:click="test.add();">Add New List Item</button>
+    <ul vsn-list:test.items vsn-list-item-model="TestItem" vsn-name="list">
+        <li vsn-list-item>
+            <span vsn-bind="item.name">Tom</span>, <span vsn-bind="item.age">22</span> Years Old <input type="text"
+                                                                                                        vsn-bind="item.name"/>
+            <input type="text" vsn-bind="item.age"/>
+            <button vsn-on:click="item.reset()">R</button>
+            <button vsn-on:click="list.remove(item)">X</button>
+        </li>
+        <li vsn-list-item>
+            <span vsn-bind="item.name">Steve</span>, <span vsn-bind="item.age">46</span> Years Old <input type="text"
+                                                                                                          vsn-bind="item.name"/>
+            <input type="text" vsn-bind="item.age"/>
+            <button vsn-on:click="item.reset()">R</button>
+            <button vsn-on:click="list.remove(item)">X</button>
+        </li>
+        <li vsn-list-item>
+            <span vsn-bind="item.name">Frank</span>, <span vsn-bind="item.age">31</span> Years Old <input type="text"
+                                                                                                          vsn-bind="item.name"/>
+            <input type="text" vsn-bind="item.age"/>
+            <button vsn-on:click="item.reset()">R</button>
+            <button vsn-on:click="list.remove(item)">X</button>
+        </li>
+        <li vsn-list-item>
+            <span vsn-name="wut" vsn-set:wut.test="1">Wut</span>
+            <span vsn-bind="item.name">Joe</span>, <span vsn-bind="item.age">91</span> Years Old <input type="text"
+                                                                                                        vsn-bind="item.name"/>
+            <input type="text" vsn-bind="item.age"/>
+            <button vsn-on:click="item.reset()">R</button>
+            <button vsn-on:click="list.remove(item)">X</button>
+        </li>
+    </ul>
 </div>
-        </textarea>
-    </div>
-    <div class="result"><div vsn-bind:@html="#query-operator.@value"></div></div>
-</div>
-
-<p></p><p></p><p></p><p></p><p></p><p></p><p></p><p></p><p></p><p></p><p></p><p></p><p></p><p></p><p></p><p></p><p></p><p></p><p></p><p></p><p></p><p></p>
-
-<h2>Lazy Execution</h2>
-<div class="example">
-    <div class="code">
-        <textarea id="lazy-loading" rows="1"><div vsn-lazy="$background = 'url(./logo.png) no-repeat';$minHeight = 150px;"></div></textarea>
-    </div>
-    <div class="result"><div vsn-bind:@html="#lazy-loading.@value"></div></div>
-</div>
-
+<script type="text/javascript">
+    window.addEventListener('vsn', function () {
+        vision.registry.classes.register('TestController', TestController);
+        vision.registry.classes.register('TestItem', TestItem);
+        vision.registry.classes.register('Controller', Controller);
+        vision.registry.classes.register('MVal', MVal);
+    });
+</script>
 <script type="text/javascript" src="vsn.js"></script>
 </body>
 </html>
