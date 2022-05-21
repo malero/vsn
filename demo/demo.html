@@ -76,7 +76,6 @@
 
 <div>
     <textarea id="example-code" rows="10" cols="50"></textarea>
-    <input type="text" id="example-input" value="hmm" />
     <div id="example-output" vsn-bind:@html="#example-code.@value"></div>
 </div>
 
@@ -98,7 +97,7 @@
 <button vsn-on:click="show = !show" vsn-set:show="false|boolean">Toggle</button>
 <span vsn-bind="show"></span>
 
-<a vsn-on:click="if(@text != @clicktext){@text=@clicktext}else{@text='Click Me'}" clicktext="Clicked!">Click Me</a>
+<a id="click-test" vsn-on:click="if(@text != @clicktext){@text=@clicktext}else{@text='Click Me'}" clicktext="Clicked!">Click Me</a>
 
 <h2>? Operator</h2>
 <p>Add/remove class to list of elements on click.</p>

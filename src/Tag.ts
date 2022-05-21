@@ -271,7 +271,7 @@ export class Tag extends DOMObject {
             return this._scope;
 
         if (this.uniqueScope)
-            return this.createScope();
+            return this.createScope(true);
 
         if (!!this.parentTag)
             return this.parentTag.scope;
@@ -601,18 +601,16 @@ export class Tag extends DOMObject {
     public createScope(force: boolean = false): Scope {
         // Standard attribute requires a unique scope
         // @todo: Does this cause any issues with attribute bindings on the parent scope prior to having its own scope? hmm...
-        if ((!this.uniqueScope && force) || this.uniqueScope) {
+        if (!this._scope && (force || this.uniqueScope)) {
             this._uniqueScope = true;
             this._scope = new Scope();
 
             if (this.parentTag) {
                 this.scope.parentScope = this.parentTag.scope;
             }
-
-            return this._scope;
         }
 
-        return null;
+        return this._scope;
     }
 
     async watchAttribute(attributeName: string) {

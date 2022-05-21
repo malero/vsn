@@ -16,6 +16,7 @@ export class StandardAttribute extends Attribute {
     }
 
     public async connect() {
+        this.tag.scope.on(`change:${this.key}`, (v) => { console.log('updated', v);});
         this.tag.scope.on(`change:${this.key}`, this.updateTo.bind(this));
         await super.connect();
     }
