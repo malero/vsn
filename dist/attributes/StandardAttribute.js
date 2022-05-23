@@ -93,7 +93,6 @@ var StandardAttribute = /** @class */ (function (_super) {
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
-                        this.tag.scope.on("change:" + this.key, function (v) { console.log('updated', v); });
                         this.tag.scope.on("change:" + this.key, this.updateTo.bind(this));
                         return [4 /*yield*/, _super.prototype.connect.call(this)];
                     case 1:

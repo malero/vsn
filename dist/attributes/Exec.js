@@ -66,12 +66,19 @@ var Exec = /** @class */ (function (_super) {
     function Exec() {
         return _super !== null && _super.apply(this, arguments) || this;
     }
+    Object.defineProperty(Exec.prototype, "code", {
+        get: function () {
+            return this.getAttributeValue();
+        },
+        enumerable: false,
+        configurable: true
+    });
     Exec.prototype.compile = function () {
         return __awaiter(this, void 0, void 0, function () {
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
-                        this.tree = new AST_1.Tree(this.getAttributeValue());
+                        this.tree = new AST_1.Tree(this.code);
                         return [4 /*yield*/, this.tree.prepare(this.tag.scope, this.tag.dom, this.tag)];
                     case 1:
                         _a.sent();

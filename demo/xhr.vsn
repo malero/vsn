@@ -1,4 +1,10 @@
-<component>
-    <script></script>
-    <template></template>
-</component>
+<div id="huh-wut">
+    <script vsn-script type="text/vsn">
+        huh_wut = 1;
+        func add(a, b) {
+            return a + b;
+        }
+    </script>
+    <span vsn-bind="huh_wut"></span>
+    <a href="" vsn-on:click|preventdefault="huh_wut = add(huh_wut, 1)">Click me!</a>
+</div>

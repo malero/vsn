@@ -52,14 +52,17 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.FunctionNode = void 0;
+var Scope_1 = require("../Scope");
+var AST_1 = require("../AST");
 var Node_1 = require("./Node");
 var FunctionNode = /** @class */ (function (_super) {
     __extends(FunctionNode, _super);
-    function FunctionNode(name, variables, block) {
+    function FunctionNode(name, args, block) {
         var _this = _super.call(this) || this;
         _this.name = name;
-        _this.variables = variables;
+        _this.args = args;
         _this.block = block;
+        _this.requiresPrep = true;
         return _this;
     }
     FunctionNode.prototype._getChildNodes = function () {
@@ -69,18 +72,56 @@ var FunctionNode = /** @class */ (function (_super) {
     };
     FunctionNode.prototype.prepare = function (scope, dom, tag) {
         if (tag === void 0) { tag = null; }
-        return __awaiter(this, void 0, void 0, function () { return __generator(this, function (_a) {
-            return [2 /*return*/];
-        }); });
+        return __awaiter(this, void 0, void 0, function () {
+            var _this = this;
+            return __generator(this, function (_a) {
+                scope.set(this.name, function () {
+                    var args = [];
+                    for (var _i = 0; _i < arguments.length; _i++) {
+                        args[_i] = arguments[_i];
+                    }
+                    return __awaiter(_this, void 0, void 0, function () {
+                        var functionScope, _a, _b, arg;
+                        return __generator(this, function (_c) {
+                            switch (_c.label) {
+                                case 0:
+                                    functionScope = new Scope_1.Scope(scope);
+                                    for (_a = 0, _b = this.args; _a < _b.length; _a++) {
+                                        arg = _b[_a];
+                                        functionScope.set(arg, args.shift());
+                                    }
+                                    return [4 /*yield*/, this.evaluate(functionScope, dom, tag)];
+                                case 1: return [2 /*return*/, _c.sent()];
+                            }
+                        });
+                    });
+                });
+                return [2 /*return*/];
+            });
+        });
     };
     FunctionNode.prototype.evaluate = function (scope, dom, tag) {
         if (tag === void 0) { tag = null; }
-        return __awaiter(this, void 0, void 0, function () { return __generator(this, function (_a) {
-            return [2 /*return*/];
-        }); });
+        return __awaiter(this, void 0, void 0, function () {
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0: return [4 /*yield*/, this.block.evaluate(scope, dom, tag)];
+                    case 1: return [2 /*return*/, _a.sent()];
+                }
+            });
+        });
     };
     FunctionNode.parse = function (lastNode, token, tokens) {
-        return new FunctionNode(null, null, null);
+        tokens.shift(); // skip 'func'
+        var name = tokens.shift();
+        var argTokens = AST_1.Tree.getBlockTokens(tokens);
+        var funcArgs = [];
+        for (var _i = 0, argTokens_1 = argTokens; _i < argTokens_1.length; _i++) {
+            var t = argTokens_1[_i];
+            funcArgs.push(t[0].value);
+        }
+        var block = AST_1.Tree.processTokens(AST_1.Tree.getBlockTokens(tokens, null)[0]);
+        return new FunctionNode(name.value, funcArgs, block);
     };
     return FunctionNode;
 }(Node_1.Node));
