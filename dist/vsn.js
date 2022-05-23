@@ -128,7 +128,7 @@ var Vision = /** @class */ (function (_super) {
                         _a.sent();
                         now = (new Date()).getTime();
                         setupTime = now - startTime;
-                        console.warn("Took " + setupTime + "ms to start up VisionJS. https://www.vsnjs.com/", window ? "v" + window['VSN_VERSION'] : null);
+                        console.info("Took " + setupTime + "ms to start up VisionJS. https://www.vsnjs.com/", window ? "v" + window['VSN_VERSION'] : null);
                         return [2 /*return*/];
                 }
             });

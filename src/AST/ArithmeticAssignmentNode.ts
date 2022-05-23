@@ -59,7 +59,7 @@ export class ArithmeticAssignmentNode extends Node implements TreeNode {
         const values = [];
         for (let localScope of scopes) {
             if (localScope instanceof DOMObject) {
-                await this.handleDOMObject(name, dom, localScope, tag);
+                await this.handleDOMObject(name, dom, scope, localScope, tag);
             } else {
                 if (localScope['$wrapped'] && localScope['$scope']) {
                     localScope = localScope['$scope'];
@@ -68,21 +68,26 @@ export class ArithmeticAssignmentNode extends Node implements TreeNode {
                 // We get the values from the passed scope, but set the value on the local scope
                 let left: number | Array<any> | string = await this.left.evaluate(scope, dom, tag);
                 let right: number | Array<any> | string = await this.right.evaluate(scope, dom, tag);
-
-                if (left instanceof Array) {
-                    left = this.handleArray(name, left, right, localScope);
-                } else if ((left as any) instanceof UnitLiteral || right instanceof UnitLiteral) {
-                    left = this.handleUnit(name, left, right, localScope);
-                } else if (Number.isFinite(left)) {
-                    left = this.handleNumber(name, left, right, localScope);
-                } else {
-                    left = this.handleString(name, left, right, localScope);
-                }
+                left = this.handle(name, left, right, localScope);
 
                 values.push(left);
             }
         }
         return values.length > 1 ? values : values[0];
+    }
+
+    public handle(name, left, right, localScope) {
+        if (left instanceof Array) {
+            left = this.handleArray(name, left, right, localScope);
+        } else if ((left as any) instanceof UnitLiteral || right instanceof UnitLiteral) {
+            left = this.handleUnit(name, left, right, localScope);
+        } else if (Number.isFinite(left)) {
+            left = this.handleNumber(name, left, right, localScope);
+        } else {
+            left = this.handleString(name, left, right, localScope);
+        }
+
+        return left;
     }
 
     public handleNumber(key, left, right, scope) {
@@ -167,13 +172,10 @@ export class ArithmeticAssignmentNode extends Node implements TreeNode {
         return left;
     }
 
-    public async handleDOMObject(key: string, dom: DOM, domObject: DOMObject, tag: Tag) {
+    public async handleDOMObject(key: string, dom: DOM, scope: Scope, domObject: DOMObject, tag: Tag) {
         let left = domObject.scope.get(key);
-        let right: number | Array<any> | string = await this.right.evaluate(domObject.scope, dom, tag);
-        if (left instanceof Array)
-            return this.handleArray(key, left, right, domObject.scope);
-
-        return this.handleString(key, left, right, domObject.scope);
+        let right: number | Array<any> | string = await this.right.evaluate(scope, dom, tag);
+        return this.handle(key, left, right, domObject.scope);
     }
 
     public handleArray(key, left, right, scope) {

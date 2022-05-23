@@ -73,41 +73,44 @@ var FunctionNode = /** @class */ (function (_super) {
     FunctionNode.prototype.prepare = function (scope, dom, tag) {
         if (tag === void 0) { tag = null; }
         return __awaiter(this, void 0, void 0, function () {
-            var _this = this;
             return __generator(this, function (_a) {
-                scope.set(this.name, function () {
-                    var args = [];
-                    for (var _i = 0; _i < arguments.length; _i++) {
-                        args[_i] = arguments[_i];
-                    }
-                    return __awaiter(_this, void 0, void 0, function () {
-                        var functionScope, _a, _b, arg;
-                        return __generator(this, function (_c) {
-                            switch (_c.label) {
-                                case 0:
-                                    functionScope = new Scope_1.Scope(scope);
-                                    for (_a = 0, _b = this.args; _a < _b.length; _a++) {
-                                        arg = _b[_a];
-                                        functionScope.set(arg, args.shift());
-                                    }
-                                    return [4 /*yield*/, this.evaluate(functionScope, dom, tag)];
-                                case 1: return [2 /*return*/, _c.sent()];
-                            }
-                        });
-                    });
-                });
-                return [2 /*return*/];
+                switch (_a.label) {
+                    case 0:
+                        scope.set(this.name, this);
+                        return [4 /*yield*/, _super.prototype.prepare.call(this, scope, dom, tag)];
+                    case 1:
+                        _a.sent();
+                        return [2 /*return*/];
+                }
             });
         });
     };
     FunctionNode.prototype.evaluate = function (scope, dom, tag) {
         if (tag === void 0) { tag = null; }
         return __awaiter(this, void 0, void 0, function () {
+            var _this = this;
             return __generator(this, function (_a) {
-                switch (_a.label) {
-                    case 0: return [4 /*yield*/, this.block.evaluate(scope, dom, tag)];
-                    case 1: return [2 /*return*/, _a.sent()];
-                }
+                return [2 /*return*/, function () {
+                        var args = [];
+                        for (var _i = 0; _i < arguments.length; _i++) {
+                            args[_i] = arguments[_i];
+                        }
+                        return __awaiter(_this, void 0, void 0, function () {
+                            var functionScope, _a, _b, arg;
+                            return __generator(this, function (_c) {
+                                switch (_c.label) {
+                                    case 0:
+                                        functionScope = new Scope_1.Scope(scope);
+                                        for (_a = 0, _b = this.args; _a < _b.length; _a++) {
+                                            arg = _b[_a];
+                                            functionScope.set(arg, args.shift());
+                                        }
+                                        return [4 /*yield*/, this.block.evaluate(functionScope, dom, tag)];
+                                    case 1: return [2 /*return*/, _c.sent()];
+                                }
+                            });
+                        });
+                    }];
             });
         });
     };

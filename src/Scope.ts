@@ -220,4 +220,10 @@ export class Scope extends EventDispatcher {
             delete toUnwrap[field];
         }
     }
+
+    public static fromObject(obj, parentScope?: Scope): Scope {
+        const scope = new Scope(parentScope);
+        scope.wrap(obj);
+        return scope;
+    }
 }

@@ -22,18 +22,19 @@ export class FunctionNode extends Node implements TreeNode {
         ];
     }
 
-    public async prepare(scope: Scope, dom: DOM, tag: Tag = null) {
-        scope.set(this.name, async (...args) => {
+    public async prepare(scope: Scope, dom: DOM, tag: Tag = null): Promise<void> {
+        scope.set(this.name, this);
+        await super.prepare(scope, dom, tag);
+    }
+
+    public async evaluate(scope: Scope, dom: DOM, tag: Tag = null) {
+        return async (...args) => {
             const functionScope = new Scope(scope);
             for (const arg of this.args) {
                 functionScope.set(arg, args.shift());
             }
-            return await this.evaluate(functionScope, dom, tag);
-        });
-    }
-
-    public async evaluate(scope: Scope, dom: DOM, tag: Tag = null) {
-        return await this.block.evaluate(scope, dom, tag);
+            return await this.block.evaluate(functionScope, dom, tag);
+        }
     }
 
     public static parse(lastNode, token, tokens: Token[]): FunctionNode {

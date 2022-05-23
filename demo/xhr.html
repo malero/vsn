@@ -1,10 +1,17 @@
-<div id="huh-wut">
+<div id="huh-wut" vsn-scope>
+    <style>
+        bb {
+            display: block;
+        }
+    </style>
     <script vsn-script type="text/vsn">
         huh_wut = 1;
         func add(a, b) {
+            ?(bb).@text = `asd 123 ${a} ${b} hmm?`;
             return a + b;
         }
     </script>
+    <bb>bb</bb>
     <span vsn-bind="huh_wut"></span>
     <a href="" vsn-on:click|preventdefault="huh_wut = add(huh_wut, 1)">Click me!</a>
 </div>

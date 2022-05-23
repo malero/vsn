@@ -13,10 +13,11 @@ export declare class ArithmeticAssignmentNode extends Node implements TreeNode {
     constructor(left: RootScopeMemberNode | ScopeMemberNode, right: TreeNode, type: TokenType);
     protected _getChildNodes(): Node[];
     evaluate(scope: Scope, dom: DOM, tag?: Tag): Promise<any>;
+    handle(name: any, left: any, right: any, localScope: any): any;
     handleNumber(key: any, left: any, right: any, scope: any): any;
     handleString(key: any, left: any, right: any, scope: any): any;
     handleUnit(key: any, left: any, right: any, scope: any): any;
-    handleDOMObject(key: string, dom: DOM, domObject: DOMObject, tag: Tag): Promise<any>;
+    handleDOMObject(key: string, dom: DOM, scope: Scope, domObject: DOMObject, tag: Tag): Promise<any>;
     handleArray(key: any, left: any, right: any, scope: any): any;
     static match(tokens: Token[]): boolean;
     static parse(lastNode: any, token: any, tokens: Token[]): ArithmeticAssignmentNode;

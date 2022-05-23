@@ -23,4 +23,5 @@ export declare class Scope extends EventDispatcher {
     cleanup(): void;
     wrap(toWrap: any, triggerUpdates?: boolean, updateFromWrapped?: boolean): void;
     unwrap(): void;
+    static fromObject(obj: any, parentScope?: Scope): Scope;
 }

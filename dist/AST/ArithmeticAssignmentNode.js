@@ -134,7 +134,7 @@ var ArithmeticAssignmentNode = /** @class */ (function (_super) {
                         if (!(_i < scopes_1.length)) return [3 /*break*/, 13];
                         localScope = scopes_1[_i];
                         if (!(localScope instanceof DOMObject_1.DOMObject)) return [3 /*break*/, 9];
-                        return [4 /*yield*/, this.handleDOMObject(name, dom, localScope, tag)];
+                        return [4 /*yield*/, this.handleDOMObject(name, dom, scope, localScope, tag)];
                     case 8:
                         _a.sent();
                         return [3 /*break*/, 12];
@@ -148,18 +148,7 @@ var ArithmeticAssignmentNode = /** @class */ (function (_super) {
                         return [4 /*yield*/, this.right.evaluate(scope, dom, tag)];
                     case 11:
                         right = _a.sent();
-                        if (left instanceof Array) {
-                            left = this.handleArray(name, left, right, localScope);
-                        }
-                        else if (left instanceof UnitLiteralNode_1.UnitLiteral || right instanceof UnitLiteralNode_1.UnitLiteral) {
-                            left = this.handleUnit(name, left, right, localScope);
-                        }
-                        else if (Number.isFinite(left)) {
-                            left = this.handleNumber(name, left, right, localScope);
-                        }
-                        else {
-                            left = this.handleString(name, left, right, localScope);
-                        }
+                        left = this.handle(name, left, right, localScope);
                         values.push(left);
                         _a.label = 12;
                     case 12:
@@ -169,6 +158,21 @@ var ArithmeticAssignmentNode = /** @class */ (function (_super) {
                 }
             });
         });
+    };
+    ArithmeticAssignmentNode.prototype.handle = function (name, left, right, localScope) {
+        if (left instanceof Array) {
+            left = this.handleArray(name, left, right, localScope);
+        }
+        else if (left instanceof UnitLiteralNode_1.UnitLiteral || right instanceof UnitLiteralNode_1.UnitLiteral) {
+            left = this.handleUnit(name, left, right, localScope);
+        }
+        else if (Number.isFinite(left)) {
+            left = this.handleNumber(name, left, right, localScope);
+        }
+        else {
+            left = this.handleString(name, left, right, localScope);
+        }
+        return left;
     };
     ArithmeticAssignmentNode.prototype.handleNumber = function (key, left, right, scope) {
         if (right !== null && !Number.isFinite(right))
@@ -244,19 +248,17 @@ var ArithmeticAssignmentNode = /** @class */ (function (_super) {
         scope.set(key, left);
         return left;
     };
-    ArithmeticAssignmentNode.prototype.handleDOMObject = function (key, dom, domObject, tag) {
+    ArithmeticAssignmentNode.prototype.handleDOMObject = function (key, dom, scope, domObject, tag) {
         return __awaiter(this, void 0, void 0, function () {
             var left, right;
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
                         left = domObject.scope.get(key);
-                        return [4 /*yield*/, this.right.evaluate(domObject.scope, dom, tag)];
+                        return [4 /*yield*/, this.right.evaluate(scope, dom, tag)];
                     case 1:
                         right = _a.sent();
-                        if (left instanceof Array)
-                            return [2 /*return*/, this.handleArray(key, left, right, domObject.scope)];
-                        return [2 /*return*/, this.handleString(key, left, right, domObject.scope)];
+                        return [2 /*return*/, this.handle(key, left, right, domObject.scope)];
                 }
             });
         });

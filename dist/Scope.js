@@ -228,6 +228,11 @@ var Scope = /** @class */ (function (_super) {
             delete toUnwrap[field];
         }
     };
+    Scope.fromObject = function (obj, parentScope) {
+        var scope = new Scope(parentScope);
+        scope.wrap(obj);
+        return scope;
+    };
     return Scope;
 }(EventDispatcher_1.EventDispatcher));
 exports.Scope = Scope;

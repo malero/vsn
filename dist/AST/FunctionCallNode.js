@@ -59,6 +59,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.FunctionCallNode = void 0;
 var Node_1 = require("./Node");
 var ScopeMemberNode_1 = require("./ScopeMemberNode");
+var FunctionNode_1 = require("./FunctionNode");
 var FunctionCallNode = /** @class */ (function (_super) {
     __extends(FunctionCallNode, _super);
     function FunctionCallNode(fnc, args) {
@@ -76,22 +77,26 @@ var FunctionCallNode = /** @class */ (function (_super) {
     FunctionCallNode.prototype.evaluate = function (scope, dom, tag) {
         if (tag === void 0) { tag = null; }
         return __awaiter(this, void 0, void 0, function () {
-            var functionScope, values;
-            var _a;
-            return __generator(this, function (_b) {
-                switch (_b.label) {
+            var functionScope, values, func;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
                     case 0:
                         functionScope = scope;
                         if (!(this.fnc instanceof ScopeMemberNode_1.ScopeMemberNode)) return [3 /*break*/, 2];
                         return [4 /*yield*/, this.fnc.scope.evaluate(scope, dom, tag)];
                     case 1:
-                        functionScope = _b.sent();
-                        _b.label = 2;
+                        functionScope = _a.sent();
+                        _a.label = 2;
                     case 2: return [4 /*yield*/, this.args.evaluate(scope, dom, tag)];
                     case 3:
-                        values = _b.sent();
+                        values = _a.sent();
                         return [4 /*yield*/, this.fnc.evaluate(scope, dom, tag)];
-                    case 4: return [2 /*return*/, (_a = (_b.sent())).call.apply(_a, __spreadArray([functionScope.wrapped || functionScope], values))];
+                    case 4:
+                        func = _a.sent();
+                        if (!(func instanceof FunctionNode_1.FunctionNode)) return [3 /*break*/, 6];
+                        return [4 /*yield*/, func.evaluate(functionScope, dom, tag)];
+                    case 5: return [2 /*return*/, (_a.sent()).apply(void 0, values)];
+                    case 6: return [2 /*return*/, func.call.apply(func, __spreadArray([functionScope.wrapped || functionScope], values))];
                 }
             });
         });

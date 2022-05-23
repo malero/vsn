@@ -61,6 +61,7 @@ exports.RootAttribute = void 0;
 var Attribute_1 = require("../Attribute");
 var VisionHelper_1 = require("../helpers/VisionHelper");
 var Registry_1 = require("../Registry");
+var Scope_1 = require("../Scope");
 var RootAttribute = /** @class */ (function (_super) {
     __extends(RootAttribute, _super);
     function RootAttribute() {
@@ -72,6 +73,8 @@ var RootAttribute = /** @class */ (function (_super) {
                 switch (_a.label) {
                     case 0:
                         this.tag.scope.set('$mobile', VisionHelper_1.VisionHelper.isMobile());
+                        if (console && !this.tag.scope.get('console'))
+                            this.tag.scope.set('console', Scope_1.Scope.fromObject(console));
                         return [4 /*yield*/, _super.prototype.setup.call(this)];
                     case 1:
                         _a.sent();

@@ -5,6 +5,7 @@ import {TreeNode} from "../AST";
 import {Node} from "./Node";
 import {FunctionArgumentNode} from "./FunctionArgumentNode";
 import {ScopeMemberNode} from "./ScopeMemberNode";
+import {FunctionNode} from "./FunctionNode";
 
 export class FunctionCallNode<T = any> extends Node implements TreeNode {
     constructor(
@@ -27,6 +28,11 @@ export class FunctionCallNode<T = any> extends Node implements TreeNode {
             functionScope = await this.fnc.scope.evaluate(scope, dom, tag);
         }
         const values = await this.args.evaluate(scope, dom, tag);
-        return (await this.fnc.evaluate(scope, dom, tag)).call(functionScope.wrapped || functionScope, ...values);
+        const func = await this.fnc.evaluate(scope, dom, tag);
+        if (func instanceof FunctionNode) {
+            return (await func.evaluate(functionScope, dom, tag) as any)(...values);
+        } else {
+            return func.call(functionScope.wrapped || functionScope, ...values);
+        }
     }
 }
