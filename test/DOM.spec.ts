@@ -20,9 +20,9 @@ describe('DOM', () => {
 
     it("should use scopes correctly", (done) => {
         document.body.innerHTML = `
-            <div id="parent" vsn-set:asd="123|integer">
+            <div id="parent" vsn-set:asd|integer="123">
                 <div id="testing" vsn-controller:test="TestController" vsn-set:asd="234|integer">
-                    <div vsn-set:asd="345|integer"></div>
+                    <div vsn-set:asd|integer="345"></div>
                 </div>
             </div>
         `;

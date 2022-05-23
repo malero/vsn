@@ -36,10 +36,12 @@ export class SetAttribute extends Attribute {
 
     public async extract() {
         let value = this.getAttributeValue(null);
-        const typeIndex: number = value && value.indexOf('|') || -1;
-        if (typeIndex > -1) {
-            this.boundScope.setType(this.key, value.substr(typeIndex + 1));
-            value = value.substr(0, typeIndex);
+        for (const m of this.getAttributeModifiers()) {
+            const t = Registry.instance.types.getSynchronous(m);
+            if (t) {
+                this.boundScope.setType(this.key, m);
+                break;
+            }
         }
         this.boundScope.set(this.key, value);
     }

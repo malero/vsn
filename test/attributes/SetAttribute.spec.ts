@@ -37,9 +37,9 @@ describe('Bind', () => {
 
     it("vsn-set to work with a typed value", (done) => {
         document.body.innerHTML = `
-            <span id="test-int" vsn-set:int="142.3|integer">testing</span>
-            <span id="test-float" vsn-set:float="142.3|float">testing</span>
-            <span id="test-bool" vsn-set:bool="false|boolean">testing</span>
+            <span id="test-int" vsn-set:int|integer="142.3">testing</span>
+            <span id="test-float" vsn-set:float|float="142.3">testing</span>
+            <span id="test-bool" vsn-set:bool|boolean="false">testing</span>
         `;
         const dom = new DOM(document);
         dom.once('built', async () => {

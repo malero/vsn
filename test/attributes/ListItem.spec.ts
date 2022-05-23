@@ -96,7 +96,7 @@ describe('ListItem', () => {
 
     it("vsn-list-item should work with vsn-set", (done) => {
         document.body.innerHTML = `
-            <ul vsn-list:list id="test"><li vsn-list-item:item="ListItemSpecTestItem" id="test-item" vsn-set:item.testing="1|integer"></li></ul>
+            <ul vsn-list:list id="test"><li vsn-list-item:item="ListItemSpecTestItem" id="test-item" vsn-set:item.testing|integer="1"></li></ul>
         `;
 
         const dom = new DOM(document);

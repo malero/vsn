@@ -94,7 +94,7 @@
 <a vsn-on:click|preventdefault="#test-container.@html = ''">Clear Container</a>
 
 <h2>On Click</h2>
-<button vsn-on:click="show = !show" vsn-set:show="false|boolean">Toggle</button>
+<button vsn-on:click="show = !show" vsn-set:show|boolean="false">Toggle</button>
 <span vsn-bind="show"></span>
 
 <a id="click-test" vsn-on:click="if(@text != @clicktext){@text=@clicktext}else{@text='Click Me'}" clicktext="Clicked!">Click Me</a>
