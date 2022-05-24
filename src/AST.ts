@@ -28,6 +28,7 @@ import {XHRNode} from "./AST/XHRNode";
 import {StringFormatNode} from "./AST/StringFormatNode";
 import {FunctionNode} from "./AST/FunctionNode";
 import {ClassNode} from "./AST/ClassNode";
+import {OnNode} from "./AST/OnNode";
 
 function lower(str: string): string {
     return str ? str.toLowerCase() : null;
@@ -68,6 +69,7 @@ export enum TokenType {
     ELSE_IF,
     ELSE,
     FUNC,
+    ON,
     CLASS,
     NAME,
     L_BRACE,
@@ -201,6 +203,10 @@ const TOKEN_PATTERNS: TokenPattern[] = [
     {
         type: TokenType.FUNC,
         pattern: /^func\s/
+    },
+    {
+        type: TokenType.ON,
+        pattern: /^on\s/
     },
     {
         type: TokenType.CLASS,
@@ -496,6 +502,10 @@ export class Tree {
                 node = null;
             } else if (token.type === TokenType.FUNC) {
                 node = FunctionNode.parse(node, token, tokens);
+                blockNodes.push(node);
+                node = null;
+            } else if (token.type === TokenType.ON) {
+                node = OnNode.parse(node, token, tokens);
                 blockNodes.push(node);
                 node = null;
             } else if (token.type === TokenType.CLASS) {

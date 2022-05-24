@@ -38,7 +38,6 @@ export class FunctionCallNode<T = any> extends Node implements TreeNode {
             for (const className of tag.preppedClasses) {
                 const cls = Registry.instance.classes.getSynchronous(className);
                 if (cls) {
-                    console.log('classScope', cls.classScope);
                     if (cls.classScope.has(functionName)) {
                         const fnc = cls.classScope.get(functionName);
                         returnValues.push((await fnc.evaluate(functionScope, dom, tag))(...values));

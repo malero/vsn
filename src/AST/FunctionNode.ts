@@ -28,6 +28,10 @@ export class FunctionNode extends Node implements TreeNode {
     }
 
     public async evaluate(scope: Scope, dom: DOM, tag: Tag = null) {
+        return await this.getFunction(scope, dom, tag);
+    }
+
+    public async getFunction(scope: Scope, dom: DOM, tag: Tag = null) {
         return async (...args) => {
             const functionScope = new FunctionScope(scope);
             for (const arg of this.args) {
@@ -37,7 +41,7 @@ export class FunctionNode extends Node implements TreeNode {
         }
     }
 
-    public static parse(lastNode, token, tokens: Token[]): FunctionNode {
+    public static parse<T = FunctionNode>(lastNode, token, tokens: Token[], cls: any = FunctionNode): FunctionNode {
         tokens.shift(); // skip 'func'
         const name = tokens.shift();
         const argTokens = Tree.getBlockTokens(tokens);
@@ -46,6 +50,6 @@ export class FunctionNode extends Node implements TreeNode {
             funcArgs.push(t[0].value);
         }
         const block = Tree.processTokens(Tree.getNextStatementTokens(tokens, true, true));
-        return new FunctionNode(name.value, funcArgs, block);
+        return new cls(name.value, funcArgs, block);
     }
 }

@@ -107,7 +107,6 @@ var FunctionCallNode = /** @class */ (function (_super) {
                         className = _a[_i];
                         cls = Registry_1.Registry.instance.classes.getSynchronous(className);
                         if (!cls) return [3 /*break*/, 8];
-                        console.log('classScope', cls.classScope);
                         if (!cls.classScope.has(functionName)) return [3 /*break*/, 8];
                         fnc = cls.classScope.get(functionName);
                         _c = (_b = returnValues).push;

@@ -599,6 +599,16 @@ export class Tag extends DOMObject {
         }
     }
 
+    public removeContextEventHandlers(context: any) {
+        for (const eventType of Object.keys(this.onEventHandlers)) {
+            for (const handler of this.onEventHandlers[eventType]) {
+                if (handler.context === context) {
+                    this.removeEventHandler(eventType, handler.handler, context);
+                }
+            }
+        }
+    }
+
     public createScope(force: boolean = false): Scope {
         // Standard attribute requires a unique scope
         // @todo: Does this cause any issues with attribute bindings on the parent scope prior to having its own scope? hmm...

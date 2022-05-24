@@ -61,12 +61,12 @@
         }());
     </script>
 
-    <script type="vsn">
-        class Test {
-            helloWorld() {
-                print('Hello, world!');
-            }
+    <script vsn-script type="text/vsn">
+    class test-class {
+        func construct() {
+            $color = "#ff00ff";
         }
+    }
     </script>
 </head>
 <body>
@@ -94,9 +94,10 @@
 <a vsn-on:click|preventdefault="#test-container.@html = ''">Clear Container</a>
 
 <h2>On Click</h2>
-<button vsn-on:click="show = !show" vsn-set:show|boolean="false">Toggle</button>
-<span vsn-bind="show"></span>
-
+<div vsn-name="toggle" vsn-set:show|boolean="false">
+    <button class="test-class" vsn-on:click="toggle.show = !toggle.show">Toggle</button>
+    <span vsn-bind="toggle.show"></span>
+</div>
 <a id="click-test" vsn-on:click="if(@text != @clicktext){@text=@clicktext}else{@text='Click Me'}" clicktext="Clicked!">Click Me</a>
 
 <h2>? Operator</h2>

@@ -56,6 +56,7 @@ var Scope_1 = require("../Scope");
 var AST_1 = require("../AST");
 var Node_1 = require("./Node");
 var Registry_1 = require("../Registry");
+var OnNode_1 = require("./OnNode");
 var ClassNode = /** @class */ (function (_super) {
     __extends(ClassNode, _super);
     function ClassNode(name, block) {
@@ -122,6 +123,14 @@ var ClassNode = /** @class */ (function (_super) {
                         (_a.sent())();
                         _a.label = 3;
                     case 3:
+                        /*
+                        for (const key of this.classScope.keys) {
+                            if (this.classScope.get(key) instanceof OnNode) {
+                                const on = this.classScope.get(key) as OnNode;
+                                tag.addEventHandler(on.name, [], await on.getFunction(tag.scope, dom, tag), on);
+                            }
+                        }
+                         */
                         tag.preppedClasses.push(this.name);
                         return [2 /*return*/];
                 }
@@ -131,9 +140,9 @@ var ClassNode = /** @class */ (function (_super) {
     ClassNode.prototype.tearDownTag = function (tag, dom, hasDeconstructor) {
         if (hasDeconstructor === void 0) { hasDeconstructor = null; }
         return __awaiter(this, void 0, void 0, function () {
-            var fnc;
-            return __generator(this, function (_a) {
-                switch (_a.label) {
+            var fnc, _i, _a, key, on;
+            return __generator(this, function (_b) {
+                switch (_b.label) {
                     case 0:
                         if (hasDeconstructor === null)
                             hasDeconstructor = this.classScope.has('deconstruct');
@@ -141,9 +150,16 @@ var ClassNode = /** @class */ (function (_super) {
                         fnc = this.classScope.get('deconstruct');
                         return [4 /*yield*/, fnc.evaluate(tag.scope, dom, tag)];
                     case 1:
-                        (_a.sent())();
-                        _a.label = 2;
+                        (_b.sent())();
+                        _b.label = 2;
                     case 2:
+                        for (_i = 0, _a = this.classScope.keys; _i < _a.length; _i++) {
+                            key = _a[_i];
+                            if (this.classScope.get(key) instanceof OnNode_1.OnNode) {
+                                on = this.classScope.get(key);
+                                tag.removeContextEventHandlers(on);
+                            }
+                        }
                         tag.preppedClasses.splice(tag.preppedClasses.indexOf(this.name), 1);
                         return [2 /*return*/];
                 }

@@ -10,21 +10,28 @@
             func construct() {
                 $color = "#ff00ff";
                 something = "something";
+                @originaltext = @text;
                 @text = 'huh?';
             }
 
             func deconstruct() {
                 $color = '#000000';
                 something = null;
-                @text = 'default';
+                @text = @originaltext;
             }
 
-            func click() {
+            on click() {
+                console.log('clicky');
             }
 
             func t() {
-                $color = 'red';
-                @text = 'wut?';
+                if ($color == 'red') {
+                    $color = 'blue';
+                    @text = 'huh?';
+                } else {
+                    $color = 'red';
+                    @text = 'wut?';
+                }
             }
         }
 

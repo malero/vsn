@@ -5,6 +5,7 @@ import {Token, TokenType, Tree, TreeNode} from "../AST";
 import {Node} from "./Node";
 import {BlockNode} from "./BlockNode";
 import {Registry} from "../Registry";
+import {OnNode} from "./OnNode";
 
 export class ClassNode extends Node implements TreeNode {
     public static readonly classes: {[name: string]: ClassNode} = {};
@@ -43,6 +44,14 @@ export class ClassNode extends Node implements TreeNode {
             const fnc = this.classScope.get('construct');
             (await fnc.evaluate(tag.scope, dom, tag))();
         }
+        /*
+        for (const key of this.classScope.keys) {
+            if (this.classScope.get(key) instanceof OnNode) {
+                const on = this.classScope.get(key) as OnNode;
+                tag.addEventHandler(on.name, [], await on.getFunction(tag.scope, dom, tag), on);
+            }
+        }
+         */
         tag.preppedClasses.push(this.name);
     }
 
@@ -53,6 +62,12 @@ export class ClassNode extends Node implements TreeNode {
         if (hasDeconstructor) {
             const fnc = this.classScope.get('deconstruct');
             (await fnc.evaluate(tag.scope, dom, tag))();
+        }
+        for (const key of this.classScope.keys) {
+            if (this.classScope.get(key) instanceof OnNode) {
+                const on = this.classScope.get(key) as OnNode;
+                tag.removeContextEventHandlers(on);
+            }
         }
         tag.preppedClasses.splice(tag.preppedClasses.indexOf(this.name), 1);
     }

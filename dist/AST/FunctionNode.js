@@ -88,6 +88,17 @@ var FunctionNode = /** @class */ (function (_super) {
     FunctionNode.prototype.evaluate = function (scope, dom, tag) {
         if (tag === void 0) { tag = null; }
         return __awaiter(this, void 0, void 0, function () {
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0: return [4 /*yield*/, this.getFunction(scope, dom, tag)];
+                    case 1: return [2 /*return*/, _a.sent()];
+                }
+            });
+        });
+    };
+    FunctionNode.prototype.getFunction = function (scope, dom, tag) {
+        if (tag === void 0) { tag = null; }
+        return __awaiter(this, void 0, void 0, function () {
             var _this = this;
             return __generator(this, function (_a) {
                 return [2 /*return*/, function () {
@@ -114,7 +125,8 @@ var FunctionNode = /** @class */ (function (_super) {
             });
         });
     };
-    FunctionNode.parse = function (lastNode, token, tokens) {
+    FunctionNode.parse = function (lastNode, token, tokens, cls) {
+        if (cls === void 0) { cls = FunctionNode; }
         tokens.shift(); // skip 'func'
         var name = tokens.shift();
         var argTokens = AST_1.Tree.getBlockTokens(tokens);
@@ -124,7 +136,7 @@ var FunctionNode = /** @class */ (function (_super) {
             funcArgs.push(t[0].value);
         }
         var block = AST_1.Tree.processTokens(AST_1.Tree.getNextStatementTokens(tokens, true, true));
-        return new FunctionNode(name.value, funcArgs, block);
+        return new cls(name.value, funcArgs, block);
     };
     return FunctionNode;
 }(Node_1.Node));

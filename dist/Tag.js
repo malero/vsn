@@ -785,6 +785,17 @@ var Tag = /** @class */ (function (_super) {
             }
         }
     };
+    Tag.prototype.removeContextEventHandlers = function (context) {
+        for (var _i = 0, _a = Object.keys(this.onEventHandlers); _i < _a.length; _i++) {
+            var eventType = _a[_i];
+            for (var _b = 0, _c = this.onEventHandlers[eventType]; _b < _c.length; _b++) {
+                var handler = _c[_b];
+                if (handler.context === context) {
+                    this.removeEventHandler(eventType, handler.handler, context);
+                }
+            }
+        }
+    };
     Tag.prototype.createScope = function (force) {
         if (force === void 0) { force = false; }
         // Standard attribute requires a unique scope
