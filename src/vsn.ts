@@ -25,9 +25,9 @@ export class Vision extends EventDispatcher {
         } else {
             console.warn('No dom, running in CLI mode.');
         }
-        this.registry.classes.register('Object', Object);
-        this.registry.classes.register('WrappedArray', WrappedArray);
-        this.registry.classes.register('Data', DynamicScopeData);
+        this.registry.controllers.register('Object', Object);
+        this.registry.controllers.register('WrappedArray', WrappedArray);
+        this.registry.controllers.register('Data', DynamicScopeData);
 
         if (VisionHelper.window) {
             window['Vision'] = Vision;

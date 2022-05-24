@@ -2,7 +2,7 @@ import "../src/vsn";
 import {DOM} from "../src/DOM";
 import {Registry} from "../src/Registry";
 
-@Registry.class('TestController')
+@Registry.controller('TestController')
 class TestController {}
 
 describe('DOM', () => {

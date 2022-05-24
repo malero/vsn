@@ -45,7 +45,7 @@ export class FunctionNode extends Node implements TreeNode {
         for (const t of argTokens) {
             funcArgs.push(t[0].value);
         }
-        const block = Tree.processTokens(Tree.getBlockTokens(tokens, null)[0]);
+        const block = Tree.processTokens(Tree.getNextStatementTokens(tokens, true, true));
         return new FunctionNode(name.value, funcArgs, block);
     }
 }

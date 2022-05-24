@@ -21,7 +21,7 @@ export class ListItem extends Attribute {
 
         this.tag.scope.set(this.listItemName, this.tag.scope);
         const modelName: string = (await this.getList()).listItemModel;
-        const cls = await Registry.instance.classes.get(modelName);
+        const cls = await Registry.instance.controllers.get(modelName);
         this.instantiateModel(cls);
         await super.setup();
     }

@@ -28,6 +28,9 @@ export class ScopeAttribute extends Attribute {
                 this.tag.scope.set(key, value.data[key]);
             }
         }
+        const binding = this.getAttributeBinding();
+        if (binding)
+            this.tag.scope.parentScope.set(binding, this.tag.scope);
         await super.extract();
     }
 }

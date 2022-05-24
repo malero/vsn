@@ -52,7 +52,7 @@ export class RegistryStore extends EventDispatcher {
 
 export class Registry extends EventDispatcher {
     protected static _instance: Registry;
-    public readonly components: RegistryStore;
+    public readonly controllers: RegistryStore;
     public readonly classes: RegistryStore;
     public readonly models: RegistryStore;
     public readonly templates: RegistryStore;
@@ -63,7 +63,7 @@ export class Registry extends EventDispatcher {
 
     constructor() {
         super();
-        this.components = new RegistryStore();
+        this.controllers = new RegistryStore();
         this.classes = new RegistryStore();
         this.models = new RegistryStore();
         this.templates = new RegistryStore();
@@ -73,16 +73,12 @@ export class Registry extends EventDispatcher {
         this.attributes = new RegistryStore();
     }
 
-    public static component(key: string = null, setup = null) {
-        return register('components', key, setup);
-    }
-
     public static class(key: string = null, setup = null) {
         return register('classes', key, setup);
     }
 
     public static controller(key: string = null, setup = null) {
-        return register('classes', key, setup);
+        return register('controllers', key, setup);
     }
 
     public static model(key: string = null, setup = null) {

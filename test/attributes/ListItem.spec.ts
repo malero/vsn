@@ -5,14 +5,14 @@ import {ListItem} from "../../src/attributes/ListItem";
 import {Registry} from "../../src/Registry";
 import {List} from "../../src/attributes/List";
 
-@Registry.class('ListItemController')
+@Registry.controller('ListItemController')
 class ListItemController{
     items: ListItemSpecTestItem[] = [];
 
     do() {}
 }
 
-@Registry.class('ListItemSpecTestItem')
+@Registry.controller('ListItemSpecTestItem')
 class ListItemSpecTestItem {
     test: number = null;
 
