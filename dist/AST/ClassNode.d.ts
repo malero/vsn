@@ -18,4 +18,5 @@ export declare class ClassNode extends Node implements TreeNode {
     tearDownTag(tag: Tag, dom: DOM, hasDeconstructor?: boolean | null): Promise<void>;
     evaluate(scope: Scope, dom: DOM, tag?: Tag): Promise<any>;
     static parse(lastNode: any, token: any, tokens: Token[]): ClassNode;
+    static checkForClassChanges(element: HTMLElement, dom: DOM, tag?: Tag): Promise<void>;
 }

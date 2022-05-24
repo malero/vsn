@@ -35,6 +35,17 @@
             }
         }
 
+        class reset-button {
+            func construct() {
+                @text = 'reset';
+                $color = 'red';
+            }
+
+            on click() {
+                ?>(:parent:parent).@html = << './xhr.html';
+            }
+        }
+
         ?>(:parent).huh_wut = 1;
         func add(a, b) {
             ?(bb).@text = `asd 123 ${a} ${b} hmm?`;
@@ -43,7 +54,7 @@
     </script>
     <div class="something-special" vsn-on:click="t()">asd</div>
     <div class="something-special" vsn-on:click="t()">asd</div>
-    <bb>bb</bb>
+    <bb class="reset-button">bb</bb>
     <span vsn-bind="huh_wut"></span>
     <a href="" vsn-on:click|preventdefault="huh_wut = add(huh_wut, 1)">Click me!</a>
 </div>

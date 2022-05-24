@@ -65,7 +65,7 @@ var List_1 = require("./Tag/List");
 var WrappedWindow_1 = require("./DOM/WrappedWindow");
 var WrappedDocument_1 = require("./DOM/WrappedDocument");
 var EventDispatcher_1 = require("./EventDispatcher");
-var Registry_1 = require("./Registry");
+var ClassNode_1 = require("./AST/ClassNode");
 var DOM = /** @class */ (function (_super) {
     __extends(DOM, _super);
     function DOM(rootElement, build, debug) {
@@ -215,96 +215,46 @@ var DOM = /** @class */ (function (_super) {
     };
     DOM.prototype.mutation = function (mutations) {
         return __awaiter(this, void 0, void 0, function () {
-            var _loop_1, this_1, _i, mutations_1, mutation;
-            return __generator(this, function (_a) {
-                switch (_a.label) {
+            var _i, mutations_1, mutation, tag, _a, _b, ele, toRemove;
+            return __generator(this, function (_c) {
+                switch (_c.label) {
                     case 0:
-                        _loop_1 = function (mutation) {
-                            var tag, classes_1, addedClasses, removedClasses, _b, addedClasses_1, addedClass, classNode, _c, removedClasses_1, removedClass, classNode, _d, _e, ele, toRemove;
-                            return __generator(this, function (_f) {
-                                switch (_f.label) {
-                                    case 0: return [4 /*yield*/, this_1.getTagForElement(mutation.target)];
-                                    case 1:
-                                        tag = _f.sent();
-                                        if (tag) {
-                                            tag.mutate(mutation);
-                                        }
-                                        if (!(mutation.type === 'attributes' && mutation.attributeName === 'class')) return [3 /*break*/, 12];
-                                        classes_1 = Array.from(mutation.target.classList);
-                                        addedClasses = classes_1.filter(function (c) { return Registry_1.Registry.instance.classes.has(c); });
-                                        removedClasses = [];
-                                        if (!tag) return [3 /*break*/, 2];
-                                        addedClasses = addedClasses.filter(function (c) { return !tag.preppedClasses.includes(c); });
-                                        removedClasses = tag.preppedClasses.filter(function (c) { return !classes_1.includes(c); });
-                                        return [3 /*break*/, 4];
-                                    case 2: return [4 /*yield*/, this_1.getTagForElement(mutation.target, true)];
-                                    case 3:
-                                        tag = _f.sent();
-                                        _f.label = 4;
-                                    case 4:
-                                        _b = 0, addedClasses_1 = addedClasses;
-                                        _f.label = 5;
-                                    case 5:
-                                        if (!(_b < addedClasses_1.length)) return [3 /*break*/, 8];
-                                        addedClass = addedClasses_1[_b];
-                                        classNode = Registry_1.Registry.instance.classes.getSynchronous(addedClass);
-                                        if (!classNode) return [3 /*break*/, 7];
-                                        return [4 /*yield*/, classNode.prepareTag(tag, this_1)];
-                                    case 6:
-                                        _f.sent();
-                                        _f.label = 7;
-                                    case 7:
-                                        _b++;
-                                        return [3 /*break*/, 5];
-                                    case 8:
-                                        _c = 0, removedClasses_1 = removedClasses;
-                                        _f.label = 9;
-                                    case 9:
-                                        if (!(_c < removedClasses_1.length)) return [3 /*break*/, 12];
-                                        removedClass = removedClasses_1[_c];
-                                        classNode = Registry_1.Registry.instance.classes.getSynchronous(removedClass);
-                                        if (!classNode) return [3 /*break*/, 11];
-                                        return [4 /*yield*/, classNode.tearDownTag(tag, this_1)];
-                                    case 10:
-                                        _f.sent();
-                                        _f.label = 11;
-                                    case 11:
-                                        _c++;
-                                        return [3 /*break*/, 9];
-                                    case 12:
-                                        _d = 0, _e = Array.from(mutation.removedNodes);
-                                        _f.label = 13;
-                                    case 13:
-                                        if (!(_d < _e.length)) return [3 /*break*/, 16];
-                                        ele = _e[_d];
-                                        return [4 /*yield*/, this_1.getTagForElement(ele)];
-                                    case 14:
-                                        toRemove = _f.sent();
-                                        if (toRemove) {
-                                            toRemove.deconstruct();
-                                        }
-                                        _f.label = 15;
-                                    case 15:
-                                        _d++;
-                                        return [3 /*break*/, 13];
-                                    case 16: return [2 /*return*/];
-                                }
-                            });
-                        };
-                        this_1 = this;
                         _i = 0, mutations_1 = mutations;
-                        _a.label = 1;
+                        _c.label = 1;
                     case 1:
-                        if (!(_i < mutations_1.length)) return [3 /*break*/, 4];
+                        if (!(_i < mutations_1.length)) return [3 /*break*/, 9];
                         mutation = mutations_1[_i];
-                        return [5 /*yield**/, _loop_1(mutation)];
+                        return [4 /*yield*/, this.getTagForElement(mutation.target)];
                     case 2:
-                        _a.sent();
-                        _a.label = 3;
+                        tag = _c.sent();
+                        if (tag) {
+                            tag.mutate(mutation);
+                        }
+                        if (!(mutation.type === 'attributes' && mutation.attributeName === 'class')) return [3 /*break*/, 4];
+                        return [4 /*yield*/, ClassNode_1.ClassNode.checkForClassChanges(mutation.target, this, tag)];
                     case 3:
+                        _c.sent();
+                        _c.label = 4;
+                    case 4:
+                        _a = 0, _b = Array.from(mutation.removedNodes);
+                        _c.label = 5;
+                    case 5:
+                        if (!(_a < _b.length)) return [3 /*break*/, 8];
+                        ele = _b[_a];
+                        return [4 /*yield*/, this.getTagForElement(ele)];
+                    case 6:
+                        toRemove = _c.sent();
+                        if (toRemove) {
+                            toRemove.deconstruct();
+                        }
+                        _c.label = 7;
+                    case 7:
+                        _a++;
+                        return [3 /*break*/, 5];
+                    case 8:
                         _i++;
                         return [3 /*break*/, 1];
-                    case 4: return [2 /*return*/];
+                    case 9: return [2 /*return*/];
                 }
             });
         });
@@ -312,10 +262,9 @@ var DOM = /** @class */ (function (_super) {
     DOM.prototype.buildFrom = function (ele, isRoot) {
         if (isRoot === void 0) { isRoot = false; }
         return __awaiter(this, void 0, void 0, function () {
-            var allElements, _i, _a, tag, newTags, toBuild, toSkip, _b, _c, element, _d, toBuild_1, element, tag, _e, _f, newTags_1, tag, _g, newTags_2, tag, _h, newTags_3, tag, _j, newTags_4, tag, _k, newTags_5, tag, _l, newTags_6, tag;
-            var _this = this;
-            return __generator(this, function (_m) {
-                switch (_m.label) {
+            var allElements, _i, _a, tag, newTags, toBuild, toSkip, _b, _c, element, _d, toBuild_1, element, tag, _e, _f, newTags_1, tag, _g, newTags_2, tag, _h, newTags_3, tag, _j, newTags_4, tag, _k, newTags_5, tag, _l, newTags_6, tag, _m, newTags_7, tag;
+            return __generator(this, function (_o) {
+                switch (_o.label) {
                     case 0:
                         allElements = [];
                         if (isRoot) {
@@ -357,94 +306,107 @@ var DOM = /** @class */ (function (_super) {
                         _e = this;
                         return [4 /*yield*/, this.getTagForElement(document.body)];
                     case 1:
-                        _e._root = _m.sent();
-                        _m.label = 2;
+                        _e._root = _o.sent();
+                        _o.label = 2;
                     case 2:
                         _f = 0, newTags_1 = newTags;
-                        _m.label = 3;
+                        _o.label = 3;
                     case 3:
                         if (!(_f < newTags_1.length)) return [3 /*break*/, 6];
                         tag = newTags_1[_f];
                         return [4 /*yield*/, tag.buildAttributes()];
                     case 4:
-                        _m.sent();
-                        _m.label = 5;
+                        _o.sent();
+                        _o.label = 5;
                     case 5:
                         _f++;
                         return [3 /*break*/, 3];
                     case 6:
                         _g = 0, newTags_2 = newTags;
-                        _m.label = 7;
+                        _o.label = 7;
                     case 7:
                         if (!(_g < newTags_2.length)) return [3 /*break*/, 10];
                         tag = newTags_2[_g];
                         return [4 /*yield*/, tag.compileAttributes()];
                     case 8:
-                        _m.sent();
-                        _m.label = 9;
+                        _o.sent();
+                        _o.label = 9;
                     case 9:
                         _g++;
                         return [3 /*break*/, 7];
                     case 10:
                         _h = 0, newTags_3 = newTags;
-                        _m.label = 11;
+                        _o.label = 11;
                     case 11:
                         if (!(_h < newTags_3.length)) return [3 /*break*/, 14];
                         tag = newTags_3[_h];
                         return [4 /*yield*/, tag.setupAttributes()];
                     case 12:
-                        _m.sent();
-                        _m.label = 13;
+                        _o.sent();
+                        _o.label = 13;
                     case 13:
                         _h++;
                         return [3 /*break*/, 11];
                     case 14:
                         _j = 0, newTags_4 = newTags;
-                        _m.label = 15;
+                        _o.label = 15;
                     case 15:
                         if (!(_j < newTags_4.length)) return [3 /*break*/, 18];
                         tag = newTags_4[_j];
                         return [4 /*yield*/, tag.extractAttributes()];
                     case 16:
-                        _m.sent();
-                        _m.label = 17;
+                        _o.sent();
+                        _o.label = 17;
                     case 17:
                         _j++;
                         return [3 /*break*/, 15];
                     case 18:
                         _k = 0, newTags_5 = newTags;
-                        _m.label = 19;
+                        _o.label = 19;
                     case 19:
                         if (!(_k < newTags_5.length)) return [3 /*break*/, 22];
                         tag = newTags_5[_k];
                         return [4 /*yield*/, tag.connectAttributes()];
                     case 20:
-                        _m.sent();
-                        _m.label = 21;
+                        _o.sent();
+                        _o.label = 21;
                     case 21:
                         _k++;
                         return [3 /*break*/, 19];
                     case 22:
                         _l = 0, newTags_6 = newTags;
-                        _m.label = 23;
+                        _o.label = 23;
                     case 23:
                         if (!(_l < newTags_6.length)) return [3 /*break*/, 26];
                         tag = newTags_6[_l];
                         return [4 /*yield*/, tag.finalize()];
                     case 24:
-                        _m.sent();
+                        _o.sent();
                         this.queued.splice(this.queued.indexOf(tag.element), 1);
-                        _m.label = 25;
+                        _o.label = 25;
                     case 25:
                         _l++;
                         return [3 /*break*/, 23];
                     case 26:
-                        newTags.forEach(function (tag) { return _this.observer.observe(tag.element, {
+                        _m = 0, newTags_7 = newTags;
+                        _o.label = 27;
+                    case 27:
+                        if (!(_m < newTags_7.length)) return [3 /*break*/, 30];
+                        tag = newTags_7[_m];
+                        this.observer.observe(tag.element, {
                             attributes: true,
                             characterData: true,
                             childList: true,
                             subtree: true
-                        }); });
+                        });
+                        return [4 /*yield*/, ClassNode_1.ClassNode.checkForClassChanges(tag.element, this, tag)];
+                    case 28:
+                        _o.sent();
+                        _o.label = 29;
+                    case 29:
+                        _m++;
+                        return [3 /*break*/, 27];
+                    case 30:
                         this.dispatch('built');
                         return [2 /*return*/];
                 }

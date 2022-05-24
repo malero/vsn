@@ -124,29 +124,7 @@ export class DOM extends EventDispatcher {
 
             // Check for class changes
             if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
-                const classes: string[] = Array.from((mutation.target as HTMLElement).classList);
-                let addedClasses: string[] = classes.filter(c => Registry.instance.classes.has(c));
-                let removedClasses: string[] = [];
-                if (tag) {
-                    addedClasses = addedClasses.filter(c => !tag.preppedClasses.includes(c));
-                    removedClasses = tag.preppedClasses.filter(c => !classes.includes(c));
-                } else {
-                    tag = await this.getTagForElement(mutation.target as HTMLElement, true);
-                }
-
-                for (const addedClass of addedClasses) {
-                    const classNode: ClassNode = Registry.instance.classes.getSynchronous(addedClass);
-                    if (classNode) {
-                        await classNode.prepareTag(tag, this);
-                    }
-                }
-
-                for (const removedClass of removedClasses) {
-                    const classNode: ClassNode = Registry.instance.classes.getSynchronous(removedClass);
-                    if (classNode) {
-                        await classNode.tearDownTag(tag, this);
-                    }
-                }
+                await ClassNode.checkForClassChanges(mutation.target as HTMLElement, this, tag);
             }
 
             for (const ele of Array.from(mutation.removedNodes)) {
@@ -220,12 +198,15 @@ export class DOM extends EventDispatcher {
             this.queued.splice(this.queued.indexOf(tag.element), 1);
         }
 
-        newTags.forEach(tag => this.observer.observe(tag.element, {
+        for (const tag of newTags) {
+            this.observer.observe(tag.element, {
                 attributes: true,
                 characterData: true,
                 childList: true,
                 subtree: true
-            }));
+            });
+            await ClassNode.checkForClassChanges(tag.element, this, tag);
+        }
 
         this.dispatch('built');
     }

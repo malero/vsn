@@ -88,4 +88,30 @@ export class ClassNode extends Node implements TreeNode {
         const block = Tree.processTokens(Tree.getNextStatementTokens(tokens, true, true));
         return new ClassNode(name, block);
     }
+
+    public static async checkForClassChanges(element: HTMLElement, dom: DOM, tag: Tag = null) {
+        const classes: string[] = Array.from(element.classList);
+        let addedClasses: string[] = classes.filter(c => Registry.instance.classes.has(c));
+        let removedClasses: string[] = [];
+        if (tag) {
+            addedClasses = addedClasses.filter(c => !tag.preppedClasses.includes(c));
+            removedClasses = tag.preppedClasses.filter(c => !classes.includes(c));
+        } else {
+            tag = await dom.getTagForElement(element, true);
+        }
+
+        for (const addedClass of addedClasses) {
+            const classNode: ClassNode = Registry.instance.classes.getSynchronous(addedClass);
+            if (classNode) {
+                await classNode.prepareTag(tag, dom);
+            }
+        }
+
+        for (const removedClass of removedClasses) {
+            const classNode: ClassNode = Registry.instance.classes.getSynchronous(removedClass);
+            if (classNode) {
+                await classNode.tearDownTag(tag, dom);
+            }
+        }
+    }
 }
