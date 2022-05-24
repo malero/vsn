@@ -9,6 +9,7 @@ export declare class RegistryStore extends EventDispatcher {
     register(key: string, item: any): void;
     get(key: string): IPromise<any>;
     getSynchronous(key: string): any;
+    has(key: string): boolean;
 }
 export declare class Registry extends EventDispatcher {
     protected static _instance: Registry;

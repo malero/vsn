@@ -65,6 +65,7 @@ var List_1 = require("./Tag/List");
 var WrappedWindow_1 = require("./DOM/WrappedWindow");
 var WrappedDocument_1 = require("./DOM/WrappedDocument");
 var EventDispatcher_1 = require("./EventDispatcher");
+var Registry_1 = require("./Registry");
 var DOM = /** @class */ (function (_super) {
     __extends(DOM, _super);
     function DOM(rootElement, build, debug) {
@@ -214,40 +215,96 @@ var DOM = /** @class */ (function (_super) {
     };
     DOM.prototype.mutation = function (mutations) {
         return __awaiter(this, void 0, void 0, function () {
-            var _i, mutations_1, mutation, tag, _a, _b, ele, toRemove;
-            return __generator(this, function (_c) {
-                switch (_c.label) {
+            var _loop_1, this_1, _i, mutations_1, mutation;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
                     case 0:
+                        _loop_1 = function (mutation) {
+                            var tag, classes_1, addedClasses, removedClasses, _b, addedClasses_1, addedClass, classNode, _c, removedClasses_1, removedClass, classNode, _d, _e, ele, toRemove;
+                            return __generator(this, function (_f) {
+                                switch (_f.label) {
+                                    case 0: return [4 /*yield*/, this_1.getTagForElement(mutation.target)];
+                                    case 1:
+                                        tag = _f.sent();
+                                        if (tag) {
+                                            tag.mutate(mutation);
+                                        }
+                                        if (!(mutation.type === 'attributes' && mutation.attributeName === 'class')) return [3 /*break*/, 12];
+                                        classes_1 = Array.from(mutation.target.classList);
+                                        addedClasses = classes_1.filter(function (c) { return Registry_1.Registry.instance.classes.has(c); });
+                                        removedClasses = [];
+                                        if (!tag) return [3 /*break*/, 2];
+                                        addedClasses = addedClasses.filter(function (c) { return !tag.preppedClasses.includes(c); });
+                                        removedClasses = tag.preppedClasses.filter(function (c) { return !classes_1.includes(c); });
+                                        return [3 /*break*/, 4];
+                                    case 2: return [4 /*yield*/, this_1.getTagForElement(mutation.target, true)];
+                                    case 3:
+                                        tag = _f.sent();
+                                        _f.label = 4;
+                                    case 4:
+                                        _b = 0, addedClasses_1 = addedClasses;
+                                        _f.label = 5;
+                                    case 5:
+                                        if (!(_b < addedClasses_1.length)) return [3 /*break*/, 8];
+                                        addedClass = addedClasses_1[_b];
+                                        classNode = Registry_1.Registry.instance.classes.getSynchronous(addedClass);
+                                        if (!classNode) return [3 /*break*/, 7];
+                                        return [4 /*yield*/, classNode.prepareTag(tag, this_1)];
+                                    case 6:
+                                        _f.sent();
+                                        _f.label = 7;
+                                    case 7:
+                                        _b++;
+                                        return [3 /*break*/, 5];
+                                    case 8:
+                                        _c = 0, removedClasses_1 = removedClasses;
+                                        _f.label = 9;
+                                    case 9:
+                                        if (!(_c < removedClasses_1.length)) return [3 /*break*/, 12];
+                                        removedClass = removedClasses_1[_c];
+                                        classNode = Registry_1.Registry.instance.classes.getSynchronous(removedClass);
+                                        if (!classNode) return [3 /*break*/, 11];
+                                        return [4 /*yield*/, classNode.tearDownTag(tag, this_1)];
+                                    case 10:
+                                        _f.sent();
+                                        _f.label = 11;
+                                    case 11:
+                                        _c++;
+                                        return [3 /*break*/, 9];
+                                    case 12:
+                                        _d = 0, _e = Array.from(mutation.removedNodes);
+                                        _f.label = 13;
+                                    case 13:
+                                        if (!(_d < _e.length)) return [3 /*break*/, 16];
+                                        ele = _e[_d];
+                                        return [4 /*yield*/, this_1.getTagForElement(ele)];
+                                    case 14:
+                                        toRemove = _f.sent();
+                                        if (toRemove) {
+                                            toRemove.deconstruct();
+                                        }
+                                        _f.label = 15;
+                                    case 15:
+                                        _d++;
+                                        return [3 /*break*/, 13];
+                                    case 16: return [2 /*return*/];
+                                }
+                            });
+                        };
+                        this_1 = this;
                         _i = 0, mutations_1 = mutations;
-                        _c.label = 1;
+                        _a.label = 1;
                     case 1:
-                        if (!(_i < mutations_1.length)) return [3 /*break*/, 7];
+                        if (!(_i < mutations_1.length)) return [3 /*break*/, 4];
                         mutation = mutations_1[_i];
-                        return [4 /*yield*/, this.getTagForElement(mutation.target)];
+                        return [5 /*yield**/, _loop_1(mutation)];
                     case 2:
-                        tag = _c.sent();
-                        if (tag) {
-                            tag.mutate(mutation);
-                        }
-                        _a = 0, _b = Array.from(mutation.removedNodes);
-                        _c.label = 3;
+                        _a.sent();
+                        _a.label = 3;
                     case 3:
-                        if (!(_a < _b.length)) return [3 /*break*/, 6];
-                        ele = _b[_a];
-                        return [4 /*yield*/, this.getTagForElement(ele)];
-                    case 4:
-                        toRemove = _c.sent();
-                        if (toRemove) {
-                            toRemove.deconstruct();
-                        }
-                        _c.label = 5;
-                    case 5:
-                        _a++;
-                        return [3 /*break*/, 3];
-                    case 6:
                         _i++;
                         return [3 /*break*/, 1];
-                    case 7: return [2 /*return*/];
+                    case 4: return [2 /*return*/];
                 }
             });
         });

@@ -50,6 +50,10 @@ export class RegistryStore extends EventDispatcher {
     getSynchronous(key: string) {
         return this.store[key];
     }
+
+    has(key: string) {
+        return !!this.store[key];
+    }
 }
 
 export class Registry extends EventDispatcher {

@@ -20,7 +20,7 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from) {
     return to;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.Scope = void 0;
+exports.FunctionScope = exports.Scope = void 0;
 var EventDispatcher_1 = require("./EventDispatcher");
 var ScopeReference_1 = require("./Scope/ScopeReference");
 var QueryReference_1 = require("./Scope/QueryReference");
@@ -236,4 +236,18 @@ var Scope = /** @class */ (function (_super) {
     return Scope;
 }(EventDispatcher_1.EventDispatcher));
 exports.Scope = Scope;
+var FunctionScope = /** @class */ (function (_super) {
+    __extends(FunctionScope, _super);
+    function FunctionScope() {
+        return _super !== null && _super.apply(this, arguments) || this;
+    }
+    FunctionScope.prototype.set = function (key, value) {
+        if (this.parentScope.has(key) || ['$', '@'].indexOf(key[0]) > -1)
+            this.parentScope.set(key, value);
+        else
+            _super.prototype.set.call(this, key, value);
+    };
+    return FunctionScope;
+}(Scope));
+exports.FunctionScope = FunctionScope;
 //# sourceMappingURL=Scope.js.map

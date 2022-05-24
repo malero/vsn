@@ -28,7 +28,6 @@ export class DOM extends EventDispatcher {
     ) {
         super();
         this.observer = new MutationObserver(this.mutation.bind(this));
-        Registry.instance.classes.on('register', this.prepareDOMClass.bind(this));
         this.tags = [];
 
         this.window = new WrappedWindow(window);
@@ -56,18 +55,6 @@ export class DOM extends EventDispatcher {
             default:
                 const nodes = this.querySelectorAll(selector, tag);
                 return await this.getTagsForElements(Array.from(nodes) as Element[], create);
-        }
-    }
-
-    public async prepareDOMClass(className: string, classObject: ClassNode) {
-        for (const element of Array.from(this.querySelectorAll(`.${className}`))) {
-            const tag: Tag = await this.getTagForElement(element as HTMLElement, true);
-            if (tag) {
-                await classObject.prepareTag(tag, this);
-                if (classObject.classScope.has('construct')) {
-                    await tag.exec('construct()');
-                }
-            }
         }
     }
 
@@ -130,9 +117,36 @@ export class DOM extends EventDispatcher {
 
     public async mutation(mutations: MutationRecord[]) {
         for (const mutation of mutations) {
-            const tag: Tag = await this.getTagForElement(mutation.target as HTMLElement);
+            let tag: Tag = await this.getTagForElement(mutation.target as HTMLElement);
             if (tag) {
                 tag.mutate(mutation);
+            }
+
+            // Check for class changes
+            if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+                const classes: string[] = Array.from((mutation.target as HTMLElement).classList);
+                let addedClasses: string[] = classes.filter(c => Registry.instance.classes.has(c));
+                let removedClasses: string[] = [];
+                if (tag) {
+                    addedClasses = addedClasses.filter(c => !tag.preppedClasses.includes(c));
+                    removedClasses = tag.preppedClasses.filter(c => !classes.includes(c));
+                } else {
+                    tag = await this.getTagForElement(mutation.target as HTMLElement, true);
+                }
+
+                for (const addedClass of addedClasses) {
+                    const classNode: ClassNode = Registry.instance.classes.getSynchronous(addedClass);
+                    if (classNode) {
+                        await classNode.prepareTag(tag, this);
+                    }
+                }
+
+                for (const removedClass of removedClasses) {
+                    const classNode: ClassNode = Registry.instance.classes.getSynchronous(removedClass);
+                    if (classNode) {
+                        await classNode.tearDownTag(tag, this);
+                    }
+                }
             }
 
             for (const ele of Array.from(mutation.removedNodes)) {

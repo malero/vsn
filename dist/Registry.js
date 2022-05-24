@@ -43,6 +43,7 @@ var RegistryStore = /** @class */ (function (_super) {
     }
     RegistryStore.prototype.register = function (key, item) {
         this.store[key] = item;
+        this.dispatch('register', key, item);
         this.dispatch("registered:" + key, item);
     };
     RegistryStore.prototype.get = function (key) {
@@ -66,6 +67,9 @@ var RegistryStore = /** @class */ (function (_super) {
     RegistryStore.prototype.getSynchronous = function (key) {
         return this.store[key];
     };
+    RegistryStore.prototype.has = function (key) {
+        return !!this.store[key];
+    };
     return RegistryStore;
 }(EventDispatcher_1.EventDispatcher));
 exports.RegistryStore = RegistryStore;
@@ -73,7 +77,7 @@ var Registry = /** @class */ (function (_super) {
     __extends(Registry, _super);
     function Registry() {
         var _this = _super.call(this) || this;
-        _this.components = new RegistryStore();
+        _this.controllers = new RegistryStore();
         _this.classes = new RegistryStore();
         _this.models = new RegistryStore();
         _this.templates = new RegistryStore();
@@ -83,20 +87,13 @@ var Registry = /** @class */ (function (_super) {
         _this.attributes = new RegistryStore();
         return _this;
     }
-    Registry.component = function (key, setup) {
-        if (key === void 0) { key = null; }
-        if (setup === void 0) { setup = null; }
-        return register('components', key, setup);
-    };
-    Registry.class = function (key, setup) {
-        if (key === void 0) { key = null; }
-        if (setup === void 0) { setup = null; }
-        return register('classes', key, setup);
+    Registry.class = function (cls) {
+        Registry.instance.classes.register(cls.name, cls);
     };
     Registry.controller = function (key, setup) {
         if (key === void 0) { key = null; }
         if (setup === void 0) { setup = null; }
-        return register('classes', key, setup);
+        return register('controllers', key, setup);
     };
     Registry.model = function (key, setup) {
         if (key === void 0) { key = null; }

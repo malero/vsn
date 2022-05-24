@@ -86,7 +86,7 @@ var ListItem = /** @class */ (function (_super) {
                         return [4 /*yield*/, this.getList()];
                     case 1:
                         modelName = (_a.sent()).listItemModel;
-                        return [4 /*yield*/, Registry_1.Registry.instance.classes.get(modelName)];
+                        return [4 /*yield*/, Registry_1.Registry.instance.controllers.get(modelName)];
                     case 2:
                         cls = _a.sent();
                         this.instantiateModel(cls);

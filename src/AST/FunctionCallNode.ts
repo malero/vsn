@@ -6,7 +6,6 @@ import {Node} from "./Node";
 import {FunctionArgumentNode} from "./FunctionArgumentNode";
 import {ScopeMemberNode} from "./ScopeMemberNode";
 import {FunctionNode} from "./FunctionNode";
-import {ClassNode} from "./ClassNode";
 import {Registry} from "../Registry";
 
 export class FunctionCallNode<T = any> extends Node implements TreeNode {
@@ -34,16 +33,25 @@ export class FunctionCallNode<T = any> extends Node implements TreeNode {
         const func = await this.fnc.evaluate(scope, dom, tag);
         if (!func) {
             const functionName = await (this.fnc as any).name.evaluate(scope, dom, tag);
-            const classes: ClassNode[] = [];
-            for (const className of Array.from(tag.element.classList)) {
+            const returnValues = [];
+            let calls = 0;
+            for (const className of tag.preppedClasses) {
                 const cls = Registry.instance.classes.getSynchronous(className);
-                if (cls) classes.push(cls);
-            }
-            for (const cls of classes) {
-                if (cls.classScope.has(functionName)) {
-                    const fnc = cls.classScope.get(functionName);
-                    return (await fnc.evaluate(functionScope, dom, tag))(...values);
+                if (cls) {
+                    console.log('classScope', cls.classScope);
+                    if (cls.classScope.has(functionName)) {
+                        const fnc = cls.classScope.get(functionName);
+                        returnValues.push((await fnc.evaluate(functionScope, dom, tag))(...values));
+                        calls++;
+                    }
                 }
+            }
+            if (calls === 1) {
+                return returnValues[0];
+            } else if (calls === 0) {
+                throw new Error(`Function ${functionName} not found`);
+            } else {
+                return returnValues;
             }
         } else if (func instanceof FunctionNode) {
             return (await func.evaluate(functionScope, dom, tag) as any)(...values);

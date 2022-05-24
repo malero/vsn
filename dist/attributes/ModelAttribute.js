@@ -16,7 +16,7 @@ var __extends = (this && this.__extends) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ModelAttribute = void 0;
-var ClassConstructor_1 = require("./ClassConstructor");
+var ControllerAttribute_1 = require("./ControllerAttribute");
 var ModelAttribute = /** @class */ (function (_super) {
     __extends(ModelAttribute, _super);
     function ModelAttribute() {
@@ -24,6 +24,6 @@ var ModelAttribute = /** @class */ (function (_super) {
     }
     ModelAttribute.canDefer = false;
     return ModelAttribute;
-}(ClassConstructor_1.ClassConstructor));
+}(ControllerAttribute_1.ControllerAttribute));
 exports.ModelAttribute = ModelAttribute;
 //# sourceMappingURL=ModelAttribute.js.map

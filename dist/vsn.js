@@ -83,9 +83,9 @@ var Vision = /** @class */ (function (_super) {
         else {
             console.warn('No dom, running in CLI mode.');
         }
-        _this.registry.classes.register('Object', Object);
-        _this.registry.classes.register('WrappedArray', WrappedArray_1.WrappedArray);
-        _this.registry.classes.register('Data', DynamicScopeData_1.DynamicScopeData);
+        _this.registry.controllers.register('Object', Object);
+        _this.registry.controllers.register('WrappedArray', WrappedArray_1.WrappedArray);
+        _this.registry.controllers.register('Data', DynamicScopeData_1.DynamicScopeData);
         if (VisionHelper_1.VisionHelper.window) {
             window['Vision'] = Vision;
             window['Registry'] = Registry_1.Registry;

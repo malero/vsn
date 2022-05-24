@@ -100,7 +100,7 @@ var FunctionNode = /** @class */ (function (_super) {
                             return __generator(this, function (_c) {
                                 switch (_c.label) {
                                     case 0:
-                                        functionScope = new Scope_1.Scope(scope);
+                                        functionScope = new Scope_1.FunctionScope(scope);
                                         for (_a = 0, _b = this.args; _a < _b.length; _a++) {
                                             arg = _b[_a];
                                             functionScope.set(arg, args.shift());
@@ -123,7 +123,7 @@ var FunctionNode = /** @class */ (function (_super) {
             var t = argTokens_1[_i];
             funcArgs.push(t[0].value);
         }
-        var block = AST_1.Tree.processTokens(AST_1.Tree.getBlockTokens(tokens, null)[0]);
+        var block = AST_1.Tree.processTokens(AST_1.Tree.getNextStatementTokens(tokens, true, true));
         return new FunctionNode(name.value, funcArgs, block);
     };
     return FunctionNode;

@@ -90,7 +90,7 @@ var ScopeAttribute = /** @class */ (function (_super) {
     };
     ScopeAttribute.prototype.extract = function () {
         return __awaiter(this, void 0, void 0, function () {
-            var value, _i, _a, key;
+            var value, _i, _a, key, binding;
             return __generator(this, function (_b) {
                 switch (_b.label) {
                     case 0:
@@ -106,7 +106,11 @@ var ScopeAttribute = /** @class */ (function (_super) {
                             this.tag.scope.set(key, value.data[key]);
                         }
                         _b.label = 2;
-                    case 2: return [4 /*yield*/, _super.prototype.extract.call(this)];
+                    case 2:
+                        binding = this.getAttributeBinding();
+                        if (binding)
+                            this.tag.scope.parentScope.set(binding, this.tag.scope);
+                        return [4 /*yield*/, _super.prototype.extract.call(this)];
                     case 3:
                         _b.sent();
                         return [2 /*return*/];

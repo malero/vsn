@@ -4,7 +4,6 @@ import { WrappedWindow } from "./DOM/WrappedWindow";
 import { WrappedDocument } from "./DOM/WrappedDocument";
 import { Scope } from "./Scope";
 import { EventDispatcher } from "./EventDispatcher";
-import { ClassNode } from "./AST/ClassNode";
 export declare class DOM extends EventDispatcher {
     protected rootElement: Document;
     protected debug: boolean;
@@ -20,7 +19,6 @@ export declare class DOM extends EventDispatcher {
     constructor(rootElement: Document, build?: boolean, debug?: boolean);
     get root(): Tag;
     get(selector: string, create?: boolean, tag?: Tag): Promise<TagList>;
-    prepareDOMClass(className: string, classObject: ClassNode): Promise<void>;
     getFromTag(tag: Tag, selector: string, create?: boolean): Promise<TagList>;
     registerElementInRoot(tag: Tag): void;
     querySelectorAll(q: string, tag?: Tag): NodeList | HTMLElement[];

@@ -1,1 +1,1 @@
-{"version":3,"file":"ModelAttribute.js","sourceRoot":"","sources":["../../src/attributes/ModelAttribute.ts"],"names":[],"mappings":";;;;;;;;;;;;;;;;;;AAAA,uDAAoD;AAEpD;IAAoC,kCAAgB;IAApD;;IAEA,CAAC;IAD0B,uBAAQ,GAAY,KAAK,CAAC;IACrD,qBAAC;CAAA,AAFD,CAAoC,mCAAgB,GAEnD;AAFY,wCAAc"}
+{"version":3,"file":"ModelAttribute.js","sourceRoot":"","sources":["../../src/attributes/ModelAttribute.ts"],"names":[],"mappings":";;;;;;;;;;;;;;;;;;AAAA,6DAA0D;AAE1D;IAAoC,kCAAmB;IAAvD;;IAEA,CAAC;IAD0B,uBAAQ,GAAY,KAAK,CAAC;IACrD,qBAAC;CAAA,AAFD,CAAoC,yCAAmB,GAEtD;AAFY,wCAAc"}

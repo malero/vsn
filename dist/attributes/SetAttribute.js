@@ -110,13 +110,16 @@ var SetAttribute = /** @class */ (function (_super) {
     };
     SetAttribute.prototype.extract = function () {
         return __awaiter(this, void 0, void 0, function () {
-            var value, typeIndex;
-            return __generator(this, function (_a) {
+            var value, _i, _a, m, t;
+            return __generator(this, function (_b) {
                 value = this.getAttributeValue(null);
-                typeIndex = value && value.indexOf('|') || -1;
-                if (typeIndex > -1) {
-                    this.boundScope.setType(this.key, value.substr(typeIndex + 1));
-                    value = value.substr(0, typeIndex);
+                for (_i = 0, _a = this.getAttributeModifiers(); _i < _a.length; _i++) {
+                    m = _a[_i];
+                    t = Registry_1.Registry.instance.types.getSynchronous(m);
+                    if (t) {
+                        this.boundScope.setType(this.key, m);
+                        break;
+                    }
                 }
                 this.boundScope.set(this.key, value);
                 return [2 /*return*/];
