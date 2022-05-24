@@ -1,3 +1,4 @@
+import {ClassNode} from "../AST/ClassNode";
 
 export class ElementHelper {
     public static hasVisionAttribute(element: HTMLElement | Element, testAttr: string = 'vsn-'): boolean {
@@ -8,6 +9,11 @@ export class ElementHelper {
             {
                 return true;
             }
+        }
+
+        for (const cls of Array.from(element.classList)) {
+            if (ClassNode.isClass(cls))
+                return true;
         }
 
         return false;

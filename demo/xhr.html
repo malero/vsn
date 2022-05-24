@@ -22,6 +22,7 @@
 
             on click() {
                 console.log('clicky');
+                t();
             }
 
             func t() {
@@ -52,8 +53,8 @@
             return a + b;
         }
     </script>
-    <div class="something-special" vsn-on:click="t()">asd</div>
-    <div class="something-special" vsn-on:click="t()">asd</div>
+    <div class="something-special">asd</div>
+    <div class="something-special">asd</div>
     <bb class="reset-button">bb</bb>
     <span vsn-bind="huh_wut"></span>
     <a href="" vsn-on:click|preventdefault="huh_wut = add(huh_wut, 1)">Click me!</a>

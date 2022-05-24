@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ElementHelper = void 0;
+var ClassNode_1 = require("../AST/ClassNode");
 var ElementHelper = /** @class */ (function () {
     function ElementHelper() {
     }
@@ -13,6 +14,11 @@ var ElementHelper = /** @class */ (function () {
             if (attr.name.startsWith(testAttr)) {
                 return true;
             }
+        }
+        for (var _i = 0, _a = Array.from(element.classList); _i < _a.length; _i++) {
+            var cls = _a[_i];
+            if (ClassNode_1.ClassNode.isClass(cls))
+                return true;
         }
         return false;
     };

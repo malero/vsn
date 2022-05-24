@@ -19,4 +19,5 @@ export declare class ClassNode extends Node implements TreeNode {
     evaluate(scope: Scope, dom: DOM, tag?: Tag): Promise<any>;
     static parse(lastNode: any, token: any, tokens: Token[]): ClassNode;
     static checkForClassChanges(element: HTMLElement, dom: DOM, tag?: Tag): Promise<void>;
+    static isClass(cls: string): boolean;
 }
