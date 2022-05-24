@@ -227,3 +227,12 @@ export class Scope extends EventDispatcher {
         return scope;
     }
 }
+
+export class FunctionScope extends Scope {
+    set(key: string, value: any) {
+        if (this.parentScope.has(key) || ['$', '@'].indexOf(key[0]) > -1)
+            this.parentScope.set(key, value);
+        else
+            super.set(key, value);
+    }
+}

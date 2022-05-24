@@ -7,6 +7,8 @@ import {WrappedWindow} from "./DOM/WrappedWindow";
 import {WrappedDocument} from "./DOM/WrappedDocument";
 import {Scope} from "./Scope";
 import {EventDispatcher} from "./EventDispatcher";
+import {Registry} from "./Registry";
+import {ClassNode} from "./AST/ClassNode";
 
 export class DOM extends EventDispatcher {
     protected static _instance: DOM;
@@ -26,6 +28,7 @@ export class DOM extends EventDispatcher {
     ) {
         super();
         this.observer = new MutationObserver(this.mutation.bind(this));
+        Registry.instance.classes.on('register', this.prepareDOMClass.bind(this));
         this.tags = [];
 
         this.window = new WrappedWindow(window);
@@ -53,6 +56,18 @@ export class DOM extends EventDispatcher {
             default:
                 const nodes = this.querySelectorAll(selector, tag);
                 return await this.getTagsForElements(Array.from(nodes) as Element[], create);
+        }
+    }
+
+    public async prepareDOMClass(className: string, classObject: ClassNode) {
+        for (const element of Array.from(this.querySelectorAll(`.${className}`))) {
+            const tag: Tag = await this.getTagForElement(element as HTMLElement, true);
+            if (tag) {
+                await classObject.prepareTag(tag, this);
+                if (classObject.classScope.has('construct')) {
+                    await tag.exec('construct()');
+                }
+            }
         }
     }
 

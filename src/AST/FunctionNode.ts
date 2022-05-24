@@ -1,4 +1,4 @@
-import {Scope} from "../Scope";
+import {FunctionScope, Scope} from "../Scope";
 import {DOM} from "../DOM";
 import {Tag} from "../Tag";
 import {Token, Tree, TreeNode} from "../AST";
@@ -29,7 +29,7 @@ export class FunctionNode extends Node implements TreeNode {
 
     public async evaluate(scope: Scope, dom: DOM, tag: Tag = null) {
         return async (...args) => {
-            const functionScope = new Scope(scope);
+            const functionScope = new FunctionScope(scope);
             for (const arg of this.args) {
                 functionScope.set(arg, args.shift());
             }

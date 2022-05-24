@@ -25,3 +25,6 @@ export declare class Scope extends EventDispatcher {
     unwrap(): void;
     static fromObject(obj: any, parentScope?: Scope): Scope;
 }
+export declare class FunctionScope extends Scope {
+    set(key: string, value: any): void;
+}

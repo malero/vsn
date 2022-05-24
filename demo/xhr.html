@@ -1,28 +1,35 @@
 <div id="huh-wut" vsn-scope>
     <style>
         bb,
-        something {
+        .something-special {
             display: block;
         }
     </style>
     <script vsn-script type="text/vsn">
-        class something {
-            color = "red";
+        class something-special {
+            func construct() {
+                $color = "#ff00ff";
+                something = "something";
+                @text = 'huh?';
+            }
 
             func click() {
             }
 
             func t() {
+                $color = 'red';
+                @text = 'wut?';
             }
         }
 
-        huh_wut = 1;
+        ?>(:parent).huh_wut = 1;
         func add(a, b) {
             ?(bb).@text = `asd 123 ${a} ${b} hmm?`;
             return a + b;
         }
     </script>
-    <div class="something"></div>
+    <div class="something-special" vsn-on:click="t()">asd</div>
+    <div class="something-special" vsn-on:click="t()">asd</div>
     <bb>bb</bb>
     <span vsn-bind="huh_wut"></span>
     <a href="" vsn-on:click|preventdefault="huh_wut = add(huh_wut, 1)">Click me!</a>

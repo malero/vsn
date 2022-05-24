@@ -1,5 +1,6 @@
 import {EventDispatcher} from "./EventDispatcher";
 import {IDeferred, IPromise, SimplePromise} from "./SimplePromise";
+import {ClassNode} from "./AST/ClassNode";
 
 export function register(store: string, key: string = null, setup: () => void = null) {
     return function(target: any, _key: string = null) {
@@ -23,6 +24,7 @@ export class RegistryStore extends EventDispatcher {
 
     register(key: string, item: any) {
         this.store[key] = item;
+        this.dispatch('register', key, item);
         this.dispatch(`registered:${key}`, item);
     }
 
@@ -73,8 +75,8 @@ export class Registry extends EventDispatcher {
         this.attributes = new RegistryStore();
     }
 
-    public static class(key: string = null, setup = null) {
-        return register('classes', key, setup);
+    public static class(cls: ClassNode) {
+        Registry.instance.classes.register(cls.name, cls);
     }
 
     public static controller(key: string = null, setup = null) {

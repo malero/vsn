@@ -7,10 +7,14 @@ import { BlockNode } from "./BlockNode";
 export declare class ClassNode extends Node implements TreeNode {
     readonly name: string;
     readonly block: BlockNode;
+    static readonly classes: {
+        [name: string]: ClassNode;
+    };
     protected requiresPrep: boolean;
+    readonly classScope: Scope;
     constructor(name: string, block: BlockNode);
-    protected _getChildNodes(): Node[];
     prepare(scope: Scope, dom: DOM, tag?: Tag): Promise<void>;
-    evaluate(scope: Scope, dom: DOM, tag?: Tag): Promise<(...args: any[]) => Promise<void>>;
+    prepareTag(tag: Tag, dom: DOM): Promise<void>;
+    evaluate(scope: Scope, dom: DOM, tag?: Tag): Promise<any>;
     static parse(lastNode: any, token: any, tokens: Token[]): ClassNode;
 }
