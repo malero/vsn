@@ -70,6 +70,13 @@ var RegistryStore = /** @class */ (function (_super) {
     RegistryStore.prototype.has = function (key) {
         return !!this.store[key];
     };
+    Object.defineProperty(RegistryStore.prototype, "keys", {
+        get: function () {
+            return Object.keys(this.store);
+        },
+        enumerable: false,
+        configurable: true
+    });
     return RegistryStore;
 }(EventDispatcher_1.EventDispatcher));
 exports.RegistryStore = RegistryStore;
@@ -77,6 +84,7 @@ var Registry = /** @class */ (function (_super) {
     __extends(Registry, _super);
     function Registry() {
         var _this = _super.call(this) || this;
+        _this.functions = new RegistryStore();
         _this.controllers = new RegistryStore();
         _this.classes = new RegistryStore();
         _this.models = new RegistryStore();
@@ -87,6 +95,11 @@ var Registry = /** @class */ (function (_super) {
         _this.attributes = new RegistryStore();
         return _this;
     }
+    Registry.function = function (key, setup) {
+        if (key === void 0) { key = null; }
+        if (setup === void 0) { setup = null; }
+        return register('functions', key, setup);
+    };
     Registry.class = function (cls) {
         Registry.instance.classes.register(cls.name, cls);
     };

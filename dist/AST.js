@@ -247,7 +247,7 @@ var TOKEN_PATTERNS = [
     },
     {
         type: TokenType.ELEMENT_QUERY,
-        pattern: /^\?>?\(([#.\[\]:,=\-_a-zA-Z0-9*\s]*[\]_a-zA-Z0-9*])\)/
+        pattern: /^\?[>|<]?\(([#.\[\]:,=\-_a-zA-Z0-9*\s]*[\]_a-zA-Z0-9*])\)/
     },
     {
         type: TokenType.NAME,

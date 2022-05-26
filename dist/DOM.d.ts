@@ -4,6 +4,11 @@ import { WrappedWindow } from "./DOM/WrappedWindow";
 import { WrappedDocument } from "./DOM/WrappedDocument";
 import { Scope } from "./Scope";
 import { EventDispatcher } from "./EventDispatcher";
+export declare enum EQuerySelectDirection {
+    ALL = 0,
+    UP = 1,
+    DOWN = 2
+}
 export declare class DOM extends EventDispatcher {
     protected rootElement: Document;
     protected debug: boolean;
@@ -18,9 +23,10 @@ export declare class DOM extends EventDispatcher {
     selected: Tag;
     constructor(rootElement: Document, build?: boolean, debug?: boolean);
     get root(): Tag;
-    get(selector: string, create?: boolean, tag?: Tag): Promise<TagList>;
+    get(selector: string, create?: boolean, tag?: Tag, direction?: EQuerySelectDirection): Promise<TagList>;
     getFromTag(tag: Tag, selector: string, create?: boolean): Promise<TagList>;
     registerElementInRoot(tag: Tag): void;
+    querySelectorClosest(q: string, tag?: Tag): HTMLElement;
     querySelectorAll(q: string, tag?: Tag): NodeList | HTMLElement[];
     querySelectorElement(element: HTMLElement | Document, q: string): NodeList | HTMLElement[];
     querySelector(q: string): Element;

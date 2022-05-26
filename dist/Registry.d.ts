@@ -10,9 +10,11 @@ export declare class RegistryStore extends EventDispatcher {
     get(key: string): IPromise<any>;
     getSynchronous(key: string): any;
     has(key: string): boolean;
+    get keys(): string[];
 }
 export declare class Registry extends EventDispatcher {
     protected static _instance: Registry;
+    readonly functions: RegistryStore;
     readonly controllers: RegistryStore;
     readonly classes: RegistryStore;
     readonly models: RegistryStore;
@@ -22,6 +24,7 @@ export declare class Registry extends EventDispatcher {
     readonly formats: RegistryStore;
     readonly attributes: RegistryStore;
     constructor();
+    static function(key?: string, setup?: any): (target: any, _key?: string) => void;
     static class(cls: ClassNode): void;
     static controller(key?: string, setup?: any): (target: any, _key?: string) => void;
     static model(key?: string, setup?: any): (target: any, _key?: string) => void;

@@ -56,7 +56,7 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from) {
     return to;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.DOM = void 0;
+exports.DOM = exports.EQuerySelectDirection = void 0;
 var Tag_1 = require("./Tag");
 var ElementHelper_1 = require("./helpers/ElementHelper");
 var Configuration_1 = require("./Configuration");
@@ -66,6 +66,12 @@ var WrappedWindow_1 = require("./DOM/WrappedWindow");
 var WrappedDocument_1 = require("./DOM/WrappedDocument");
 var EventDispatcher_1 = require("./EventDispatcher");
 var ClassNode_1 = require("./AST/ClassNode");
+var EQuerySelectDirection;
+(function (EQuerySelectDirection) {
+    EQuerySelectDirection[EQuerySelectDirection["ALL"] = 0] = "ALL";
+    EQuerySelectDirection[EQuerySelectDirection["UP"] = 1] = "UP";
+    EQuerySelectDirection[EQuerySelectDirection["DOWN"] = 2] = "DOWN";
+})(EQuerySelectDirection = exports.EQuerySelectDirection || (exports.EQuerySelectDirection = {}));
 var DOM = /** @class */ (function (_super) {
     __extends(DOM, _super);
     function DOM(rootElement, build, debug) {
@@ -93,9 +99,10 @@ var DOM = /** @class */ (function (_super) {
         enumerable: false,
         configurable: true
     });
-    DOM.prototype.get = function (selector, create, tag) {
+    DOM.prototype.get = function (selector, create, tag, direction) {
         if (create === void 0) { create = false; }
         if (tag === void 0) { tag = null; }
+        if (direction === void 0) { direction = EQuerySelectDirection.DOWN; }
         return __awaiter(this, void 0, void 0, function () {
             var _a, nodes;
             return __generator(this, function (_b) {
@@ -112,7 +119,16 @@ var DOM = /** @class */ (function (_super) {
                     case 2: return [2 /*return*/, new List_1.TagList(this.document)];
                     case 3: return [2 /*return*/, new List_1.TagList(this.root)];
                     case 4:
-                        nodes = this.querySelectorAll(selector, tag);
+                        nodes = void 0;
+                        if (direction === EQuerySelectDirection.DOWN) {
+                            nodes = this.querySelectorAll(selector, tag);
+                        }
+                        else if (direction === EQuerySelectDirection.UP) {
+                            nodes = [this.querySelectorClosest(selector, tag)];
+                        }
+                        else {
+                            nodes = this.querySelectorAll(selector);
+                        }
                         return [4 /*yield*/, this.getTagsForElements(Array.from(nodes), create)];
                     case 5: return [2 /*return*/, _b.sent()];
                 }
@@ -137,6 +153,10 @@ var DOM = /** @class */ (function (_super) {
         var id = tag.element.getAttribute('id');
         if (!!id)
             this.root.scope.set("#" + id, tag.scope);
+    };
+    DOM.prototype.querySelectorClosest = function (q, tag) {
+        if (tag === void 0) { tag = null; }
+        return tag.element.closest(q);
     };
     DOM.prototype.querySelectorAll = function (q, tag) {
         if (tag === void 0) { tag = null; }

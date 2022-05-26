@@ -1,7 +1,6 @@
 import {Attribute} from "../Attribute";
 import {VisionHelper} from "../helpers/VisionHelper";
 import {Registry} from "../Registry";
-import {Scope} from "../Scope";
 
 @Registry.attribute('vsn-root')
 export class RootAttribute extends Attribute {
@@ -10,8 +9,17 @@ export class RootAttribute extends Attribute {
 
     public async setup() {
         this.tag.scope.set('$mobile', VisionHelper.isMobile());
-        if (console && !this.tag.scope.get('console'))
-            this.tag.scope.set('console', Scope.fromObject(console));
+
+        for (const key of Registry.instance.functions.keys) {
+            const fn = Registry.instance.functions.get(key);
+            this.tag.scope.set(key, fn);
+        }
+
+        Registry.instance.functions.on('register', this.registerFunction, this);
         await super.setup();
+    }
+
+    public async registerFunction(name: string, fn: Function) {
+        this.tag.scope.set(name, fn);
     }
 }

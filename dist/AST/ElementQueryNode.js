@@ -52,16 +52,17 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ElementQueryNode = void 0;
+var DOM_1 = require("../DOM");
 var Node_1 = require("./Node");
 var ElementQueryNode = /** @class */ (function (_super) {
     __extends(ElementQueryNode, _super);
-    function ElementQueryNode(query, first, global) {
+    function ElementQueryNode(query, first, direction) {
         if (first === void 0) { first = false; }
-        if (global === void 0) { global = false; }
+        if (direction === void 0) { direction = DOM_1.EQuerySelectDirection.ALL; }
         var _this = _super.call(this) || this;
         _this.query = query;
         _this.first = first;
-        _this.global = global;
+        _this.direction = direction;
         _this.requiresPrep = true;
         return _this;
     }
@@ -81,7 +82,7 @@ var ElementQueryNode = /** @class */ (function (_super) {
                         _b.label = 2;
                     case 2:
                         tag = _a;
-                        return [4 /*yield*/, dom.get(this.query, true, this.global ? null : tag)];
+                        return [4 /*yield*/, dom.get(this.query, true, tag, this.direction)];
                     case 3:
                         elements = _b.sent();
                         return [2 /*return*/, this.first && !forceList ? elements[0] : elements];
@@ -114,7 +115,16 @@ var ElementQueryNode = /** @class */ (function (_super) {
     };
     ElementQueryNode.parse = function (lastNode, token, tokens) {
         tokens.shift();
-        return new ElementQueryNode(token.value, false, !token.full.startsWith('?>'));
+        var first = false;
+        var direction = DOM_1.EQuerySelectDirection.ALL;
+        if (token.full.startsWith('?>')) {
+            direction = DOM_1.EQuerySelectDirection.DOWN;
+        }
+        else if (token.full.startsWith('?<')) {
+            direction = DOM_1.EQuerySelectDirection.UP;
+            first = true;
+        }
+        return new ElementQueryNode(token.value, first, direction);
     };
     return ElementQueryNode;
 }(Node_1.Node));

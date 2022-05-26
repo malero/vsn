@@ -7,8 +7,13 @@ import {WrappedWindow} from "./DOM/WrappedWindow";
 import {WrappedDocument} from "./DOM/WrappedDocument";
 import {Scope} from "./Scope";
 import {EventDispatcher} from "./EventDispatcher";
-import {Registry} from "./Registry";
 import {ClassNode} from "./AST/ClassNode";
+
+export enum EQuerySelectDirection {
+    ALL,
+    UP,
+    DOWN
+}
 
 export class DOM extends EventDispatcher {
     protected static _instance: DOM;
@@ -44,7 +49,7 @@ export class DOM extends EventDispatcher {
         return this._root;
     }
 
-    public async get(selector: string, create: boolean = false, tag: Tag = null) {
+    public async get(selector: string, create: boolean = false, tag: Tag = null, direction: EQuerySelectDirection = EQuerySelectDirection.DOWN): Promise<TagList> {
         switch (selector) {
             case 'window':
                 return new TagList(this.window);
@@ -53,7 +58,14 @@ export class DOM extends EventDispatcher {
             case 'body':
                 return new TagList(this.root);
             default:
-                const nodes = this.querySelectorAll(selector, tag);
+                let nodes;
+                if (direction === EQuerySelectDirection.DOWN) {
+                    nodes = this.querySelectorAll(selector, tag);
+                } else if (direction === EQuerySelectDirection.UP) {
+                    nodes = [this.querySelectorClosest(selector, tag)];
+                } else {
+                    nodes = this.querySelectorAll(selector);
+                }
                 return await this.getTagsForElements(Array.from(nodes) as Element[], create);
         }
     }
@@ -67,6 +79,10 @@ export class DOM extends EventDispatcher {
         const id: string = tag.element.getAttribute('id');
         if (!!id)
             this.root.scope.set(`#${id}`, tag.scope);
+    }
+
+    public querySelectorClosest(q: string, tag: Tag = null): HTMLElement {
+        return tag.element.closest(q);
     }
 
     public querySelectorAll(q: string, tag: Tag = null): NodeList | HTMLElement[] {

@@ -25,6 +25,10 @@ export class Vision extends EventDispatcher {
         } else {
             console.warn('No dom, running in CLI mode.');
         }
+        this.registry.functions.register('log', console.log);
+        this.registry.functions.register('warn', console.warn);
+        this.registry.functions.register('error', console.error);
+        this.registry.functions.register('info', console.info);
         this.registry.controllers.register('Object', Object);
         this.registry.controllers.register('WrappedArray', WrappedArray);
         this.registry.controllers.register('Data', DynamicScopeData);

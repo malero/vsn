@@ -61,7 +61,6 @@ exports.RootAttribute = void 0;
 var Attribute_1 = require("../Attribute");
 var VisionHelper_1 = require("../helpers/VisionHelper");
 var Registry_1 = require("../Registry");
-var Scope_1 = require("../Scope");
 var RootAttribute = /** @class */ (function (_super) {
     __extends(RootAttribute, _super);
     function RootAttribute() {
@@ -69,17 +68,30 @@ var RootAttribute = /** @class */ (function (_super) {
     }
     RootAttribute.prototype.setup = function () {
         return __awaiter(this, void 0, void 0, function () {
-            return __generator(this, function (_a) {
-                switch (_a.label) {
+            var _i, _a, key, fn;
+            return __generator(this, function (_b) {
+                switch (_b.label) {
                     case 0:
                         this.tag.scope.set('$mobile', VisionHelper_1.VisionHelper.isMobile());
-                        if (console && !this.tag.scope.get('console'))
-                            this.tag.scope.set('console', Scope_1.Scope.fromObject(console));
+                        for (_i = 0, _a = Registry_1.Registry.instance.functions.keys; _i < _a.length; _i++) {
+                            key = _a[_i];
+                            fn = Registry_1.Registry.instance.functions.get(key);
+                            this.tag.scope.set(key, fn);
+                        }
+                        Registry_1.Registry.instance.functions.on('register', this.registerFunction, this);
                         return [4 /*yield*/, _super.prototype.setup.call(this)];
                     case 1:
-                        _a.sent();
+                        _b.sent();
                         return [2 /*return*/];
                 }
+            });
+        });
+    };
+    RootAttribute.prototype.registerFunction = function (name, fn) {
+        return __awaiter(this, void 0, void 0, function () {
+            return __generator(this, function (_a) {
+                this.tag.scope.set(name, fn);
+                return [2 /*return*/];
             });
         });
     };

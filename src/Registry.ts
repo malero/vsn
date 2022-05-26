@@ -54,10 +54,15 @@ export class RegistryStore extends EventDispatcher {
     has(key: string) {
         return !!this.store[key];
     }
+
+    get keys(): string[] {
+        return Object.keys(this.store);
+    }
 }
 
 export class Registry extends EventDispatcher {
     protected static _instance: Registry;
+    public readonly functions: RegistryStore;
     public readonly controllers: RegistryStore;
     public readonly classes: RegistryStore;
     public readonly models: RegistryStore;
@@ -69,6 +74,7 @@ export class Registry extends EventDispatcher {
 
     constructor() {
         super();
+        this.functions = new RegistryStore();
         this.controllers = new RegistryStore();
         this.classes = new RegistryStore();
         this.models = new RegistryStore();
@@ -77,6 +83,10 @@ export class Registry extends EventDispatcher {
         this.validators = new RegistryStore();
         this.formats = new RegistryStore();
         this.attributes = new RegistryStore();
+    }
+
+    public static function(key: string = null, setup = null) {
+        return register('functions', key, setup);
     }
 
     public static class(cls: ClassNode) {
