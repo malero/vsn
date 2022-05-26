@@ -26,5 +26,6 @@ export declare class Scope extends EventDispatcher {
     static fromObject(obj: any, parentScope?: Scope): Scope;
 }
 export declare class FunctionScope extends Scope {
+    constructor(parentScope?: Scope);
     set(key: string, value: any): void;
 }

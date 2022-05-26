@@ -238,14 +238,18 @@ var Scope = /** @class */ (function (_super) {
 exports.Scope = Scope;
 var FunctionScope = /** @class */ (function (_super) {
     __extends(FunctionScope, _super);
-    function FunctionScope() {
-        return _super !== null && _super.apply(this, arguments) || this;
+    function FunctionScope(parentScope) {
+        var _this = _super.call(this, parentScope) || this;
+        _this.addRelay(parentScope);
+        return _this;
     }
     FunctionScope.prototype.set = function (key, value) {
-        if (this.parentScope.has(key) || ['$', '@'].indexOf(key[0]) > -1)
+        if (this.parentScope.has(key) || ['$', '@'].indexOf(key[0]) > -1) {
             this.parentScope.set(key, value);
-        else
+        }
+        else {
             _super.prototype.set.call(this, key, value);
+        }
     };
     return FunctionScope;
 }(Scope));

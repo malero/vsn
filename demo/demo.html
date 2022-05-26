@@ -67,8 +67,15 @@
             $color = "#ff00ff";
         }
 
+        func deconstruct() {
+            $color = '#000000';
+        }
+
         on click() {
-            error('huh?');
+            log(@class);
+            @class -= 'test-class';
+            @class ~ 'huh';
+            log(@class);
         }
     }
     </script>
@@ -99,7 +106,7 @@
 
 <h2>On Click</h2>
 <div vsn-name="toggle" vsn-set:show|boolean="false">
-    <button class="test-class" vsn-on:click="toggle.show = !toggle.show">Toggle</button>
+    <button class="test-class" vsn-on:click="toggle.show = !toggle.show" vsn-exec="on click() {@class -= 'test-class';log('uh', @class);}">Toggle</button>
     <span vsn-bind="toggle.show"></span>
 </div>
 <a id="click-test" vsn-on:click="if(@text != @clicktext){@text=@clicktext}else{@text='Click Me'}" clicktext="Clicked!">Click Me</a>
