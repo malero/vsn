@@ -173,7 +173,7 @@ var ClassNode = /** @class */ (function (_super) {
                 break;
             nameParts.push(t.value);
         }
-        var name = nameParts.join('');
+        var name = nameParts.join('').trim();
         tokens.splice(0, nameParts.length);
         var block = AST_1.Tree.processTokens(AST_1.Tree.getNextStatementTokens(tokens, true, true));
         return new ClassNode(name, block);
@@ -188,45 +188,44 @@ var ClassNode = /** @class */ (function (_super) {
                         classes = Array.from(element.classList);
                         addedClasses = classes.filter(function (c) { return Registry_1.Registry.instance.classes.has(c); });
                         removedClasses = [];
-                        if (!tag) return [3 /*break*/, 1];
+                        if (!!tag) return [3 /*break*/, 2];
+                        return [4 /*yield*/, dom.getTagForElement(element, true)];
+                    case 1:
+                        tag = _b.sent();
+                        _b.label = 2;
+                    case 2:
                         addedClasses = addedClasses.filter(function (c) { return !tag.preppedClasses.includes(c); });
                         removedClasses = tag.preppedClasses.filter(function (c) { return !classes.includes(c); });
-                        return [3 /*break*/, 3];
-                    case 1: return [4 /*yield*/, dom.getTagForElement(element, true)];
-                    case 2:
-                        tag = _b.sent();
+                        _i = 0, addedClasses_1 = addedClasses;
                         _b.label = 3;
                     case 3:
-                        _i = 0, addedClasses_1 = addedClasses;
-                        _b.label = 4;
-                    case 4:
-                        if (!(_i < addedClasses_1.length)) return [3 /*break*/, 7];
+                        if (!(_i < addedClasses_1.length)) return [3 /*break*/, 6];
                         addedClass = addedClasses_1[_i];
                         classNode = Registry_1.Registry.instance.classes.getSynchronous(addedClass);
-                        if (!classNode) return [3 /*break*/, 6];
+                        if (!classNode) return [3 /*break*/, 5];
                         return [4 /*yield*/, classNode.prepareTag(tag, dom)];
-                    case 5:
+                    case 4:
                         _b.sent();
-                        _b.label = 6;
-                    case 6:
+                        _b.label = 5;
+                    case 5:
                         _i++;
-                        return [3 /*break*/, 4];
-                    case 7:
+                        return [3 /*break*/, 3];
+                    case 6:
                         _a = 0, removedClasses_1 = removedClasses;
-                        _b.label = 8;
-                    case 8:
-                        if (!(_a < removedClasses_1.length)) return [3 /*break*/, 11];
+                        _b.label = 7;
+                    case 7:
+                        if (!(_a < removedClasses_1.length)) return [3 /*break*/, 10];
                         removedClass = removedClasses_1[_a];
                         classNode = Registry_1.Registry.instance.classes.getSynchronous(removedClass);
-                        if (!classNode) return [3 /*break*/, 10];
+                        if (!classNode) return [3 /*break*/, 9];
                         return [4 /*yield*/, classNode.tearDownTag(tag, dom)];
-                    case 9:
+                    case 8:
                         _b.sent();
-                        _b.label = 10;
-                    case 10:
+                        _b.label = 9;
+                    case 9:
                         _a++;
-                        return [3 /*break*/, 8];
-                    case 11: return [2 /*return*/];
+                        return [3 /*break*/, 7];
+                    case 10: return [2 /*return*/];
                 }
             });
         });

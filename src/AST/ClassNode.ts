@@ -84,7 +84,7 @@ export class ClassNode extends Node implements TreeNode {
             if (t.type === TokenType.L_BRACE) break;
             nameParts.push(t.value);
         }
-        const name = nameParts.join('');
+        const name = nameParts.join('').trim();
         tokens.splice(0, nameParts.length);
         const block = Tree.processTokens(Tree.getNextStatementTokens(tokens, true, true));
         return new ClassNode(name, block);
@@ -92,15 +92,13 @@ export class ClassNode extends Node implements TreeNode {
 
     public static async checkForClassChanges(element: HTMLElement, dom: DOM, tag: Tag = null) {
         const classes: string[] = Array.from(element.classList);
-
         let addedClasses: string[] = classes.filter(c => Registry.instance.classes.has(c));
         let removedClasses: string[] = [];
-        if (tag) {
-            addedClasses = addedClasses.filter(c => !tag.preppedClasses.includes(c));
-            removedClasses = tag.preppedClasses.filter(c => !classes.includes(c));
-        } else {
+        if (!tag) {
             tag = await dom.getTagForElement(element, true);
         }
+        addedClasses = addedClasses.filter(c => !tag.preppedClasses.includes(c));
+        removedClasses = tag.preppedClasses.filter(c => !classes.includes(c));
 
         for (const addedClass of addedClasses) {
             const classNode: ClassNode = Registry.instance.classes.getSynchronous(addedClass);
