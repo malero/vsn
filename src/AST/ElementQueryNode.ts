@@ -21,7 +21,7 @@ export class ElementQueryNode extends Node implements TreeNode {
         return this.first && !forceList ? elements[0] : elements;
     }
 
-    async prepare(scope: Scope, dom: DOM, tag: Tag = null) {
+    async prepare(scope: Scope, dom: DOM, tag: Tag = null, meta: any = null): Promise<any> {
         tag = tag || await dom.getTagForScope(scope);
         await dom.get(this.query, true, tag);
     }

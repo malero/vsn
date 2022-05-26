@@ -36,6 +36,12 @@
             }
         }
 
+        class something-normal {
+            on click() {
+                log('also clicky');
+            }
+        }
+
         class reset-button {
             func construct() {
                 @text = 'reset';
@@ -53,7 +59,7 @@
             return a + b;
         }
     </script>
-    <div class="something-special">asd</div>
+    <div class="something-special something-normal" id="dual-class">asd</div>
     <div class="something-special">asd</div>
     <bb class="reset-button">bb</bb>
     <span vsn-bind="huh_wut"></span>

@@ -10,6 +10,6 @@ export declare class ElementQueryNode extends Node implements TreeNode {
     protected requiresPrep: boolean;
     constructor(query: string, first?: boolean, direction?: EQuerySelectDirection);
     evaluate(scope: Scope, dom: DOM, tag?: Tag, forceList?: boolean): Promise<any>;
-    prepare(scope: Scope, dom: DOM, tag?: Tag): Promise<void>;
+    prepare(scope: Scope, dom: DOM, tag?: Tag, meta?: any): Promise<any>;
     static parse(lastNode: any, token: any, tokens: Token[]): ElementQueryNode;
 }

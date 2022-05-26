@@ -368,8 +368,7 @@ const TOKEN_PATTERNS: TokenPattern[] = [
 
 export interface TreeNode<T = any> {
     evaluate(scope: Scope, dom: DOM, tag?: Tag);
-
-    prepare(scope: Scope, dom: DOM, tag?: Tag);
+    prepare(scope: Scope, dom: DOM, tag?: Tag, meta?: any);
 }
 
 export interface IBlockInfo {

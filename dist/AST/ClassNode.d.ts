@@ -13,7 +13,8 @@ export declare class ClassNode extends Node implements TreeNode {
     protected requiresPrep: boolean;
     readonly classScope: Scope;
     constructor(name: string, block: BlockNode);
-    prepare(scope: Scope, dom: DOM, tag?: Tag): Promise<void>;
+    updateMeta(meta?: any): any;
+    prepare(scope: Scope, dom: DOM, tag?: Tag, meta?: any): Promise<void>;
     prepareTag(tag: Tag, dom: DOM, hasConstructor?: boolean | null): Promise<void>;
     tearDownTag(tag: Tag, dom: DOM, hasDeconstructor?: boolean | null): Promise<void>;
     evaluate(scope: Scope, dom: DOM, tag?: Tag): Promise<any>;

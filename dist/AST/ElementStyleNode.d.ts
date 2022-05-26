@@ -14,5 +14,5 @@ export declare class ElementStyleNode extends Node implements TreeNode {
     protected _getChildNodes(): Node[];
     get attributeName(): string;
     evaluate(scope: Scope, dom: DOM, tag?: Tag): Promise<any>;
-    prepare(scope: Scope, dom: DOM, tag?: Tag): Promise<void>;
+    prepare(scope: Scope, dom: DOM, tag?: Tag, meta?: any): Promise<void>;
 }

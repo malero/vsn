@@ -27,9 +27,9 @@ export abstract class Node implements TreeNode {
         return false;
     }
 
-    async prepare(scope: Scope, dom: DOM, tag: Tag = null) {
+    async prepare(scope: Scope, dom: DOM, tag: Tag = null, meta: any = null): Promise<void> {
         for (const node of this.getChildNodes()) {
-            await node.prepare(scope, dom, tag);
+            await node.prepare(scope, dom, tag, meta);
         }
     }
 

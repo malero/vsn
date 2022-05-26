@@ -56,8 +56,9 @@ var Node = /** @class */ (function () {
         }
         return false;
     };
-    Node.prototype.prepare = function (scope, dom, tag) {
+    Node.prototype.prepare = function (scope, dom, tag, meta) {
         if (tag === void 0) { tag = null; }
+        if (meta === void 0) { meta = null; }
         return __awaiter(this, void 0, void 0, function () {
             var _i, _a, node;
             return __generator(this, function (_b) {
@@ -68,7 +69,7 @@ var Node = /** @class */ (function () {
                     case 1:
                         if (!(_i < _a.length)) return [3 /*break*/, 4];
                         node = _a[_i];
-                        return [4 /*yield*/, node.prepare(scope, dom, tag)];
+                        return [4 /*yield*/, node.prepare(scope, dom, tag, meta)];
                     case 2:
                         _b.sent();
                         _b.label = 3;

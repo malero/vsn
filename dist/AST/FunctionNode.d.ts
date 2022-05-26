@@ -11,7 +11,7 @@ export declare class FunctionNode extends Node implements TreeNode {
     protected requiresPrep: boolean;
     constructor(name: string, args: string[], block: BlockNode);
     protected _getChildNodes(): Node[];
-    prepare(scope: Scope, dom: DOM, tag?: Tag): Promise<void>;
+    prepare(scope: Scope, dom: DOM, tag?: Tag, meta?: any): Promise<void>;
     evaluate(scope: Scope, dom: DOM, tag?: Tag): Promise<(...args: any[]) => Promise<any>>;
     getFunction(scope: Scope, dom: DOM, tag?: Tag): Promise<(...args: any[]) => Promise<any>>;
     static parse<T = FunctionNode>(lastNode: any, token: any, tokens: Token[], cls?: any): FunctionNode;

@@ -85,7 +85,7 @@ export declare enum TokenType {
 }
 export interface TreeNode<T = any> {
     evaluate(scope: Scope, dom: DOM, tag?: Tag): any;
-    prepare(scope: Scope, dom: DOM, tag?: Tag): any;
+    prepare(scope: Scope, dom: DOM, tag?: Tag, meta?: any): any;
 }
 export interface IBlockInfo {
     type: BlockType;

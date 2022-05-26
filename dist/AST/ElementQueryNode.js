@@ -90,8 +90,9 @@ var ElementQueryNode = /** @class */ (function (_super) {
             });
         });
     };
-    ElementQueryNode.prototype.prepare = function (scope, dom, tag) {
+    ElementQueryNode.prototype.prepare = function (scope, dom, tag, meta) {
         if (tag === void 0) { tag = null; }
+        if (meta === void 0) { meta = null; }
         return __awaiter(this, void 0, void 0, function () {
             var _a;
             return __generator(this, function (_b) {

@@ -50,9 +50,9 @@ export class ElementStyleNode extends Node implements TreeNode {
         return tags.map((tag) => tag.scope.get(`$${this.attributeName}`));
     }
 
-    async prepare(scope: Scope, dom: DOM, tag: Tag = null) {
+    async prepare(scope: Scope, dom: DOM, tag: Tag = null, meta: any = null) {
         if (this.elementRef) {
-            await this.elementRef.prepare(scope, dom, tag);
+            await this.elementRef.prepare(scope, dom, tag, meta);
             const tags: TagList = await this.elementRef.evaluate(scope, dom, tag, true);
             for (const t of tags)
                 await t.watchStyle(this.attributeName);

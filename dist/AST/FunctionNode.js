@@ -70,14 +70,15 @@ var FunctionNode = /** @class */ (function (_super) {
             this.block
         ];
     };
-    FunctionNode.prototype.prepare = function (scope, dom, tag) {
+    FunctionNode.prototype.prepare = function (scope, dom, tag, meta) {
         if (tag === void 0) { tag = null; }
         return __awaiter(this, void 0, void 0, function () {
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
-                        scope.set(this.name, this);
-                        return [4 /*yield*/, _super.prototype.prepare.call(this, scope, dom, tag)];
+                        if (!(meta === null || meta === void 0 ? void 0 : meta.ClassNode)) // Don't muddle up tag scope if we're in a class
+                            scope.set(this.name, this);
+                        return [4 /*yield*/, _super.prototype.prepare.call(this, scope, dom, tag, meta)];
                     case 1:
                         _a.sent();
                         return [2 /*return*/];

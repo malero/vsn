@@ -67,38 +67,27 @@ var ClassNode = /** @class */ (function (_super) {
         _this.classScope = new Scope_1.Scope();
         return _this;
     }
-    ClassNode.prototype.prepare = function (scope, dom, tag) {
+    ClassNode.prototype.updateMeta = function (meta) {
+        meta = meta || {};
+        meta['ClassNode'] = this;
+        return meta;
+    };
+    ClassNode.prototype.prepare = function (scope, dom, tag, meta) {
         if (tag === void 0) { tag = null; }
         return __awaiter(this, void 0, void 0, function () {
-            var hasConstructor, _i, _a, element, tag_1;
-            return __generator(this, function (_b) {
-                switch (_b.label) {
+            return __generator(this, function (_a) {
+                switch (_a.label) {
                     case 0:
+                        meta = meta || {};
+                        meta['ClassNodePrepare'] = true;
                         if (ClassNode.classes[this.name])
                             return [2 /*return*/]; // Don't re-prepare same classes
                         ClassNode.classes[this.name] = this;
-                        return [4 /*yield*/, this.block.prepare(this.classScope, dom, tag)];
+                        return [4 /*yield*/, this.block.prepare(this.classScope, dom, tag, meta)];
                     case 1:
-                        _b.sent();
+                        _a.sent();
                         Registry_1.Registry.class(this);
-                        hasConstructor = this.classScope.has('construct');
-                        _i = 0, _a = Array.from(dom.querySelectorAll("." + this.name));
-                        _b.label = 2;
-                    case 2:
-                        if (!(_i < _a.length)) return [3 /*break*/, 6];
-                        element = _a[_i];
-                        return [4 /*yield*/, dom.getTagForElement(element, true)];
-                    case 3:
-                        tag_1 = _b.sent();
-                        if (!tag_1) return [3 /*break*/, 5];
-                        return [4 /*yield*/, this.prepareTag(tag_1, dom, hasConstructor)];
-                    case 4:
-                        _b.sent();
-                        _b.label = 5;
-                    case 5:
-                        _i++;
-                        return [3 /*break*/, 2];
-                    case 6: return [2 /*return*/];
+                        return [2 /*return*/];
                 }
             });
         });
@@ -106,14 +95,15 @@ var ClassNode = /** @class */ (function (_super) {
     ClassNode.prototype.prepareTag = function (tag, dom, hasConstructor) {
         if (hasConstructor === void 0) { hasConstructor = null; }
         return __awaiter(this, void 0, void 0, function () {
-            var fnc;
+            var meta, fnc;
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
                         if (hasConstructor === null)
                             hasConstructor = this.classScope.has('construct');
                         tag.createScope(true);
-                        return [4 /*yield*/, this.block.prepare(tag.scope, dom, tag)];
+                        meta = this.updateMeta();
+                        return [4 /*yield*/, this.block.prepare(tag.scope, dom, tag, meta)];
                     case 1:
                         _a.sent();
                         if (!hasConstructor) return [3 /*break*/, 3];

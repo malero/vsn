@@ -5,11 +5,11 @@ import {DOM} from "../DOM";
 import {Tag} from "../Tag";
 
 export class OnNode extends FunctionNode implements TreeNode {
-    public async prepare(scope: Scope, dom: DOM, tag: Tag = null): Promise<void> {
-        if (tag) {
+    public async prepare(scope: Scope, dom: DOM, tag: Tag = null, meta): Promise<void> {
+        const classPrep = meta?.ClassNodePrepare; // Don't add event handler if we're in class prep
+        if (tag && !classPrep)
             tag.addEventHandler(this.name, [], await this.getFunction(scope, dom, tag), this);
-        }
-        await super.prepare(scope, dom, tag);
+        await super.prepare(scope, dom, tag, meta);
     }
 
     public static parse(lastNode, token, tokens: Token[]): OnNode {

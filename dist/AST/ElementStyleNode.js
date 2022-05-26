@@ -115,15 +115,16 @@ var ElementStyleNode = /** @class */ (function (_super) {
             });
         });
     };
-    ElementStyleNode.prototype.prepare = function (scope, dom, tag) {
+    ElementStyleNode.prototype.prepare = function (scope, dom, tag, meta) {
         if (tag === void 0) { tag = null; }
+        if (meta === void 0) { meta = null; }
         return __awaiter(this, void 0, void 0, function () {
             var tags, _i, tags_1, t;
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
                         if (!this.elementRef) return [3 /*break*/, 7];
-                        return [4 /*yield*/, this.elementRef.prepare(scope, dom, tag)];
+                        return [4 /*yield*/, this.elementRef.prepare(scope, dom, tag, meta)];
                     case 1:
                         _a.sent();
                         return [4 /*yield*/, this.elementRef.evaluate(scope, dom, tag, true)];
