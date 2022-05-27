@@ -231,7 +231,7 @@ var ClassNode = /** @class */ (function (_super) {
         });
     };
     ClassNode.isClass = function (cls) {
-        return this.classes[cls] instanceof ClassNode;
+        return !!this.classes[cls];
     };
     ClassNode.classes = {};
     return ClassNode;

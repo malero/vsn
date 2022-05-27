@@ -116,6 +116,6 @@ export class ClassNode extends Node implements TreeNode {
     }
 
     public static isClass(cls: string): boolean {
-        return this.classes[cls] instanceof ClassNode;
+        return !!this.classes[cls];
     }
 }

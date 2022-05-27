@@ -2,6 +2,11 @@ import {ClassNode} from "../AST/ClassNode";
 
 export class ElementHelper {
     public static hasVisionAttribute(element: HTMLElement | Element, testAttr: string = 'vsn-'): boolean {
+        for (const cls of Array.from(element.classList)) {
+            if (ClassNode.isClass(cls))
+                return true;
+        }
+
         if (!element.attributes || element.attributes.length <= 0) return false;
         for (let i: number = 0; i < element.attributes.length; i++) {
             const attr: Attr = element.attributes[i];
@@ -9,11 +14,6 @@ export class ElementHelper {
             {
                 return true;
             }
-        }
-
-        for (const cls of Array.from(element.classList)) {
-            if (ClassNode.isClass(cls))
-                return true;
         }
 
         return false;
