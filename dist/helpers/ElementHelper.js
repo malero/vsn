@@ -7,16 +7,17 @@ var ElementHelper = /** @class */ (function () {
     }
     ElementHelper.hasVisionAttribute = function (element, testAttr) {
         if (testAttr === void 0) { testAttr = 'vsn-'; }
-        for (var _i = 0, _a = Array.from(element.classList); _i < _a.length; _i++) {
-            var cls = _a[_i];
-            if (ClassNode_1.ClassNode.isClass(cls))
-                return true;
-        }
         if (!element.attributes || element.attributes.length <= 0)
             return false;
         for (var i = 0; i < element.attributes.length; i++) {
             var attr = element.attributes[i];
             if (attr.name.startsWith(testAttr)) {
+                return true;
+            }
+        }
+        for (var _i = 0, _a = Array.from(element.classList); _i < _a.length; _i++) {
+            var cls = _a[_i];
+            if (ClassNode_1.ClassNode.isClass(cls)) {
                 return true;
             }
         }

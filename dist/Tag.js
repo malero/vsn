@@ -56,7 +56,7 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from) {
     return to;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.Tag = exports.TaggedVariable = exports.TagState = void 0;
+exports.Tag = exports.TagState = void 0;
 var Scope_1 = require("./Scope");
 var Attribute_1 = require("./Attribute");
 var DOM_1 = require("./DOM");
@@ -79,7 +79,6 @@ var TagState;
     TagState[TagState["AttributesConnected"] = 5] = "AttributesConnected";
     TagState[TagState["Built"] = 6] = "Built";
 })(TagState = exports.TagState || (exports.TagState = {}));
-exports.TaggedVariable = '_vsn_tag';
 var Tag = /** @class */ (function (_super) {
     __extends(Tag, _super);
     function Tag(element, dom) {
@@ -98,7 +97,7 @@ var Tag = /** @class */ (function (_super) {
             'select',
             'textarea'
         ];
-        element[exports.TaggedVariable] = _this;
+        element[Tag.TaggedVariable] = _this;
         _this.rawAttributes = {};
         _this.parsedAttributes = {};
         _this.attributes = [];
@@ -339,9 +338,9 @@ var Tag = /** @class */ (function (_super) {
                 var parentElement = this.element.parentElement;
                 var foundParent = false;
                 while (parentElement) {
-                    if (parentElement[exports.TaggedVariable]) {
+                    if (parentElement[Tag.TaggedVariable]) {
                         foundParent = true;
-                        this.parentTag = parentElement[exports.TaggedVariable];
+                        this.parentTag = parentElement[Tag.TaggedVariable];
                         break;
                     }
                     parentElement = parentElement.parentElement;
@@ -908,6 +907,7 @@ var Tag = /** @class */ (function (_super) {
         this._children.length = 0;
         _super.prototype.deconstruct.call(this);
     };
+    Tag.TaggedVariable = '_vsn_tag';
     Tag.magicAttributes = [
         '@text',
         '@html',

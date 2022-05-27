@@ -11,6 +11,7 @@ export class ClassNode extends Node implements TreeNode {
     public static readonly classes: {[name: string]: ClassNode} = {};
     protected requiresPrep: boolean = true;
     public readonly classScope: Scope = new Scope();
+    protected _ready: boolean = false;
 
     constructor(
         public readonly name: string,
@@ -32,6 +33,10 @@ export class ClassNode extends Node implements TreeNode {
         ClassNode.classes[this.name] = this;
         await this.block.prepare(this.classScope, dom, tag, meta);
         Registry.class(this);
+
+        for (const element of Array.from(dom.querySelectorAll(`.${this.name}`))) {
+            await ClassNode.checkForClassChanges(element as HTMLElement, dom, element[Tag.TaggedVariable] || null);
+        }
     }
 
     public async prepareTag(tag: Tag, dom: DOM, hasConstructor: boolean | null = null) {
@@ -45,14 +50,6 @@ export class ClassNode extends Node implements TreeNode {
             const fnc = this.classScope.get('construct');
             (await fnc.evaluate(tag.scope, dom, tag))();
         }
-        /*
-        for (const key of this.classScope.keys) {
-            if (this.classScope.get(key) instanceof OnNode) {
-                const on = this.classScope.get(key) as OnNode;
-                tag.addEventHandler(on.name, [], await on.getFunction(tag.scope, dom, tag), on);
-            }
-        }
-         */
         tag.preppedClasses.push(this.name);
     }
 
@@ -93,7 +90,8 @@ export class ClassNode extends Node implements TreeNode {
     public static async checkForClassChanges(element: HTMLElement, dom: DOM, tag: Tag = null) {
         const classes: string[] = Array.from(element.classList);
         let addedClasses: string[] = classes.filter(c => Registry.instance.classes.has(c));
-        let removedClasses: string[] = [];
+        let removedClasses: string[];
+
         if (!tag) {
             tag = await dom.getTagForElement(element, true);
         }

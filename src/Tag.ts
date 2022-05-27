@@ -21,9 +21,8 @@ export enum TagState {
     Built,
 }
 
-export const TaggedVariable:string = '_vsn_tag';
-
 export class Tag extends DOMObject {
+    public static readonly TaggedVariable: string = '_vsn_tag';
     public readonly rawAttributes: { [key: string]: string; };
     public readonly parsedAttributes: { [key: string]: string[]; };
     public readonly deferredAttributes: Attribute[] = [];
@@ -58,7 +57,7 @@ export class Tag extends DOMObject {
         ...props
     ) {
         super(element, props);
-        element[TaggedVariable] = this;
+        element[Tag.TaggedVariable] = this;
         this.rawAttributes = {};
         this.parsedAttributes = {};
         this.attributes = [];
@@ -240,9 +239,9 @@ export class Tag extends DOMObject {
             let parentElement: HTMLElement = this.element.parentElement as HTMLElement;
             let foundParent = false;
             while (parentElement) {
-                if (parentElement[TaggedVariable]) {
+                if (parentElement[Tag.TaggedVariable]) {
                     foundParent = true;
-                    this.parentTag = parentElement[TaggedVariable];
+                    this.parentTag = parentElement[Tag.TaggedVariable];
                     break;
                 }
 

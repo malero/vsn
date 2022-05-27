@@ -53,6 +53,7 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ClassNode = void 0;
 var Scope_1 = require("../Scope");
+var Tag_1 = require("../Tag");
 var AST_1 = require("../AST");
 var Node_1 = require("./Node");
 var Registry_1 = require("../Registry");
@@ -65,6 +66,7 @@ var ClassNode = /** @class */ (function (_super) {
         _this.block = block;
         _this.requiresPrep = true;
         _this.classScope = new Scope_1.Scope();
+        _this._ready = false;
         return _this;
     }
     ClassNode.prototype.updateMeta = function (meta) {
@@ -75,8 +77,9 @@ var ClassNode = /** @class */ (function (_super) {
     ClassNode.prototype.prepare = function (scope, dom, tag, meta) {
         if (tag === void 0) { tag = null; }
         return __awaiter(this, void 0, void 0, function () {
-            return __generator(this, function (_a) {
-                switch (_a.label) {
+            var _i, _a, element;
+            return __generator(this, function (_b) {
+                switch (_b.label) {
                     case 0:
                         meta = meta || {};
                         meta['ClassNodePrepare'] = true;
@@ -85,9 +88,21 @@ var ClassNode = /** @class */ (function (_super) {
                         ClassNode.classes[this.name] = this;
                         return [4 /*yield*/, this.block.prepare(this.classScope, dom, tag, meta)];
                     case 1:
-                        _a.sent();
+                        _b.sent();
                         Registry_1.Registry.class(this);
-                        return [2 /*return*/];
+                        _i = 0, _a = Array.from(dom.querySelectorAll("." + this.name));
+                        _b.label = 2;
+                    case 2:
+                        if (!(_i < _a.length)) return [3 /*break*/, 5];
+                        element = _a[_i];
+                        return [4 /*yield*/, ClassNode.checkForClassChanges(element, dom, element[Tag_1.Tag.TaggedVariable] || null)];
+                    case 3:
+                        _b.sent();
+                        _b.label = 4;
+                    case 4:
+                        _i++;
+                        return [3 /*break*/, 2];
+                    case 5: return [2 /*return*/];
                 }
             });
         });
@@ -113,14 +128,6 @@ var ClassNode = /** @class */ (function (_super) {
                         (_a.sent())();
                         _a.label = 3;
                     case 3:
-                        /*
-                        for (const key of this.classScope.keys) {
-                            if (this.classScope.get(key) instanceof OnNode) {
-                                const on = this.classScope.get(key) as OnNode;
-                                tag.addEventHandler(on.name, [], await on.getFunction(tag.scope, dom, tag), on);
-                            }
-                        }
-                         */
                         tag.preppedClasses.push(this.name);
                         return [2 /*return*/];
                 }
@@ -187,7 +194,6 @@ var ClassNode = /** @class */ (function (_super) {
                     case 0:
                         classes = Array.from(element.classList);
                         addedClasses = classes.filter(function (c) { return Registry_1.Registry.instance.classes.has(c); });
-                        removedClasses = [];
                         if (!!tag) return [3 /*break*/, 2];
                         return [4 /*yield*/, dom.getTagForElement(element, true)];
                     case 1:

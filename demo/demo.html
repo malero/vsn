@@ -211,6 +211,21 @@
         vision.registry.controllers.register('MVal', MVal);
     });
 </script>
+
+<script vsn-script type="text/vsn">
+class testing-class {
+  on click() {
+    @text = 'Clicked';
+  }
+
+  on mouseenter() {
+    @text = 'Hovered!';
+  }
+}
+</script>
+
+<button class="testing-class" test="1">Click me</button>
+
 <script type="text/javascript" src="vsn.js"></script>
 </body>
 </html>
