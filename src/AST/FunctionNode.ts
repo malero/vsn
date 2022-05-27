@@ -38,7 +38,9 @@ export class FunctionNode extends Node implements TreeNode {
             for (const arg of this.args) {
                 functionScope.set(arg, args.shift());
             }
-            return await this.block.evaluate(functionScope, dom, tag);
+            const returnValue = await this.block.evaluate(functionScope, dom, tag);
+            functionScope.cleanup();
+            return returnValue;
         }
     }
 

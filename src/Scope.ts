@@ -32,12 +32,23 @@ export class Scope extends EventDispatcher {
     }
 
     public set parentScope(scope: Scope) {
-        this._parentScope = scope;
-        scope.addChild(this);
+        if (scope) {
+            this._parentScope = scope;
+            scope.addChild(this);
+        } else if (this._parentScope){
+            this._parentScope.removeChild(this);
+            this._parentScope = null;
+        }
     }
 
     public addChild(scope: Scope) {
         this.children.push(scope);
+    }
+
+    public removeChild(scope: Scope) {
+        const index = this.children.indexOf(scope);
+        if (index > -1)
+            this.children.splice(index, 1);
     }
 
     getReference(path: string, createIfNotFound: boolean = true): ScopeReference {
