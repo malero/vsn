@@ -64,6 +64,7 @@ var StringFormatNode_1 = require("./AST/StringFormatNode");
 var FunctionNode_1 = require("./AST/FunctionNode");
 var ClassNode_1 = require("./AST/ClassNode");
 var OnNode_1 = require("./AST/OnNode");
+var ModifierNode_1 = require("./AST/ModifierNode");
 function lower(str) {
     return str ? str.toLowerCase() : null;
 }
@@ -139,6 +140,7 @@ var TokenType;
     TokenType[TokenType["XHR_POST"] = 60] = "XHR_POST";
     TokenType[TokenType["XHR_PUT"] = 61] = "XHR_PUT";
     TokenType[TokenType["XHR_DELETE"] = 62] = "XHR_DELETE";
+    TokenType[TokenType["MODIFIER"] = 63] = "MODIFIER";
 })(TokenType = exports.TokenType || (exports.TokenType = {}));
 var TOKEN_PATTERNS = [
     {
@@ -384,6 +386,10 @@ var TOKEN_PATTERNS = [
     {
         type: TokenType.EXCLAMATION_POINT,
         pattern: /^!/
+    },
+    {
+        type: TokenType.MODIFIER,
+        pattern: /^\|\S+/
     }
 ];
 exports.AttributableNodes = [
@@ -643,6 +649,9 @@ var Tree = /** @class */ (function () {
             }
             else if (tokens[0].type === TokenType.EXCLAMATION_POINT) {
                 node = NotNode_1.NotNode.parse(node, tokens[0], tokens);
+            }
+            else if (tokens[0].type === TokenType.MODIFIER) {
+                node = ModifierNode_1.ModifierNode.parse(node, tokens[0], tokens);
             }
             else {
                 var code = Tree.toCode(tokens, 10);

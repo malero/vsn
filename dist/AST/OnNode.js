@@ -61,21 +61,39 @@ var OnNode = /** @class */ (function (_super) {
     OnNode.prototype.prepare = function (scope, dom, tag, meta) {
         if (tag === void 0) { tag = null; }
         return __awaiter(this, void 0, void 0, function () {
-            var classPrep, _a, _b, _c;
-            return __generator(this, function (_d) {
-                switch (_d.label) {
+            var classPrep, func_1;
+            var _this = this;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
                     case 0:
                         classPrep = meta === null || meta === void 0 ? void 0 : meta.ClassNodePrepare;
                         if (!(tag && !classPrep)) return [3 /*break*/, 2];
-                        _b = (_a = tag).addEventHandler;
-                        _c = [this.name, []];
                         return [4 /*yield*/, this.getFunction(scope, dom, tag)];
                     case 1:
-                        _b.apply(_a, _c.concat([_d.sent(), this]));
-                        _d.label = 2;
+                        func_1 = _a.sent();
+                        tag.addEventHandler(this.name, [], function () {
+                            var args = [];
+                            for (var _i = 0; _i < arguments.length; _i++) {
+                                args[_i] = arguments[_i];
+                            }
+                            return __awaiter(_this, void 0, void 0, function () {
+                                return __generator(this, function (_a) {
+                                    switch (_a.label) {
+                                        case 0: return [4 /*yield*/, func_1.apply(void 0, args)];
+                                        case 1:
+                                            _a.sent();
+                                            return [4 /*yield*/, this.collectGarbage()];
+                                        case 2:
+                                            _a.sent();
+                                            return [2 /*return*/];
+                                    }
+                                });
+                            });
+                        }, this);
+                        _a.label = 2;
                     case 2: return [4 /*yield*/, _super.prototype.prepare.call(this, scope, dom, tag, meta)];
                     case 3:
-                        _d.sent();
+                        _a.sent();
                         return [2 /*return*/];
                 }
             });

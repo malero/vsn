@@ -8,6 +8,7 @@
     <script vsn-script type="text/vsn">
         class something-special {
             func construct() {
+                count|integer = 0;
                 $color = "#ff00ff";
                 something = "something";
                 @originaltext = @text;
@@ -25,13 +26,19 @@
                 t();
             }
 
+            on hover() {
+                b|integer = 1;
+            }
+
             func t() {
+                count += 1;
+                b += 1;
                 if ($color == 'red') {
                     $color = 'blue';
-                    @text = 'huh?';
+                    @text = `${count} huh?`;
                 } else {
                     $color = 'red';
-                    @text = 'wut?';
+                    @text = `${b} wut?`;
                 }
             }
         }

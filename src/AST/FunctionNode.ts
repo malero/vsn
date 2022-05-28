@@ -7,6 +7,7 @@ import {BlockNode} from "./BlockNode";
 
 export class FunctionNode extends Node implements TreeNode {
     protected requiresPrep: boolean = true;
+    protected garbage: FunctionScope[] = [];
 
     constructor(
         public readonly name: string,
@@ -32,15 +33,27 @@ export class FunctionNode extends Node implements TreeNode {
         return await this.getFunction(scope, dom, tag);
     }
 
-    public async getFunction(scope: Scope, dom: DOM, tag: Tag = null) {
+    public async collectGarbage() {
+        for (const f of this.garbage) {
+            f.collectGarbage();
+        }
+        this.garbage = [];
+    }
+
+    public async getFunction(scope: Scope, dom: DOM, tag: Tag = null, createFunctionScope: boolean = true) {
+        const self = this;
         return async (...args) => {
-            const functionScope = new FunctionScope(scope);
+            let functionScope;
+            if (createFunctionScope && !(scope instanceof FunctionScope)) {
+                functionScope = new FunctionScope(scope);
+                self.garbage.push(functionScope);
+            } else {
+                functionScope = scope;
+            }
             for (const arg of this.args) {
                 functionScope.set(arg, args.shift());
             }
-            const returnValue = await this.block.evaluate(functionScope, dom, tag);
-            functionScope.cleanup();
-            return returnValue;
+            return await this.block.evaluate(functionScope, dom, tag);
         }
     }
 

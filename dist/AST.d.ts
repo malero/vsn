@@ -81,7 +81,8 @@ export declare enum TokenType {
     XHR_GET = 59,
     XHR_POST = 60,
     XHR_PUT = 61,
-    XHR_DELETE = 62
+    XHR_DELETE = 62,
+    MODIFIER = 63
 }
 export interface TreeNode<T = any> {
     evaluate(scope: Scope, dom: DOM, tag?: Tag): any;

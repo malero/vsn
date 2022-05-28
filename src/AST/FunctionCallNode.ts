@@ -34,16 +34,21 @@ export class FunctionCallNode<T = any> extends Node implements TreeNode {
         if (!func) {
             const functionName = await (this.fnc as any).name.evaluate(scope, dom, tag);
             const returnValues = [];
+            const toCleanup = [];
             let calls = 0;
             for (const className of tag.preppedClasses) {
                 const cls = Registry.instance.classes.getSynchronous(className);
                 if (cls) {
                     if (cls.classScope.has(functionName)) {
                         const fnc = cls.classScope.get(functionName);
-                        returnValues.push((await fnc.evaluate(functionScope, dom, tag))(...values));
+                        toCleanup.push(fnc);
+                        returnValues.push(await (await fnc.evaluate(functionScope, dom, tag))(...values));
                         calls++;
                     }
                 }
+            }
+            for (const fnc of toCleanup) {
+                await fnc.collectGarbage();
             }
             if (calls === 1) {
                 return returnValues[0];
@@ -53,7 +58,9 @@ export class FunctionCallNode<T = any> extends Node implements TreeNode {
                 return returnValues;
             }
         } else if (func instanceof FunctionNode) {
-            return (await func.evaluate(functionScope, dom, tag) as any)(...values);
+            const r = await (await func.evaluate(functionScope, dom, tag) as any)(...values);
+            await func.collectGarbage();
+            return r;
         } else {
             return func.call(functionScope.wrapped || functionScope, ...values);
         }

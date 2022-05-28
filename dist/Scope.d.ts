@@ -11,6 +11,7 @@ export declare class Scope extends EventDispatcher {
     get parentScope(): Scope;
     set parentScope(scope: Scope);
     addChild(scope: Scope): void;
+    removeChild(scope: Scope): void;
     getReference(path: string, createIfNotFound?: boolean): ScopeReference;
     get(key: string, searchParents?: boolean): any;
     set(key: string, value: any): void;
@@ -21,6 +22,8 @@ export declare class Scope extends EventDispatcher {
     extend(data: any): void;
     clear(): void;
     cleanup(): void;
+    collectGarbage(force?: boolean): void;
+    deconstruct(): void;
     wrap(toWrap: any, triggerUpdates?: boolean, updateFromWrapped?: boolean): void;
     unwrap(): void;
     static fromObject(obj: any, parentScope?: Scope): Scope;
@@ -28,4 +31,5 @@ export declare class Scope extends EventDispatcher {
 export declare class FunctionScope extends Scope {
     constructor(parentScope?: Scope);
     set(key: string, value: any): void;
+    collectGarbage(force?: boolean): void;
 }

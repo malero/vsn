@@ -63,6 +63,7 @@ var FunctionNode = /** @class */ (function (_super) {
         _this.args = args;
         _this.block = block;
         _this.requiresPrep = true;
+        _this.garbage = [];
         return _this;
     }
     FunctionNode.prototype._getChildNodes = function () {
@@ -97,11 +98,27 @@ var FunctionNode = /** @class */ (function (_super) {
             });
         });
     };
-    FunctionNode.prototype.getFunction = function (scope, dom, tag) {
-        if (tag === void 0) { tag = null; }
+    FunctionNode.prototype.collectGarbage = function () {
         return __awaiter(this, void 0, void 0, function () {
+            var _i, _a, f;
+            return __generator(this, function (_b) {
+                for (_i = 0, _a = this.garbage; _i < _a.length; _i++) {
+                    f = _a[_i];
+                    f.collectGarbage();
+                }
+                this.garbage = [];
+                return [2 /*return*/];
+            });
+        });
+    };
+    FunctionNode.prototype.getFunction = function (scope, dom, tag, createFunctionScope) {
+        if (tag === void 0) { tag = null; }
+        if (createFunctionScope === void 0) { createFunctionScope = true; }
+        return __awaiter(this, void 0, void 0, function () {
+            var self;
             var _this = this;
             return __generator(this, function (_a) {
+                self = this;
                 return [2 /*return*/, function () {
                         var args = [];
                         for (var _i = 0; _i < arguments.length; _i++) {
@@ -112,7 +129,13 @@ var FunctionNode = /** @class */ (function (_super) {
                             return __generator(this, function (_c) {
                                 switch (_c.label) {
                                     case 0:
-                                        functionScope = new Scope_1.FunctionScope(scope);
+                                        if (createFunctionScope && !(scope instanceof Scope_1.FunctionScope)) {
+                                            functionScope = new Scope_1.FunctionScope(scope);
+                                            self.garbage.push(functionScope);
+                                        }
+                                        else {
+                                            functionScope = scope;
+                                        }
                                         for (_a = 0, _b = this.args; _a < _b.length; _a++) {
                                             arg = _b[_a];
                                             functionScope.set(arg, args.shift());

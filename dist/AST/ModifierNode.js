@@ -51,87 +51,38 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
     }
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.ScopeMemberNode = void 0;
-var Scope_1 = require("../Scope");
-var List_1 = require("../Tag/List");
-var DOMObject_1 = require("../DOM/DOMObject");
-var ElementQueryNode_1 = require("./ElementQueryNode");
-var ScopeNodeAbstract_1 = require("./ScopeNodeAbstract");
-var ScopeMemberNode = /** @class */ (function (_super) {
-    __extends(ScopeMemberNode, _super);
-    function ScopeMemberNode(scope, name) {
+exports.ModifierNode = void 0;
+var Node_1 = require("./Node");
+var ModifierNode = /** @class */ (function (_super) {
+    __extends(ModifierNode, _super);
+    function ModifierNode(name, block) {
         var _this = _super.call(this) || this;
-        _this.scope = scope;
         _this.name = name;
+        _this.block = block;
         return _this;
     }
-    ScopeMemberNode.prototype._getChildNodes = function () {
-        return [
-            this.scope,
-            this.name
-        ];
-    };
-    ScopeMemberNode.prototype.evaluate = function (scope, dom, tag) {
+    ModifierNode.prototype.prepare = function (scope, dom, tag, meta) {
         if (tag === void 0) { tag = null; }
         return __awaiter(this, void 0, void 0, function () {
-            var scopes, values, elements, evalScope, _i, scopes_1, parent_1, _a, _b, name_1, value;
-            return __generator(this, function (_c) {
-                switch (_c.label) {
-                    case 0:
-                        scopes = [];
-                        values = [];
-                        if (!(this.scope instanceof ElementQueryNode_1.ElementQueryNode)) return [3 /*break*/, 2];
-                        return [4 /*yield*/, this.scope.evaluate(scope, dom, tag)];
-                    case 1:
-                        elements = _c.sent();
-                        if (this.scope.first) {
-                            scopes.push(elements);
-                        }
-                        else {
-                            scopes = elements;
-                        }
-                        return [3 /*break*/, 4];
-                    case 2: return [4 /*yield*/, this.scope.evaluate(scope, dom, tag)];
-                    case 3:
-                        evalScope = _c.sent();
-                        if (evalScope instanceof List_1.TagList) {
-                            scopes = evalScope;
-                        }
-                        else {
-                            scopes.push(evalScope);
-                        }
-                        _c.label = 4;
-                    case 4:
-                        _i = 0, scopes_1 = scopes;
-                        _c.label = 5;
-                    case 5:
-                        if (!(_i < scopes_1.length)) return [3 /*break*/, 11];
-                        parent_1 = scopes_1[_i];
-                        if (parent_1 instanceof DOMObject_1.DOMObject)
-                            parent_1 = parent_1.scope;
-                        if (!!parent_1) return [3 /*break*/, 7];
-                        _a = Error;
-                        _b = "Cannot access \"";
-                        return [4 /*yield*/, this.name.evaluate(scope, dom, tag)];
-                    case 6: throw _a.apply(void 0, [_b + (_c.sent()) + "\" of undefined."]);
-                    case 7: return [4 /*yield*/, this.name.evaluate(scope, dom, tag)];
-                    case 8:
-                        name_1 = _c.sent();
-                        return [4 /*yield*/, this.applyModifiers(name_1, parent_1, dom, tag)];
-                    case 9:
-                        _c.sent();
-                        value = parent_1.get(name_1, false);
-                        values.push(value instanceof Scope_1.Scope && value.wrapped || value);
-                        _c.label = 10;
-                    case 10:
-                        _i++;
-                        return [3 /*break*/, 5];
-                    case 11: return [2 /*return*/, values.length === 1 ? values[0] : values];
-                }
+            return __generator(this, function (_a) {
+                return [2 /*return*/, null];
             });
         });
     };
-    return ScopeMemberNode;
-}(ScopeNodeAbstract_1.ScopeNodeAbstract));
-exports.ScopeMemberNode = ScopeMemberNode;
-//# sourceMappingURL=ScopeMemberNode.js.map
+    ModifierNode.prototype.evaluate = function (scope, dom, tag) {
+        if (tag === void 0) { tag = null; }
+        return __awaiter(this, void 0, void 0, function () {
+            return __generator(this, function (_a) {
+                return [2 /*return*/, null];
+            });
+        });
+    };
+    ModifierNode.parse = function (lastNode, token, tokens) {
+        var modifier = tokens.shift().value.substr(1);
+        lastNode.modifiers.push(modifier);
+        return lastNode;
+    };
+    return ModifierNode;
+}(Node_1.Node));
+exports.ModifierNode = ModifierNode;
+//# sourceMappingURL=ModifierNode.js.map

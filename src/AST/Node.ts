@@ -8,6 +8,7 @@ export abstract class Node implements TreeNode {
     protected _isPreparationRequired: boolean;
     protected childNodes: Node[];
     protected nodeCache: {[key: string]: Node[]} = {};
+    public readonly modifiers: string[] = [];
     abstract evaluate(scope: Scope, dom: DOM, tag?: Tag);
 
     isPreparationRequired(): boolean {
@@ -30,6 +31,12 @@ export abstract class Node implements TreeNode {
     async prepare(scope: Scope, dom: DOM, tag: Tag = null, meta: any = null): Promise<void> {
         for (const node of this.getChildNodes()) {
             await node.prepare(scope, dom, tag, meta);
+        }
+    }
+
+    async cleanup(scope: Scope, dom: DOM, tag: Tag) {
+        for (const node of this.getChildNodes()) {
+            await node.cleanup(scope, dom, tag);
         }
     }
 

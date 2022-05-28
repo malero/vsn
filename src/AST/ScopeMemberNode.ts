@@ -6,8 +6,9 @@ import {DOMObject} from "../DOM/DOMObject";
 import {TreeNode} from "../AST";
 import {Node} from "./Node";
 import {ElementQueryNode} from "./ElementQueryNode";
+import {ScopeNodeAbstract} from "./ScopeNodeAbstract";
 
-export class ScopeMemberNode extends Node implements TreeNode {
+export class ScopeMemberNode extends ScopeNodeAbstract implements TreeNode {
     constructor(
         public readonly scope: TreeNode<Scope>,
         public readonly name: TreeNode<string>
@@ -50,6 +51,7 @@ export class ScopeMemberNode extends Node implements TreeNode {
                 throw Error(`Cannot access "${await this.name.evaluate(scope, dom, tag)}" of undefined.`);
             }
             const name = await this.name.evaluate(scope, dom, tag);
+            await this.applyModifiers(name, parent, dom, tag);
             const value: any = parent.get(name, false);
             values.push(value instanceof Scope && value.wrapped || value);
         }

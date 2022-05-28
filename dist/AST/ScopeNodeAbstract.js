@@ -51,40 +51,32 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
     }
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.RootScopeMemberNode = void 0;
-var Scope_1 = require("../Scope");
-var ScopeNodeAbstract_1 = require("./ScopeNodeAbstract");
-var RootScopeMemberNode = /** @class */ (function (_super) {
-    __extends(RootScopeMemberNode, _super);
-    function RootScopeMemberNode(name) {
-        var _this = _super.call(this) || this;
-        _this.name = name;
-        return _this;
+exports.ScopeNodeAbstract = void 0;
+var Node_1 = require("./Node");
+var Registry_1 = require("../Registry");
+var ScopeNodeAbstract = /** @class */ (function (_super) {
+    __extends(ScopeNodeAbstract, _super);
+    function ScopeNodeAbstract() {
+        return _super !== null && _super.apply(this, arguments) || this;
     }
-    RootScopeMemberNode.prototype._getChildNodes = function () {
-        return [
-            this.name
-        ];
-    };
-    RootScopeMemberNode.prototype.evaluate = function (scope, dom, tag) {
-        if (tag === void 0) { tag = null; }
+    ScopeNodeAbstract.prototype.applyModifiers = function (name, scope, dom, tag) {
         return __awaiter(this, void 0, void 0, function () {
-            var name, value;
-            return __generator(this, function (_a) {
-                switch (_a.label) {
-                    case 0: return [4 /*yield*/, this.name.evaluate(scope, dom, tag)];
-                    case 1:
-                        name = _a.sent();
-                        return [4 /*yield*/, this.applyModifiers(name, scope, dom, tag)];
-                    case 2:
-                        _a.sent();
-                        value = scope.get(name);
-                        return [2 /*return*/, value instanceof Scope_1.Scope && value.wrapped || value];
+            var type, _i, _a, modifier;
+            return __generator(this, function (_b) {
+                for (_i = 0, _a = this.modifiers; _i < _a.length; _i++) {
+                    modifier = _a[_i];
+                    if (Registry_1.Registry.instance.types.has(modifier)) {
+                        type = modifier;
+                        break;
+                    }
                 }
+                if (type)
+                    scope.setType(name, type);
+                return [2 /*return*/];
             });
         });
     };
-    return RootScopeMemberNode;
-}(ScopeNodeAbstract_1.ScopeNodeAbstract));
-exports.RootScopeMemberNode = RootScopeMemberNode;
-//# sourceMappingURL=RootScopeMemberNode.js.map
+    return ScopeNodeAbstract;
+}(Node_1.Node));
+exports.ScopeNodeAbstract = ScopeNodeAbstract;
+//# sourceMappingURL=ScopeNodeAbstract.js.map

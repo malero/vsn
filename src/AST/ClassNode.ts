@@ -6,6 +6,7 @@ import {Node} from "./Node";
 import {BlockNode} from "./BlockNode";
 import {Registry} from "../Registry";
 import {OnNode} from "./OnNode";
+import {FunctionNode} from "./FunctionNode";
 
 export class ClassNode extends Node implements TreeNode {
     public static readonly classes: {[name: string]: ClassNode} = {};
@@ -47,8 +48,9 @@ export class ClassNode extends Node implements TreeNode {
         const meta = this.updateMeta();
         await this.block.prepare(tag.scope, dom, tag, meta);
         if (hasConstructor) {
-            const fnc = this.classScope.get('construct');
-            (await fnc.evaluate(tag.scope, dom, tag))();
+            const fncCls: FunctionNode = this.classScope.get('construct') as FunctionNode;
+            const fnc = await fncCls.getFunction(tag.scope, dom, tag, false);
+            await fnc();
         }
         tag.preppedClasses.push(this.name);
     }
@@ -58,8 +60,9 @@ export class ClassNode extends Node implements TreeNode {
             hasDeconstructor = this.classScope.has('deconstruct');
 
         if (hasDeconstructor) {
-            const fnc = this.classScope.get('deconstruct');
-            (await fnc.evaluate(tag.scope, dom, tag))();
+            const fncCls: FunctionNode = this.classScope.get('deconstruct') as FunctionNode;
+            const fnc = await fncCls.getFunction(tag.scope, dom, tag, false);
+            await fnc();
         }
         for (const key of this.classScope.keys) {
             if (this.classScope.get(key) instanceof OnNode) {

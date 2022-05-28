@@ -138,6 +138,19 @@ export class Scope extends EventDispatcher {
         this.parentScope = null;
     }
 
+    collectGarbage(force: boolean = false) {
+        for (const child of this.children) {
+            child.collectGarbage(force);
+        }
+        if (force)
+            this.cleanup();
+    }
+
+    deconstruct() {
+        super.deconstruct();
+        this.collectGarbage(true);
+    }
+
     public wrap(toWrap: any, triggerUpdates: boolean = false, updateFromWrapped: boolean = true) {
         if (toWrap instanceof ScopeData) {
             if (this._data instanceof EventDispatcher) {
@@ -246,10 +259,15 @@ export class FunctionScope extends Scope {
     }
 
     set(key: string, value: any) {
-        if (this.parentScope.has(key) || ['$', '@'].indexOf(key[0]) > -1) {
+        if (this.parentScope && (this.parentScope.has(key) || ['$', '@'].indexOf(key[0]) > -1)) {
             this.parentScope.set(key, value);
         } else {
             super.set(key, value);
         }
+    }
+
+    collectGarbage(force: boolean = true) {
+        super.collectGarbage(true);
+        this.cleanup();
     }
 }

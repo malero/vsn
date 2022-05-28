@@ -50,14 +50,25 @@ var Scope = /** @class */ (function (_super) {
             return this._parentScope;
         },
         set: function (scope) {
-            this._parentScope = scope;
-            scope.addChild(this);
+            if (scope) {
+                this._parentScope = scope;
+                scope.addChild(this);
+            }
+            else if (this._parentScope) {
+                this._parentScope.removeChild(this);
+                this._parentScope = null;
+            }
         },
         enumerable: false,
         configurable: true
     });
     Scope.prototype.addChild = function (scope) {
         this.children.push(scope);
+    };
+    Scope.prototype.removeChild = function (scope) {
+        var index = this.children.indexOf(scope);
+        if (index > -1)
+            this.children.splice(index, 1);
     };
     Scope.prototype.getReference = function (path, createIfNotFound) {
         if (createIfNotFound === void 0) { createIfNotFound = true; }
@@ -138,6 +149,19 @@ var Scope = /** @class */ (function (_super) {
     Scope.prototype.cleanup = function () {
         this.children.length = 0;
         this.parentScope = null;
+    };
+    Scope.prototype.collectGarbage = function (force) {
+        if (force === void 0) { force = false; }
+        for (var _i = 0, _a = this.children; _i < _a.length; _i++) {
+            var child = _a[_i];
+            child.collectGarbage(force);
+        }
+        if (force)
+            this.cleanup();
+    };
+    Scope.prototype.deconstruct = function () {
+        _super.prototype.deconstruct.call(this);
+        this.collectGarbage(true);
     };
     Scope.prototype.wrap = function (toWrap, triggerUpdates, updateFromWrapped) {
         var _this = this;
@@ -244,12 +268,17 @@ var FunctionScope = /** @class */ (function (_super) {
         return _this;
     }
     FunctionScope.prototype.set = function (key, value) {
-        if (this.parentScope.has(key) || ['$', '@'].indexOf(key[0]) > -1) {
+        if (this.parentScope && (this.parentScope.has(key) || ['$', '@'].indexOf(key[0]) > -1)) {
             this.parentScope.set(key, value);
         }
         else {
             _super.prototype.set.call(this, key, value);
         }
+    };
+    FunctionScope.prototype.collectGarbage = function (force) {
+        if (force === void 0) { force = true; }
+        _super.prototype.collectGarbage.call(this, true);
+        this.cleanup();
     };
     return FunctionScope;
 }(Scope));

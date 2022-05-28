@@ -29,6 +29,7 @@ import {StringFormatNode} from "./AST/StringFormatNode";
 import {FunctionNode} from "./AST/FunctionNode";
 import {ClassNode} from "./AST/ClassNode";
 import {OnNode} from "./AST/OnNode";
+import {ModifierNode} from "./AST/ModifierNode";
 
 function lower(str: string): string {
     return str ? str.toLowerCase() : null;
@@ -117,6 +118,7 @@ export enum TokenType {
     XHR_POST,
     XHR_PUT,
     XHR_DELETE,
+    MODIFIER,
 }
 
 const TOKEN_PATTERNS: TokenPattern[] = [
@@ -363,6 +365,10 @@ const TOKEN_PATTERNS: TokenPattern[] = [
     {
         type: TokenType.EXCLAMATION_POINT,
         pattern: /^!/
+    },
+    {
+        type: TokenType.MODIFIER,
+        pattern: /^\|\S+/
     }
 ];
 
@@ -585,6 +591,8 @@ export class Tree {
                 tokens.shift()
             } else if (tokens[0].type === TokenType.EXCLAMATION_POINT) {
                 node = NotNode.parse(node, tokens[0], tokens);
+            } else if (tokens[0].type === TokenType.MODIFIER) {
+                node = ModifierNode.parse(node, tokens[0], tokens);
             } else {
                 let code: string = Tree.toCode(tokens, 10);
                 throw Error(`Syntax Error. Near ${code}`);

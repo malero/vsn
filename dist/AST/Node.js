@@ -41,6 +41,7 @@ var Node = /** @class */ (function () {
     function Node() {
         this.requiresPrep = false;
         this.nodeCache = {};
+        this.modifiers = [];
     }
     Node.prototype.isPreparationRequired = function () {
         if (this.requiresPrep)
@@ -70,6 +71,29 @@ var Node = /** @class */ (function () {
                         if (!(_i < _a.length)) return [3 /*break*/, 4];
                         node = _a[_i];
                         return [4 /*yield*/, node.prepare(scope, dom, tag, meta)];
+                    case 2:
+                        _b.sent();
+                        _b.label = 3;
+                    case 3:
+                        _i++;
+                        return [3 /*break*/, 1];
+                    case 4: return [2 /*return*/];
+                }
+            });
+        });
+    };
+    Node.prototype.cleanup = function (scope, dom, tag) {
+        return __awaiter(this, void 0, void 0, function () {
+            var _i, _a, node;
+            return __generator(this, function (_b) {
+                switch (_b.label) {
+                    case 0:
+                        _i = 0, _a = this.getChildNodes();
+                        _b.label = 1;
+                    case 1:
+                        if (!(_i < _a.length)) return [3 /*break*/, 4];
+                        node = _a[_i];
+                        return [4 /*yield*/, node.cleanup(scope, dom, tag)];
                     case 2:
                         _b.sent();
                         _b.label = 3;

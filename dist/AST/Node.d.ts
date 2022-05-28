@@ -9,9 +9,11 @@ export declare abstract class Node implements TreeNode {
     protected nodeCache: {
         [key: string]: Node[];
     };
+    readonly modifiers: string[];
     abstract evaluate(scope: Scope, dom: DOM, tag?: Tag): any;
     isPreparationRequired(): boolean;
     prepare(scope: Scope, dom: DOM, tag?: Tag, meta?: any): Promise<void>;
+    cleanup(scope: Scope, dom: DOM, tag: Tag): Promise<void>;
     protected _getChildNodes(): Node[];
     getChildNodes(): Node[];
     findChildrenByType<T = Node>(t: any): T[];

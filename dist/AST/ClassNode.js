@@ -110,7 +110,7 @@ var ClassNode = /** @class */ (function (_super) {
     ClassNode.prototype.prepareTag = function (tag, dom, hasConstructor) {
         if (hasConstructor === void 0) { hasConstructor = null; }
         return __awaiter(this, void 0, void 0, function () {
-            var meta, fnc;
+            var meta, fncCls, fnc;
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
@@ -121,13 +121,16 @@ var ClassNode = /** @class */ (function (_super) {
                         return [4 /*yield*/, this.block.prepare(tag.scope, dom, tag, meta)];
                     case 1:
                         _a.sent();
-                        if (!hasConstructor) return [3 /*break*/, 3];
-                        fnc = this.classScope.get('construct');
-                        return [4 /*yield*/, fnc.evaluate(tag.scope, dom, tag)];
+                        if (!hasConstructor) return [3 /*break*/, 4];
+                        fncCls = this.classScope.get('construct');
+                        return [4 /*yield*/, fncCls.getFunction(tag.scope, dom, tag, false)];
                     case 2:
-                        (_a.sent())();
-                        _a.label = 3;
+                        fnc = _a.sent();
+                        return [4 /*yield*/, fnc()];
                     case 3:
+                        _a.sent();
+                        _a.label = 4;
+                    case 4:
                         tag.preppedClasses.push(this.name);
                         return [2 /*return*/];
                 }
@@ -137,19 +140,22 @@ var ClassNode = /** @class */ (function (_super) {
     ClassNode.prototype.tearDownTag = function (tag, dom, hasDeconstructor) {
         if (hasDeconstructor === void 0) { hasDeconstructor = null; }
         return __awaiter(this, void 0, void 0, function () {
-            var fnc, _i, _a, key, on;
+            var fncCls, fnc, _i, _a, key, on;
             return __generator(this, function (_b) {
                 switch (_b.label) {
                     case 0:
                         if (hasDeconstructor === null)
                             hasDeconstructor = this.classScope.has('deconstruct');
-                        if (!hasDeconstructor) return [3 /*break*/, 2];
-                        fnc = this.classScope.get('deconstruct');
-                        return [4 /*yield*/, fnc.evaluate(tag.scope, dom, tag)];
+                        if (!hasDeconstructor) return [3 /*break*/, 3];
+                        fncCls = this.classScope.get('deconstruct');
+                        return [4 /*yield*/, fncCls.getFunction(tag.scope, dom, tag, false)];
                     case 1:
-                        (_b.sent())();
-                        _b.label = 2;
+                        fnc = _b.sent();
+                        return [4 /*yield*/, fnc()];
                     case 2:
+                        _b.sent();
+                        _b.label = 3;
+                    case 3:
                         for (_i = 0, _a = this.classScope.keys; _i < _a.length; _i++) {
                             key = _a[_i];
                             if (this.classScope.get(key) instanceof OnNode_1.OnNode) {
