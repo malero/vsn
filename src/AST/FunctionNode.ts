@@ -41,6 +41,7 @@ export class FunctionNode extends Node implements TreeNode {
     }
 
     public async getFunction(scope: Scope, dom: DOM, tag: Tag = null, createFunctionScope: boolean = true) {
+        console.log(`FunctionNode.getFunction(${this.name})`);
         const self = this;
         return async (...args) => {
             let functionScope;

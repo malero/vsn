@@ -1,74 +1,12 @@
 <div id="huh-wut" vsn-scope>
-    <style>
-        bb,
-        .something-special {
-            display: block;
-        }
-    </style>
     <script vsn-script type="text/vsn">
-        class something-special {
-            func construct() {
-                count|integer = 0;
-                $color = "#ff00ff";
-                something = "something";
-                @originaltext = @text;
-                @text = 'huh?';
+        class simple {
+            func test() {
+                return "test";
             }
-
-            func deconstruct() {
-                $color = '#000000';
-                something = null;
-                @text = @originaltext;
-            }
-
-            on click() {
-                log('clicky');
-                t();
-            }
-
-            on hover() {
-                b|integer = 1;
-            }
-
-            func t() {
-                count += 1;
-                b += 1;
-                if ($color == 'red') {
-                    $color = 'blue';
-                    @text = `${count} huh?`;
-                } else {
-                    $color = 'red';
-                    @text = `${b} wut?`;
-                }
-            }
-        }
-
-        class something-normal {
-            on click() {
-                log('also clicky');
-            }
-        }
-
-        class reset-button {
-            func construct() {
-                @text = 'reset';
-                $color = 'red';
-            }
-
-            on click() {
-                ?>(:parent:parent).@html = << './xhr.html';
-            }
-        }
-
-        ?>(:parent).huh_wut = 1;
-        func add(a, b) {
-            ?(bb).@text = `asd 123 ${a} ${b} hmm?`;
-            return a + b;
         }
     </script>
-    <div class="something-special something-normal" id="dual-class">asd</div>
-    <div class="something-special">asd</div>
-    <bb class="reset-button">bb</bb>
-    <span vsn-bind="huh_wut"></span>
-    <a href="" vsn-on:click|preventdefault="huh_wut = add(huh_wut, 1)">Click me!</a>
+    <div class="simple">asd</div>
+    <div class="simple">asd</div>
+    
 </div>

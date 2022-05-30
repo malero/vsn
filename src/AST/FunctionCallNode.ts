@@ -7,6 +7,7 @@ import {FunctionArgumentNode} from "./FunctionArgumentNode";
 import {ScopeMemberNode} from "./ScopeMemberNode";
 import {FunctionNode} from "./FunctionNode";
 import {Registry} from "../Registry";
+import {ElementQueryNode} from "./ElementQueryNode";
 
 export class FunctionCallNode<T = any> extends Node implements TreeNode {
     constructor(
@@ -24,26 +25,37 @@ export class FunctionCallNode<T = any> extends Node implements TreeNode {
     }
 
     public async evaluate(scope: Scope, dom: DOM, tag: Tag = null) {
+        // @todo: Need to rewrite/refactor this. It's a bit of a mess with element queries.
+        let tags: Tag[];
         let functionScope: Scope = scope;
         if (this.fnc instanceof ScopeMemberNode) {
             functionScope = await this.fnc.scope.evaluate(scope, dom, tag);
+            if (this.fnc.scope instanceof ElementQueryNode) {
+                tags = await this.fnc.scope.evaluate(scope, dom, tag) as Tag[];
+            } else {
+               tags = [tag];
+            }
         }
 
         const values = await this.args.evaluate(scope, dom, tag);
-        const func = await this.fnc.evaluate(scope, dom, tag);
-        if (!func) {
+        let func = await this.fnc.evaluate(scope, dom, tag);
+        if (!func || func instanceof Array) {
             const functionName = await (this.fnc as any).name.evaluate(scope, dom, tag);
             const returnValues = [];
             const toCleanup = [];
             let calls = 0;
-            for (const className of tag.preppedClasses) {
-                const cls = Registry.instance.classes.getSynchronous(className);
-                if (cls) {
-                    if (cls.classScope.has(functionName)) {
-                        const fnc = cls.classScope.get(functionName);
-                        toCleanup.push(fnc);
-                        returnValues.push(await (await fnc.evaluate(functionScope, dom, tag))(...values));
-                        calls++;
+            for (const _tag of tags) {
+                let tagNum = 0;
+                for (const className of _tag.preppedClasses) {
+                    tagNum++;
+                    const cls = Registry.instance.classes.getSynchronous(className);
+                    if (cls) {
+                        if (cls.classScope.has(functionName)) {
+                            const fnc = cls.classScope.get(functionName);
+                            toCleanup.push(fnc);
+                            returnValues.push(await (await fnc.evaluate(_tag.scope, dom, _tag))(...values));
+                            calls++;
+                        }
                     }
                 }
             }
