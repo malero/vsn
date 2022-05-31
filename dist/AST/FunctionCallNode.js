@@ -61,6 +61,7 @@ var Node_1 = require("./Node");
 var ScopeMemberNode_1 = require("./ScopeMemberNode");
 var FunctionNode_1 = require("./FunctionNode");
 var Registry_1 = require("../Registry");
+var ElementQueryNode_1 = require("./ElementQueryNode");
 var FunctionCallNode = /** @class */ (function (_super) {
     __extends(FunctionCallNode, _super);
     function FunctionCallNode(fnc, args) {
@@ -78,63 +79,80 @@ var FunctionCallNode = /** @class */ (function (_super) {
     FunctionCallNode.prototype.evaluate = function (scope, dom, tag) {
         if (tag === void 0) { tag = null; }
         return __awaiter(this, void 0, void 0, function () {
-            var functionScope, values, func, functionName, returnValues, toCleanup, calls, _i, _a, className, cls, fnc, _b, _c, _d, toCleanup_1, fnc, r;
-            return __generator(this, function (_e) {
-                switch (_e.label) {
+            var tags, functionScope, values, func, functionName, returnValues, toCleanup, calls, _i, tags_1, _tag, tagNum, _a, _b, className, cls, fnc, _c, _d, _e, toCleanup_1, fnc, r;
+            return __generator(this, function (_f) {
+                switch (_f.label) {
                     case 0:
                         functionScope = scope;
-                        if (!(this.fnc instanceof ScopeMemberNode_1.ScopeMemberNode)) return [3 /*break*/, 2];
+                        if (!(this.fnc instanceof ScopeMemberNode_1.ScopeMemberNode)) return [3 /*break*/, 4];
                         return [4 /*yield*/, this.fnc.scope.evaluate(scope, dom, tag)];
                     case 1:
-                        functionScope = _e.sent();
-                        _e.label = 2;
-                    case 2: return [4 /*yield*/, this.args.evaluate(scope, dom, tag)];
+                        functionScope = _f.sent();
+                        if (!(this.fnc.scope instanceof ElementQueryNode_1.ElementQueryNode)) return [3 /*break*/, 3];
+                        return [4 /*yield*/, this.fnc.scope.evaluate(scope, dom, tag)];
+                    case 2:
+                        tags = (_f.sent());
+                        return [3 /*break*/, 4];
                     case 3:
-                        values = _e.sent();
-                        return [4 /*yield*/, this.fnc.evaluate(scope, dom, tag)];
-                    case 4:
-                        func = _e.sent();
-                        if (!!func) return [3 /*break*/, 15];
-                        return [4 /*yield*/, this.fnc.name.evaluate(scope, dom, tag)];
+                        tags = [tag];
+                        _f.label = 4;
+                    case 4: return [4 /*yield*/, this.args.evaluate(scope, dom, tag)];
                     case 5:
-                        functionName = _e.sent();
+                        values = _f.sent();
+                        return [4 /*yield*/, this.fnc.evaluate(scope, dom, tag)];
+                    case 6:
+                        func = _f.sent();
+                        if (!(!func || func instanceof Array)) return [3 /*break*/, 19];
+                        return [4 /*yield*/, this.fnc.name.evaluate(scope, dom, tag)];
+                    case 7:
+                        functionName = _f.sent();
                         returnValues = [];
                         toCleanup = [];
                         calls = 0;
-                        _i = 0, _a = tag.preppedClasses;
-                        _e.label = 6;
-                    case 6:
-                        if (!(_i < _a.length)) return [3 /*break*/, 10];
-                        className = _a[_i];
+                        _i = 0, tags_1 = tags;
+                        _f.label = 8;
+                    case 8:
+                        if (!(_i < tags_1.length)) return [3 /*break*/, 14];
+                        _tag = tags_1[_i];
+                        tagNum = 0;
+                        _a = 0, _b = _tag.preppedClasses;
+                        _f.label = 9;
+                    case 9:
+                        if (!(_a < _b.length)) return [3 /*break*/, 13];
+                        className = _b[_a];
+                        tagNum++;
                         cls = Registry_1.Registry.instance.classes.getSynchronous(className);
-                        if (!cls) return [3 /*break*/, 9];
-                        if (!cls.classScope.has(functionName)) return [3 /*break*/, 9];
+                        if (!cls) return [3 /*break*/, 12];
+                        if (!cls.classScope.has(functionName)) return [3 /*break*/, 12];
                         fnc = cls.classScope.get(functionName);
                         toCleanup.push(fnc);
-                        _c = (_b = returnValues).push;
-                        return [4 /*yield*/, fnc.evaluate(functionScope, dom, tag)];
-                    case 7: return [4 /*yield*/, (_e.sent()).apply(void 0, values)];
-                    case 8:
-                        _c.apply(_b, [_e.sent()]);
-                        calls++;
-                        _e.label = 9;
-                    case 9:
-                        _i++;
-                        return [3 /*break*/, 6];
-                    case 10:
-                        _d = 0, toCleanup_1 = toCleanup;
-                        _e.label = 11;
+                        _d = (_c = returnValues).push;
+                        return [4 /*yield*/, fnc.evaluate(_tag.scope, dom, _tag)];
+                    case 10: return [4 /*yield*/, (_f.sent()).apply(void 0, values)];
                     case 11:
-                        if (!(_d < toCleanup_1.length)) return [3 /*break*/, 14];
-                        fnc = toCleanup_1[_d];
-                        return [4 /*yield*/, fnc.collectGarbage()];
+                        _d.apply(_c, [_f.sent()]);
+                        calls++;
+                        _f.label = 12;
                     case 12:
-                        _e.sent();
-                        _e.label = 13;
+                        _a++;
+                        return [3 /*break*/, 9];
                     case 13:
-                        _d++;
-                        return [3 /*break*/, 11];
+                        _i++;
+                        return [3 /*break*/, 8];
                     case 14:
+                        _e = 0, toCleanup_1 = toCleanup;
+                        _f.label = 15;
+                    case 15:
+                        if (!(_e < toCleanup_1.length)) return [3 /*break*/, 18];
+                        fnc = toCleanup_1[_e];
+                        return [4 /*yield*/, fnc.collectGarbage()];
+                    case 16:
+                        _f.sent();
+                        _f.label = 17;
+                    case 17:
+                        _e++;
+                        return [3 /*break*/, 15];
+                    case 18:
                         if (calls === 1) {
                             return [2 /*return*/, returnValues[0]];
                         }
@@ -144,19 +162,19 @@ var FunctionCallNode = /** @class */ (function (_super) {
                         else {
                             return [2 /*return*/, returnValues];
                         }
-                        return [3 /*break*/, 20];
-                    case 15:
-                        if (!(func instanceof FunctionNode_1.FunctionNode)) return [3 /*break*/, 19];
+                        return [3 /*break*/, 24];
+                    case 19:
+                        if (!(func instanceof FunctionNode_1.FunctionNode)) return [3 /*break*/, 23];
                         return [4 /*yield*/, func.evaluate(functionScope, dom, tag)];
-                    case 16: return [4 /*yield*/, (_e.sent()).apply(void 0, values)];
-                    case 17:
-                        r = _e.sent();
+                    case 20: return [4 /*yield*/, (_f.sent()).apply(void 0, values)];
+                    case 21:
+                        r = _f.sent();
                         return [4 /*yield*/, func.collectGarbage()];
-                    case 18:
-                        _e.sent();
+                    case 22:
+                        _f.sent();
                         return [2 /*return*/, r];
-                    case 19: return [2 /*return*/, func.call.apply(func, __spreadArray([functionScope.wrapped || functionScope], values))];
-                    case 20: return [2 /*return*/];
+                    case 23: return [2 /*return*/, func.call.apply(func, __spreadArray([functionScope.wrapped || functionScope], values))];
+                    case 24: return [2 /*return*/];
                 }
             });
         });
