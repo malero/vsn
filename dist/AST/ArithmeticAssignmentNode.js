@@ -116,7 +116,7 @@ var ArithmeticAssignmentNode = /** @class */ (function (_super) {
                         return [4 /*yield*/, this.left.elementRef.evaluate(scope, dom, tag)];
                     case 4:
                         elements = _a.sent();
-                        if (this.left.elementRef.first) {
+                        if (this.left.elementRef.first || elements instanceof DOMObject_1.DOMObject) {
                             scopes.push(elements);
                         }
                         else {

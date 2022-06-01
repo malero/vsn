@@ -23,6 +23,7 @@ export declare class EventDispatcher {
     removeRelay(relay: EventDispatcher): void;
     on(event: string, fct: EventDispatcherCallback, context?: any, once?: boolean): number;
     once(event: string, fct: EventDispatcherCallback, context?: any): number;
+    promise(event: string, ...args: any[]): Promise<any>;
     off(event: string, key?: number): boolean;
     offWithContext(event: string, context: any): number;
     getListener(event: string, key: number): EventCallback | undefined;

@@ -12,19 +12,6 @@ export class TagList extends Array<DOMObject> {
         return this[0].scope
     }
 
-    on(event, cbOrSelector, cb) {
-        if (typeof cbOrSelector === "function") {
-            this.forEach(e => e.element.addEventListener(event, cbOrSelector))
-        } else {
-            this.forEach(elem => {
-                elem.element.addEventListener(event, e => {
-                    if (e.target.matches(cbOrSelector)) cb(e)
-                })
-            })
-        }
-        return this
-    }
-
     get elements(): HTMLElement[] {
         return this.map(e => e.element);
     }
@@ -35,6 +22,11 @@ export class TagList extends Array<DOMObject> {
 
     get last(): DOMObject {
         return this[this.length - 1];
+    }
+
+    all(event: string): Promise<number[]> {
+        const promises = this.map(e => e.promise(event));
+        return Promise.all(promises);
     }
 
     removeClass(className) {

@@ -3,6 +3,10 @@ import {DOM} from "../DOM";
 import {Tag} from "../Tag";
 import {TreeNode} from "../AST";
 
+export interface INodeMeta {
+    [key: string]: string | number | boolean | null;
+}
+
 export abstract class Node implements TreeNode {
     protected requiresPrep: boolean = false;
     protected _isPreparationRequired: boolean;
@@ -28,7 +32,7 @@ export abstract class Node implements TreeNode {
         return false;
     }
 
-    async prepare(scope: Scope, dom: DOM, tag: Tag = null, meta: any = null): Promise<void> {
+    async prepare(scope: Scope, dom: DOM, tag: Tag = null, meta: INodeMeta = null): Promise<void> {
         for (const node of this.getChildNodes()) {
             await node.prepare(scope, dom, tag, meta);
         }

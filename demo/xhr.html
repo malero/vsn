@@ -1,11 +1,33 @@
 <div id="huh-wut" vsn-scope>
     <script vsn-script type="text/vsn">
-        class simple {
-            func test() {
-                return "test";
+        class .simple {
+            func construct() {
+                log('.simple construct');
+            }
+
+            func deconstruct() {
+                log('.simple deconstruct');
+            }
+
+            class input {
+                func construct() {
+                    log('.simple input construct');
+                    a|float = 0.0;
+                }
+
+                func deconstruct() {
+                    log('.simple input deconstruct');
+                }
+
+                on focus() {
+                    log(@type);
+                    a += 0.1;
+                    log(a);
+                }
             }
         }
     </script>
-    <div class="simple">asd</div>
-    <div class="simple">asd</div>
+    <div class="simple"><input type="text" /></div>
+    <div class="simple"><input type="button" /></div>
+    <button vsn-on:click="?(.simple)[0].@class -= 'simple'">Remove</button>
 </div>

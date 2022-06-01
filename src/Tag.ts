@@ -26,7 +26,6 @@ export class Tag extends DOMObject {
     public readonly rawAttributes: { [key: string]: string; };
     public readonly parsedAttributes: { [key: string]: string[]; };
     public readonly deferredAttributes: Attribute[] = [];
-    public readonly preppedClasses: string[] = [];
     protected _state: TagState;
     protected attributes: Attribute[];
     protected _nonDeferredAttributes: Attribute[] = [];

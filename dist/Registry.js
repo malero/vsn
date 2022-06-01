@@ -101,7 +101,7 @@ var Registry = /** @class */ (function (_super) {
         return register('functions', key, setup);
     };
     Registry.class = function (cls) {
-        Registry.instance.classes.register(cls.name, cls);
+        Registry.instance.classes.register(cls.fullSelector, cls);
     };
     Registry.controller = function (key, setup) {
         if (key === void 0) { key = null; }

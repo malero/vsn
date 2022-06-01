@@ -70,6 +70,14 @@ export class EventDispatcher  {
         return this.on(event, fct, context, true);
     }
 
+    promise(event: string, ...args: any[]): Promise<any> {
+        return new Promise((resolve, reject) => {
+            this.once(event, (...args) => {
+                resolve(args);
+            }, null);
+        });
+    }
+
     off(event: string, key?: number): boolean {
         if(!(event in this._listeners)) return false;
         if(key) {

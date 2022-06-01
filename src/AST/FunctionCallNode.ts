@@ -8,6 +8,7 @@ import {ScopeMemberNode} from "./ScopeMemberNode";
 import {FunctionNode} from "./FunctionNode";
 import {Registry} from "../Registry";
 import {ElementQueryNode} from "./ElementQueryNode";
+import {ClassNode} from "./ClassNode";
 
 export class FunctionCallNode<T = any> extends Node implements TreeNode {
     constructor(
@@ -46,7 +47,7 @@ export class FunctionCallNode<T = any> extends Node implements TreeNode {
             let calls = 0;
             for (const _tag of tags) {
                 let tagNum = 0;
-                for (const className of _tag.preppedClasses) {
+                for (const className of _tag.element[ClassNode.ClassesVariable]) {
                     tagNum++;
                     const cls = Registry.instance.classes.getSynchronous(className);
                     if (cls) {

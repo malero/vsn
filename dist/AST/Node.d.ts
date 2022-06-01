@@ -2,6 +2,9 @@ import { Scope } from "../Scope";
 import { DOM } from "../DOM";
 import { Tag } from "../Tag";
 import { TreeNode } from "../AST";
+export interface INodeMeta {
+    [key: string]: string | number | boolean | null;
+}
 export declare abstract class Node implements TreeNode {
     protected requiresPrep: boolean;
     protected _isPreparationRequired: boolean;
@@ -12,7 +15,7 @@ export declare abstract class Node implements TreeNode {
     readonly modifiers: string[];
     abstract evaluate(scope: Scope, dom: DOM, tag?: Tag): any;
     isPreparationRequired(): boolean;
-    prepare(scope: Scope, dom: DOM, tag?: Tag, meta?: any): Promise<void>;
+    prepare(scope: Scope, dom: DOM, tag?: Tag, meta?: INodeMeta): Promise<void>;
     cleanup(scope: Scope, dom: DOM, tag: Tag): Promise<void>;
     protected _getChildNodes(): Node[];
     getChildNodes(): Node[];

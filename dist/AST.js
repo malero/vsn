@@ -436,7 +436,9 @@ var Tree = /** @class */ (function () {
                     case 0:
                         if (!this._root.isPreparationRequired())
                             return [2 /*return*/];
-                        return [4 /*yield*/, this._root.prepare(scope, dom, tag)];
+                        return [4 /*yield*/, this._root.prepare(scope, dom, tag, {
+                                initial: true
+                            })];
                     case 1: return [2 /*return*/, _a.sent()];
                 }
             });

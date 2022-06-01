@@ -61,6 +61,22 @@ var EventDispatcher = /** @class */ (function () {
     EventDispatcher.prototype.once = function (event, fct, context) {
         return this.on(event, fct, context, true);
     };
+    EventDispatcher.prototype.promise = function (event) {
+        var _this = this;
+        var args = [];
+        for (var _i = 1; _i < arguments.length; _i++) {
+            args[_i - 1] = arguments[_i];
+        }
+        return new Promise(function (resolve, reject) {
+            _this.once(event, function () {
+                var args = [];
+                for (var _i = 0; _i < arguments.length; _i++) {
+                    args[_i] = arguments[_i];
+                }
+                resolve(args);
+            }, null);
+        });
+    };
     EventDispatcher.prototype.off = function (event, key) {
         if (!(event in this._listeners))
             return false;

@@ -89,7 +89,6 @@ var Tag = /** @class */ (function (_super) {
         var _this = _super.call(this, element, props) || this;
         _this.dom = dom;
         _this.deferredAttributes = [];
-        _this.preppedClasses = [];
         _this._nonDeferredAttributes = [];
         _this._children = [];
         _this.inputTags = [

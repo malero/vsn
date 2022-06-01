@@ -48,7 +48,7 @@ export class ArithmeticAssignmentNode extends Node implements TreeNode {
             }
         } else if ((this.left instanceof ElementAttributeNode || this.left instanceof ElementStyleNode) && this.left.elementRef) {
             const elements = await this.left.elementRef.evaluate(scope, dom, tag);
-            if (this.left.elementRef.first) {
+            if (this.left.elementRef.first || elements instanceof DOMObject) {
                 scopes.push(elements);
             } else {
                 scopes = elements;

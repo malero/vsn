@@ -81,6 +81,11 @@ var DOM = /** @class */ (function (_super) {
         _this.rootElement = rootElement;
         _this.debug = debug;
         _this.queued = [];
+        _this._ready = new Promise(function (resolve) {
+            _this.once('built', function () {
+                resolve(true);
+            });
+        });
         _this.observer = new MutationObserver(_this.mutation.bind(_this));
         _this.tags = [];
         _this.window = new WrappedWindow_1.WrappedWindow(window);
@@ -95,6 +100,13 @@ var DOM = /** @class */ (function (_super) {
     Object.defineProperty(DOM.prototype, "root", {
         get: function () {
             return this._root;
+        },
+        enumerable: false,
+        configurable: true
+    });
+    Object.defineProperty(DOM.prototype, "ready", {
+        get: function () {
+            return;
         },
         enumerable: false,
         configurable: true
@@ -444,7 +456,7 @@ var DOM = /** @class */ (function (_super) {
                         found = [];
                         for (_i = 0, _a = this.tags; _i < _a.length; _i++) {
                             tag = _a[_i];
-                            if (elements.indexOf(tag.element) > -1) {
+                            if (!found.includes(tag.element) && elements.indexOf(tag.element) > -1) {
                                 tags.push(tag);
                                 found.push(tag.element);
                             }
@@ -453,8 +465,9 @@ var DOM = /** @class */ (function (_super) {
                         notFound = __spreadArray([], elements);
                         for (i = notFound.length; i >= 0; i--) {
                             element = notFound[i];
-                            if (found.indexOf(element) > -1)
-                                notFound.pop();
+                            if (found.indexOf(element) > -1) {
+                                notFound.splice(i, 1);
+                            }
                         }
                         _b = 0, notFound_1 = notFound;
                         _e.label = 1;

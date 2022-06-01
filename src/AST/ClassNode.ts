@@ -2,23 +2,32 @@ import {Scope} from "../Scope";
 import {DOM} from "../DOM";
 import {Tag} from "../Tag";
 import {Token, TokenType, Tree, TreeNode} from "../AST";
-import {Node} from "./Node";
+import {INodeMeta, Node} from "./Node";
 import {BlockNode} from "./BlockNode";
 import {Registry} from "../Registry";
 import {OnNode} from "./OnNode";
 import {FunctionNode} from "./FunctionNode";
 
 export class ClassNode extends Node implements TreeNode {
+    public static readonly ClassesVariable = '_vsn_classes';
     public static readonly classes: {[name: string]: ClassNode} = {};
+    public static readonly classParents: {[name: string]: string[]} = {};
+    public static readonly classChildren: {[name: string]: string[]} = {}; // List of child class selectors for a given class selector
+    public static readonly preppedTags: {[name: string]: Tag[]} = {};
+
     protected requiresPrep: boolean = true;
     public readonly classScope: Scope = new Scope();
-    protected _ready: boolean = false;
+    protected _fullSelector: string;
 
     constructor(
-        public readonly name: string,
+        public readonly selector: string,
         public readonly block: BlockNode
     ) {
         super();
+    }
+
+    public get fullSelector(): string {
+        return this._fullSelector;
     }
 
     public updateMeta(meta?: any) {
@@ -27,20 +36,42 @@ export class ClassNode extends Node implements TreeNode {
         return meta;
     }
 
-    public async prepare(scope: Scope, dom: DOM, tag: Tag = null, meta?: any): Promise<void> {
-        meta = meta || {};
-        meta['ClassNodePrepare'] = true;
-        if (ClassNode.classes[this.name]) return; // Don't re-prepare same classes
-        ClassNode.classes[this.name] = this;
-        await this.block.prepare(this.classScope, dom, tag, meta);
-        Registry.class(this);
+    public async prepare(scope: Scope, dom: DOM, tag: Tag = null, meta?: INodeMeta): Promise<void> {
+        meta = Object.assign({}, meta) || {};
+        const initial = !!meta['initial'];
+        meta['ClassNodePrepare'] = initial;
 
-        for (const element of Array.from(dom.querySelectorAll(`.${this.name}`))) {
-            await ClassNode.checkForClassChanges(element as HTMLElement, dom, element[Tag.TaggedVariable] || null);
+        // Only prepare once during the initial prep, all subsequent prepares are on tag class blocks
+        if (initial) {
+            if (meta['ClassNodeSelector']) {
+                ClassNode.classChildren[meta['ClassNodeSelector'] as string].push(this.selector);
+                meta['ClassNodeSelector'] = `${meta['ClassNodeSelector']} ${this.selector}`;
+            } else {
+                meta['ClassNodeSelector'] = this.selector;
+            }
+
+            this._fullSelector = meta['ClassNodeSelector'];
+            if (ClassNode.classes[this._fullSelector]) return; // Don't re-prepare same classes
+            ClassNode.classes[this._fullSelector] = this;
+            ClassNode.classChildren[this._fullSelector] = [];
+            ClassNode.preppedTags[this._fullSelector] = [];
+
+            if (ClassNode.classParents[this.selector] === undefined)
+                ClassNode.classParents[this.selector] = [];
+
+            ClassNode.classParents[this.selector].push(this._fullSelector);
+            await this.block.prepare(this.classScope, dom, tag, meta);
+            Registry.class(this);
+
+            for (const element of Array.from(dom.querySelectorAll(this._fullSelector))) {
+                await ClassNode.addElementClass(this._fullSelector, element as HTMLElement, dom, element[Tag.TaggedVariable] || null);
+            }
+        } else {
+            await this.block.prepare(this.classScope, dom, tag, meta);
         }
     }
 
-    public async prepareTag(tag: Tag, dom: DOM, hasConstructor: boolean | null = null) {
+    public async constructTag(tag: Tag, dom: DOM, hasConstructor: boolean | null = null) {
         if (hasConstructor === null)
             hasConstructor = this.classScope.has('construct');
 
@@ -52,10 +83,12 @@ export class ClassNode extends Node implements TreeNode {
             const fnc = await fncCls.getFunction(tag.scope, dom, tag, false);
             await fnc();
         }
-        tag.preppedClasses.push(this.name);
+        tag.dispatch(`${this.fullSelector}.construct`, tag.element.id);
+        ClassNode.preppedTags[this.fullSelector].push(tag);
+        ClassNode.addPreparedClassToElement(tag.element, this.fullSelector);
     }
 
-    public async tearDownTag(tag: Tag, dom: DOM, hasDeconstructor: boolean | null = null) {
+    public async deconstructTag(tag: Tag, dom: DOM, hasDeconstructor: boolean | null = null) {
         if (hasDeconstructor === null)
             hasDeconstructor = this.classScope.has('deconstruct');
 
@@ -70,7 +103,9 @@ export class ClassNode extends Node implements TreeNode {
                 tag.removeContextEventHandlers(on);
             }
         }
-        tag.preppedClasses.splice(tag.preppedClasses.indexOf(this.name), 1);
+        tag.dispatch(`${this.fullSelector}.deconstruct`);
+        ClassNode.preppedTags[this.fullSelector].splice(ClassNode.preppedTags[this.fullSelector].indexOf(tag), 1);
+        await ClassNode.removePreparedClassFromElement(tag.element, this.fullSelector);
     }
 
     public async evaluate(scope: Scope, dom: DOM, tag: Tag = null) {
@@ -84,35 +119,92 @@ export class ClassNode extends Node implements TreeNode {
             if (t.type === TokenType.L_BRACE) break;
             nameParts.push(t.value);
         }
-        const name = nameParts.join('').trim();
+        const selector = nameParts.join('').trim();
         tokens.splice(0, nameParts.length);
         const block = Tree.processTokens(Tree.getNextStatementTokens(tokens, true, true));
-        return new ClassNode(name, block);
+        return new ClassNode(selector, block);
     }
 
     public static async checkForClassChanges(element: HTMLElement, dom: DOM, tag: Tag = null) {
-        const classes: string[] = Array.from(element.classList);
-        let addedClasses: string[] = classes.filter(c => Registry.instance.classes.has(c));
-        let removedClasses: string[];
+        const localSelectors: string[] = [element.tagName.toLowerCase(), ...Array.from(element.classList).map(c => `.${c}`)];
+        const fullSelectors: string[] = [...ClassNode.getClassesForElement(element)];
+        if (element.id)
+            localSelectors.push(`#${element.id}`);
+
+        for (const selector in localSelectors) {
+            if (ClassNode.classParents[selector])
+                fullSelectors.push(...ClassNode.classParents[selector]);
+        }
 
         if (!tag) {
             tag = await dom.getTagForElement(element, true);
         }
-        addedClasses = addedClasses.filter(c => !tag.preppedClasses.includes(c));
-        removedClasses = tag.preppedClasses.filter(c => !classes.includes(c));
 
-        for (const addedClass of addedClasses) {
-            const classNode: ClassNode = Registry.instance.classes.getSynchronous(addedClass);
-            if (classNode) {
-                await classNode.prepareTag(tag, dom);
+        for (const selector of fullSelectors) {
+            const isPrepped = ClassNode.getClassesForElement(element).includes(selector);
+            const elements = Array.from(dom.querySelectorAll(selector));
+            const inElements = elements.includes(element);
+            let changed: boolean = false;
+
+            if (inElements && !isPrepped) {
+                await ClassNode.addElementClass(selector, element, dom, tag);
+                changed = true;
+            } else if (!inElements && isPrepped) {
+                await ClassNode.removeElementClass(selector, element, dom, tag);
+                changed = true;
             }
+
+            if (changed && ClassNode.classChildren[selector].length > 0) {
+                for (const childSelector of ClassNode.classChildren[selector]) {
+                    for (const childElement of Array.from(dom.querySelectorAll(childSelector, tag)) as HTMLElement[]) {
+                        await ClassNode.checkForClassChanges(childElement, dom, childElement[Tag.TaggedVariable] || null);
+                    }
+                }
+            }
+
+        }
+    }
+
+    public static getClassesForElement(element: HTMLElement): string[] {
+        if (!element[ClassNode.ClassesVariable])
+            element[ClassNode.ClassesVariable] = [];
+        return element[ClassNode.ClassesVariable];
+    }
+
+    public static addPreparedClassToElement(element: HTMLElement, selector: string) {
+        ClassNode.getClassesForElement(element).push(selector);
+    }
+
+    public static removePreparedClassFromElement(element: HTMLElement, selector: string) {
+        const classes = ClassNode.getClassesForElement(element);
+        classes.splice(classes.indexOf(selector), 1);
+    }
+
+    public static async addElementClass(selector: string, element: HTMLElement, dom: DOM, tag: Tag = null) {
+        const classes = ClassNode.getClassesForElement(element);
+        if (classes.includes(selector)) return;
+
+        if (!tag) {
+            tag = await dom.getTagForElement(element, true);
         }
 
-        for (const removedClass of removedClasses) {
-            const classNode: ClassNode = Registry.instance.classes.getSynchronous(removedClass);
-            if (classNode) {
-                await classNode.tearDownTag(tag, dom);
-            }
+        const classNode: ClassNode = Registry.instance.classes.getSynchronous(selector);
+        if (classNode) {
+            await classNode.constructTag(tag, dom);
+        }
+    }
+
+    public static async removeElementClass(selector: string, element: HTMLElement, dom: DOM, tag: Tag = null) {
+        const classes = ClassNode.getClassesForElement(element);
+        if (!classes.includes(selector)) return;
+
+        if (!tag) {
+            tag = await dom.getTagForElement(element, true);
+        }
+
+        const classNode: ClassNode = Registry.instance.classes.getSynchronous(selector);
+        if (classNode) {
+            await classNode.deconstructTag(tag, dom);
         }
     }
 

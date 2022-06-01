@@ -420,7 +420,9 @@ export class Tree {
     async prepare(scope: Scope, dom: DOM, tag: Tag = null) {
         if (!this._root.isPreparationRequired())
             return;
-        return await this._root.prepare(scope, dom, tag);
+        return await this._root.prepare(scope, dom, tag, {
+            initial: true
+        });
     }
 
     async bindToScopeChanges(scope, fnc, dom: DOM, tag: Tag = null) {

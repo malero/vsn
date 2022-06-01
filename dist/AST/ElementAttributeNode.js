@@ -55,6 +55,7 @@ exports.ElementAttributeNode = void 0;
 var List_1 = require("../Tag/List");
 var Node_1 = require("./Node");
 var LiteralNode_1 = require("./LiteralNode");
+var DOMObject_1 = require("../DOM/DOMObject");
 var ElementAttributeNode = /** @class */ (function (_super) {
     __extends(ElementAttributeNode, _super);
     function ElementAttributeNode(elementRef, attr) {
@@ -123,13 +124,14 @@ var ElementAttributeNode = /** @class */ (function (_super) {
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
-                        if (!this.elementRef) return [3 /*break*/, 7];
+                        if (!this.elementRef) return [3 /*break*/, 10];
                         return [4 /*yield*/, this.elementRef.prepare(scope, dom, tag, meta)];
                     case 1:
                         _a.sent();
                         return [4 /*yield*/, this.elementRef.evaluate(scope, dom, tag, true)];
                     case 2:
                         tags = _a.sent();
+                        if (!(tags instanceof List_1.TagList)) return [3 /*break*/, 7];
                         _i = 0, tags_1 = tags;
                         _a.label = 3;
                     case 3:
@@ -144,12 +146,19 @@ var ElementAttributeNode = /** @class */ (function (_super) {
                         return [3 /*break*/, 3];
                     case 6: return [3 /*break*/, 9];
                     case 7:
-                        if (!tag) return [3 /*break*/, 9];
-                        return [4 /*yield*/, tag.watchAttribute(this.attributeName)];
+                        if (!(tags instanceof DOMObject_1.DOMObject)) return [3 /*break*/, 9];
+                        return [4 /*yield*/, tags.watchAttribute(this.attributeName)];
                     case 8:
                         _a.sent();
                         _a.label = 9;
-                    case 9: return [2 /*return*/];
+                    case 9: return [3 /*break*/, 12];
+                    case 10:
+                        if (!tag) return [3 /*break*/, 12];
+                        return [4 /*yield*/, tag.watchAttribute(this.attributeName)];
+                    case 11:
+                        _a.sent();
+                        _a.label = 12;
+                    case 12: return [2 /*return*/];
                 }
             });
         });

@@ -35,20 +35,6 @@ var TagList = /** @class */ (function (_super) {
         enumerable: false,
         configurable: true
     });
-    TagList.prototype.on = function (event, cbOrSelector, cb) {
-        if (typeof cbOrSelector === "function") {
-            this.forEach(function (e) { return e.element.addEventListener(event, cbOrSelector); });
-        }
-        else {
-            this.forEach(function (elem) {
-                elem.element.addEventListener(event, function (e) {
-                    if (e.target.matches(cbOrSelector))
-                        cb(e);
-                });
-            });
-        }
-        return this;
-    };
     Object.defineProperty(TagList.prototype, "elements", {
         get: function () {
             return this.map(function (e) { return e.element; });
@@ -70,6 +56,10 @@ var TagList = /** @class */ (function (_super) {
         enumerable: false,
         configurable: true
     });
+    TagList.prototype.all = function (event) {
+        var promises = this.map(function (e) { return e.promise(event); });
+        return Promise.all(promises);
+    };
     TagList.prototype.removeClass = function (className) {
         this.forEach(function (e) { return e.element.classList.remove(className); });
         return this;

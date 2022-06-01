@@ -6,6 +6,7 @@ import {TreeNode} from "../AST";
 import {Node} from "./Node";
 import {ElementQueryNode} from "./ElementQueryNode";
 import {LiteralNode} from "./LiteralNode";
+import {DOMObject} from "../DOM/DOMObject";
 
 export class ElementAttributeNode extends Node implements TreeNode {
     protected requiresPrep: boolean = true;
@@ -53,10 +54,14 @@ export class ElementAttributeNode extends Node implements TreeNode {
     async prepare(scope: Scope, dom: DOM, tag: Tag = null, meta: any = null) {
         if (this.elementRef) {
             await this.elementRef.prepare(scope, dom, tag, meta);
-            const tags: TagList = await this.elementRef.evaluate(scope, dom, tag, true);
-            for (const t of tags)
-                await t.watchAttribute(this.attributeName);
-        } else if(tag) {
+            const tags: any = await this.elementRef.evaluate(scope, dom, tag, true);
+            if (tags instanceof TagList) {
+                for (const t of tags)
+                    await t.watchAttribute(this.attributeName);
+            } else if (tags instanceof DOMObject) {
+                await (tags as DOMObject).watchAttribute(this.attributeName);
+            }
+        } else if (tag) {
             await tag.watchAttribute(this.attributeName);
         }
     }

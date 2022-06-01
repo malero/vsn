@@ -18,6 +18,7 @@ export enum EQuerySelectDirection {
 export class DOM extends EventDispatcher {
     protected static _instance: DOM;
     protected _root: Tag;
+    protected _ready: Promise<boolean>;
     protected tags: Tag[];
     protected observer: MutationObserver;
     protected evaluateTimeout: any;
@@ -32,6 +33,12 @@ export class DOM extends EventDispatcher {
         protected debug: boolean = false
     ) {
         super();
+        this._ready = new Promise((resolve) => {
+            this.once('built', () => {
+                resolve(true);
+            });
+        });
+
         this.observer = new MutationObserver(this.mutation.bind(this));
         this.tags = [];
 
@@ -47,6 +54,10 @@ export class DOM extends EventDispatcher {
 
     public get root(): Tag {
         return this._root;
+    }
+
+    public get ready(): Promise<boolean> {
+        return
     }
 
     public async get(selector: string, create: boolean = false, tag: Tag = null, direction: EQuerySelectDirection = EQuerySelectDirection.DOWN): Promise<TagList> {
@@ -232,7 +243,7 @@ export class DOM extends EventDispatcher {
         const found: Element[] = [];
         for (const tag of this.tags)
         {
-            if (elements.indexOf(tag.element) > -1) {
+            if (!found.includes(tag.element) && elements.indexOf(tag.element) > -1) {
                 tags.push(tag);
                 found.push(tag.element);
             }
@@ -242,8 +253,9 @@ export class DOM extends EventDispatcher {
             const notFound: Element[] = [...elements];
             for (let i = notFound.length; i >= 0; i--) {
                 const element: Element = notFound[i];
-                if (found.indexOf(element) > -1)
-                    notFound.pop();
+                if (found.indexOf(element) > -1) {
+                    notFound.splice(i, 1);
+                }
             }
 
             for (const element of notFound) {

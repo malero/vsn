@@ -90,7 +90,7 @@ export class Registry extends EventDispatcher {
     }
 
     public static class(cls: ClassNode) {
-        Registry.instance.classes.register(cls.name, cls);
+        Registry.instance.classes.register(cls.fullSelector, cls);
     }
 
     public static controller(key: string = null, setup = null) {
