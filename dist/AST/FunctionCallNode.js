@@ -85,6 +85,7 @@ var FunctionCallNode = /** @class */ (function (_super) {
             return __generator(this, function (_f) {
                 switch (_f.label) {
                     case 0:
+                        tags = [];
                         functionScope = scope;
                         if (!(this.fnc instanceof ScopeMemberNode_1.ScopeMemberNode)) return [3 /*break*/, 4];
                         return [4 /*yield*/, this.fnc.scope.evaluate(scope, dom, tag)];

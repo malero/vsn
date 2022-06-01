@@ -7,7 +7,7 @@ import {Tag} from "../../src/Tag";
 
 describe('ClassNode', () => {
     it("properly combine nested classes", async () => {
-         document.body.innerHTML = `
+        document.body.innerHTML = `
             <script type="text/vsn" vsn-script>
             class .simple { 
                 func construct() {}
@@ -27,7 +27,7 @@ describe('ClassNode', () => {
     });
 
     it("properly define a simple class", async () => {
-         document.body.innerHTML = `
+        document.body.innerHTML = `
             <script type="text/vsn" vsn-script>
             class .simple-construct { 
                 func construct() {
@@ -80,5 +80,76 @@ describe('ClassNode', () => {
         const t = await dom.exec('?(.testing .test)[0]');
         await t.promise('.testing .test.construct');
         expect(await dom.exec('?(.testing)[0].a')).toEqual(1);
+    });
+
+    it("properly define a simple class with a parent", async () => {
+        document.body.innerHTML = `
+<script type="text/vsn" vsn-script>
+class .product-firearm-option {
+    func construct() {
+        log('construct');
+    }
+        
+    func open() {
+        log(@data-type, 'open');
+    }
+
+    func close() {
+        log(@data-type, 'close');
+    }
+
+    func filter(value) {
+        log(@data-type, 'filter', value);
+    }
+
+    class > input {
+        func construct() {
+            log('construct');
+        }
+        on focus() {
+            ?>(:parent).open();
+        }
+        
+        on blur() {
+            ?>(:parent).close();
+        }
+        
+        on keyup() {
+            ?>(:parent).filter(@value)
+        }
+    }
+
+    class .option-list {
+        func construct() {
+            log(?>(:parent input).@data-type, 'construct');
+        }
+    
+        class li {
+            func construct() {
+                log(@text);
+            }
+        }
+    }
+}
+</script>
+<div class="product-firearm-option">
+    <input data-type="firearm-type" />
+    <ul class="option-list">
+        <li data-type="rifle">Rifle</li>
+        <li data-type="pistol">Pistol</li>
+        <li data-type="shotgun">Shotgun</li>
+    </ul>
+</div>
+<div class="product-firearm-option">
+    <input data-type="model-type" />
+    <ul class="option-list">
+        <li data-type="rifle">Glock</li>
+        <li data-type="pistol">Springfield Armory</li>
+        <li data-type="shotgun">Smith & Wesson</li>
+    </ul>
+</div>
+`;
+        const dom = new DOM(document);
+        await dom.ready;
     });
 });

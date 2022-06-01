@@ -9,7 +9,6 @@ import {FunctionNode} from "./FunctionNode";
 import {Registry} from "../Registry";
 import {ElementQueryNode} from "./ElementQueryNode";
 import {ClassNode} from "./ClassNode";
-import {TagList} from "../Tag/List";
 
 export class FunctionCallNode<T = any> extends Node implements TreeNode {
     constructor(
@@ -28,7 +27,7 @@ export class FunctionCallNode<T = any> extends Node implements TreeNode {
 
     public async evaluate(scope: Scope, dom: DOM, tag: Tag = null) {
         // @todo: Need to rewrite/refactor this. It's a bit of a mess with element queries.
-        let tags: Tag[];
+        let tags: Tag[] = [];
         let functionScope: Scope = scope;
         if (this.fnc instanceof ScopeMemberNode) {
             functionScope = await this.fnc.scope.evaluate(scope, dom, tag);
@@ -53,6 +52,7 @@ export class FunctionCallNode<T = any> extends Node implements TreeNode {
             const returnValues = [];
             const toCleanup = [];
             let calls = 0;
+
             for (const _tag of tags) {
                 let tagNum = 0;
                 for (const className of _tag.element[ClassNode.ClassesVariable]) {
@@ -68,6 +68,7 @@ export class FunctionCallNode<T = any> extends Node implements TreeNode {
                     }
                 }
             }
+
             for (const fnc of toCleanup) {
                 await fnc.collectGarbage();
             }
