@@ -2,6 +2,7 @@ import {DOM} from "../../src/DOM";
 import {ClassNode} from "../../src/AST/ClassNode";
 import {Registry} from "../../src/Registry";
 import {TagList} from "../../src/Tag/List";
+import {Tag} from "../../src/Tag";
 
 
 describe('ClassNode', () => {
@@ -54,5 +55,30 @@ describe('ClassNode', () => {
         expect(await dom.exec('?(.simple-construct).a')).toEqual([15, 15]);
         await dom.exec('?(.simple-construct).test()');
         expect(await dom.exec('?(.simple-construct).a')).toEqual([16, 16]);
+    });
+
+    it("properly define a simple class with a parent", async () => {
+        document.body.innerHTML = `
+            <script type="text/vsn" vsn-script>
+            class .testing { 
+                func construct() {
+                    a|integer = 0;
+                }
+                
+                class .test {
+                    func construct() {
+                        ?<(.testing).a += 1;
+                    }
+                }
+            }
+            </script>
+            <div class="testing"><span class="test"></span></div>
+        `;
+        const dom = new DOM(document);
+        await dom.ready;
+        await Registry.instance.classes.get('.testing .test');
+        const t = await dom.exec('?(.testing .test)[0]');
+        await t.promise('.testing .test.construct');
+        expect(await dom.exec('?(.testing)[0].a')).toEqual(1);
     });
 });

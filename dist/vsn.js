@@ -71,6 +71,7 @@ var AST_1 = require("./AST");
 var Query_1 = require("./Query");
 var EventDispatcher_1 = require("./EventDispatcher");
 var DynamicScopeData_1 = require("./Scope/DynamicScopeData");
+var version_1 = require("./version");
 var Vision = /** @class */ (function (_super) {
     __extends(Vision, _super);
     function Vision() {
@@ -132,7 +133,7 @@ var Vision = /** @class */ (function (_super) {
                         _a.sent();
                         now = (new Date()).getTime();
                         setupTime = now - startTime;
-                        console.info("Took " + setupTime + "ms to start up VisionJS. https://www.vsnjs.com/", window ? "v" + window['VSN_VERSION'] : null);
+                        console.info("Took " + setupTime + "ms to start up VisionJS. https://www.vsnjs.com/", "v" + version_1.VERSION);
                         return [2 /*return*/];
                 }
             });

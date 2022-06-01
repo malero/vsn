@@ -8,6 +8,7 @@ import {Query} from "./Query";
 import {EventDispatcher} from "./EventDispatcher";
 import {DynamicScopeData} from "./Scope/DynamicScopeData";
 import {Controller} from "./Controller";
+import {VERSION} from "./version";
 
 export class Vision extends EventDispatcher {
     protected static _instance: Vision;
@@ -59,7 +60,7 @@ export class Vision extends EventDispatcher {
         await this._dom.buildFrom(document, true);
         const now = (new Date()).getTime();
         const setupTime = now - startTime;
-        console.info(`Took ${setupTime}ms to start up VisionJS. https://www.vsnjs.com/`, window ? `v${window['VSN_VERSION']}` : null);
+        console.info(`Took ${setupTime}ms to start up VisionJS. https://www.vsnjs.com/`, `v${VERSION}`);
     }
 
     public static get instance() {

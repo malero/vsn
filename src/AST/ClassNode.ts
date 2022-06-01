@@ -39,6 +39,7 @@ export class ClassNode extends Node implements TreeNode {
     public async prepare(scope: Scope, dom: DOM, tag: Tag = null, meta?: INodeMeta): Promise<void> {
         meta = Object.assign({}, meta) || {};
         const initial = !!meta['initial'];
+        let root: boolean = false;
         meta['ClassNodePrepare'] = initial;
 
         // Only prepare once during the initial prep, all subsequent prepares are on tag class blocks
@@ -47,6 +48,7 @@ export class ClassNode extends Node implements TreeNode {
                 ClassNode.classChildren[meta['ClassNodeSelector'] as string].push(this.selector);
                 meta['ClassNodeSelector'] = `${meta['ClassNodeSelector']} ${this.selector}`;
             } else {
+                root = true;
                 meta['ClassNodeSelector'] = this.selector;
             }
 
@@ -63,11 +65,22 @@ export class ClassNode extends Node implements TreeNode {
             await this.block.prepare(this.classScope, dom, tag, meta);
             Registry.class(this);
 
-            for (const element of Array.from(dom.querySelectorAll(this._fullSelector))) {
-                await ClassNode.addElementClass(this._fullSelector, element as HTMLElement, dom, element[Tag.TaggedVariable] || null);
+            if (root) {
+                await this.findClassElements(dom);
             }
         } else {
             await this.block.prepare(this.classScope, dom, tag, meta);
+        }
+    }
+
+    public async findClassElements(dom) {
+        for (const element of Array.from(dom.querySelectorAll(this._fullSelector))) {
+            await ClassNode.addElementClass(this._fullSelector, element as HTMLElement, dom, element[Tag.TaggedVariable] || null);
+        }
+        for (const childSelector of ClassNode.classChildren[this._fullSelector]) {
+            const node =  ClassNode.classes[`${this._fullSelector} ${childSelector}`];
+            if (!node) continue;
+            await node.findClassElements(dom);
         }
     }
 

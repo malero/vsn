@@ -27,6 +27,7 @@ export declare class ClassNode extends Node implements TreeNode {
     get fullSelector(): string;
     updateMeta(meta?: any): any;
     prepare(scope: Scope, dom: DOM, tag?: Tag, meta?: INodeMeta): Promise<void>;
+    findClassElements(dom: any): Promise<void>;
     constructTag(tag: Tag, dom: DOM, hasConstructor?: boolean | null): Promise<void>;
     deconstructTag(tag: Tag, dom: DOM, hasDeconstructor?: boolean | null): Promise<void>;
     evaluate(scope: Scope, dom: DOM, tag?: Tag): Promise<any>;

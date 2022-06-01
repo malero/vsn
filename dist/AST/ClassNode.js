@@ -88,19 +88,21 @@ var ClassNode = /** @class */ (function (_super) {
     ClassNode.prototype.prepare = function (scope, dom, tag, meta) {
         if (tag === void 0) { tag = null; }
         return __awaiter(this, void 0, void 0, function () {
-            var initial, _i, _a, element;
-            return __generator(this, function (_b) {
-                switch (_b.label) {
+            var initial, root;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
                     case 0:
                         meta = Object.assign({}, meta) || {};
                         initial = !!meta['initial'];
+                        root = false;
                         meta['ClassNodePrepare'] = initial;
-                        if (!initial) return [3 /*break*/, 6];
+                        if (!initial) return [3 /*break*/, 4];
                         if (meta['ClassNodeSelector']) {
                             ClassNode.classChildren[meta['ClassNodeSelector']].push(this.selector);
                             meta['ClassNodeSelector'] = meta['ClassNodeSelector'] + " " + this.selector;
                         }
                         else {
+                            root = true;
                             meta['ClassNodeSelector'] = this.selector;
                         }
                         this._fullSelector = meta['ClassNodeSelector'];
@@ -114,25 +116,57 @@ var ClassNode = /** @class */ (function (_super) {
                         ClassNode.classParents[this.selector].push(this._fullSelector);
                         return [4 /*yield*/, this.block.prepare(this.classScope, dom, tag, meta)];
                     case 1:
-                        _b.sent();
+                        _a.sent();
                         Registry_1.Registry.class(this);
-                        _i = 0, _a = Array.from(dom.querySelectorAll(this._fullSelector));
-                        _b.label = 2;
+                        if (!root) return [3 /*break*/, 3];
+                        return [4 /*yield*/, this.findClassElements(dom)];
                     case 2:
-                        if (!(_i < _a.length)) return [3 /*break*/, 5];
+                        _a.sent();
+                        _a.label = 3;
+                    case 3: return [3 /*break*/, 6];
+                    case 4: return [4 /*yield*/, this.block.prepare(this.classScope, dom, tag, meta)];
+                    case 5:
+                        _a.sent();
+                        _a.label = 6;
+                    case 6: return [2 /*return*/];
+                }
+            });
+        });
+    };
+    ClassNode.prototype.findClassElements = function (dom) {
+        return __awaiter(this, void 0, void 0, function () {
+            var _i, _a, element, _b, _c, childSelector, node;
+            return __generator(this, function (_d) {
+                switch (_d.label) {
+                    case 0:
+                        _i = 0, _a = Array.from(dom.querySelectorAll(this._fullSelector));
+                        _d.label = 1;
+                    case 1:
+                        if (!(_i < _a.length)) return [3 /*break*/, 4];
                         element = _a[_i];
                         return [4 /*yield*/, ClassNode.addElementClass(this._fullSelector, element, dom, element[Tag_1.Tag.TaggedVariable] || null)];
+                    case 2:
+                        _d.sent();
+                        _d.label = 3;
                     case 3:
-                        _b.sent();
-                        _b.label = 4;
-                    case 4:
                         _i++;
-                        return [3 /*break*/, 2];
-                    case 5: return [3 /*break*/, 8];
-                    case 6: return [4 /*yield*/, this.block.prepare(this.classScope, dom, tag, meta)];
+                        return [3 /*break*/, 1];
+                    case 4:
+                        _b = 0, _c = ClassNode.classChildren[this._fullSelector];
+                        _d.label = 5;
+                    case 5:
+                        if (!(_b < _c.length)) return [3 /*break*/, 8];
+                        childSelector = _c[_b];
+                        node = ClassNode.classes[this._fullSelector + " " + childSelector];
+                        if (!node)
+                            return [3 /*break*/, 7];
+                        return [4 /*yield*/, node.findClassElements(dom)];
+                    case 6:
+                        _d.sent();
+                        _d.label = 7;
                     case 7:
-                        _b.sent();
-                        _b.label = 8;
+                        _b++;
+                        return [3 /*break*/, 5];
                     case 8: return [2 /*return*/];
                 }
             });
