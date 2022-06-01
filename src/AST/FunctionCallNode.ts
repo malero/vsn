@@ -9,6 +9,7 @@ import {FunctionNode} from "./FunctionNode";
 import {Registry} from "../Registry";
 import {ElementQueryNode} from "./ElementQueryNode";
 import {ClassNode} from "./ClassNode";
+import {TagList} from "../Tag/List";
 
 export class FunctionCallNode<T = any> extends Node implements TreeNode {
     constructor(
@@ -32,7 +33,14 @@ export class FunctionCallNode<T = any> extends Node implements TreeNode {
         if (this.fnc instanceof ScopeMemberNode) {
             functionScope = await this.fnc.scope.evaluate(scope, dom, tag);
             if (this.fnc.scope instanceof ElementQueryNode) {
-                tags = await this.fnc.scope.evaluate(scope, dom, tag) as Tag[];
+                const _tags = await this.fnc.scope.evaluate(scope, dom, tag);
+                if (_tags instanceof Array) {
+                    tags = _tags;
+                } else if (_tags instanceof Tag) {
+                    tags = [_tags];
+                } else {
+                    throw new Error('Invalid element query result');
+                }
             } else {
                tags = [tag];
             }

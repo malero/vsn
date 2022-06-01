@@ -57,6 +57,7 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.FunctionCallNode = void 0;
+var Tag_1 = require("../Tag");
 var Node_1 = require("./Node");
 var ScopeMemberNode_1 = require("./ScopeMemberNode");
 var FunctionNode_1 = require("./FunctionNode");
@@ -80,7 +81,7 @@ var FunctionCallNode = /** @class */ (function (_super) {
     FunctionCallNode.prototype.evaluate = function (scope, dom, tag) {
         if (tag === void 0) { tag = null; }
         return __awaiter(this, void 0, void 0, function () {
-            var tags, functionScope, values, func, functionName, returnValues, toCleanup, calls, _i, tags_1, _tag, tagNum, _a, _b, className, cls, fnc, _c, _d, _e, toCleanup_1, fnc, r;
+            var tags, functionScope, _tags, values, func, functionName, returnValues, toCleanup, calls, _i, tags_1, _tag, tagNum, _a, _b, className, cls, fnc, _c, _d, _e, toCleanup_1, fnc, r;
             return __generator(this, function (_f) {
                 switch (_f.label) {
                     case 0:
@@ -92,7 +93,16 @@ var FunctionCallNode = /** @class */ (function (_super) {
                         if (!(this.fnc.scope instanceof ElementQueryNode_1.ElementQueryNode)) return [3 /*break*/, 3];
                         return [4 /*yield*/, this.fnc.scope.evaluate(scope, dom, tag)];
                     case 2:
-                        tags = (_f.sent());
+                        _tags = _f.sent();
+                        if (_tags instanceof Array) {
+                            tags = _tags;
+                        }
+                        else if (_tags instanceof Tag_1.Tag) {
+                            tags = [_tags];
+                        }
+                        else {
+                            throw new Error('Invalid element query result');
+                        }
                         return [3 /*break*/, 4];
                     case 3:
                         tags = [tag];
