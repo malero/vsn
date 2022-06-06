@@ -28,8 +28,8 @@ export declare class ClassNode extends Node implements TreeNode {
     updateMeta(meta?: any): any;
     prepare(scope: Scope, dom: DOM, tag?: Tag, meta?: INodeMeta): Promise<void>;
     findClassElements(dom: any): Promise<void>;
-    constructTag(tag: Tag, dom: DOM, hasConstructor?: boolean | null): Promise<void>;
-    deconstructTag(tag: Tag, dom: DOM, hasDeconstructor?: boolean | null): Promise<void>;
+    constructTag(tag: Tag, dom: DOM, hasConstruct?: boolean | null): Promise<void>;
+    deconstructTag(tag: Tag, dom: DOM, hasDeconstruct?: boolean | null): Promise<void>;
     evaluate(scope: Scope, dom: DOM, tag?: Tag): Promise<any>;
     static parse(lastNode: any, token: any, tokens: Token[]): ClassNode;
     static checkForClassChanges(element: HTMLElement, dom: DOM, tag?: Tag): Promise<void>;

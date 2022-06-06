@@ -81,6 +81,7 @@ var DOM = /** @class */ (function (_super) {
         _this.rootElement = rootElement;
         _this.debug = debug;
         _this.queued = [];
+        _this._built = false;
         _this._ready = new Promise(function (resolve) {
             _this.once('built', function () {
                 resolve(true);
@@ -97,6 +98,13 @@ var DOM = /** @class */ (function (_super) {
         Configuration_1.Configuration.instance.on('change', _this.evaluate.bind(_this));
         return _this;
     }
+    Object.defineProperty(DOM.prototype, "built", {
+        get: function () {
+            return this._built;
+        },
+        enumerable: false,
+        configurable: true
+    });
     Object.defineProperty(DOM.prototype, "root", {
         get: function () {
             return this._root;
@@ -106,7 +114,7 @@ var DOM = /** @class */ (function (_super) {
     });
     Object.defineProperty(DOM.prototype, "ready", {
         get: function () {
-            return;
+            return this.promise('builtRoot');
         },
         enumerable: false,
         configurable: true
@@ -439,7 +447,11 @@ var DOM = /** @class */ (function (_super) {
                         _m++;
                         return [3 /*break*/, 27];
                     case 30:
-                        this.dispatch('built');
+                        if (isRoot) {
+                            this._built = true;
+                            this.dispatch('builtRoot');
+                        }
+                        this.dispatch('built', newTags);
                         return [2 /*return*/];
                 }
             });

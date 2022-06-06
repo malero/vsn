@@ -89,6 +89,7 @@ var ClassNode = /** @class */ (function (_super) {
         if (tag === void 0) { tag = null; }
         return __awaiter(this, void 0, void 0, function () {
             var initial, root;
+            var _this = this;
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
@@ -96,7 +97,7 @@ var ClassNode = /** @class */ (function (_super) {
                         initial = !!meta['initial'];
                         root = false;
                         meta['ClassNodePrepare'] = initial;
-                        if (!initial) return [3 /*break*/, 4];
+                        if (!initial) return [3 /*break*/, 5];
                         if (meta['ClassNodeSelector']) {
                             ClassNode.classChildren[meta['ClassNodeSelector']].push(this.selector);
                             meta['ClassNodeSelector'] = meta['ClassNodeSelector'] + " " + this.selector;
@@ -118,17 +119,21 @@ var ClassNode = /** @class */ (function (_super) {
                     case 1:
                         _a.sent();
                         Registry_1.Registry.class(this);
-                        if (!root) return [3 /*break*/, 3];
+                        if (!root) return [3 /*break*/, 4];
+                        if (!dom.built) return [3 /*break*/, 3];
                         return [4 /*yield*/, this.findClassElements(dom)];
                     case 2:
                         _a.sent();
-                        _a.label = 3;
-                    case 3: return [3 /*break*/, 6];
-                    case 4: return [4 /*yield*/, this.block.prepare(this.classScope, dom, tag, meta)];
-                    case 5:
+                        return [3 /*break*/, 4];
+                    case 3:
+                        dom.once('builtRoot', function () { return _this.findClassElements(dom); });
+                        _a.label = 4;
+                    case 4: return [3 /*break*/, 7];
+                    case 5: return [4 /*yield*/, this.block.prepare(this.classScope, dom, tag, meta)];
+                    case 6:
                         _a.sent();
-                        _a.label = 6;
-                    case 6: return [2 /*return*/];
+                        _a.label = 7;
+                    case 7: return [2 /*return*/];
                 }
             });
         });
@@ -172,21 +177,21 @@ var ClassNode = /** @class */ (function (_super) {
             });
         });
     };
-    ClassNode.prototype.constructTag = function (tag, dom, hasConstructor) {
-        if (hasConstructor === void 0) { hasConstructor = null; }
+    ClassNode.prototype.constructTag = function (tag, dom, hasConstruct) {
+        if (hasConstruct === void 0) { hasConstruct = null; }
         return __awaiter(this, void 0, void 0, function () {
             var meta, fncCls, fnc;
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
-                        if (hasConstructor === null)
-                            hasConstructor = this.classScope.has('construct');
+                        if (hasConstruct === null)
+                            hasConstruct = this.classScope.has('construct');
                         tag.createScope(true);
                         meta = this.updateMeta();
                         return [4 /*yield*/, this.block.prepare(tag.scope, dom, tag, meta)];
                     case 1:
                         _a.sent();
-                        if (!hasConstructor) return [3 /*break*/, 4];
+                        if (!hasConstruct) return [3 /*break*/, 4];
                         fncCls = this.classScope.get('construct');
                         return [4 /*yield*/, fncCls.getFunction(tag.scope, dom, tag, false)];
                     case 2:
@@ -204,16 +209,16 @@ var ClassNode = /** @class */ (function (_super) {
             });
         });
     };
-    ClassNode.prototype.deconstructTag = function (tag, dom, hasDeconstructor) {
-        if (hasDeconstructor === void 0) { hasDeconstructor = null; }
+    ClassNode.prototype.deconstructTag = function (tag, dom, hasDeconstruct) {
+        if (hasDeconstruct === void 0) { hasDeconstruct = null; }
         return __awaiter(this, void 0, void 0, function () {
             var fncCls, fnc, _i, _a, key, on;
             return __generator(this, function (_b) {
                 switch (_b.label) {
                     case 0:
-                        if (hasDeconstructor === null)
-                            hasDeconstructor = this.classScope.has('deconstruct');
-                        if (!hasDeconstructor) return [3 /*break*/, 3];
+                        if (hasDeconstruct === null)
+                            hasDeconstruct = this.classScope.has('deconstruct');
+                        if (!hasDeconstruct) return [3 /*break*/, 3];
                         fncCls = this.classScope.get('deconstruct');
                         return [4 /*yield*/, fncCls.getFunction(tag.scope, dom, tag, false)];
                     case 1:

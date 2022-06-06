@@ -66,7 +66,10 @@ export class ClassNode extends Node implements TreeNode {
             Registry.class(this);
 
             if (root) {
-                await this.findClassElements(dom);
+                if (dom.built)
+                    await this.findClassElements(dom);
+                else
+                    dom.once('builtRoot', () => this.findClassElements(dom));
             }
         } else {
             await this.block.prepare(this.classScope, dom, tag, meta);
@@ -84,14 +87,14 @@ export class ClassNode extends Node implements TreeNode {
         }
     }
 
-    public async constructTag(tag: Tag, dom: DOM, hasConstructor: boolean | null = null) {
-        if (hasConstructor === null)
-            hasConstructor = this.classScope.has('construct');
+    public async constructTag(tag: Tag, dom: DOM, hasConstruct: boolean | null = null) {
+        if (hasConstruct === null)
+            hasConstruct = this.classScope.has('construct');
 
         tag.createScope(true);
         const meta = this.updateMeta();
         await this.block.prepare(tag.scope, dom, tag, meta);
-        if (hasConstructor) {
+        if (hasConstruct) {
             const fncCls: FunctionNode = this.classScope.get('construct') as FunctionNode;
             const fnc = await fncCls.getFunction(tag.scope, dom, tag, false);
             await fnc();
@@ -101,11 +104,11 @@ export class ClassNode extends Node implements TreeNode {
         ClassNode.addPreparedClassToElement(tag.element, this.fullSelector);
     }
 
-    public async deconstructTag(tag: Tag, dom: DOM, hasDeconstructor: boolean | null = null) {
-        if (hasDeconstructor === null)
-            hasDeconstructor = this.classScope.has('deconstruct');
+    public async deconstructTag(tag: Tag, dom: DOM, hasDeconstruct: boolean | null = null) {
+        if (hasDeconstruct === null)
+            hasDeconstruct = this.classScope.has('deconstruct');
 
-        if (hasDeconstructor) {
+        if (hasDeconstruct) {
             const fncCls: FunctionNode = this.classScope.get('deconstruct') as FunctionNode;
             const fnc = await fncCls.getFunction(tag.scope, dom, tag, false);
             await fnc();

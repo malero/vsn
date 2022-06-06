@@ -21,8 +21,10 @@ export declare class DOM extends EventDispatcher {
     protected queued: HTMLElement[];
     protected window: WrappedWindow;
     protected document: WrappedDocument;
+    protected _built: boolean;
     selected: Tag;
     constructor(rootElement: Document, build?: boolean, debug?: boolean);
+    get built(): boolean;
     get root(): Tag;
     get ready(): Promise<boolean>;
     get(selector: string, create?: boolean, tag?: Tag, direction?: EQuerySelectDirection): Promise<TagList>;

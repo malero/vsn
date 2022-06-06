@@ -25,6 +25,7 @@ export class DOM extends EventDispatcher {
     protected queued: HTMLElement[] = [];
     protected window: WrappedWindow;
     protected document: WrappedDocument;
+    protected _built: boolean = false;
     public selected: Tag;
 
     constructor(
@@ -52,12 +53,16 @@ export class DOM extends EventDispatcher {
         Configuration.instance.on('change', this.evaluate.bind(this));
     }
 
+    public get built(): boolean {
+        return this._built;
+    }
+
     public get root(): Tag {
         return this._root;
     }
 
     public get ready(): Promise<boolean> {
-        return
+        return this.promise('builtRoot');
     }
 
     public async get(selector: string, create: boolean = false, tag: Tag = null, direction: EQuerySelectDirection = EQuerySelectDirection.DOWN): Promise<TagList> {
@@ -235,7 +240,11 @@ export class DOM extends EventDispatcher {
             await ClassNode.checkForClassChanges(tag.element, this, tag);
         }
 
-        this.dispatch('built');
+        if (isRoot) {
+            this._built = true;
+            this.dispatch('builtRoot')
+        }
+        this.dispatch('built', newTags);
     }
 
     async getTagsForElements(elements: Element[], create: boolean = false) {
