@@ -65,7 +65,6 @@ var VisionHelper_1 = require("./helpers/VisionHelper");
 var StandardAttribute_1 = require("./attributes/StandardAttribute");
 var On_1 = require("./attributes/On");
 var Registry_1 = require("./Registry");
-var Bencmark_1 = require("./Bencmark");
 var DOMObject_1 = require("./DOM/DOMObject");
 var AST_1 = require("./AST");
 var StyleAttribute_1 = require("./attributes/StyleAttribute");
@@ -121,8 +120,11 @@ var Tag = /** @class */ (function (_super) {
     });
     ;
     Tag.prototype.onAttributeStateChange = function (event) {
-        if (event.previouseState === Attribute_1.AttributeState.Deferred)
+        if (event.previouseState === Attribute_1.AttributeState.Deferred) // @todo: what is this?
             this._nonDeferredAttributes.length = 0;
+    };
+    Tag.prototype.getAttributesWithState = function (state) {
+        return this.attributes.filter(function (attr) { return attr.state === state; });
     };
     Object.defineProperty(Tag.prototype, "nonDeferredAttributes", {
         get: function () {
@@ -510,11 +512,24 @@ var Tag = /** @class */ (function (_super) {
         if (fallback === void 0) { fallback = null; }
         return this.parsedAttributes[key] && this.parsedAttributes[key][index] || fallback;
     };
+    Tag.prototype.getTagsToBuild = function () {
+        return __awaiter(this, void 0, void 0, function () {
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0:
+                        if (!this.isSlot) return [3 /*break*/, 2];
+                        return [4 /*yield*/, DOM_1.DOM.instance.getTagsForElements(this.delegates, true)];
+                    case 1: return [2 /*return*/, _a.sent()];
+                    case 2: return [2 /*return*/, [this]];
+                }
+            });
+        });
+    };
     Tag.prototype.buildAttributes = function () {
         return __awaiter(this, void 0, void 0, function () {
-            var requiresScope, defer, isMobile, _a, _b, _i, attr, attrClass, attrObj;
-            return __generator(this, function (_c) {
-                switch (_c.label) {
+            var requiresScope, defer, isMobile, tags, slot, _i, tags_1, tag, _a, _b, _c, attr, attrClass, attrObj;
+            return __generator(this, function (_d) {
+                switch (_d.label) {
                     case 0:
                         requiresScope = false;
                         defer = false;
@@ -525,48 +540,62 @@ var Tag = /** @class */ (function (_super) {
                             this.hasAttribute('vsn-defer')) {
                             defer = true;
                         }
+                        return [4 /*yield*/, this.getTagsToBuild()];
+                    case 1:
+                        tags = _d.sent();
+                        slot = this.isSlot ? this : null;
+                        _i = 0, tags_1 = tags;
+                        _d.label = 2;
+                    case 2:
+                        if (!(_i < tags_1.length)) return [3 /*break*/, 9];
+                        tag = tags_1[_i];
                         _a = [];
                         for (_b in this.rawAttributes)
                             _a.push(_b);
-                        _i = 0;
-                        _c.label = 1;
-                    case 1:
-                        if (!(_i < _a.length)) return [3 /*break*/, 5];
-                        attr = _a[_i];
+                        _c = 0;
+                        _d.label = 3;
+                    case 3:
+                        if (!(_c < _a.length)) return [3 /*break*/, 7];
+                        attr = _a[_c];
                         if (this.hasModifier(attr, 'mobile')) {
                             if (!isMobile) {
-                                return [3 /*break*/, 4];
+                                return [3 /*break*/, 6];
                             }
                         }
                         if (this.hasModifier(attr, 'desktop')) {
                             if (isMobile) {
-                                return [3 /*break*/, 4];
+                                return [3 /*break*/, 6];
                             }
                         }
                         return [4 /*yield*/, this.getAttributeClass(attr)];
-                    case 2:
-                        attrClass = _c.sent();
-                        if (!attrClass) return [3 /*break*/, 4];
+                    case 4:
+                        attrClass = _d.sent();
+                        if (!attrClass) return [3 /*break*/, 6];
                         if (attrClass.scoped)
                             requiresScope = true;
-                        attrObj = attrClass.create(this, attr, attrClass);
-                        this.attributes.push(attrObj);
-                        if (!(defer && attrClass.canDefer)) return [3 /*break*/, 4];
+                        attrObj = attrClass.create(tag, attr, attrClass, slot);
+                        tag.attributes.push(attrObj);
+                        if (!(defer && attrClass.canDefer)) return [3 /*break*/, 6];
                         return [4 /*yield*/, attrObj.defer()];
-                    case 3:
-                        _c.sent();
-                        this.deferredAttributes.push(attrObj);
-                        attrObj.on('state', this.onAttributeStateChange.bind(this));
-                        _c.label = 4;
-                    case 4:
-                        _i++;
-                        return [3 /*break*/, 1];
                     case 5:
-                        if (this.element.getAttribute('id'))
+                        _d.sent();
+                        tag.deferredAttributes.push(attrObj);
+                        attrObj.on('state', tag.onAttributeStateChange, tag);
+                        _d.label = 6;
+                    case 6:
+                        _c++;
+                        return [3 /*break*/, 3];
+                    case 7:
+                        if (tag.element.getAttribute('id'))
                             requiresScope = true;
-                        if (requiresScope && !this.uniqueScope) {
-                            this._uniqueScope = true;
+                        if (requiresScope && !tag.uniqueScope) {
+                            tag._uniqueScope = true;
                         }
+                        _d.label = 8;
+                    case 8:
+                        _i++;
+                        return [3 /*break*/, 2];
+                    case 9:
                         this._state = TagState.AttributesBuilt;
                         return [2 /*return*/];
                 }
@@ -575,23 +604,33 @@ var Tag = /** @class */ (function (_super) {
     };
     Tag.prototype.compileAttributes = function () {
         return __awaiter(this, void 0, void 0, function () {
-            var _i, _a, attr;
-            return __generator(this, function (_b) {
-                switch (_b.label) {
-                    case 0:
-                        _i = 0, _a = this.nonDeferredAttributes;
-                        _b.label = 1;
+            var tags, _i, tags_2, tag, _a, _b, attr;
+            return __generator(this, function (_c) {
+                switch (_c.label) {
+                    case 0: return [4 /*yield*/, this.getTagsToBuild()];
                     case 1:
-                        if (!(_i < _a.length)) return [3 /*break*/, 4];
-                        attr = _a[_i];
-                        return [4 /*yield*/, attr.compile()];
+                        tags = _c.sent();
+                        _i = 0, tags_2 = tags;
+                        _c.label = 2;
                     case 2:
-                        _b.sent();
-                        _b.label = 3;
+                        if (!(_i < tags_2.length)) return [3 /*break*/, 7];
+                        tag = tags_2[_i];
+                        _a = 0, _b = tag.getAttributesWithState(Attribute_1.AttributeState.Instantiated);
+                        _c.label = 3;
                     case 3:
-                        _i++;
-                        return [3 /*break*/, 1];
+                        if (!(_a < _b.length)) return [3 /*break*/, 6];
+                        attr = _b[_a];
+                        return [4 /*yield*/, attr.compile()];
                     case 4:
+                        _c.sent();
+                        _c.label = 5;
+                    case 5:
+                        _a++;
+                        return [3 /*break*/, 3];
+                    case 6:
+                        _i++;
+                        return [3 /*break*/, 2];
+                    case 7:
                         this._state = TagState.AttributesCompiled;
                         return [2 /*return*/];
                 }
@@ -600,34 +639,37 @@ var Tag = /** @class */ (function (_super) {
     };
     Tag.prototype.setupAttributes = function () {
         return __awaiter(this, void 0, void 0, function () {
-            var _i, _a, attr;
-            return __generator(this, function (_b) {
-                switch (_b.label) {
-                    case 0:
-                        if (VisionHelper_1.VisionHelper.doBenchmark)
-                            Bencmark_1.benchmarkStart('Tag.setupAttributes');
-                        _i = 0, _a = this.nonDeferredAttributes;
-                        _b.label = 1;
+            var tags, _i, tags_3, tag, _a, _b, attr;
+            return __generator(this, function (_c) {
+                switch (_c.label) {
+                    case 0: return [4 /*yield*/, this.getTagsToBuild()];
                     case 1:
-                        if (!(_i < _a.length)) return [3 /*break*/, 4];
-                        attr = _a[_i];
-                        return [4 /*yield*/, attr.setup()];
+                        tags = _c.sent();
+                        _i = 0, tags_3 = tags;
+                        _c.label = 2;
                     case 2:
-                        _b.sent();
-                        _b.label = 3;
+                        if (!(_i < tags_3.length)) return [3 /*break*/, 7];
+                        tag = tags_3[_i];
+                        _a = 0, _b = tag.getAttributesWithState(Attribute_1.AttributeState.Compiled);
+                        _c.label = 3;
                     case 3:
-                        _i++;
-                        return [3 /*break*/, 1];
+                        if (!(_a < _b.length)) return [3 /*break*/, 6];
+                        attr = _b[_a];
+                        return [4 /*yield*/, attr.setup()];
                     case 4:
-                        if (VisionHelper_1.VisionHelper.doBenchmark)
-                            Bencmark_1.benchmarkEnd('Tag.setupAttributes', 'Attribute.setup');
-                        this.dom.registerElementInRoot(this);
-                        if (VisionHelper_1.VisionHelper.doBenchmark)
-                            Bencmark_1.benchmarkEnd('Tag.setupAttributes', 'register');
+                        _c.sent();
+                        _c.label = 5;
+                    case 5:
+                        _a++;
+                        return [3 /*break*/, 3];
+                    case 6:
+                        _i++;
+                        return [3 /*break*/, 2];
+                    case 7:
+                        if (!this.isSlot)
+                            this.dom.registerElementInRoot(this);
                         this._state = TagState.AttributesSetup;
                         this.callOnWrapped('$setup');
-                        if (VisionHelper_1.VisionHelper.doBenchmark)
-                            Bencmark_1.benchmarkEnd('Tag.setupAttributes', '$setup');
                         return [2 /*return*/];
                 }
             });
@@ -635,23 +677,33 @@ var Tag = /** @class */ (function (_super) {
     };
     Tag.prototype.extractAttributes = function () {
         return __awaiter(this, void 0, void 0, function () {
-            var _i, _a, attr;
-            return __generator(this, function (_b) {
-                switch (_b.label) {
-                    case 0:
-                        _i = 0, _a = this.nonDeferredAttributes;
-                        _b.label = 1;
+            var tags, _i, tags_4, tag, _a, _b, attr;
+            return __generator(this, function (_c) {
+                switch (_c.label) {
+                    case 0: return [4 /*yield*/, this.getTagsToBuild()];
                     case 1:
-                        if (!(_i < _a.length)) return [3 /*break*/, 4];
-                        attr = _a[_i];
-                        return [4 /*yield*/, attr.extract()];
+                        tags = _c.sent();
+                        _i = 0, tags_4 = tags;
+                        _c.label = 2;
                     case 2:
-                        _b.sent();
-                        _b.label = 3;
+                        if (!(_i < tags_4.length)) return [3 /*break*/, 7];
+                        tag = tags_4[_i];
+                        _a = 0, _b = tag.getAttributesWithState(Attribute_1.AttributeState.Setup);
+                        _c.label = 3;
                     case 3:
-                        _i++;
-                        return [3 /*break*/, 1];
+                        if (!(_a < _b.length)) return [3 /*break*/, 6];
+                        attr = _b[_a];
+                        return [4 /*yield*/, attr.extract()];
                     case 4:
+                        _c.sent();
+                        _c.label = 5;
+                    case 5:
+                        _a++;
+                        return [3 /*break*/, 3];
+                    case 6:
+                        _i++;
+                        return [3 /*break*/, 2];
+                    case 7:
                         this._state = TagState.AttributesExtracted;
                         this.callOnWrapped('$extracted');
                         return [2 /*return*/];
@@ -661,26 +713,36 @@ var Tag = /** @class */ (function (_super) {
     };
     Tag.prototype.connectAttributes = function () {
         return __awaiter(this, void 0, void 0, function () {
-            var _i, _a, attr;
-            return __generator(this, function (_b) {
-                switch (_b.label) {
-                    case 0:
-                        if (this.isInput) {
-                            this.addEventHandler('input', [], this.inputMutation, this);
-                        }
-                        _i = 0, _a = this.nonDeferredAttributes;
-                        _b.label = 1;
+            var tags, _i, tags_5, tag, _a, _b, attr;
+            return __generator(this, function (_c) {
+                switch (_c.label) {
+                    case 0: return [4 /*yield*/, this.getTagsToBuild()];
                     case 1:
-                        if (!(_i < _a.length)) return [3 /*break*/, 4];
-                        attr = _a[_i];
-                        return [4 /*yield*/, attr.connect()];
+                        tags = _c.sent();
+                        _i = 0, tags_5 = tags;
+                        _c.label = 2;
                     case 2:
-                        _b.sent();
-                        _b.label = 3;
+                        if (!(_i < tags_5.length)) return [3 /*break*/, 7];
+                        tag = tags_5[_i];
+                        if (tag.isInput) {
+                            tag.addEventHandler('input', [], tag.inputMutation, tag);
+                        }
+                        _a = 0, _b = tag.getAttributesWithState(Attribute_1.AttributeState.Extracted);
+                        _c.label = 3;
                     case 3:
-                        _i++;
-                        return [3 /*break*/, 1];
+                        if (!(_a < _b.length)) return [3 /*break*/, 6];
+                        attr = _b[_a];
+                        return [4 /*yield*/, attr.connect()];
                     case 4:
+                        _c.sent();
+                        _c.label = 5;
+                    case 5:
+                        _a++;
+                        return [3 /*break*/, 3];
+                    case 6:
+                        _i++;
+                        return [3 /*break*/, 2];
+                    case 7:
                         this._state = TagState.AttributesConnected;
                         this.callOnWrapped('$bound');
                         return [2 /*return*/];
@@ -704,19 +766,21 @@ var Tag = /** @class */ (function (_super) {
                     option.removeAttribute('selected');
                 }
             }
-            //this.element.setAttribute('value', );
             this.value = values.join(',');
         }
         else {
-            //this.element.setAttribute('value', e.target.value);
-            //(this.element as any).value = e.target.value;
             this.value = e.target.value;
         }
     };
     Tag.prototype.finalize = function () {
-        this._state = TagState.Built;
-        this.callOnWrapped('$built', this, this.scope, this.element);
-        VisionHelper_1.VisionHelper.nice(this.setupDeferredAttributes.bind(this));
+        return __awaiter(this, void 0, void 0, function () {
+            return __generator(this, function (_a) {
+                this._state = TagState.Built;
+                this.callOnWrapped('$built', this, this.scope, this.element);
+                VisionHelper_1.VisionHelper.nice(this.setupDeferredAttributes.bind(this));
+                return [2 /*return*/];
+            });
+        });
     };
     Tag.prototype.callOnWrapped = function (method) {
         var _a;

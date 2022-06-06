@@ -460,17 +460,17 @@ var DOM = /** @class */ (function (_super) {
     DOM.prototype.getTagsForElements = function (elements, create) {
         if (create === void 0) { create = false; }
         return __awaiter(this, void 0, void 0, function () {
-            var tags, found, _i, _a, tag, notFound, i, element, _b, notFound_1, element, _c, _d;
-            return __generator(this, function (_e) {
-                switch (_e.label) {
+            var tags, found, _i, elements_1, element, notFound, i, element, _a, notFound_1, element, _b, _c;
+            return __generator(this, function (_d) {
+                switch (_d.label) {
                     case 0:
                         tags = new List_1.TagList();
                         found = [];
-                        for (_i = 0, _a = this.tags; _i < _a.length; _i++) {
-                            tag = _a[_i];
-                            if (!found.includes(tag.element) && elements.indexOf(tag.element) > -1) {
-                                tags.push(tag);
-                                found.push(tag.element);
+                        for (_i = 0, elements_1 = elements; _i < elements_1.length; _i++) {
+                            element = elements_1[_i];
+                            if (element[Tag_1.Tag.TaggedVariable]) {
+                                tags.push(element[Tag_1.Tag.TaggedVariable]);
+                                found.push(element);
                             }
                         }
                         if (!create) return [3 /*break*/, 4];
@@ -481,18 +481,18 @@ var DOM = /** @class */ (function (_super) {
                                 notFound.splice(i, 1);
                             }
                         }
-                        _b = 0, notFound_1 = notFound;
-                        _e.label = 1;
+                        _a = 0, notFound_1 = notFound;
+                        _d.label = 1;
                     case 1:
-                        if (!(_b < notFound_1.length)) return [3 /*break*/, 4];
-                        element = notFound_1[_b];
-                        _d = (_c = tags).push;
+                        if (!(_a < notFound_1.length)) return [3 /*break*/, 4];
+                        element = notFound_1[_a];
+                        _c = (_b = tags).push;
                         return [4 /*yield*/, this.getTagForElement(element, create)];
                     case 2:
-                        _d.apply(_c, [_e.sent()]);
-                        _e.label = 3;
+                        _c.apply(_b, [_d.sent()]);
+                        _d.label = 3;
                     case 3:
-                        _b++;
+                        _a++;
                         return [3 /*break*/, 1];
                     case 4: return [2 /*return*/, tags];
                 }
@@ -502,23 +502,19 @@ var DOM = /** @class */ (function (_super) {
     DOM.prototype.getTagForElement = function (element, create) {
         if (create === void 0) { create = false; }
         return __awaiter(this, void 0, void 0, function () {
-            var _i, _a, tag;
-            return __generator(this, function (_b) {
-                switch (_b.label) {
+            return __generator(this, function (_a) {
+                switch (_a.label) {
                     case 0:
-                        for (_i = 0, _a = this.tags; _i < _a.length; _i++) {
-                            tag = _a[_i];
-                            if (tag.element === element)
-                                return [2 /*return*/, tag];
-                        }
+                        if (element[Tag_1.Tag.TaggedVariable])
+                            return [2 /*return*/, element[Tag_1.Tag.TaggedVariable]];
                         if (!(element && create)) return [3 /*break*/, 3];
                         if (element instanceof HTMLElement)
                             element.setAttribute('vsn-ref', '');
                         return [4 /*yield*/, this.buildFrom(element.parentElement || element)];
                     case 1:
-                        _b.sent();
+                        _a.sent();
                         return [4 /*yield*/, this.getTagForElement(element, false)];
-                    case 2: return [2 /*return*/, _b.sent()];
+                    case 2: return [2 /*return*/, _a.sent()];
                     case 3: return [2 /*return*/, null];
                 }
             });

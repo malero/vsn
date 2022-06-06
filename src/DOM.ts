@@ -8,6 +8,7 @@ import {WrappedDocument} from "./DOM/WrappedDocument";
 import {Scope} from "./Scope";
 import {EventDispatcher} from "./EventDispatcher";
 import {ClassNode} from "./AST/ClassNode";
+import {Registry} from "./Registry";
 
 export enum EQuerySelectDirection {
     ALL,
@@ -250,11 +251,11 @@ export class DOM extends EventDispatcher {
     async getTagsForElements(elements: Element[], create: boolean = false) {
         const tags: TagList = new TagList();
         const found: Element[] = [];
-        for (const tag of this.tags)
-        {
-            if (!found.includes(tag.element) && elements.indexOf(tag.element) > -1) {
-                tags.push(tag);
-                found.push(tag.element);
+
+        for (const element of elements) {
+            if (element[Tag.TaggedVariable]) {
+                tags.push(element[Tag.TaggedVariable]);
+                found.push(element);
             }
         }
 
@@ -276,10 +277,8 @@ export class DOM extends EventDispatcher {
     }
 
     async getTagForElement(element: Element, create: boolean = false) {
-        for (const tag of this.tags) {
-            if (tag.element === element)
-                return tag;
-        }
+        if (element[Tag.TaggedVariable])
+            return element[Tag.TaggedVariable];
 
         if (element && create) {
             if (element instanceof HTMLElement)

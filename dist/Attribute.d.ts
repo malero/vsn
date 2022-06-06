@@ -12,10 +12,12 @@ export declare enum AttributeState {
 export declare abstract class Attribute extends EventDispatcher {
     readonly tag: Tag;
     readonly attributeName: string;
+    readonly slot?: Tag;
     protected _state: AttributeState;
     static readonly scoped: boolean;
     static readonly canDefer: boolean;
-    constructor(tag: Tag, attributeName: string);
+    constructor(tag: Tag, attributeName: string, slot?: Tag);
+    get origin(): Tag;
     get state(): AttributeState;
     protected defer(): Promise<void>;
     protected configure(): Promise<void>;
@@ -31,6 +33,7 @@ export declare abstract class Attribute extends EventDispatcher {
     mutate(mutation: MutationRecord): void;
     set value(value: string);
     get value(): string;
+    apply(fnc: Function): Promise<void>;
     private setState;
-    static create(tag: Tag, attributeName: string, cls: any): Attribute;
+    static create(tag: Tag, attributeName: string, cls: any, slot?: Tag): Attribute;
 }

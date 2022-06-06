@@ -20,11 +20,25 @@ var EventDispatcher_1 = require("../EventDispatcher");
 var DOMObject = /** @class */ (function (_super) {
     __extends(DOMObject, _super);
     function DOMObject(element, props) {
+        var _a;
         var _this = _super.call(this) || this;
         _this.element = element;
         _this._uniqueScope = false;
+        _this.delegates = [];
+        if (_this.isSlot) {
+            (_a = _this.delegates).push.apply(_a, element.assignedNodes());
+        }
+        if (element.assignedSlot)
+            _this.slot = element.assignedSlot;
         return _this;
     }
+    Object.defineProperty(DOMObject.prototype, "isSlot", {
+        get: function () {
+            return this.element instanceof HTMLSlotElement;
+        },
+        enumerable: false,
+        configurable: true
+    });
     Object.defineProperty(DOMObject.prototype, "scope", {
         get: function () {
             if (!!this._scope)

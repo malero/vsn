@@ -57,75 +57,33 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
     }
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.ListItem = void 0;
-var Attribute_1 = require("../Attribute");
+exports.TemplateAttribute = void 0;
 var Registry_1 = require("../Registry");
-var ListItem = /** @class */ (function (_super) {
-    __extends(ListItem, _super);
-    function ListItem() {
+var Attribute_1 = require("../Attribute");
+var TemplateAttribute = /** @class */ (function (_super) {
+    __extends(TemplateAttribute, _super);
+    function TemplateAttribute() {
         return _super !== null && _super.apply(this, arguments) || this;
     }
-    ListItem_1 = ListItem;
-    Object.defineProperty(ListItem.prototype, "list", {
-        get: function () {
-            return this._list;
-        },
-        enumerable: false,
-        configurable: true
-    });
-    ListItem.prototype.setup = function () {
+    TemplateAttribute.prototype.extract = function () {
         return __awaiter(this, void 0, void 0, function () {
-            var modelName, cls;
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
-                        this._list = this.tag.findAncestorByAttribute('vsn-list');
-                        if (!this._list)
-                            throw Error(ListItem_1.ERROR_NO_PARENT);
-                        this.tag.scope.set(this.listItemName, this.tag.scope);
-                        return [4 /*yield*/, this.getList()];
+                        Registry_1.Registry.instance.templates.register(this.getAttributeBinding(), this.tag.element);
+                        return [4 /*yield*/, _super.prototype.extract.call(this)];
                     case 1:
-                        modelName = (_a.sent()).listItemModel;
-                        return [4 /*yield*/, Registry_1.Registry.instance.controllers.get(modelName)];
-                    case 2:
-                        cls = _a.sent();
-                        this.instantiateModel(cls);
-                        return [4 /*yield*/, _super.prototype.setup.call(this)];
-                    case 3:
                         _a.sent();
                         return [2 /*return*/];
                 }
             });
         });
     };
-    Object.defineProperty(ListItem.prototype, "listItemName", {
-        get: function () {
-            return this.getAttributeBinding('item');
-        },
-        enumerable: false,
-        configurable: true
-    });
-    ListItem.prototype.getList = function () {
-        return __awaiter(this, void 0, void 0, function () {
-            return __generator(this, function (_a) {
-                switch (_a.label) {
-                    case 0: return [4 /*yield*/, this._list.getAttribute('vsn-list')];
-                    case 1: return [2 /*return*/, _a.sent()];
-                }
-            });
-        });
-    };
-    ListItem.prototype.instantiateModel = function (model) {
-        this.tag.wrap(model, false, true);
-    };
-    var ListItem_1;
-    ListItem.canDefer = false;
-    ListItem.scoped = true;
-    ListItem.ERROR_NO_PARENT = "Cannot find list parent.";
-    ListItem = ListItem_1 = __decorate([
-        Registry_1.Registry.attribute('vsn-list-item')
-    ], ListItem);
-    return ListItem;
+    TemplateAttribute.canDefer = false;
+    TemplateAttribute = __decorate([
+        Registry_1.Registry.attribute('vsn-template')
+    ], TemplateAttribute);
+    return TemplateAttribute;
 }(Attribute_1.Attribute));
-exports.ListItem = ListItem;
-//# sourceMappingURL=ListItem.js.map
+exports.TemplateAttribute = TemplateAttribute;
+//# sourceMappingURL=TemplateAttribute.js.map

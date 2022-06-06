@@ -84,6 +84,7 @@ var Registry = /** @class */ (function (_super) {
     __extends(Registry, _super);
     function Registry() {
         var _this = _super.call(this) || this;
+        _this.components = new RegistryStore();
         _this.functions = new RegistryStore();
         _this.controllers = new RegistryStore();
         _this.classes = new RegistryStore();
@@ -95,6 +96,11 @@ var Registry = /** @class */ (function (_super) {
         _this.attributes = new RegistryStore();
         return _this;
     }
+    Registry.component = function (key, setup) {
+        if (key === void 0) { key = null; }
+        if (setup === void 0) { setup = null; }
+        return register('components', key, setup);
+    };
     Registry.function = function (key, setup) {
         if (key === void 0) { key = null; }
         if (setup === void 0) { setup = null; }

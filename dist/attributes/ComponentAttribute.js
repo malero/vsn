@@ -57,75 +57,49 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
     }
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.ListItem = void 0;
-var Attribute_1 = require("../Attribute");
+exports.ComponentAttribute = void 0;
 var Registry_1 = require("../Registry");
-var ListItem = /** @class */ (function (_super) {
-    __extends(ListItem, _super);
-    function ListItem() {
+var TemplateAttribute_1 = require("./TemplateAttribute");
+var Component_1 = require("../Component");
+var ComponentAttribute = /** @class */ (function (_super) {
+    __extends(ComponentAttribute, _super);
+    function ComponentAttribute() {
         return _super !== null && _super.apply(this, arguments) || this;
     }
-    ListItem_1 = ListItem;
-    Object.defineProperty(ListItem.prototype, "list", {
-        get: function () {
-            return this._list;
-        },
-        enumerable: false,
-        configurable: true
-    });
-    ListItem.prototype.setup = function () {
+    ComponentAttribute.prototype.extract = function () {
         return __awaiter(this, void 0, void 0, function () {
-            var modelName, cls;
+            var name, clsName, cls;
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
-                        this._list = this.tag.findAncestorByAttribute('vsn-list');
-                        if (!this._list)
-                            throw Error(ListItem_1.ERROR_NO_PARENT);
-                        this.tag.scope.set(this.listItemName, this.tag.scope);
-                        return [4 /*yield*/, this.getList()];
+                        name = this.getAttributeBinding();
+                        if (!!Registry_1.Registry.instance.components.has(name)) return [3 /*break*/, 4];
+                        return [4 /*yield*/, _super.prototype.extract.call(this)];
                     case 1:
-                        modelName = (_a.sent()).listItemModel;
-                        return [4 /*yield*/, Registry_1.Registry.instance.controllers.get(modelName)];
+                        _a.sent();
+                        clsName = this.getAttributeValue();
+                        cls = Component_1.Component;
+                        if (!clsName) return [3 /*break*/, 3];
+                        return [4 /*yield*/, Registry_1.Registry.instance.components.get(clsName)];
                     case 2:
                         cls = _a.sent();
-                        this.instantiateModel(cls);
-                        return [4 /*yield*/, _super.prototype.setup.call(this)];
+                        if (!cls) {
+                            throw new Error("Component " + clsName + " not found");
+                        }
+                        _a.label = 3;
                     case 3:
-                        _a.sent();
-                        return [2 /*return*/];
+                        Registry_1.Registry.instance.components.register(name, cls);
+                        _a.label = 4;
+                    case 4: return [2 /*return*/];
                 }
             });
         });
     };
-    Object.defineProperty(ListItem.prototype, "listItemName", {
-        get: function () {
-            return this.getAttributeBinding('item');
-        },
-        enumerable: false,
-        configurable: true
-    });
-    ListItem.prototype.getList = function () {
-        return __awaiter(this, void 0, void 0, function () {
-            return __generator(this, function (_a) {
-                switch (_a.label) {
-                    case 0: return [4 /*yield*/, this._list.getAttribute('vsn-list')];
-                    case 1: return [2 /*return*/, _a.sent()];
-                }
-            });
-        });
-    };
-    ListItem.prototype.instantiateModel = function (model) {
-        this.tag.wrap(model, false, true);
-    };
-    var ListItem_1;
-    ListItem.canDefer = false;
-    ListItem.scoped = true;
-    ListItem.ERROR_NO_PARENT = "Cannot find list parent.";
-    ListItem = ListItem_1 = __decorate([
-        Registry_1.Registry.attribute('vsn-list-item')
-    ], ListItem);
-    return ListItem;
-}(Attribute_1.Attribute));
-exports.ListItem = ListItem;
-//# sourceMappingURL=ListItem.js.map
+    ComponentAttribute.scoped = true;
+    ComponentAttribute = __decorate([
+        Registry_1.Registry.attribute('vsn-component')
+    ], ComponentAttribute);
+    return ComponentAttribute;
+}(TemplateAttribute_1.TemplateAttribute));
+exports.ComponentAttribute = ComponentAttribute;
+//# sourceMappingURL=ComponentAttribute.js.map

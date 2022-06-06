@@ -13,9 +13,9 @@ export function register(store: string, key: string = null, setup: () => void = 
     }
 }
 
-export class RegistryStore extends EventDispatcher {
+export class RegistryStore<T = any> extends EventDispatcher {
     private timeouts = {};
-    private readonly store: {[key: string]: any};
+    private readonly store: {[key: string]: T};
 
     constructor(defaults = null) {
         super();
@@ -62,6 +62,7 @@ export class RegistryStore extends EventDispatcher {
 
 export class Registry extends EventDispatcher {
     protected static _instance: Registry;
+    public readonly components: RegistryStore;
     public readonly functions: RegistryStore;
     public readonly controllers: RegistryStore;
     public readonly classes: RegistryStore;
@@ -74,15 +75,20 @@ export class Registry extends EventDispatcher {
 
     constructor() {
         super();
+        this.components = new RegistryStore();
         this.functions = new RegistryStore();
         this.controllers = new RegistryStore();
         this.classes = new RegistryStore();
         this.models = new RegistryStore();
-        this.templates = new RegistryStore();
+        this.templates = new RegistryStore<HTMLTemplateElement>();
         this.types = new RegistryStore();
         this.validators = new RegistryStore();
         this.formats = new RegistryStore();
         this.attributes = new RegistryStore();
+    }
+
+    public static component(key: string = null, setup = null) {
+        return register('components', key, setup);
     }
 
     public static function(key: string = null, setup = null) {

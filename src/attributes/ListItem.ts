@@ -34,10 +34,6 @@ export class ListItem extends Attribute {
         return await this._list.getAttribute<List>('vsn-list');
     }
 
-    protected async configure() {
-
-    }
-
     private instantiateModel(model: any) {
         this.tag.wrap(model, false, true);
     }

@@ -12,7 +12,10 @@ export declare abstract class DOMObject extends EventDispatcher {
         [key: string]: IEventHandler[];
     };
     protected _uniqueScope: boolean;
+    protected slot: HTMLSlotElement;
+    readonly delegates: HTMLElement[];
     constructor(element: HTMLElement, props: any);
+    get isSlot(): boolean;
     get scope(): Scope;
     set scope(scope: Scope);
     watchAttribute(attr: string): void;

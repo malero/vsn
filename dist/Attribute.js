@@ -66,15 +66,23 @@ var AttributeState;
 })(AttributeState = exports.AttributeState || (exports.AttributeState = {}));
 var Attribute = /** @class */ (function (_super) {
     __extends(Attribute, _super);
-    function Attribute(tag, attributeName) {
+    function Attribute(tag, attributeName, slot) {
         var _this = _super.call(this) || this;
         _this.tag = tag;
         _this.attributeName = attributeName;
+        _this.slot = slot;
         _this.configure();
         if (VisionHelper_1.VisionHelper.window)
             VisionHelper_1.VisionHelper.window['Attributes'].push(_this);
         return _this;
     }
+    Object.defineProperty(Attribute.prototype, "origin", {
+        get: function () {
+            return this.slot || this.tag;
+        },
+        enumerable: false,
+        configurable: true
+    });
     Object.defineProperty(Attribute.prototype, "state", {
         get: function () {
             return this._state;
@@ -145,15 +153,15 @@ var Attribute = /** @class */ (function (_super) {
     ;
     Attribute.prototype.getAttributeValue = function (fallback) {
         if (fallback === void 0) { fallback = null; }
-        return this.tag.getRawAttributeValue(this.attributeName, fallback);
+        return this.origin.getRawAttributeValue(this.attributeName, fallback);
     };
     Attribute.prototype.getAttributeBinding = function (fallback) {
         if (fallback === void 0) { fallback = null; }
-        return this.tag.getAttributeBinding(this.attributeName) || fallback;
+        return this.origin.getAttributeBinding(this.attributeName) || fallback;
     };
     Attribute.prototype.getAttributeModifiers = function (fallback) {
         if (fallback === void 0) { fallback = []; }
-        var modifiers = this.tag.getAttributeModifiers(this.attributeName);
+        var modifiers = this.origin.getAttributeModifiers(this.attributeName);
         return modifiers.length && modifiers || fallback;
     };
     Attribute.prototype.hasModifier = function (mod) {
@@ -162,14 +170,37 @@ var Attribute = /** @class */ (function (_super) {
     Attribute.prototype.mutate = function (mutation) { };
     Object.defineProperty(Attribute.prototype, "value", {
         get: function () {
-            return this.tag.element.getAttribute(this.attributeName) || '';
+            return this.origin.element.getAttribute(this.attributeName) || '';
         },
         set: function (value) {
-            this.tag.element.setAttribute(this.attributeName, value);
+            this.origin.element.setAttribute(this.attributeName, value);
         },
         enumerable: false,
         configurable: true
     });
+    Attribute.prototype.apply = function (fnc) {
+        return __awaiter(this, void 0, void 0, function () {
+            var _i, _a, element;
+            return __generator(this, function (_b) {
+                switch (_b.label) {
+                    case 0:
+                        _i = 0, _a = this.origin.delegates;
+                        _b.label = 1;
+                    case 1:
+                        if (!(_i < _a.length)) return [3 /*break*/, 4];
+                        element = _a[_i];
+                        return [4 /*yield*/, fnc(element)];
+                    case 2:
+                        _b.sent();
+                        _b.label = 3;
+                    case 3:
+                        _i++;
+                        return [3 /*break*/, 1];
+                    case 4: return [2 /*return*/];
+                }
+            });
+        });
+    };
     Attribute.prototype.setState = function (state) {
         var previousState = this._state;
         this._state = state;
@@ -179,8 +210,8 @@ var Attribute = /** @class */ (function (_super) {
             attribute: this
         });
     };
-    Attribute.create = function (tag, attributeName, cls) {
-        return new cls(tag, attributeName);
+    Attribute.create = function (tag, attributeName, cls, slot) {
+        return new cls(tag, attributeName, slot);
     };
     Attribute.scoped = false;
     Attribute.canDefer = true;

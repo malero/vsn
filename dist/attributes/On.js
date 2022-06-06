@@ -73,6 +73,7 @@ var On = /** @class */ (function (_super) {
                 switch (_a.label) {
                     case 0:
                         code = this.getAttributeValue();
+                        console.log("Compiling " + this.getAttributeBinding() + " with " + code);
                         this.handler = new AST_1.Tree(code);
                         return [4 /*yield*/, this.handler.prepare(this.tag.scope, this.tag.dom, this.tag)];
                     case 1:

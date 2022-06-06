@@ -10,6 +10,5 @@ export declare class ListItem extends Attribute {
     setup(): Promise<void>;
     get listItemName(): string;
     getList(): Promise<List>;
-    protected configure(): Promise<void>;
     private instantiateModel;
 }

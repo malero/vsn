@@ -6,7 +6,6 @@ import {VisionHelper} from "./helpers/VisionHelper";
 import {StandardAttribute} from "./attributes/StandardAttribute";
 import {On} from "./attributes/On";
 import {Registry} from "./Registry";
-import {benchmarkEnd, benchmarkStart} from "./Bencmark";
 import {DOMObject} from "./DOM/DOMObject";
 import {Tree} from "./AST";
 import {StyleAttribute} from "./attributes/StyleAttribute";
@@ -73,8 +72,12 @@ export class Tag extends DOMObject {
     }
 
     protected onAttributeStateChange(event) {
-        if (event.previouseState === AttributeState.Deferred)
+        if (event.previouseState === AttributeState.Deferred)  // @todo: what is this?
             this._nonDeferredAttributes.length = 0;
+    }
+
+    public getAttributesWithState(state: AttributeState): Attribute[] {
+        return this.attributes.filter(attr => attr.state === state);
     }
 
     public get nonDeferredAttributes(): Attribute[] {
@@ -408,6 +411,14 @@ export class Tag extends DOMObject {
         return this.parsedAttributes[key] && this.parsedAttributes[key][index] || fallback;
     }
 
+    public async getTagsToBuild() {
+        if (this.isSlot) {
+            return await DOM.instance.getTagsForElements(this.delegates, true);
+        } else {
+            return [this];
+        }
+    }
+
     public async buildAttributes() {
         let requiresScope = false;
         let defer: boolean = false;
@@ -420,81 +431,93 @@ export class Tag extends DOMObject {
             defer = true;
         }
 
-        for (let attr in this.rawAttributes) {
-            if (this.hasModifier(attr, 'mobile')) {
-                if (!isMobile) {
-                    continue;
+        const tags: Tag[] = await this.getTagsToBuild() as Tag[];
+        const slot: Tag = this.isSlot ? this : null;
+        for (const tag of tags) {
+            for (let attr in this.rawAttributes) {
+                if (this.hasModifier(attr, 'mobile')) {
+                    if (!isMobile) {
+                        continue;
+                    }
+                }
+
+                if (this.hasModifier(attr, 'desktop')) {
+                    if (isMobile) {
+                        continue;
+                    }
+                }
+
+                const attrClass = await this.getAttributeClass(attr);
+                if (attrClass) {
+                    if (attrClass.scoped)
+                        requiresScope = true;
+
+                    const attrObj = attrClass.create(tag, attr, attrClass, slot);
+                    tag.attributes.push(attrObj);
+                    if (defer && attrClass.canDefer) {
+                        await attrObj.defer();
+                        tag.deferredAttributes.push(attrObj);
+                        attrObj.on('state', tag.onAttributeStateChange, tag);
+                    }
                 }
             }
 
-            if (this.hasModifier(attr, 'desktop')) {
-                if (isMobile) {
-                    continue;
-                }
+            if (tag.element.getAttribute('id'))
+                requiresScope = true;
+
+            if (requiresScope && !tag.uniqueScope) {
+                tag._uniqueScope = true;
             }
 
-            const attrClass = await this.getAttributeClass(attr);
-            if (attrClass) {
-                if (attrClass.scoped)
-                    requiresScope = true;
-                const attrObj = attrClass.create(this, attr, attrClass);
-                this.attributes.push(attrObj);
-
-                if (defer && attrClass.canDefer) {
-                    await attrObj.defer();
-                    this.deferredAttributes.push(attrObj);
-                    attrObj.on('state', this.onAttributeStateChange.bind(this));
-                }
-            }
         }
-
-        if (this.element.getAttribute('id'))
-            requiresScope = true;
-
-        if (requiresScope && !this.uniqueScope) {
-            this._uniqueScope = true;
-        }
-
         this._state = TagState.AttributesBuilt;
     }
 
     public async compileAttributes() {
-        for (const attr of this.nonDeferredAttributes) {
-            await attr.compile();
-        }
+        const tags: Tag[] = await this.getTagsToBuild() as Tag[];
+        for (const tag of tags) {
+            for (const attr of tag.getAttributesWithState(AttributeState.Instantiated)) {
+                await attr.compile();
+            }
 
+        }
         this._state = TagState.AttributesCompiled;
     }
 
     public async setupAttributes() {
-        if (VisionHelper.doBenchmark) benchmarkStart('Tag.setupAttributes');
-        for (const attr of this.nonDeferredAttributes) {
-            await attr.setup();
+        const tags: Tag[] = await this.getTagsToBuild() as Tag[];
+        for (const tag of tags) {
+            for (const attr of tag.getAttributesWithState(AttributeState.Compiled)) {
+                await attr.setup();
+            }
         }
-        if (VisionHelper.doBenchmark) benchmarkEnd('Tag.setupAttributes', 'Attribute.setup');
-        this.dom.registerElementInRoot(this);
-        if (VisionHelper.doBenchmark) benchmarkEnd('Tag.setupAttributes', 'register');
-
+        if (!this.isSlot)
+            this.dom.registerElementInRoot(this);
         this._state = TagState.AttributesSetup;
         this.callOnWrapped('$setup');
-        if (VisionHelper.doBenchmark) benchmarkEnd('Tag.setupAttributes', '$setup');
     }
 
     public async extractAttributes() {
-        for (const attr of this.nonDeferredAttributes) {
-            await attr.extract();
+        const tags: Tag[] = await this.getTagsToBuild() as Tag[];
+        for (const tag of tags) {
+            for (const attr of tag.getAttributesWithState(AttributeState.Setup)) {
+                await attr.extract();
+            }
         }
         this._state = TagState.AttributesExtracted;
         this.callOnWrapped('$extracted');
     }
 
     public async connectAttributes() {
-        if (this.isInput) {
-            this.addEventHandler('input', [], this.inputMutation, this);
-        }
+        const tags: Tag[] = await this.getTagsToBuild() as Tag[];
+        for (const tag of tags) {
+            if (tag.isInput) {
+                tag.addEventHandler('input', [], tag.inputMutation, tag);
+            }
 
-        for (const attr of this.nonDeferredAttributes) {
-            await attr.connect();
+            for (const attr of tag.getAttributesWithState(AttributeState.Extracted)) {
+                await attr.connect();
+            }
         }
         this._state = TagState.AttributesConnected;
         this.callOnWrapped('$bound');
@@ -514,16 +537,13 @@ export class Tag extends DOMObject {
                     option.removeAttribute('selected');
                 }
             }
-            //this.element.setAttribute('value', );
             this.value = values.join(',');
         } else {
-            //this.element.setAttribute('value', e.target.value);
-            //(this.element as any).value = e.target.value;
             this.value = e.target.value;
         }
     }
 
-    public finalize(): void {
+    public async finalize() {
         this._state = TagState.Built;
         this.callOnWrapped('$built', this, this.scope, this.element);
         VisionHelper.nice(this.setupDeferredAttributes.bind(this));

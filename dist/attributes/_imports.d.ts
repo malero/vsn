@@ -1,5 +1,6 @@
 export { AddClassIf } from "./AddClassIf";
 export { Bind } from "./Bind";
+export { ComponentAttribute } from './ComponentAttribute';
 export { ControllerAttribute } from "./ControllerAttribute";
 export { DisableIf } from "./DisableIf";
 export { Exec } from "./Exec";
@@ -23,5 +24,5 @@ export { ScriptAttribute } from "./ScriptAttribute";
 export { SetAttribute } from "./SetAttribute";
 export { StandardAttribute } from "./StandardAttribute";
 export { StyleAttribute } from "./StyleAttribute";
-export { Template } from "./Template";
+export { TemplateAttribute } from "./TemplateAttribute";
 export { TypeAttribute } from "./TypeAttribute";

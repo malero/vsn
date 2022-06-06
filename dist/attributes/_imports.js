@@ -1,10 +1,12 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.TypeAttribute = exports.Template = exports.StyleAttribute = exports.StandardAttribute = exports.SetAttribute = exports.ScriptAttribute = exports.ScopeChange = exports.ScopeAttribute = exports.RootAttribute = exports.Referenced = exports.On = exports.Name = exports.ModelAttribute = exports.ListItemModel = exports.ListItem = exports.List = exports.LazyAttribute = exports.KeyUp = exports.KeyDown = exports.JSONAttribute = exports.If = exports.Format = exports.Exec = exports.DisableIf = exports.ControllerAttribute = exports.Bind = exports.AddClassIf = void 0;
+exports.TypeAttribute = exports.TemplateAttribute = exports.StyleAttribute = exports.StandardAttribute = exports.SetAttribute = exports.ScriptAttribute = exports.ScopeChange = exports.ScopeAttribute = exports.RootAttribute = exports.Referenced = exports.On = exports.Name = exports.ModelAttribute = exports.ListItemModel = exports.ListItem = exports.List = exports.LazyAttribute = exports.KeyUp = exports.KeyDown = exports.JSONAttribute = exports.If = exports.Format = exports.Exec = exports.DisableIf = exports.ControllerAttribute = exports.ComponentAttribute = exports.Bind = exports.AddClassIf = void 0;
 var AddClassIf_1 = require("./AddClassIf");
 Object.defineProperty(exports, "AddClassIf", { enumerable: true, get: function () { return AddClassIf_1.AddClassIf; } });
 var Bind_1 = require("./Bind");
 Object.defineProperty(exports, "Bind", { enumerable: true, get: function () { return Bind_1.Bind; } });
+var ComponentAttribute_1 = require("./ComponentAttribute");
+Object.defineProperty(exports, "ComponentAttribute", { enumerable: true, get: function () { return ComponentAttribute_1.ComponentAttribute; } });
 var ControllerAttribute_1 = require("./ControllerAttribute");
 Object.defineProperty(exports, "ControllerAttribute", { enumerable: true, get: function () { return ControllerAttribute_1.ControllerAttribute; } });
 var DisableIf_1 = require("./DisableIf");
@@ -51,8 +53,8 @@ var StandardAttribute_1 = require("./StandardAttribute");
 Object.defineProperty(exports, "StandardAttribute", { enumerable: true, get: function () { return StandardAttribute_1.StandardAttribute; } });
 var StyleAttribute_1 = require("./StyleAttribute");
 Object.defineProperty(exports, "StyleAttribute", { enumerable: true, get: function () { return StyleAttribute_1.StyleAttribute; } });
-var Template_1 = require("./Template");
-Object.defineProperty(exports, "Template", { enumerable: true, get: function () { return Template_1.Template; } });
+var TemplateAttribute_1 = require("./TemplateAttribute");
+Object.defineProperty(exports, "TemplateAttribute", { enumerable: true, get: function () { return TemplateAttribute_1.TemplateAttribute; } });
 var TypeAttribute_1 = require("./TypeAttribute");
 Object.defineProperty(exports, "TypeAttribute", { enumerable: true, get: function () { return TypeAttribute_1.TypeAttribute; } });
 //# sourceMappingURL=_imports.js.map

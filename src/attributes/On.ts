@@ -20,6 +20,7 @@ export abstract class On extends Attribute {
 
     public async compile() {
         const code: string = this.getAttributeValue();
+        console.log(`Compiling ${this.getAttributeBinding()} with ${code}`);
         this.handler = new Tree(code);
         await this.handler.prepare(this.tag.scope, this.tag.dom, this.tag);
         await super.compile();

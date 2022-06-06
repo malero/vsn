@@ -2,12 +2,14 @@ import { DOM } from "./DOM";
 import { Registry } from "./Registry";
 import { Configuration } from "./Configuration";
 import { EventDispatcher } from "./EventDispatcher";
+import './custom-elements';
 export declare class Vision extends EventDispatcher {
     protected static _instance: Vision;
     protected _dom?: DOM;
     readonly registry: Registry;
     readonly config: Configuration;
     constructor();
+    protected defineComponent(name: any, cls: any): void;
     get dom(): DOM;
     exec(code: string): Promise<any>;
     setup(): Promise<void>;

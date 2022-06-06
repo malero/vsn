@@ -9,6 +9,7 @@ import {EventDispatcher} from "./EventDispatcher";
 import {DynamicScopeData} from "./Scope/DynamicScopeData";
 import {Controller} from "./Controller";
 import {VERSION} from "./version";
+import './custom-elements';
 
 export class Vision extends EventDispatcher {
     protected static _instance: Vision;
@@ -18,6 +19,7 @@ export class Vision extends EventDispatcher {
 
     constructor() {
         super();
+        Registry.instance.components.on('register', this.defineComponent, this);
         if (VisionHelper.document) {
             document.addEventListener(
                 "DOMContentLoaded",
@@ -42,6 +44,10 @@ export class Vision extends EventDispatcher {
             window['$'] = Query;
             VisionHelper.window.dispatchEvent(new Event('vsn'));
         }
+    }
+
+    protected defineComponent(name, cls) {
+        customElements.define(name, cls);
     }
 
     public get dom(): DOM {

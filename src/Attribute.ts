@@ -19,11 +19,16 @@ export abstract class Attribute extends EventDispatcher {
 
     constructor(
         public readonly tag: Tag,
-        public readonly attributeName: string
+        public readonly attributeName: string,
+        public readonly slot?: Tag
     ) {
         super();
         this.configure();
         if (VisionHelper.window) VisionHelper.window['Attributes'].push(this);
+    }
+
+    public get origin(): Tag {
+        return this.slot || this.tag;
     }
 
     public get state(): AttributeState {
@@ -54,15 +59,15 @@ export abstract class Attribute extends EventDispatcher {
     };
 
     public getAttributeValue(fallback: any = null) {
-        return this.tag.getRawAttributeValue(this.attributeName, fallback);
+        return this.origin.getRawAttributeValue(this.attributeName, fallback);
     }
 
     public getAttributeBinding(fallback: any = null): string {
-        return this.tag.getAttributeBinding(this.attributeName) || fallback;
+        return this.origin.getAttributeBinding(this.attributeName) || fallback;
     }
 
     public getAttributeModifiers(fallback: any = []): string[] {
-        const modifiers = this.tag.getAttributeModifiers(this.attributeName);
+        const modifiers = this.origin.getAttributeModifiers(this.attributeName);
         return modifiers.length && modifiers || fallback;
     }
 
@@ -73,11 +78,17 @@ export abstract class Attribute extends EventDispatcher {
     public mutate(mutation: MutationRecord): void {}
 
     public set value(value: string) {
-        this.tag.element.setAttribute(this.attributeName, value);
+        this.origin.element.setAttribute(this.attributeName, value);
     }
 
     public get value(): string {
-        return this.tag.element.getAttribute(this.attributeName) || '';
+        return this.origin.element.getAttribute(this.attributeName) || '';
+    }
+
+    public async apply(fnc: Function) {
+        for (const element of this.origin.delegates) {
+            await fnc(element);
+        }
     }
 
     private setState(state: AttributeState) {
@@ -90,7 +101,7 @@ export abstract class Attribute extends EventDispatcher {
         });
     }
 
-    public static create(tag: Tag, attributeName: string, cls: any): Attribute {
-        return new cls(tag, attributeName);
+    public static create(tag: Tag, attributeName: string, cls: any, slot?: Tag): Attribute {
+        return new cls(tag, attributeName, slot);
     }
 }

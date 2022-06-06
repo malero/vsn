@@ -72,12 +72,14 @@ var Query_1 = require("./Query");
 var EventDispatcher_1 = require("./EventDispatcher");
 var DynamicScopeData_1 = require("./Scope/DynamicScopeData");
 var version_1 = require("./version");
+require("./custom-elements");
 var Vision = /** @class */ (function (_super) {
     __extends(Vision, _super);
     function Vision() {
         var _this = _super.call(this) || this;
         _this.registry = Registry_1.Registry.instance;
         _this.config = Configuration_1.Configuration.instance;
+        Registry_1.Registry.instance.components.on('register', _this.defineComponent, _this);
         if (VisionHelper_1.VisionHelper.document) {
             document.addEventListener("DOMContentLoaded", _this.setup.bind(_this));
         }
@@ -101,6 +103,9 @@ var Vision = /** @class */ (function (_super) {
         }
         return _this;
     }
+    Vision.prototype.defineComponent = function (name, cls) {
+        customElements.define(name, cls);
+    };
     Object.defineProperty(Vision.prototype, "dom", {
         get: function () {
             return this._dom;

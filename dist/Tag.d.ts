@@ -1,5 +1,5 @@
 import { Scope } from "./Scope";
-import { Attribute } from "./Attribute";
+import { Attribute, AttributeState } from "./Attribute";
 import { DOM } from "./DOM";
 import { Controller } from "./Controller";
 import { StandardAttribute } from "./attributes/StandardAttribute";
@@ -35,6 +35,7 @@ export declare class Tag extends DOMObject {
     get uniqueScope(): boolean;
     constructor(element: HTMLElement, dom: DOM, ...props: any[]);
     protected onAttributeStateChange(event: any): void;
+    getAttributesWithState(state: AttributeState): Attribute[];
     get nonDeferredAttributes(): Attribute[];
     get style(): CSSStyleDeclaration;
     get computedStyle(): CSSStyleDeclaration;
@@ -79,13 +80,14 @@ export declare class Tag extends DOMObject {
     getRawAttributeValue(key: string, fallback?: any): any;
     hasRawAttribute(mod: string): boolean;
     getParsedAttributeValue(key: string, index?: number, fallback?: any): any;
+    getTagsToBuild(): Promise<import("./Tag/List").TagList | this[]>;
     buildAttributes(): Promise<void>;
     compileAttributes(): Promise<void>;
     setupAttributes(): Promise<void>;
     extractAttributes(): Promise<void>;
     connectAttributes(): Promise<void>;
     inputMutation(e: any): void;
-    finalize(): void;
+    finalize(): Promise<void>;
     callOnWrapped(method: any, ...args: any[]): boolean;
     protected handleEvent(eventType: string, e: any): void;
     hasModifier(attribute: string, modifier: string): boolean;
