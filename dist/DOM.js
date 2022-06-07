@@ -428,25 +428,15 @@ var DOM = /** @class */ (function (_super) {
                         _l++;
                         return [3 /*break*/, 23];
                     case 26:
-                        _m = 0, newTags_7 = newTags;
-                        _o.label = 27;
-                    case 27:
-                        if (!(_m < newTags_7.length)) return [3 /*break*/, 30];
-                        tag = newTags_7[_m];
-                        this.observer.observe(tag.element, {
-                            attributes: true,
-                            characterData: true,
-                            childList: true,
-                            subtree: true
-                        });
-                        return [4 /*yield*/, ClassNode_1.ClassNode.checkForClassChanges(tag.element, this, tag)];
-                    case 28:
-                        _o.sent();
-                        _o.label = 29;
-                    case 29:
-                        _m++;
-                        return [3 /*break*/, 27];
-                    case 30:
+                        for (_m = 0, newTags_7 = newTags; _m < newTags_7.length; _m++) {
+                            tag = newTags_7[_m];
+                            this.observer.observe(tag.element, {
+                                attributes: true,
+                                characterData: true,
+                                childList: true,
+                                subtree: true
+                            });
+                        }
                         if (isRoot) {
                             this._built = true;
                             this.dispatch('builtRoot');

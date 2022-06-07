@@ -102,7 +102,7 @@ class .product-firearm-option {
         log(@data-type, 'filter', value);
     }
 
-    class > input {
+    class input {
         func construct() {
             log('construct');
         }

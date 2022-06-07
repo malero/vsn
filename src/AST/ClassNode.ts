@@ -147,9 +147,11 @@ export class ClassNode extends Node implements TreeNode {
         if (element.id)
             localSelectors.push(`#${element.id}`);
 
-        for (const selector in localSelectors) {
-            if (ClassNode.classParents[selector])
-                fullSelectors.push(...ClassNode.classParents[selector]);
+        for (const selector of localSelectors) {
+            const parentSelectors = ClassNode.classParents[selector];
+            if (parentSelectors) {
+                fullSelectors.push(...parentSelectors.filter(s => !fullSelectors.includes(s)));
+            }
         }
 
         if (!tag) {

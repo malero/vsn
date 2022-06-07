@@ -270,29 +270,32 @@ var ClassNode = /** @class */ (function (_super) {
     ClassNode.checkForClassChanges = function (element, dom, tag) {
         if (tag === void 0) { tag = null; }
         return __awaiter(this, void 0, void 0, function () {
-            var localSelectors, fullSelectors, selector, _i, fullSelectors_1, selector, isPrepped, elements, inElements, changed, _a, _b, childSelector, _c, _d, childElement;
-            return __generator(this, function (_e) {
-                switch (_e.label) {
+            var localSelectors, fullSelectors, _i, localSelectors_1, selector, parentSelectors, _a, fullSelectors_1, selector, isPrepped, elements, inElements, changed, _b, _c, childSelector, _d, _e, childElement;
+            return __generator(this, function (_f) {
+                switch (_f.label) {
                     case 0:
                         localSelectors = __spreadArray([element.tagName.toLowerCase()], Array.from(element.classList).map(function (c) { return "." + c; }));
                         fullSelectors = __spreadArray([], ClassNode.getClassesForElement(element));
                         if (element.id)
                             localSelectors.push("#" + element.id);
-                        for (selector in localSelectors) {
-                            if (ClassNode.classParents[selector])
-                                fullSelectors.push.apply(fullSelectors, ClassNode.classParents[selector]);
+                        for (_i = 0, localSelectors_1 = localSelectors; _i < localSelectors_1.length; _i++) {
+                            selector = localSelectors_1[_i];
+                            parentSelectors = ClassNode.classParents[selector];
+                            if (parentSelectors) {
+                                fullSelectors.push.apply(fullSelectors, parentSelectors.filter(function (s) { return !fullSelectors.includes(s); }));
+                            }
                         }
                         if (!!tag) return [3 /*break*/, 2];
                         return [4 /*yield*/, dom.getTagForElement(element, true)];
                     case 1:
-                        tag = _e.sent();
-                        _e.label = 2;
+                        tag = _f.sent();
+                        _f.label = 2;
                     case 2:
-                        _i = 0, fullSelectors_1 = fullSelectors;
-                        _e.label = 3;
+                        _a = 0, fullSelectors_1 = fullSelectors;
+                        _f.label = 3;
                     case 3:
-                        if (!(_i < fullSelectors_1.length)) return [3 /*break*/, 14];
-                        selector = fullSelectors_1[_i];
+                        if (!(_a < fullSelectors_1.length)) return [3 /*break*/, 14];
+                        selector = fullSelectors_1[_a];
                         isPrepped = ClassNode.getClassesForElement(element).includes(selector);
                         elements = Array.from(dom.querySelectorAll(selector));
                         inElements = elements.includes(element);
@@ -300,40 +303,40 @@ var ClassNode = /** @class */ (function (_super) {
                         if (!(inElements && !isPrepped)) return [3 /*break*/, 5];
                         return [4 /*yield*/, ClassNode.addElementClass(selector, element, dom, tag)];
                     case 4:
-                        _e.sent();
+                        _f.sent();
                         changed = true;
                         return [3 /*break*/, 7];
                     case 5:
                         if (!(!inElements && isPrepped)) return [3 /*break*/, 7];
                         return [4 /*yield*/, ClassNode.removeElementClass(selector, element, dom, tag)];
                     case 6:
-                        _e.sent();
+                        _f.sent();
                         changed = true;
-                        _e.label = 7;
+                        _f.label = 7;
                     case 7:
                         if (!(changed && ClassNode.classChildren[selector].length > 0)) return [3 /*break*/, 13];
-                        _a = 0, _b = ClassNode.classChildren[selector];
-                        _e.label = 8;
+                        _b = 0, _c = ClassNode.classChildren[selector];
+                        _f.label = 8;
                     case 8:
-                        if (!(_a < _b.length)) return [3 /*break*/, 13];
-                        childSelector = _b[_a];
-                        _c = 0, _d = Array.from(dom.querySelectorAll(childSelector, tag));
-                        _e.label = 9;
+                        if (!(_b < _c.length)) return [3 /*break*/, 13];
+                        childSelector = _c[_b];
+                        _d = 0, _e = Array.from(dom.querySelectorAll(childSelector, tag));
+                        _f.label = 9;
                     case 9:
-                        if (!(_c < _d.length)) return [3 /*break*/, 12];
-                        childElement = _d[_c];
+                        if (!(_d < _e.length)) return [3 /*break*/, 12];
+                        childElement = _e[_d];
                         return [4 /*yield*/, ClassNode.checkForClassChanges(childElement, dom, childElement[Tag_1.Tag.TaggedVariable] || null)];
                     case 10:
-                        _e.sent();
-                        _e.label = 11;
+                        _f.sent();
+                        _f.label = 11;
                     case 11:
-                        _c++;
+                        _d++;
                         return [3 /*break*/, 9];
                     case 12:
-                        _a++;
+                        _b++;
                         return [3 /*break*/, 8];
                     case 13:
-                        _i++;
+                        _a++;
                         return [3 /*break*/, 3];
                     case 14: return [2 /*return*/];
                 }

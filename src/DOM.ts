@@ -238,7 +238,6 @@ export class DOM extends EventDispatcher {
                 childList: true,
                 subtree: true
             });
-            await ClassNode.checkForClassChanges(tag.element, this, tag);
         }
 
         if (isRoot) {
