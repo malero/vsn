@@ -23,7 +23,6 @@ var Component = /** @class */ (function (_super) {
     function Component() {
         var _this = _super.call(this) || this;
         Object.setPrototypeOf(_this, Component.prototype);
-        console.log('huh');
         _this.shadow = _this.attachShadow({ mode: 'open' });
         var templateId = _this.getAttribute('template');
         var template;

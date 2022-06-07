@@ -7,7 +7,6 @@ export class Component extends HTMLElement {
     constructor() {
         super();
         Object.setPrototypeOf(this, Component.prototype);
-        console.log('huh');
 
         this.shadow = this.attachShadow({mode: 'open'});
         const templateId = this.getAttribute('template');
