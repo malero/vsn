@@ -71,7 +71,7 @@ var Name = /** @class */ (function (_super) {
             return __generator(this, function (_a) {
                 parentScope = this.tag.scope.parentScope;
                 if (parentScope) {
-                    parentScope.set(this.tag.parsedAttributes['vsn-name'][1], this.tag.scope);
+                    parentScope.set(this.getAttributeValue(), this.tag.scope);
                 }
                 return [2 /*return*/];
             });

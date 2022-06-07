@@ -10,7 +10,7 @@ export class Name extends Attribute {
     public async setup() {
         const parentScope: Scope = this.tag.scope.parentScope;
         if (parentScope) {
-            parentScope.set(this.tag.parsedAttributes['vsn-name'][1], this.tag.scope);
+            parentScope.set(this.getAttributeValue(), this.tag.scope);
         }
     }
 }
