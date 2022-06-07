@@ -78,16 +78,21 @@ var ComponentAttribute = /** @class */ (function (_super) {
                     case 1:
                         _a.sent();
                         clsName = this.getAttributeValue();
-                        cls = Component_1.Component;
+                        cls = void 0;
                         if (!clsName) return [3 /*break*/, 3];
                         return [4 /*yield*/, Registry_1.Registry.instance.components.get(clsName)];
                     case 2:
                         cls = _a.sent();
-                        if (!cls) {
-                            throw new Error("Component " + clsName + " not found");
-                        }
                         _a.label = 3;
                     case 3:
+                        if (!cls)
+                            cls = /** @class */ (function (_super) {
+                                __extends(cls, _super);
+                                function cls() {
+                                    return _super !== null && _super.apply(this, arguments) || this;
+                                }
+                                return cls;
+                            }(Component_1.Component));
                         Registry_1.Registry.instance.components.register(name, cls);
                         _a.label = 4;
                     case 4: return [2 /*return*/];

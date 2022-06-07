@@ -11,13 +11,12 @@ export class ComponentAttribute extends TemplateAttribute {
         if (!Registry.instance.components.has(name)) {
             await super.extract();
             const clsName = this.getAttributeValue();
-            let cls = Component;
+            let cls;
             if (clsName) {
                 cls = await Registry.instance.components.get(clsName);
-                if (!cls) {
-                    throw new Error(`Component ${clsName} not found`);
-                }
             }
+            if (!cls)
+                cls = class extends Component {};
             Registry.instance.components.register(name, cls);
         }
     }
