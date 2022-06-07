@@ -91,7 +91,7 @@ export abstract class Attribute extends EventDispatcher {
         }
     }
 
-    private setState(state: AttributeState) {
+    protected setState(state: AttributeState) {
         const previousState = this._state;
         this._state = state;
         this.dispatch('state', {

@@ -208,7 +208,11 @@ var DOM = /** @class */ (function (_super) {
                 return this.querySelectorElement(element.parentElement, rest);
             }
         }
-        return element.querySelectorAll(q);
+        var matches = element.querySelectorAll(q);
+        if (matches.length === 0 && element.shadowRoot) {
+            matches = element.shadowRoot.querySelectorAll(q);
+        }
+        return matches;
     };
     DOM.prototype.querySelector = function (q) {
         return this.rootElement.querySelector(q);

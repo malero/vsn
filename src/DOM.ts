@@ -128,7 +128,12 @@ export class DOM extends EventDispatcher {
                 return this.querySelectorElement(element.parentElement, rest);
             }
         }
-        return element.querySelectorAll(q);
+        let matches = element.querySelectorAll(q);
+
+        if (matches.length === 0 && (element as HTMLElement).shadowRoot) {
+            matches = (element as HTMLElement).shadowRoot.querySelectorAll(q);
+        }
+        return matches;
     }
 
     public querySelector(q: string): Element {
