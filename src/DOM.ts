@@ -102,6 +102,21 @@ export class DOM extends EventDispatcher {
         return tag.element.closest(q);
     }
 
+    public querySelectPath(path: string[], element: HTMLElement = null): HTMLElement[] {
+        const current = path.shift();
+        if (!current) return [];
+        const elements = Array.from(element ? this.querySelectorElement(element, current) : this.querySelectorAll(current));
+        if (path.length > 0) {
+            const result = [];
+            for (const _element of elements) {
+                result.push(...this.querySelectPath([...path], _element as HTMLElement));
+            }
+            return result;
+        }
+
+        return elements as HTMLElement[];
+    }
+
     public querySelectorAll(q: string, tag: Tag = null): NodeList | HTMLElement[] {
         const element: HTMLElement | Document = tag && !q.startsWith('#') ? tag.element : this.rootElement;
         return this.querySelectorElement(element, q);

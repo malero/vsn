@@ -178,6 +178,22 @@ var DOM = /** @class */ (function (_super) {
         if (tag === void 0) { tag = null; }
         return tag.element.closest(q);
     };
+    DOM.prototype.querySelectPath = function (path, element) {
+        if (element === void 0) { element = null; }
+        var current = path.shift();
+        if (!current)
+            return [];
+        var elements = Array.from(element ? this.querySelectorElement(element, current) : this.querySelectorAll(current));
+        if (path.length > 0) {
+            var result = [];
+            for (var _i = 0, elements_1 = elements; _i < elements_1.length; _i++) {
+                var _element = elements_1[_i];
+                result.push.apply(result, this.querySelectPath(__spreadArray([], path), _element));
+            }
+            return result;
+        }
+        return elements;
+    };
     DOM.prototype.querySelectorAll = function (q, tag) {
         if (tag === void 0) { tag = null; }
         var element = tag && !q.startsWith('#') ? tag.element : this.rootElement;
@@ -454,14 +470,14 @@ var DOM = /** @class */ (function (_super) {
     DOM.prototype.getTagsForElements = function (elements, create) {
         if (create === void 0) { create = false; }
         return __awaiter(this, void 0, void 0, function () {
-            var tags, found, _i, elements_1, element, notFound, i, element, _a, notFound_1, element, _b, _c;
+            var tags, found, _i, elements_2, element, notFound, i, element, _a, notFound_1, element, _b, _c;
             return __generator(this, function (_d) {
                 switch (_d.label) {
                     case 0:
                         tags = new List_1.TagList();
                         found = [];
-                        for (_i = 0, elements_1 = elements; _i < elements_1.length; _i++) {
-                            element = elements_1[_i];
+                        for (_i = 0, elements_2 = elements; _i < elements_2.length; _i++) {
+                            element = elements_2[_i];
                             if (element[Tag_1.Tag.TaggedVariable]) {
                                 tags.push(element[Tag_1.Tag.TaggedVariable]);
                                 found.push(element);

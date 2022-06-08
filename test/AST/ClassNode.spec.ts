@@ -51,7 +51,6 @@ describe('ClassNode', () => {
         expect(t).toBeInstanceOf(TagList);
         expect(t.length).toBe(2);
         await t.all('.simple-construct.construct');
-        console.log('####### hmm?', await dom.exec('?(.simple-construct).a'));
         expect(await dom.exec('?(.simple-construct).a')).toEqual([15, 15]);
         await dom.exec('?(.simple-construct).test()');
         expect(await dom.exec('?(.simple-construct).a')).toEqual([16, 16]);
@@ -85,7 +84,7 @@ describe('ClassNode', () => {
     it("properly define a simple class with a parent", async () => {
         document.body.innerHTML = `
 <script type="text/vsn" vsn-script>
-class .product-firearm-option {
+class .option {
     func construct() {
         log('construct');
     }
@@ -132,20 +131,20 @@ class .product-firearm-option {
     }
 }
 </script>
-<div class="product-firearm-option">
-    <input data-type="firearm-type" />
+<div class="option">
+    <input data-type="normal" />
     <ul class="option-list">
-        <li data-type="rifle">Rifle</li>
-        <li data-type="pistol">Pistol</li>
-        <li data-type="shotgun">Shotgun</li>
+        <li data-type="test">Foo</li>
+        <li data-type="test">Bar</li>
+        <li data-type="test">Baz</li>
     </ul>
 </div>
-<div class="product-firearm-option">
-    <input data-type="model-type" />
+<div class="option">
+    <input data-type="reverse" />
     <ul class="option-list">
-        <li data-type="rifle">Glock</li>
-        <li data-type="pistol">Springfield Armory</li>
-        <li data-type="shotgun">Smith & Wesson</li>
+        <li data-type="tset">Oof</li>
+        <li data-type="tset">Rab</li>
+        <li data-type="tset">Zab</li>
     </ul>
 </div>
 `;

@@ -247,7 +247,14 @@ export class Tag extends DOMObject {
                     break;
                 }
 
-                parentElement = parentElement.parentElement as HTMLElement;
+                if (parentElement.parentElement) {
+                    parentElement = parentElement.parentElement as HTMLElement;
+                } else if (parentElement.assignedSlot) {
+                    parentElement = parentElement.assignedSlot.parentElement as HTMLElement;
+                } else {
+                    parentElement = null;
+                }
+
             }
 
             if (!foundParent && DOM.instance.root !== this)

@@ -23,20 +23,22 @@ export declare class ClassNode extends Node implements TreeNode {
     protected requiresPrep: boolean;
     readonly classScope: Scope;
     protected _fullSelector: string;
+    protected _parentSelector: string;
     constructor(selector: string, block: BlockNode);
     get fullSelector(): string;
     updateMeta(meta?: any): any;
     prepare(scope: Scope, dom: DOM, tag?: Tag, meta?: INodeMeta): Promise<void>;
-    findClassElements(dom: any): Promise<void>;
+    findClassElements(dom: DOM, tag?: Tag): Promise<void>;
     constructTag(tag: Tag, dom: DOM, hasConstruct?: boolean | null): Promise<void>;
     deconstructTag(tag: Tag, dom: DOM, hasDeconstruct?: boolean | null): Promise<void>;
     evaluate(scope: Scope, dom: DOM, tag?: Tag): Promise<any>;
     static parse(lastNode: any, token: any, tokens: Token[]): ClassNode;
+    getSelectorPath(): string[];
     static checkForClassChanges(element: HTMLElement, dom: DOM, tag?: Tag): Promise<void>;
     static getClassesForElement(element: HTMLElement): string[];
     static addPreparedClassToElement(element: HTMLElement, selector: string): void;
     static removePreparedClassFromElement(element: HTMLElement, selector: string): void;
-    static addElementClass(selector: string, element: HTMLElement, dom: DOM, tag?: Tag): Promise<void>;
+    static addElementClass(selector: string, element: HTMLElement, dom: DOM, tag?: Tag): Promise<Tag>;
     static removeElementClass(selector: string, element: HTMLElement, dom: DOM, tag?: Tag): Promise<void>;
     static isClass(cls: string): boolean;
 }

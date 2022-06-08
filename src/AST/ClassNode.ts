@@ -18,6 +18,7 @@ export class ClassNode extends Node implements TreeNode {
     protected requiresPrep: boolean = true;
     public readonly classScope: Scope = new Scope();
     protected _fullSelector: string;
+    protected _parentSelector: string;
 
     constructor(
         public readonly selector: string,
@@ -45,6 +46,7 @@ export class ClassNode extends Node implements TreeNode {
         // Only prepare once during the initial prep, all subsequent prepares are on tag class blocks
         if (initial) {
             if (meta['ClassNodeSelector']) {
+                this._parentSelector = meta['ClassNodeSelector'] as string;
                 ClassNode.classChildren[meta['ClassNodeSelector'] as string].push(this.selector);
                 meta['ClassNodeSelector'] = `${meta['ClassNodeSelector']} ${this.selector}`;
             } else {
@@ -76,14 +78,17 @@ export class ClassNode extends Node implements TreeNode {
         }
     }
 
-    public async findClassElements(dom) {
-        for (const element of Array.from(dom.querySelectorAll(this._fullSelector))) {
-            await ClassNode.addElementClass(this._fullSelector, element as HTMLElement, dom, element[Tag.TaggedVariable] || null);
+    public async findClassElements(dom: DOM, tag: Tag = null) {
+        const tags: Tag[] = [];
+        for (const element of Array.from(dom.querySelectorAll(this.selector, tag))) {
+            tags.push(await ClassNode.addElementClass(this._fullSelector, element as HTMLElement, dom, element[Tag.TaggedVariable] || null));
         }
         for (const childSelector of ClassNode.classChildren[this._fullSelector]) {
             const node =  ClassNode.classes[`${this._fullSelector} ${childSelector}`];
             if (!node) continue;
-            await node.findClassElements(dom);
+            for (const _tag of tags) {
+                await node.findClassElements(dom, _tag);
+            }
         }
     }
 
@@ -141,6 +146,16 @@ export class ClassNode extends Node implements TreeNode {
         return new ClassNode(selector, block);
     }
 
+    public getSelectorPath(): string[] {
+        const path: string[] = [this.selector];
+        let current = this._parentSelector;
+        while (current) {
+            path.push(ClassNode.classes[current].selector);
+            current = ClassNode.classes[current]._parentSelector;
+        }
+        return path.reverse();
+    }
+
     public static async checkForClassChanges(element: HTMLElement, dom: DOM, tag: Tag = null) {
         const localSelectors: string[] = [element.tagName.toLowerCase(), ...Array.from(element.classList).map(c => `.${c}`)];
         const fullSelectors: string[] = [...ClassNode.getClassesForElement(element)];
@@ -160,7 +175,8 @@ export class ClassNode extends Node implements TreeNode {
 
         for (const selector of fullSelectors) {
             const isPrepped = ClassNode.getClassesForElement(element).includes(selector);
-            const elements = Array.from(dom.querySelectorAll(selector));
+            const path = ClassNode.classes[selector]?.getSelectorPath();
+            const elements = dom.querySelectPath(path);
             const inElements = elements.includes(element);
             let changed: boolean = false;
 
@@ -210,6 +226,8 @@ export class ClassNode extends Node implements TreeNode {
         if (classNode) {
             await classNode.constructTag(tag, dom);
         }
+
+        return tag;
     }
 
     public static async removeElementClass(selector: string, element: HTMLElement, dom: DOM, tag: Tag = null) {

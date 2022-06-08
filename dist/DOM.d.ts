@@ -31,6 +31,7 @@ export declare class DOM extends EventDispatcher {
     getFromTag(tag: Tag, selector: string, create?: boolean): Promise<TagList>;
     registerElementInRoot(tag: Tag): void;
     querySelectorClosest(q: string, tag?: Tag): HTMLElement;
+    querySelectPath(path: string[], element?: HTMLElement): HTMLElement[];
     querySelectorAll(q: string, tag?: Tag): NodeList | HTMLElement[];
     querySelectorElement(element: HTMLElement | Document, q: string): NodeList | HTMLElement[];
     querySelector(q: string): Element;

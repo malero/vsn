@@ -99,6 +99,7 @@ var ClassNode = /** @class */ (function (_super) {
                         meta['ClassNodePrepare'] = initial;
                         if (!initial) return [3 /*break*/, 5];
                         if (meta['ClassNodeSelector']) {
+                            this._parentSelector = meta['ClassNodeSelector'];
                             ClassNode.classChildren[meta['ClassNodeSelector']].push(this.selector);
                             meta['ClassNodeSelector'] = meta['ClassNodeSelector'] + " " + this.selector;
                         }
@@ -138,41 +139,52 @@ var ClassNode = /** @class */ (function (_super) {
             });
         });
     };
-    ClassNode.prototype.findClassElements = function (dom) {
+    ClassNode.prototype.findClassElements = function (dom, tag) {
+        if (tag === void 0) { tag = null; }
         return __awaiter(this, void 0, void 0, function () {
-            var _i, _a, element, _b, _c, childSelector, node;
-            return __generator(this, function (_d) {
-                switch (_d.label) {
+            var tags, _i, _a, element, _b, _c, _d, _e, childSelector, node, _f, tags_1, _tag;
+            return __generator(this, function (_g) {
+                switch (_g.label) {
                     case 0:
-                        _i = 0, _a = Array.from(dom.querySelectorAll(this._fullSelector));
-                        _d.label = 1;
+                        tags = [];
+                        _i = 0, _a = Array.from(dom.querySelectorAll(this.selector, tag));
+                        _g.label = 1;
                     case 1:
                         if (!(_i < _a.length)) return [3 /*break*/, 4];
                         element = _a[_i];
+                        _c = (_b = tags).push;
                         return [4 /*yield*/, ClassNode.addElementClass(this._fullSelector, element, dom, element[Tag_1.Tag.TaggedVariable] || null)];
                     case 2:
-                        _d.sent();
-                        _d.label = 3;
+                        _c.apply(_b, [_g.sent()]);
+                        _g.label = 3;
                     case 3:
                         _i++;
                         return [3 /*break*/, 1];
                     case 4:
-                        _b = 0, _c = ClassNode.classChildren[this._fullSelector];
-                        _d.label = 5;
+                        _d = 0, _e = ClassNode.classChildren[this._fullSelector];
+                        _g.label = 5;
                     case 5:
-                        if (!(_b < _c.length)) return [3 /*break*/, 8];
-                        childSelector = _c[_b];
+                        if (!(_d < _e.length)) return [3 /*break*/, 10];
+                        childSelector = _e[_d];
                         node = ClassNode.classes[this._fullSelector + " " + childSelector];
                         if (!node)
-                            return [3 /*break*/, 7];
-                        return [4 /*yield*/, node.findClassElements(dom)];
+                            return [3 /*break*/, 9];
+                        _f = 0, tags_1 = tags;
+                        _g.label = 6;
                     case 6:
-                        _d.sent();
-                        _d.label = 7;
+                        if (!(_f < tags_1.length)) return [3 /*break*/, 9];
+                        _tag = tags_1[_f];
+                        return [4 /*yield*/, node.findClassElements(dom, _tag)];
                     case 7:
-                        _b++;
+                        _g.sent();
+                        _g.label = 8;
+                    case 8:
+                        _f++;
+                        return [3 /*break*/, 6];
+                    case 9:
+                        _d++;
                         return [3 /*break*/, 5];
-                    case 8: return [2 /*return*/];
+                    case 10: return [2 /*return*/];
                 }
             });
         });
@@ -267,12 +279,22 @@ var ClassNode = /** @class */ (function (_super) {
         var block = AST_1.Tree.processTokens(AST_1.Tree.getNextStatementTokens(tokens, true, true));
         return new ClassNode(selector, block);
     };
+    ClassNode.prototype.getSelectorPath = function () {
+        var path = [this.selector];
+        var current = this._parentSelector;
+        while (current) {
+            path.push(ClassNode.classes[current].selector);
+            current = ClassNode.classes[current]._parentSelector;
+        }
+        return path.reverse();
+    };
     ClassNode.checkForClassChanges = function (element, dom, tag) {
+        var _a;
         if (tag === void 0) { tag = null; }
         return __awaiter(this, void 0, void 0, function () {
-            var localSelectors, fullSelectors, _i, localSelectors_1, selector, parentSelectors, _a, fullSelectors_1, selector, isPrepped, elements, inElements, changed, _b, _c, childSelector, _d, _e, childElement;
-            return __generator(this, function (_f) {
-                switch (_f.label) {
+            var localSelectors, fullSelectors, _i, localSelectors_1, selector, parentSelectors, _b, fullSelectors_1, selector, isPrepped, path, elements, inElements, changed, _c, _d, childSelector, _e, _f, childElement;
+            return __generator(this, function (_g) {
+                switch (_g.label) {
                     case 0:
                         localSelectors = __spreadArray([element.tagName.toLowerCase()], Array.from(element.classList).map(function (c) { return "." + c; }));
                         fullSelectors = __spreadArray([], ClassNode.getClassesForElement(element));
@@ -288,55 +310,56 @@ var ClassNode = /** @class */ (function (_super) {
                         if (!!tag) return [3 /*break*/, 2];
                         return [4 /*yield*/, dom.getTagForElement(element, true)];
                     case 1:
-                        tag = _f.sent();
-                        _f.label = 2;
+                        tag = _g.sent();
+                        _g.label = 2;
                     case 2:
-                        _a = 0, fullSelectors_1 = fullSelectors;
-                        _f.label = 3;
+                        _b = 0, fullSelectors_1 = fullSelectors;
+                        _g.label = 3;
                     case 3:
-                        if (!(_a < fullSelectors_1.length)) return [3 /*break*/, 14];
-                        selector = fullSelectors_1[_a];
+                        if (!(_b < fullSelectors_1.length)) return [3 /*break*/, 14];
+                        selector = fullSelectors_1[_b];
                         isPrepped = ClassNode.getClassesForElement(element).includes(selector);
-                        elements = Array.from(dom.querySelectorAll(selector));
+                        path = (_a = ClassNode.classes[selector]) === null || _a === void 0 ? void 0 : _a.getSelectorPath();
+                        elements = dom.querySelectPath(path);
                         inElements = elements.includes(element);
                         changed = false;
                         if (!(inElements && !isPrepped)) return [3 /*break*/, 5];
                         return [4 /*yield*/, ClassNode.addElementClass(selector, element, dom, tag)];
                     case 4:
-                        _f.sent();
+                        _g.sent();
                         changed = true;
                         return [3 /*break*/, 7];
                     case 5:
                         if (!(!inElements && isPrepped)) return [3 /*break*/, 7];
                         return [4 /*yield*/, ClassNode.removeElementClass(selector, element, dom, tag)];
                     case 6:
-                        _f.sent();
+                        _g.sent();
                         changed = true;
-                        _f.label = 7;
+                        _g.label = 7;
                     case 7:
                         if (!(changed && ClassNode.classChildren[selector].length > 0)) return [3 /*break*/, 13];
-                        _b = 0, _c = ClassNode.classChildren[selector];
-                        _f.label = 8;
+                        _c = 0, _d = ClassNode.classChildren[selector];
+                        _g.label = 8;
                     case 8:
-                        if (!(_b < _c.length)) return [3 /*break*/, 13];
-                        childSelector = _c[_b];
-                        _d = 0, _e = Array.from(dom.querySelectorAll(childSelector, tag));
-                        _f.label = 9;
+                        if (!(_c < _d.length)) return [3 /*break*/, 13];
+                        childSelector = _d[_c];
+                        _e = 0, _f = Array.from(dom.querySelectorAll(childSelector, tag));
+                        _g.label = 9;
                     case 9:
-                        if (!(_d < _e.length)) return [3 /*break*/, 12];
-                        childElement = _e[_d];
+                        if (!(_e < _f.length)) return [3 /*break*/, 12];
+                        childElement = _f[_e];
                         return [4 /*yield*/, ClassNode.checkForClassChanges(childElement, dom, childElement[Tag_1.Tag.TaggedVariable] || null)];
                     case 10:
-                        _f.sent();
-                        _f.label = 11;
+                        _g.sent();
+                        _g.label = 11;
                     case 11:
-                        _d++;
+                        _e++;
                         return [3 /*break*/, 9];
                     case 12:
-                        _b++;
+                        _c++;
                         return [3 /*break*/, 8];
                     case 13:
-                        _a++;
+                        _b++;
                         return [3 /*break*/, 3];
                     case 14: return [2 /*return*/];
                 }
@@ -377,7 +400,7 @@ var ClassNode = /** @class */ (function (_super) {
                     case 3:
                         _a.sent();
                         _a.label = 4;
-                    case 4: return [2 /*return*/];
+                    case 4: return [2 /*return*/, tag];
                 }
             });
         });

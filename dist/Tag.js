@@ -344,7 +344,15 @@ var Tag = /** @class */ (function (_super) {
                         this.parentTag = parentElement[Tag.TaggedVariable];
                         break;
                     }
-                    parentElement = parentElement.parentElement;
+                    if (parentElement.parentElement) {
+                        parentElement = parentElement.parentElement;
+                    }
+                    else if (parentElement.assignedSlot) {
+                        parentElement = parentElement.assignedSlot.parentElement;
+                    }
+                    else {
+                        parentElement = null;
+                    }
                 }
                 if (!foundParent && DOM_1.DOM.instance.root !== this)
                     return DOM_1.DOM.instance.root;
