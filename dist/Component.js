@@ -32,6 +32,7 @@ var Component = /** @class */ (function (_super) {
         else {
             template = Registry_1.Registry.instance.templates.getSynchronous(_this.tagName.toLowerCase());
         }
+        _this.setAttribute('vsn-ref', '');
         _this.shadow.appendChild(template.content.cloneNode(true));
         DOM_1.DOM.instance.buildFrom(_this.shadow);
         return _this;

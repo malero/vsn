@@ -54,8 +54,10 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.ElementAttributeNode = void 0;
 var List_1 = require("../Tag/List");
 var Node_1 = require("./Node");
+var ElementQueryNode_1 = require("./ElementQueryNode");
 var LiteralNode_1 = require("./LiteralNode");
 var DOMObject_1 = require("../DOM/DOMObject");
+var IndexNode_1 = require("./IndexNode");
 var ElementAttributeNode = /** @class */ (function (_super) {
     __extends(ElementAttributeNode, _super);
     function ElementAttributeNode(elementRef, attr) {
@@ -90,25 +92,37 @@ var ElementAttributeNode = /** @class */ (function (_super) {
     ElementAttributeNode.prototype.evaluate = function (scope, dom, tag) {
         if (tag === void 0) { tag = null; }
         return __awaiter(this, void 0, void 0, function () {
-            var tags;
+            var tags, indexResult;
             var _this = this;
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
-                        if (!this.elementRef) return [3 /*break*/, 2];
+                        if (!(this.elementRef instanceof ElementQueryNode_1.ElementQueryNode)) return [3 /*break*/, 2];
                         return [4 /*yield*/, this.elementRef.evaluate(scope, dom, tag, true)];
                     case 1:
                         tags = _a.sent();
-                        return [3 /*break*/, 3];
+                        return [3 /*break*/, 5];
                     case 2:
+                        if (!(this.elementRef instanceof IndexNode_1.IndexNode)) return [3 /*break*/, 4];
+                        return [4 /*yield*/, this.elementRef.evaluate(scope, dom, tag, true)];
+                    case 3:
+                        indexResult = _a.sent();
+                        if (indexResult instanceof List_1.TagList) {
+                            tags = indexResult;
+                        }
+                        else {
+                            tags = new List_1.TagList(indexResult);
+                        }
+                        return [3 /*break*/, 5];
+                    case 4:
                         if (tag) {
                             tags = new List_1.TagList(tag);
                         }
                         else {
                             return [2 /*return*/];
                         }
-                        _a.label = 3;
-                    case 3:
+                        _a.label = 5;
+                    case 5:
                         if (tags.length === 1)
                             return [2 /*return*/, tags[0].scope.get("@" + this.attributeName)];
                         return [2 /*return*/, tags.map(function (tag) { return tag.scope.get("@" + _this.attributeName); })];
@@ -137,7 +151,7 @@ var ElementAttributeNode = /** @class */ (function (_super) {
                     case 3:
                         if (!(_i < tags_1.length)) return [3 /*break*/, 6];
                         t = tags_1[_i];
-                        return [4 /*yield*/, t.watchAttribute(this.attributeName)];
+                        return [4 /*yield*/, (t === null || t === void 0 ? void 0 : t.watchAttribute(this.attributeName))];
                     case 4:
                         _a.sent();
                         _a.label = 5;

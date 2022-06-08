@@ -18,6 +18,8 @@ export class Component extends HTMLElement {
             template = Registry.instance.templates.getSynchronous(this.tagName.toLowerCase());
         }
 
+        this.setAttribute('vsn-ref', '');
+
         this.shadow.appendChild(template.content.cloneNode(true));
         DOM.instance.buildFrom(this.shadow);
     }

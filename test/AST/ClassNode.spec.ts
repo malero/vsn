@@ -2,7 +2,6 @@ import {DOM} from "../../src/DOM";
 import {ClassNode} from "../../src/AST/ClassNode";
 import {Registry} from "../../src/Registry";
 import {TagList} from "../../src/Tag/List";
-import {Tag} from "../../src/Tag";
 
 
 describe('ClassNode', () => {

@@ -7,6 +7,7 @@ import {Node} from "./Node";
 import {ElementQueryNode} from "./ElementQueryNode";
 import {LiteralNode} from "./LiteralNode";
 import {DOMObject} from "../DOM/DOMObject";
+import {IndexNode} from "./IndexNode";
 
 export class ElementAttributeNode extends Node implements TreeNode {
     protected requiresPrep: boolean = true;
@@ -37,8 +38,15 @@ export class ElementAttributeNode extends Node implements TreeNode {
 
     async evaluate(scope: Scope, dom: DOM, tag: Tag = null) {
         let tags: TagList;
-        if (this.elementRef) {
+        if (this.elementRef instanceof ElementQueryNode) {
             tags = await this.elementRef.evaluate(scope, dom, tag, true);
+        } else if (this.elementRef as any instanceof IndexNode) {
+            const indexResult = await (this.elementRef as any).evaluate(scope, dom, tag, true);
+            if (indexResult instanceof TagList) {
+                tags = indexResult;
+            } else {
+                tags = new TagList(indexResult);
+            }
         } else if (tag) {
             tags = new TagList(tag)
         } else {
@@ -57,7 +65,7 @@ export class ElementAttributeNode extends Node implements TreeNode {
             const tags: any = await this.elementRef.evaluate(scope, dom, tag, true);
             if (tags instanceof TagList) {
                 for (const t of tags)
-                    await t.watchAttribute(this.attributeName);
+                    await t?.watchAttribute(this.attributeName);
             } else if (tags instanceof DOMObject) {
                 await (tags as DOMObject).watchAttribute(this.attributeName);
             }
