@@ -14,6 +14,8 @@ export declare class ScopeDataAbstract extends EventDispatcher {
     getKeys(...tags: string[]): string[];
     setData(data: IScopeData): void;
     getData(...tags: string[]): IScopeData;
+    get(key: string): any;
+    set(key: string, value: any): void;
     getProperties(): string[];
     getProperty(name: string, create?: boolean): Property;
     bindToProperties(event: string, properties: string[], callback: (...args: any[]) => any): void;

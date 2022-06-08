@@ -18,11 +18,12 @@ export class ListItem extends Attribute {
         this._list = this.tag.findAncestorByAttribute('vsn-list');
         if (!this._list)
             throw Error(ListItem.ERROR_NO_PARENT);
-
-        this.tag.scope.set(this.listItemName, this.tag.scope);
         const modelName: string = (await this.getList()).listItemModel;
-        const cls = await Registry.instance.controllers.get(modelName);
-        this.instantiateModel(cls);
+        if (modelName) {
+            const cls = await Registry.instance.models.get(modelName);
+            this.instantiateModel(cls);
+        }
+        this.tag.scope.set(this.listItemName, this.tag.scope);
         await super.setup();
     }
 

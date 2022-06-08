@@ -59,6 +59,7 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.List = void 0;
 var Attribute_1 = require("../Attribute");
+var Tag_1 = require("../Tag");
 var WrappedArray_1 = require("../Scope/WrappedArray");
 var AST_1 = require("../AST");
 var ElementHelper_1 = require("../helpers/ElementHelper");
@@ -227,7 +228,7 @@ var List = /** @class */ (function (_super) {
     });
     Object.defineProperty(List.prototype, "listItemModel", {
         get: function () {
-            return this.tag.getRawAttributeValue('vsn-list-item-model', 'Object');
+            return this.tag.getRawAttributeValue('vsn-list-item-model');
         },
         enumerable: false,
         configurable: true
@@ -256,6 +257,7 @@ var List = /** @class */ (function (_super) {
                         else {
                             element = clone;
                         }
+                        delete element[Tag_1.Tag.TaggedVariable];
                         this.tag.element.appendChild(element);
                         return [4 /*yield*/, this.tag.dom.buildFrom(this.tag.element)];
                     case 1:
@@ -264,10 +266,13 @@ var List = /** @class */ (function (_super) {
                     case 2:
                         tag = _a.sent();
                         this.tags.push(tag);
-                        tag.scope.clear();
                         if (obj) {
-                            tag.unwrap();
-                            tag.wrap(obj);
+                            if (tag.scope.wrapped) {
+                                tag.scope.data.setData(obj);
+                            }
+                            else {
+                                tag.wrap(obj);
+                            }
                         }
                         this.tag.dispatch('add', obj);
                         return [2 /*return*/];

@@ -4,6 +4,8 @@ import {DOM} from "../../src/DOM";
 import {ListItem} from "../../src/attributes/ListItem";
 import {Registry} from "../../src/Registry";
 import {List} from "../../src/attributes/List";
+import {Model} from "../../src/Model";
+import {property} from "../../src/Scope/properties/Property";
 
 @Registry.controller('ListItemController')
 class ListItemController{
@@ -12,26 +14,19 @@ class ListItemController{
     do() {}
 }
 
-@Registry.controller('ListItemSpecTestItem')
-class ListItemSpecTestItem {
+@Registry.model('ListItemSpecTestItem')
+class ListItemSpecTestItem extends Model {
+    @property()
     test: number = null;
 
-    constructor(
-        public readonly v: number = 123,
-        test: number
-    ) {
-        this.test = test;
-    }
-
-    getValue() {
-        return this.v
-    }
+    @property()
+    v: number;
 }
 
 describe('ListItem', () => {
     it("vsn-list-item should find it's parent list or complain", async () => {
         document.body.innerHTML = `
-            <ul id="test"><li vsn-list-item:item="ListItemSpecTestItem" id="test-item"></li></ul>
+            <ul  id="test"><li vsn-list-item:item id="test-item"></li></ul>
         `;
         let errorThrown: boolean = false;
         try {
@@ -46,7 +41,7 @@ describe('ListItem', () => {
 
     it("vsn-list-item should find it's parent list", (done) => {
         document.body.innerHTML = `
-            <ul vsn-list:list id="test"><li vsn-list-item:item="ListItemSpecTestItem" id="test-item"></li></ul>
+            <ul vsn-list:list vsn-list-item-model="ListItemSpecTestItem" id="test"><li vsn-list-item:item id="test-item"></li></ul>
         `;
 
         const dom = new DOM(document);
@@ -63,8 +58,8 @@ describe('ListItem', () => {
     it("should properly wrap list item class", (done) => {
         document.body.innerHTML = `
             <div vsn-controller:controller="ListItemController">
-                <ul vsn-list:controller.items id="test">
-                    <li vsn-template vsn-list-item:item="ListItemSpecTestItem"></li>
+                <ul vsn-list:controller.items vsn-list-item-model="ListItemSpecTestItem" id="test">
+                    <li vsn-template vsn-list-item:item></li>
                 </ul>
             </div>
         `;
@@ -77,25 +72,24 @@ describe('ListItem', () => {
             list.on('add', () => {
                 const listItem = listAttr.tags[0];
 
-                expect(listItem.scope.wrapped instanceof ListItemSpecTestItem).toBeTrue();
-                expect(controller.items[0] instanceof ListItemSpecTestItem).toBeTrue();
-                expect(listItem.scope.wrapped === controller.items[0]).toBeTrue();
+                expect(listItem.scope.data instanceof ListItemSpecTestItem).toBeTrue();
                 expect(controller.items.length).toBe(1);
-                expect(controller.items.indexOf(listItem.scope.wrapped) > -1).toBeTrue();
-                expect(controller.items.indexOf(listItem.scope.wrapped) > -1).toBeTrue();
-                expect(listItem.scope.get('test')).toBe(1);
-                expect(listItem.scope.get('v')).toBe(555);
+                expect(controller.items[0] instanceof ListItemSpecTestItem).toBeTrue();
+
                 done();
             });
 
             listAttr.items.length = 0;
-            listAttr.items.push(new ListItemSpecTestItem(555, 1));
+            listAttr.items.push(new ListItemSpecTestItem({
+                test: 1,
+                v: 555
+            }));
         });
     });
 
     it("vsn-list-item should work with vsn-set", (done) => {
         document.body.innerHTML = `
-            <ul vsn-list:list id="test"><li vsn-list-item:item="ListItemSpecTestItem" id="test-item" vsn-set:item.testing|integer="1"></li></ul>
+            <ul vsn-list:list vsn-list-item-model="ListItemSpecTestItem" id="test"><li vsn-list-item:item id="test-item" vsn-set:item.testing|integer="1"></li></ul>
         `;
 
         const dom = new DOM(document);
@@ -111,7 +105,7 @@ describe('ListItem', () => {
 
     it("vsn-list-item should work with vsn-exec", (done) => {
         document.body.innerHTML = `
-            <ul vsn-list:list id="test"><li vsn-list-item:item="ListItemSpecTestItem" id="test-item" vsn-exec="item.testing = 1"></li></ul>
+            <ul vsn-list:list vsn-list-item-model="ListItemSpecTestItem" id="test"><li vsn-list-item:item id="test-item" vsn-exec="item.test = 1"></li></ul>
         `;
 
         const dom = new DOM(document);
@@ -119,8 +113,8 @@ describe('ListItem', () => {
             const list = await dom.getTagForElement(document.getElementById('test'));
             const listItem = await dom.getTagForElement(document.getElementById('test-item'));
             const listItemAttr: ListItem = await listItem.getAttribute('vsn-list-item') as ListItem;
-
-            expect(listItem.scope.get('testing')).toBe(1);
+            console.log('test keys', listItem.scope.keys);
+            expect(listItem.scope.get('test')).toBe(1);
             done();
         });
     });

@@ -14,10 +14,17 @@ var __extends = (this && this.__extends) || (function () {
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
     };
 })();
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Model = void 0;
 var MessageList_1 = require("./MessageList");
 var ScopeData_1 = require("./Scope/ScopeData");
+var Registry_1 = require("./Registry");
 var Model = /** @class */ (function (_super) {
     __extends(Model, _super);
     function Model(data) {
@@ -55,6 +62,9 @@ var Model = /** @class */ (function (_super) {
         enumerable: false,
         configurable: true
     });
+    Model = __decorate([
+        Registry_1.Registry.model('Model')
+    ], Model);
     return Model;
 }(ScopeData_1.ScopeData));
 exports.Model = Model;

@@ -35,6 +35,9 @@ var ScopeDataAbstract = /** @class */ (function (_super) {
     ScopeDataAbstract.prototype.createProperty = function (name, propertyType, config) {
         var _this = this;
         if (propertyType === void 0) { propertyType = Property_1.Property; }
+        if (this.hasProperty(name)) {
+            return this.getProperty(name);
+        }
         config = config || {};
         var instance = new propertyType(config.default, config), propDesc = Object.getOwnPropertyDescriptor(this, name);
         this['__' + name] = instance;
@@ -117,6 +120,12 @@ var ScopeDataAbstract = /** @class */ (function (_super) {
             data[key] = property.clean();
         }
         return data;
+    };
+    ScopeDataAbstract.prototype.get = function (key) {
+        return this[key];
+    };
+    ScopeDataAbstract.prototype.set = function (key, value) {
+        this[key] = value;
     };
     ScopeDataAbstract.prototype.getProperties = function () {
         return this.__properties__;

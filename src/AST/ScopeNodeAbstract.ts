@@ -14,7 +14,7 @@ export abstract class ScopeNodeAbstract extends Node implements TreeNode {
                 break;
             }
         }
-        if (type)
+        if (type && scope instanceof Scope)
             scope.setType(name, type);
     }
 }

@@ -82,16 +82,19 @@ var ListItem = /** @class */ (function (_super) {
                         this._list = this.tag.findAncestorByAttribute('vsn-list');
                         if (!this._list)
                             throw Error(ListItem_1.ERROR_NO_PARENT);
-                        this.tag.scope.set(this.listItemName, this.tag.scope);
                         return [4 /*yield*/, this.getList()];
                     case 1:
                         modelName = (_a.sent()).listItemModel;
-                        return [4 /*yield*/, Registry_1.Registry.instance.controllers.get(modelName)];
+                        if (!modelName) return [3 /*break*/, 3];
+                        return [4 /*yield*/, Registry_1.Registry.instance.models.get(modelName)];
                     case 2:
                         cls = _a.sent();
                         this.instantiateModel(cls);
-                        return [4 /*yield*/, _super.prototype.setup.call(this)];
+                        _a.label = 3;
                     case 3:
+                        this.tag.scope.set(this.listItemName, this.tag.scope);
+                        return [4 /*yield*/, _super.prototype.setup.call(this)];
+                    case 4:
                         _a.sent();
                         return [2 /*return*/];
                 }

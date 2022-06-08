@@ -53,6 +53,7 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ScopeNodeAbstract = void 0;
 var Node_1 = require("./Node");
+var Scope_1 = require("../Scope");
 var Registry_1 = require("../Registry");
 var ScopeNodeAbstract = /** @class */ (function (_super) {
     __extends(ScopeNodeAbstract, _super);
@@ -70,7 +71,7 @@ var ScopeNodeAbstract = /** @class */ (function (_super) {
                         break;
                     }
                 }
-                if (type)
+                if (type && scope instanceof Scope_1.Scope)
                     scope.setType(name, type);
                 return [2 /*return*/];
             });

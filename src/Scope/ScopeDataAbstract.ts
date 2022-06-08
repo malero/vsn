@@ -19,6 +19,9 @@ export class ScopeDataAbstract extends EventDispatcher {
     }
 
     createProperty(name: string, propertyType: any = Property, config?: IPropertyConfig): any {
+        if (this.hasProperty(name)) {
+            return this.getProperty(name);
+        }
         config = config || {};
         const instance = new propertyType(config.default, config),
             propDesc = Object.getOwnPropertyDescriptor(this, name);
@@ -96,6 +99,14 @@ export class ScopeDataAbstract extends EventDispatcher {
             data[key] = property.clean();
         }
         return data;
+    }
+
+    get(key: string) {
+        return this[key];
+    }
+
+    set(key: string, value: any) {
+        this[key] = value;
     }
 
     getProperties(): string[] {

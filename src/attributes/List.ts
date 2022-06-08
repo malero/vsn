@@ -102,7 +102,7 @@ export class List extends Attribute {
     }
 
     public get listItemModel(): string {
-        return this.tag.getRawAttributeValue('vsn-list-item-model', 'Object');
+        return this.tag.getRawAttributeValue('vsn-list-item-model');
     }
 
     public remove(item: any) {
@@ -126,17 +126,20 @@ export class List extends Attribute {
         } else {
             element = clone as HTMLElement;
         }
+        delete element[Tag.TaggedVariable];
 
         this.tag.element.appendChild(element);
 
         await this.tag.dom.buildFrom(this.tag.element);
         const tag: Tag = await this.tag.dom.getTagForElement(element);
         this.tags.push(tag);
-        tag.scope.clear();
 
         if (obj) {
-            tag.unwrap();
-            tag.wrap(obj);
+            if (tag.scope.wrapped) {
+                tag.scope.data.setData(obj);
+            } else {
+                tag.wrap(obj);
+            }
         }
 
         this.tag.dispatch('add', obj);

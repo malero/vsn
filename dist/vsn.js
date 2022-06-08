@@ -90,7 +90,7 @@ var Vision = /** @class */ (function (_super) {
         _this.registry.functions.register('warn', console.warn);
         _this.registry.functions.register('error', console.error);
         _this.registry.functions.register('info', console.info);
-        _this.registry.controllers.register('Object', Object);
+        _this.registry.models.register('Object', Object);
         _this.registry.controllers.register('WrappedArray', WrappedArray_1.WrappedArray);
         _this.registry.controllers.register('Data', DynamicScopeData_1.DynamicScopeData);
         if (VisionHelper_1.VisionHelper.window) {
