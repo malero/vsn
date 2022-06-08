@@ -27,7 +27,6 @@ var ScopeData = /** @class */ (function (_super) {
             (function (_self, name) {
                 if (!_self['__' + name + '__'])
                     return;
-                _self.__properties__.push(name);
                 var _property = _self['__' + name + '__'], propertyType = _property[0], config = _property[1] || {};
                 _self.createProperty(name, propertyType, config);
             })(_this, property);

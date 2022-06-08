@@ -9,7 +9,6 @@ export class ScopeData extends ScopeDataAbstract {
                 if(!_self['__'+name+'__'])
                     return;
 
-                _self.__properties__.push(name);
                 const _property = _self['__'+name+'__'],
                     propertyType = _property[0],
                     config = _property[1] || {};
