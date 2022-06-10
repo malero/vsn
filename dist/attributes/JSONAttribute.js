@@ -68,7 +68,7 @@ var JSONAttribute = /** @class */ (function (_super) {
     }
     JSONAttribute.prototype.extract = function () {
         return __awaiter(this, void 0, void 0, function () {
-            var scopeKey, ref, key, scope, json, property, data, newScope;
+            var scopeKey, ref, key, scope, json, data, newScope;
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
@@ -92,14 +92,15 @@ var JSONAttribute = /** @class */ (function (_super) {
                         else {
                             json = unescape(this.getAttributeValue());
                         }
-                        property = this.getAttributeBinding();
                         data = JSON.parse(json);
                         if (data && typeof data === 'object' && data.constructor === Object) {
                             newScope = new Scope_1.Scope(scope);
                             newScope.wrap(data);
                             scope.set(key, newScope);
                         }
-                        scope.set(key, data);
+                        else {
+                            scope.set(key, data);
+                        }
                         return [4 /*yield*/, _super.prototype.extract.call(this)];
                     case 3:
                         _a.sent();

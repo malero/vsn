@@ -52,7 +52,6 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Attribute = exports.AttributeState = void 0;
-var VisionHelper_1 = require("./helpers/VisionHelper");
 var EventDispatcher_1 = require("./EventDispatcher");
 var AttributeState;
 (function (AttributeState) {
@@ -72,8 +71,6 @@ var Attribute = /** @class */ (function (_super) {
         _this.attributeName = attributeName;
         _this.slot = slot;
         _this.configure();
-        if (VisionHelper_1.VisionHelper.window)
-            VisionHelper_1.VisionHelper.window['Attributes'].push(_this);
         return _this;
     }
     Object.defineProperty(Attribute.prototype, "origin", {

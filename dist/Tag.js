@@ -102,12 +102,10 @@ var Tag = /** @class */ (function (_super) {
         _this.onEventHandlers = {};
         _this.analyzeElementAttributes();
         _this._state = TagState.Instantiated;
-        if (VisionHelper_1.VisionHelper.window) {
-            if (!VisionHelper_1.VisionHelper.window['Tags']) {
-                VisionHelper_1.VisionHelper.window['Tags'] = [];
-                VisionHelper_1.VisionHelper.window['Attributes'] = [];
-            }
-            VisionHelper_1.VisionHelper.window['Tags'].push(_this);
+        if (_this.hasAttribute('slot')) {
+            _this.addEventHandler('slotted', [], function (e) {
+                console.log('slot change', e, _this.element.assignedSlot);
+            });
         }
         return _this;
     }
@@ -119,6 +117,10 @@ var Tag = /** @class */ (function (_super) {
         configurable: true
     });
     ;
+    Tag.prototype.slotted = function (slot) {
+        this.slot = slot;
+        console.log('i am slotted', slot);
+    };
     Tag.prototype.onAttributeStateChange = function (event) {
         if (event.previouseState === Attribute_1.AttributeState.Deferred) // @todo: what is this?
             this._nonDeferredAttributes.length = 0;

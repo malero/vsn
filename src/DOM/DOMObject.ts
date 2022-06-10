@@ -22,8 +22,9 @@ export abstract class DOMObject extends EventDispatcher {
         if (this.isSlot) {
             this.delegates.push(...(element as HTMLSlotElement).assignedNodes() as HTMLElement[]);
         }
-        if (element.assignedSlot)
+        if (element.assignedSlot) {
             this.slot = element.assignedSlot;
+        }
     }
 
     public get isSlot(): boolean {

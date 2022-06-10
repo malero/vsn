@@ -34,6 +34,7 @@ export declare class Tag extends DOMObject {
     protected inputTags: string[];
     get uniqueScope(): boolean;
     constructor(element: HTMLElement, dom: DOM, ...props: any[]);
+    slotted(slot: HTMLSlotElement): void;
     protected onAttributeStateChange(event: any): void;
     getAttributesWithState(state: AttributeState): Attribute[];
     get nonDeferredAttributes(): Attribute[];

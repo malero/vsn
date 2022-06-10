@@ -26,15 +26,15 @@ export class JSONAttribute extends Attribute {
         } else {
             json = unescape(this.getAttributeValue());
         }
-        const property = this.getAttributeBinding();
         const data = JSON.parse(json);
+
         if (data && typeof data === 'object' && data.constructor === Object) {
             const newScope = new Scope(scope);
             newScope.wrap(data);
             scope.set(key, newScope);
+        } else {
+            scope.set(key, data);
         }
-
-        scope.set(key, data);
         await super.extract();
     }
 }

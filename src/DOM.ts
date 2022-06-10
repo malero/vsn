@@ -189,42 +189,41 @@ export class DOM extends EventDispatcher {
         }
     }
 
-    async buildFrom(ele: any, isRoot: boolean = false) {
-        // Assign parents to each tag
-        const allElements: HTMLElement[] = [];
-
+    async buildFrom(ele: any, isRoot: boolean = false, forComponent: boolean = false) {
         if (isRoot) {
             document.body.setAttribute('vsn-root', '');
             document.ondragover = (e) => e.cancelable && e.preventDefault();  // Allow dragging over document
         }
 
-        for (const tag of this.tags)
-            allElements.push(tag.element);
-
         // Create tags for each html element with a v-attribute
         const newTags: Tag[] = [];
         const toBuild: HTMLElement[] = [];
-        const toSkip: HTMLElement[] = [];
 
-        if (ele && ele.querySelectorAll) {
-            for (const element of (Array.from(ele.querySelectorAll(`*`)) as HTMLElement[])) { // Don't build items more than once
-                if (!ElementHelper.hasVisionAttribute(element)) continue;
-                if ((element.hasAttribute('vsn-template') && element.tagName === 'template') || toSkip.indexOf(element.parentElement) > -1) {
-                    toSkip.push(element);
-                    continue;
-                }
-                if (this.queued.indexOf(element) > -1) continue;
-                this.queued.push(element);
-                toBuild.push(element);
+        const checkElement = (e: HTMLElement) => {
+            if (ElementHelper.hasVisionAttribute(e)) {
+                if (
+                    (!forComponent && e.hasAttribute('slot'))
+                ) return;
+                if (this.queued.indexOf(e) > -1) return;
+                this.queued.push(e);
+                toBuild.push(e);
             }
         }
+        const scanChildren = (e: HTMLElement) => {
+            for (const element of Array.from(e.children) as HTMLElement[]) {
+                checkElement(element);
+                if (element.tagName.toLowerCase() !== 'template')
+                    scanChildren(element);
+            }
+        }
+        checkElement(ele);
+        scanChildren(ele);
 
         for (const element of toBuild) {
-            if (allElements.indexOf(element) > -1) continue;
+            if (element[Tag.TaggedVariable]) continue;
             const tag: Tag = new Tag(element, this);
             this.tags.push(tag);
             newTags.push(tag);
-            allElements.push(element as HTMLElement);
         }
 
         if (isRoot)
@@ -295,14 +294,14 @@ export class DOM extends EventDispatcher {
         return tags;
     }
 
-    async getTagForElement(element: Element, create: boolean = false) {
+    async getTagForElement(element: Element, create: boolean = false, forComponent: boolean = false) {
         if (element[Tag.TaggedVariable])
             return element[Tag.TaggedVariable];
 
         if (element && create) {
             if (element instanceof HTMLElement)
                 element.setAttribute('vsn-ref', '');
-            await this.buildFrom(element.parentElement || element);
+            await this.buildFrom(element.parentElement || element, false, forComponent);
             return await this.getTagForElement(element, false);
         }
 

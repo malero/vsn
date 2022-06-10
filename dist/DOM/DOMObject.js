@@ -28,8 +28,9 @@ var DOMObject = /** @class */ (function (_super) {
         if (_this.isSlot) {
             (_a = _this.delegates).push.apply(_a, element.assignedNodes());
         }
-        if (element.assignedSlot)
+        if (element.assignedSlot) {
             _this.slot = element.assignedSlot;
+        }
         return _this;
     }
     Object.defineProperty(DOMObject.prototype, "isSlot", {

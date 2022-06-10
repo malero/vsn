@@ -24,7 +24,6 @@ export abstract class Attribute extends EventDispatcher {
     ) {
         super();
         this.configure();
-        if (VisionHelper.window) VisionHelper.window['Attributes'].push(this);
     }
 
     public get origin(): Tag {

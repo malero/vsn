@@ -62,13 +62,16 @@ export class Tag extends DOMObject {
         this.onEventHandlers = {};
         this.analyzeElementAttributes();
         this._state = TagState.Instantiated;
-        if (VisionHelper.window) {
-            if (!VisionHelper.window['Tags']) {
-                VisionHelper.window['Tags'] = [];
-                VisionHelper.window['Attributes'] = [];
-            }
-            VisionHelper.window['Tags'].push(this);
+        if (this.hasAttribute('slot')) {
+            this.addEventHandler('slotted',[], (e) => {
+                console.log('slot change', e, this.element.assignedSlot);
+            })
         }
+    }
+
+    public slotted(slot: HTMLSlotElement) {
+        this.slot = slot;
+        console.log('i am slotted', slot);
     }
 
     protected onAttributeStateChange(event) {

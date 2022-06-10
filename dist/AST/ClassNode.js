@@ -130,7 +130,9 @@ var ClassNode = /** @class */ (function (_super) {
                         dom.once('builtRoot', function () { return _this.findClassElements(dom); });
                         _a.label = 4;
                     case 4: return [3 /*break*/, 7];
-                    case 5: return [4 /*yield*/, this.block.prepare(this.classScope, dom, tag, meta)];
+                    case 5:
+                        if (!(meta['PrepForSelector'] === this.fullSelector)) return [3 /*break*/, 7];
+                        return [4 /*yield*/, this.block.prepare(tag.scope, dom, tag, meta)];
                     case 6:
                         _a.sent();
                         _a.label = 7;
@@ -200,6 +202,7 @@ var ClassNode = /** @class */ (function (_super) {
                             hasConstruct = this.classScope.has('construct');
                         tag.createScope(true);
                         meta = this.updateMeta();
+                        meta['PrepForSelector'] = this.fullSelector;
                         return [4 /*yield*/, this.block.prepare(tag.scope, dom, tag, meta)];
                     case 1:
                         _a.sent();
@@ -275,6 +278,8 @@ var ClassNode = /** @class */ (function (_super) {
             nameParts.push(t.value);
         }
         var selector = nameParts.join('').trim();
+        if (selector.startsWith('>'))
+            selector = ":scope " + selector;
         tokens.splice(0, nameParts.length);
         var block = AST_1.Tree.processTokens(AST_1.Tree.getNextStatementTokens(tokens, true, true));
         return new ClassNode(selector, block);

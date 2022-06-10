@@ -73,8 +73,8 @@ export class ClassNode extends Node implements TreeNode {
                 else
                     dom.once('builtRoot', () => this.findClassElements(dom));
             }
-        } else {
-            await this.block.prepare(this.classScope, dom, tag, meta);
+        } else if (meta['PrepForSelector'] === this.fullSelector) { // Only prepare top level class if we're prepping for tag
+            await this.block.prepare(tag.scope, dom, tag, meta);
         }
     }
 
@@ -83,6 +83,7 @@ export class ClassNode extends Node implements TreeNode {
         for (const element of Array.from(dom.querySelectorAll(this.selector, tag))) {
             tags.push(await ClassNode.addElementClass(this._fullSelector, element as HTMLElement, dom, element[Tag.TaggedVariable] || null));
         }
+
         for (const childSelector of ClassNode.classChildren[this._fullSelector]) {
             const node =  ClassNode.classes[`${this._fullSelector} ${childSelector}`];
             if (!node) continue;
@@ -98,6 +99,7 @@ export class ClassNode extends Node implements TreeNode {
 
         tag.createScope(true);
         const meta = this.updateMeta();
+        meta['PrepForSelector'] = this.fullSelector;
         await this.block.prepare(tag.scope, dom, tag, meta);
         if (hasConstruct) {
             const fncCls: FunctionNode = this.classScope.get('construct') as FunctionNode;
@@ -140,7 +142,9 @@ export class ClassNode extends Node implements TreeNode {
             if (t.type === TokenType.L_BRACE) break;
             nameParts.push(t.value);
         }
-        const selector = nameParts.join('').trim();
+        let selector = nameParts.join('').trim();
+        if (selector.startsWith('>'))
+            selector = `:scope ${selector}`;
         tokens.splice(0, nameParts.length);
         const block = Tree.processTokens(Tree.getNextStatementTokens(tokens, true, true));
         return new ClassNode(selector, block);

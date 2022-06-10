@@ -21,6 +21,14 @@ export class Component extends HTMLElement {
         this.setAttribute('vsn-ref', '');
 
         this.shadow.appendChild(template.content.cloneNode(true));
+        this.shadow.querySelectorAll('slot').forEach(slot => {
+            slot.addEventListener('slotchange', async (e) => {
+                for (const child of slot.assignedNodes()) {
+                    const t = await DOM.instance.getTagForElement(child as HTMLElement, true, true);
+                    t?.slotted(slot);
+                }
+            });
+        });
         DOM.instance.buildFrom(this.shadow);
     }
 }

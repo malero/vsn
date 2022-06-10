@@ -38,9 +38,9 @@ export declare class DOM extends EventDispatcher {
     exec(code: string): Promise<any>;
     evaluate(): Promise<void>;
     mutation(mutations: MutationRecord[]): Promise<void>;
-    buildFrom(ele: any, isRoot?: boolean): Promise<void>;
+    buildFrom(ele: any, isRoot?: boolean, forComponent?: boolean): Promise<void>;
     getTagsForElements(elements: Element[], create?: boolean): Promise<TagList>;
-    getTagForElement(element: Element, create?: boolean): any;
+    getTagForElement(element: Element, create?: boolean, forComponent?: boolean): any;
     getTagForScope(scope: Scope): Promise<Tag>;
     static get instance(): DOM;
 }
