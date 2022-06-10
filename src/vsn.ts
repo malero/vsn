@@ -91,6 +91,7 @@ export {ScopeReference} from './Scope/ScopeReference';
 export {WrappedArray} from './Scope/WrappedArray';
 export {Controller} from './Controller';
 export {Model} from './Model';
+export {Service} from './Service';
 export {EventDispatcher} from './EventDispatcher';
 export {MessageList} from './MessageList';
 export {SimplePromise} from './SimplePromise';

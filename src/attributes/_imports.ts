@@ -21,6 +21,7 @@ export {RootAttribute} from "./RootAttribute";
 export {ScopeAttribute} from "./ScopeAttribute";
 export {ScopeChange} from "./ScopeChange";
 export {ScriptAttribute} from "./ScriptAttribute";
+export {ServiceAttribute} from "./ServiceAttribute";
 export {SetAttribute} from "./SetAttribute";
 export {StandardAttribute} from "./StandardAttribute";
 export {StyleAttribute} from "./StyleAttribute";

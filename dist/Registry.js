@@ -90,6 +90,7 @@ var Registry = /** @class */ (function (_super) {
         _this.classes = new RegistryStore();
         _this.models = new RegistryStore();
         _this.templates = new RegistryStore();
+        _this.services = new RegistryStore();
         _this.types = new RegistryStore();
         _this.validators = new RegistryStore();
         _this.formats = new RegistryStore();
@@ -123,6 +124,11 @@ var Registry = /** @class */ (function (_super) {
         if (key === void 0) { key = null; }
         if (setup === void 0) { setup = null; }
         return register('templates', key, setup);
+    };
+    Registry.service = function (key, setup) {
+        if (key === void 0) { key = null; }
+        if (setup === void 0) { setup = null; }
+        return register('services', key, setup);
     };
     Registry.type = function (key, setup) {
         if (key === void 0) { key = null; }

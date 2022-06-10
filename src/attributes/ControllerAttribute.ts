@@ -6,6 +6,8 @@ import {Registry} from "../Registry";
 export class ControllerAttribute extends Attribute {
     public static readonly canDefer: boolean = false;
     public static readonly scoped: boolean = true;
+    public readonly registryName: string = 'controllers'
+    public readonly assignToParent: boolean = true;
     protected attributeKey: string;
     protected className: string;
     protected defaultClassName: string;
@@ -18,15 +20,21 @@ export class ControllerAttribute extends Attribute {
         this.attributeKey = this.getAttributeBinding();
         this.className = this.getAttributeValue(this.defaultClassName);
 
-        const cls = await Registry.instance.controllers.get(this.className);
-        this.instantiateClass(cls);
+        const cls = await Registry.instance[this.registryName].get(this.className);
+        const obj = this.instantiateClass(cls);
 
-        if (this.attributeKey && parentScope)
-            parentScope.set(this.attributeKey, this.tag.scope);
+        if (this.attributeKey && obj) {
+            if (this.assignToParent && parentScope) {
+                parentScope.set(this.attributeKey, obj);
+            } else {
+                this.tag.scope.set(this.attributeKey, obj);
+            }
+        }
         await super.setup();
     }
 
-    protected instantiateClass(cls) {
+    protected instantiateClass(cls): any {
         this.tag.wrap(cls);
+        return this.tag.scope;
     }
 }

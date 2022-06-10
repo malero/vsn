@@ -63,11 +63,14 @@ var Registry_1 = require("../Registry");
 var ControllerAttribute = /** @class */ (function (_super) {
     __extends(ControllerAttribute, _super);
     function ControllerAttribute() {
-        return _super !== null && _super.apply(this, arguments) || this;
+        var _this = _super !== null && _super.apply(this, arguments) || this;
+        _this.registryName = 'controllers';
+        _this.assignToParent = true;
+        return _this;
     }
     ControllerAttribute.prototype.setup = function () {
         return __awaiter(this, void 0, void 0, function () {
-            var parentScope, cls;
+            var parentScope, cls, obj;
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
@@ -76,12 +79,18 @@ var ControllerAttribute = /** @class */ (function (_super) {
                             return [2 /*return*/];
                         this.attributeKey = this.getAttributeBinding();
                         this.className = this.getAttributeValue(this.defaultClassName);
-                        return [4 /*yield*/, Registry_1.Registry.instance.controllers.get(this.className)];
+                        return [4 /*yield*/, Registry_1.Registry.instance[this.registryName].get(this.className)];
                     case 1:
                         cls = _a.sent();
-                        this.instantiateClass(cls);
-                        if (this.attributeKey && parentScope)
-                            parentScope.set(this.attributeKey, this.tag.scope);
+                        obj = this.instantiateClass(cls);
+                        if (this.attributeKey && obj) {
+                            if (this.assignToParent && parentScope) {
+                                parentScope.set(this.attributeKey, obj);
+                            }
+                            else {
+                                this.tag.scope.set(this.attributeKey, obj);
+                            }
+                        }
                         return [4 /*yield*/, _super.prototype.setup.call(this)];
                     case 2:
                         _a.sent();
@@ -92,6 +101,7 @@ var ControllerAttribute = /** @class */ (function (_super) {
     };
     ControllerAttribute.prototype.instantiateClass = function (cls) {
         this.tag.wrap(cls);
+        return this.tag.scope;
     };
     ControllerAttribute.canDefer = false;
     ControllerAttribute.scoped = true;

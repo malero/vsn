@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.TypeAttribute = exports.TemplateAttribute = exports.StyleAttribute = exports.StandardAttribute = exports.SetAttribute = exports.ScriptAttribute = exports.ScopeChange = exports.ScopeAttribute = exports.RootAttribute = exports.Referenced = exports.On = exports.Name = exports.ModelAttribute = exports.ListItemModel = exports.ListItem = exports.List = exports.LazyAttribute = exports.KeyUp = exports.KeyDown = exports.JSONAttribute = exports.If = exports.Format = exports.Exec = exports.DisableIf = exports.ControllerAttribute = exports.ComponentAttribute = exports.Bind = exports.AddClassIf = void 0;
+exports.TypeAttribute = exports.TemplateAttribute = exports.StyleAttribute = exports.StandardAttribute = exports.SetAttribute = exports.ServiceAttribute = exports.ScriptAttribute = exports.ScopeChange = exports.ScopeAttribute = exports.RootAttribute = exports.Referenced = exports.On = exports.Name = exports.ModelAttribute = exports.ListItemModel = exports.ListItem = exports.List = exports.LazyAttribute = exports.KeyUp = exports.KeyDown = exports.JSONAttribute = exports.If = exports.Format = exports.Exec = exports.DisableIf = exports.ControllerAttribute = exports.ComponentAttribute = exports.Bind = exports.AddClassIf = void 0;
 var AddClassIf_1 = require("./AddClassIf");
 Object.defineProperty(exports, "AddClassIf", { enumerable: true, get: function () { return AddClassIf_1.AddClassIf; } });
 var Bind_1 = require("./Bind");
@@ -47,6 +47,8 @@ var ScopeChange_1 = require("./ScopeChange");
 Object.defineProperty(exports, "ScopeChange", { enumerable: true, get: function () { return ScopeChange_1.ScopeChange; } });
 var ScriptAttribute_1 = require("./ScriptAttribute");
 Object.defineProperty(exports, "ScriptAttribute", { enumerable: true, get: function () { return ScriptAttribute_1.ScriptAttribute; } });
+var ServiceAttribute_1 = require("./ServiceAttribute");
+Object.defineProperty(exports, "ServiceAttribute", { enumerable: true, get: function () { return ServiceAttribute_1.ServiceAttribute; } });
 var SetAttribute_1 = require("./SetAttribute");
 Object.defineProperty(exports, "SetAttribute", { enumerable: true, get: function () { return SetAttribute_1.SetAttribute; } });
 var StandardAttribute_1 = require("./StandardAttribute");

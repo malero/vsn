@@ -20,6 +20,7 @@ export declare class Registry extends EventDispatcher {
     readonly classes: RegistryStore;
     readonly models: RegistryStore;
     readonly templates: RegistryStore;
+    readonly services: RegistryStore;
     readonly types: RegistryStore;
     readonly validators: RegistryStore;
     readonly formats: RegistryStore;
@@ -31,6 +32,7 @@ export declare class Registry extends EventDispatcher {
     static controller(key?: string, setup?: any): (target: any, _key?: string) => void;
     static model(key?: string, setup?: any): (target: any, _key?: string) => void;
     static template(key?: string, setup?: any): (target: any, _key?: string) => void;
+    static service(key?: string, setup?: any): (target: any, _key?: string) => void;
     static type(key?: string, setup?: any): (target: any, _key?: string) => void;
     static validator(key?: string, setup?: any): (target: any, _key?: string) => void;
     static format(key?: string, setup?: any): (target: any, _key?: string) => void;

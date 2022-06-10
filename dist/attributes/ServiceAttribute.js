@@ -21,21 +21,25 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
     return c > 3 && r && Object.defineProperty(target, key, r), r;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.ModelAttribute = void 0;
+exports.ServiceAttribute = void 0;
 var ControllerAttribute_1 = require("./ControllerAttribute");
 var Registry_1 = require("../Registry");
-var ModelAttribute = /** @class */ (function (_super) {
-    __extends(ModelAttribute, _super);
-    function ModelAttribute() {
+var ServiceAttribute = /** @class */ (function (_super) {
+    __extends(ServiceAttribute, _super);
+    function ServiceAttribute() {
         var _this = _super !== null && _super.apply(this, arguments) || this;
-        _this.registryName = 'models';
+        _this.registryName = 'services';
+        _this.assignToParent = false;
         return _this;
     }
-    ModelAttribute.canDefer = false;
-    ModelAttribute = __decorate([
-        Registry_1.Registry.attribute('vsn-model')
-    ], ModelAttribute);
-    return ModelAttribute;
+    ServiceAttribute.prototype.instantiateClass = function (cls) {
+        return cls.instance.scope;
+    };
+    ServiceAttribute.canDefer = false;
+    ServiceAttribute = __decorate([
+        Registry_1.Registry.attribute('vsn-service')
+    ], ServiceAttribute);
+    return ServiceAttribute;
 }(ControllerAttribute_1.ControllerAttribute));
-exports.ModelAttribute = ModelAttribute;
-//# sourceMappingURL=ModelAttribute.js.map
+exports.ServiceAttribute = ServiceAttribute;
+//# sourceMappingURL=ServiceAttribute.js.map
