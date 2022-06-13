@@ -61,7 +61,6 @@ exports.List = void 0;
 var Attribute_1 = require("../Attribute");
 var Tag_1 = require("../Tag");
 var WrappedArray_1 = require("../Scope/WrappedArray");
-var AST_1 = require("../AST");
 var ElementHelper_1 = require("../helpers/ElementHelper");
 var Registry_1 = require("../Registry");
 var DOM_1 = require("../DOM");
@@ -70,25 +69,6 @@ var List = /** @class */ (function (_super) {
     function List() {
         return _super !== null && _super.apply(this, arguments) || this;
     }
-    List.prototype.compile = function () {
-        return __awaiter(this, void 0, void 0, function () {
-            var listAttr;
-            return __generator(this, function (_a) {
-                switch (_a.label) {
-                    case 0:
-                        listAttr = this.getAttributeBinding();
-                        this.tree = new AST_1.Tree(listAttr);
-                        return [4 /*yield*/, this.tree.prepare(this.tag.scope, this.tag.dom, this.tag)];
-                    case 1:
-                        _a.sent();
-                        return [4 /*yield*/, _super.prototype.compile.call(this)];
-                    case 2:
-                        _a.sent();
-                        return [2 /*return*/];
-                }
-            });
-        });
-    };
     List.prototype.setup = function () {
         return __awaiter(this, void 0, void 0, function () {
             var template, templateTag, templateNode;
@@ -131,30 +111,48 @@ var List = /** @class */ (function (_super) {
     };
     List.prototype.extract = function () {
         return __awaiter(this, void 0, void 0, function () {
-            var items, toAdd, i;
+            var listAttr, ref, listScope, listKey, items, toAdd, i;
+            var _this = this;
             return __generator(this, function (_a) {
                 switch (_a.label) {
-                    case 0: return [4 /*yield*/, this.tree.evaluate(this.tag.scope, this.tag.dom, this.tag)];
+                    case 0:
+                        listAttr = this.getAttributeBinding('items');
+                        ref = this.tag.scope.getReference(listAttr);
+                        return [4 /*yield*/, ref.getScope()];
                     case 1:
-                        items = _a.sent();
-                        return [4 /*yield*/, this.addExistingItems(items)];
+                        listScope = _a.sent();
+                        return [4 /*yield*/, ref.getKey()];
                     case 2:
+                        listKey = _a.sent();
+                        items = listScope.get(listKey);
+                        return [4 /*yield*/, this.addExistingItems(items)];
+                    case 3:
                         _a.sent();
-                        if (!this.tag.hasRawAttribute('initial-items')) return [3 /*break*/, 6];
+                        listScope.on("change:" + listKey, function (e) {
+                            if (e.oldValue instanceof WrappedArray_1.WrappedArray) {
+                                e.oldValue.map(function (item) {
+                                    _this.remove(item);
+                                });
+                                e.oldValue.offWithContext('add', _this);
+                                e.oldValue.offWithContext('remove', _this);
+                            }
+                            _this.addExistingItems(e.value);
+                        });
+                        if (!this.tag.hasRawAttribute('initial-items')) return [3 /*break*/, 7];
                         toAdd = parseInt(this.tag.getRawAttributeValue('initial-items'));
                         i = 0;
-                        _a.label = 3;
-                    case 3:
-                        if (!(i < toAdd)) return [3 /*break*/, 6];
-                        return [4 /*yield*/, this.add({})];
+                        _a.label = 4;
                     case 4:
-                        _a.sent();
-                        _a.label = 5;
+                        if (!(i < toAdd)) return [3 /*break*/, 7];
+                        return [4 /*yield*/, this.add({})];
                     case 5:
+                        _a.sent();
+                        _a.label = 6;
+                    case 6:
                         i++;
-                        return [3 /*break*/, 3];
-                    case 6: return [4 /*yield*/, _super.prototype.extract.call(this)];
-                    case 7:
+                        return [3 /*break*/, 4];
+                    case 7: return [4 /*yield*/, _super.prototype.extract.call(this)];
+                    case 8:
                         _a.sent();
                         return [2 /*return*/];
                 }
@@ -164,7 +162,6 @@ var List = /** @class */ (function (_super) {
     List.prototype.addExistingItems = function (defaultList) {
         return __awaiter(this, void 0, void 0, function () {
             var _i, defaultList_1, existingItem, _a, _b, element, tag;
-            var _this = this;
             return __generator(this, function (_c) {
                 switch (_c.label) {
                     case 0:
@@ -206,12 +203,8 @@ var List = /** @class */ (function (_super) {
                         if (!(this.items instanceof WrappedArray_1.WrappedArray)) {
                             this.items = new WrappedArray_1.WrappedArray(this.items);
                         }
-                        this.items.on('add', function (item) {
-                            _this.add(item);
-                        });
-                        this.items.on('remove', function (item) {
-                            _this.remove(item);
-                        });
+                        this.items.on('add', this.add, this);
+                        this.items.on('remove', this.remove, this);
                         this.tag.scope.set('add', this.add.bind(this));
                         this.tag.scope.set('remove', this.remove.bind(this));
                         return [2 /*return*/];
@@ -238,6 +231,7 @@ var List = /** @class */ (function (_super) {
             var tag = this.tags[i];
             var listItem = tag.scope.get(this.listItemName);
             if ([listItem, listItem.wrapped].indexOf(item) > -1) {
+                tag.deconstruct();
                 tag.removeFromDOM();
                 this.tags.splice(i, 1);
                 return;

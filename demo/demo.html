@@ -5,27 +5,91 @@
     <title>SEO Javascript Test</title>
 
     <style></style>
+    <script type="text/javascript">
+        var TestController = (function () {
+            function TestController() {
+                this.items = [];
+                this.name = null;
+                this.age = null;
+                this.obj = null;
+                this.array = null;
+            }
+
+            TestController.prototype.reset = function () {
+                this.name = '';
+                this.age = '';
+            };
+
+            TestController.prototype.add = function () {
+                this.items.push(new TestItem(this.name, this.age));
+                this.reset();
+            };
+
+            return TestController;
+        }());
+
+        var TestItem = (function () {
+            function TestItem(name = null, age = null) {
+                this.name = name;
+                this.age = age;
+            }
+
+            TestItem.prototype.reset = function () {
+                this.name = '';
+                this.age = '';
+            };
+            return TestItem;
+        }());
+
+        var MVal = (function () {
+            function MVal(v) {
+                this.v = v;
+            }
+            return MVal;
+        }());
+
+        var Controller = (function () {
+            function Controller() {
+                this.on = false;
+            }
+
+            Controller.prototype.doSomething = function ($event, value) {
+                $event.preventDefault();
+                this.on = value;
+            };
+            return Controller;
+        }());
+    </script>
+
+    <script vsn-script type="text/vsn">
+    class test-class {
+        func construct() {
+            $color = "#ff00ff";
+        }
+
+        func deconstruct() {
+            $color = '#000000';
+        }
+
+        on click() {
+            log(@class);
+            @class -= 'test-class';
+            @class ~ 'huh';
+            log(@class);
+        }
+    }
+    </script>
 </head>
 <body>
 
 <template vsn-component:test-component>
     <script vsn-script type="text/vsn">
     class test-component {
-        class > button {
-            func construct() {
-                $color = 'green';
-            }
-
-            on click() {
-                $color = 'red';
-            }
-        }
         class .test-class {
               func construct() {
                     log('hmm?');
-                    $color = "#ff0000";
+                    $color = "#ff00ff";
               }
-
             class button {
                 func construct() {
                     $color = "#ff00ff";
@@ -41,20 +105,164 @@
         }
     }
     </script>
-    <button>Don't Click Me</button>
     <div class="test-class">
         <h1>Test Component</h1>
         <p>
             <button>Click Me</button>
         </p>
     </div>
-    <slot name="testing"></slot>
 </template>
 
-<test-component>
-    <span slot="testing" vsn-name="slot">asdf</span>
-    <span slot="testing" vsn-name="slot2">asd</span>
-</test-component>
+<test-component></test-component>
+
+<template vsn-template id="vsn-template">
+    <span>Hello, world!</span>
+</template>
+
+<div>
+    <textarea id="example-code" rows="10" cols="50"></textarea>
+    <div id="example-output" vsn-bind:@html="#example-code.@value"></div>
+</div>
+
+<template vsn-template id="query-operator-example-item">
+    <li vsn-list-item>
+        <span vsn-if="'active' in ?>(:parent).@class">active</span>
+        <span vsn-if:not="'active' not in ?>(:parent).@class">inactive</span>
+        <button vsn-on:click="?>(:parent).@class += 'active'">+</button>
+        <button vsn-on:click="?>(:parent).@class -= 'active'">-</button>
+        <button vsn-on:click="?>(:parent).@class ~ 'active'">~</button>
+    </li>
+</template>
+
+<div id="test-container"></div>
+<a href="./markup.html" vsn-on:click|preventdefault="#test-container.@html = << @href">Fill Container</a>
+<a vsn-on:click|preventdefault="#test-container.@html = ''">Clear Container</a>
+
+<h2>On Click</h2>
+<div vsn-name="toggle" vsn-set:show|boolean="false">
+    <button class="test-class" vsn-on:click="toggle.show = !toggle.show" vsn-exec="on click() {@class -= 'test-class';log('uh', @class);}">Toggle</button>
+    <span vsn-bind="toggle.show"></span>
+</div>
+<a id="click-test" vsn-on:click="if(@text != @clicktext){@text=@clicktext}else{@text='Click Me'}" clicktext="Clicked!">Click Me</a>
+
+<h2>? Operator</h2>
+<p>Add/remove class to list of elements on click.</p>
+<p id="toggle-container" vsn-exec="toggles = ?(#list-add-remove-class-example li)">
+    <button vsn-on:click="?(#list-add-remove-class-example li).@class += 'active'">Add</button> <button vsn-on:click="?(#list-add-remove-class-example li).@class -= 'active'">Remove</button> <button vsn-on:click="?(#list-add-remove-class-example li).@class ~ 'active'">Toggle</button>
+    <ul id="list-add-remove-class-example" vsn-list initial-items="5" template="?(#query-operator-example-item)"></ul>
+</p>
+
+<h2>@ Operator</h2>
+<p></p>
+<p>
+    <input type="text" value="testing" id="at-attribute" /> <input type="button" vsn-on:click="?(#at-attribute).@type = 'password'" value="Button" /> <input type="button" vsn-on:click="?(#at-attribute).@type = 'text'" value="Button" />
+</p>
+
+<p>Bind to window attributes. </p>
+<p>window.scrollX,Y <span vsn-bind="?(window).@scrollX"></span>, <span vsn-bind="?(window).@scrollY"></span></p>
+
+<h2>Attribute Binding</h2>
+<a href="/index.html" id="link" vsn-name="link_test">Home</a>
+<input type="text" vsn-bind="#link.@text"/>
+<input type="text" vsn-bind="#link.@href"/>
+
+<h2>Attribute Formatters</h2>
+<h3>Currency</h3>
+<span vsn-bind="currency_format" vsn-type:currency_format="float" vsn-format="currency" id="formatter">1.5</span>
+<input type="text" vsn-bind="#formatter.currency_format" />
+<br />
+<h3>Date</h3>
+<span vsn-bind="date_format" vsn-type:date_format="date" vsn-format="date" id="date-formatter">Aug 11, 2021 01:03:00 PM PDT</span>
+<input type="text" vsn-bind:|to="?(#date-formatter).date_format" />
+<input type="text" vsn-on:keyup="?(#date-formatter).date_format = $value" value="Aug 11, 2021 01:03:00 PM PDT" />
+
+<h2>$ Operator</h2>
+<p></p>
+<p>
+    <input type="text" vsn-bind="$marginTop" id="style-attribute" /> <input type="button" vsn-on:click="?(#style-attribute).$marginTop = $padding;$padding += 1px" vsn-on:contextmenu|preventdefault="$padding -= 1px" value="Button" /> <input type="button" vsn-on:click="?(#style-attribute).$marginTop = '0'" value="Button" />
+</p>
+
+<h2>Conditional Elements</h2>
+<button vsn-on:click="show = !show">Toggle</button>
+<span vsn-if="show">Show is true</span>
+<span vsn-if="!show">Show is false</span>
+
+<h2>Controllers</h2>
+<div vsn-controller:controller="Controller">
+    <span vsn-if="controller.on">It's on!</span>
+    <span vsn-if="!controller.on">It's off...</span>
+    <a href="/" vsn-on:click="controller.doSomething($event, !controller.on)">Click Me</a>
+</div>
+
+<h2>Lists</h2>
+<div vsn-controller:test="TestController" id="testing">
+    <h3>Value: <span vsn-bind="test.name">Testing</span> <span vsn-bind="test.age">32</span></h3>
+    <input type="text" vsn-bind="test.name"/>
+    <input type="text" vsn-bind="test.age"/>
+    <button vsn-on:click="test.reset()" vsn-if="test.name">Reset</button>
+    <button vsn-on:click="test.add();">Add New List Item</button>
+    <ul vsn-list:test.items vsn-list-item-model="TestItem" vsn-name="list">
+        <li vsn-list-item>
+            <span vsn-bind="item.name">Tom</span>, <span vsn-bind="item.age">22</span> Years Old <input type="text"
+                                                                                                        vsn-bind="item.name"/>
+            <input type="text" vsn-bind="item.age"/>
+            <button vsn-on:click="item.reset()">R</button>
+            <button vsn-on:click="list.remove(item)">X</button>
+        </li>
+        <li vsn-list-item>
+            <span vsn-bind="item.name">Steve</span>, <span vsn-bind="item.age">46</span> Years Old <input type="text"
+                                                                                                          vsn-bind="item.name"/>
+            <input type="text" vsn-bind="item.age"/>
+            <button vsn-on:click="item.reset()">R</button>
+            <button vsn-on:click="list.remove(item)">X</button>
+        </li>
+        <li vsn-list-item>
+            <span vsn-bind="item.name">Frank</span>, <span vsn-bind="item.age">31</span> Years Old <input type="text"
+                                                                                                          vsn-bind="item.name"/>
+            <input type="text" vsn-bind="item.age"/>
+            <button vsn-on:click="item.reset()">R</button>
+            <button vsn-on:click="list.remove(item)">X</button>
+        </li>
+        <li vsn-list-item>
+            <span vsn-name="wut" vsn-set:wut.test="1">Wut</span>
+            <span vsn-bind="item.name">Joe</span>, <span vsn-bind="item.age">91</span> Years Old <input type="text"
+                                                                                                        vsn-bind="item.name"/>
+            <input type="text" vsn-bind="item.age"/>
+            <button vsn-on:click="item.reset()">R</button>
+            <button vsn-on:click="list.remove(item)">X</button>
+        </li>
+    </ul>
+</div>
+
+<h2>Lazy XHR Component</h2>
+<div vsn-lazy="@html = << './xhr.html'"></div>
+
+<script type="text/javascript">
+    window.addEventListener('vsn', function () {
+        vision.registry.controllers.register('TestController', TestController);
+        vision.registry.models.register('TestItem', TestItem);
+        vision.registry.controllers.register('Controller', Controller);
+        vision.registry.controllers.register('MVal', MVal);
+    });
+</script>
+
+<script vsn-script type="text/vsn">
+class .testing-class {
+  on click() {
+    @text = 'Clicked';
+  }
+
+  on mouseenter() {
+    @text = 'Hovered!';
+  }
+
+  on mouseleave() {
+    @text = 'Mouse left';
+  }
+}
+</script>
+
+<button class="testing-class" test="1">Click me</button>
 
 <script type="text/javascript" src="vsn.js"></script>
 </body>

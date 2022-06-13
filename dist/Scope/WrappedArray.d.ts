@@ -4,7 +4,7 @@ export declare class WrappedArray<T> extends Array<T> {
     readonly $wrapped: boolean;
     constructor(...items: T[]);
     dispatch(event: string, ...args: any[]): void;
-    on(event: string, callback: EventDispatcherCallback): void;
+    on(event: string, callback: EventDispatcherCallback, ctx?: any): void;
     off(event: string, key?: number): void;
     once(event: string, callback: EventDispatcherCallback): void;
     push(...items: T[]): number;

@@ -1,26 +1,19 @@
 import {Attribute} from "../Attribute";
 import {Tag} from "../Tag";
 import {WrappedArray} from "../Scope/WrappedArray";
-import {Tree} from "../AST";
 import {ElementHelper} from "../helpers/ElementHelper";
 import {Registry} from "../Registry";
 import {DOM} from "../DOM";
+import {Scope} from "../Scope";
 
 @Registry.attribute('vsn-list')
 export class List extends Attribute {
     public static readonly canDefer: boolean = false;
     public static readonly scoped: boolean = true;
-    public tree: Tree;
+
     public items: any[];
     public tags: Tag[];
     protected template: Node;
-
-    public async compile() {
-        const listAttr: string = this.getAttributeBinding();
-        this.tree = new Tree(listAttr);
-        await this.tree.prepare(this.tag.scope, this.tag.dom, this.tag);
-        await super.compile();
-    }
 
     public async setup() {
         if (this.tag.element.children.length > 0) {
@@ -50,8 +43,23 @@ export class List extends Attribute {
     }
 
     public async extract() {
-        const items = await this.tree.evaluate(this.tag.scope, this.tag.dom, this.tag);
+        const listAttr: string = this.getAttributeBinding('items');
+        const ref = this.tag.scope.getReference(listAttr);
+        const listScope: Scope = await ref.getScope();
+        const listKey: string = await ref.getKey();
+        const items = listScope.get(listKey);
         await this.addExistingItems(items);
+
+        listScope.on(`change:${listKey}`, (e) => {
+            if (e.oldValue instanceof WrappedArray) {
+                e.oldValue.map((item) => {
+                    this.remove(item);
+                });
+                e.oldValue.offWithContext('add', this);
+                e.oldValue.offWithContext('remove', this);
+            }
+            this.addExistingItems(e.value);
+        });
 
         if (this.tag.hasRawAttribute('initial-items')) {
             const toAdd: number = parseInt(this.tag.getRawAttributeValue('initial-items'));
@@ -86,12 +94,8 @@ export class List extends Attribute {
             this.items = new WrappedArray(this.items);
         }
 
-        (this.items as WrappedArray<any>).on('add', (item) => {
-            this.add(item);
-        });
-        (this.items as WrappedArray<any>).on('remove', (item) => {
-            this.remove(item);
-        });
+        (this.items as WrappedArray<any>).on('add', this.add, this);
+        (this.items as WrappedArray<any>).on('remove', this.remove, this);
 
         this.tag.scope.set('add', this.add.bind(this));
         this.tag.scope.set('remove', this.remove.bind(this));
@@ -110,6 +114,7 @@ export class List extends Attribute {
             const tag: Tag = this.tags[i];
             const listItem = tag.scope.get(this.listItemName);
             if ([listItem, listItem.wrapped].indexOf(item) > -1) {
+                tag.deconstruct();
                 tag.removeFromDOM();
                 this.tags.splice(i, 1);
 

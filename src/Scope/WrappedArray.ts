@@ -14,8 +14,8 @@ export class WrappedArray<T> extends Array<T> {
         this.dispatcher.dispatch(event, ...args);
     }
 
-    on(event: string, callback: EventDispatcherCallback) {
-        this.dispatcher.on(event, callback);
+    on(event: string, callback: EventDispatcherCallback, ctx?: any) {
+        this.dispatcher.on(event, callback, ctx);
     }
 
     off(event: string, key?: number) {

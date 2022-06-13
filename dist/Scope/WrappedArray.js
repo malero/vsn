@@ -43,8 +43,8 @@ var WrappedArray = /** @class */ (function (_super) {
         }
         (_a = this.dispatcher).dispatch.apply(_a, __spreadArray([event], args));
     };
-    WrappedArray.prototype.on = function (event, callback) {
-        this.dispatcher.on(event, callback);
+    WrappedArray.prototype.on = function (event, callback, ctx) {
+        this.dispatcher.on(event, callback, ctx);
     };
     WrappedArray.prototype.off = function (event, key) {
         this.dispatcher.off(event, key);
