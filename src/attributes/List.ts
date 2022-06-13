@@ -123,7 +123,7 @@ export class List extends Attribute {
         for (let i: number = 0; i < this.tags.length; i++) {
             const tag: Tag = this.tags[i];
             const listItem = tag.scope.get(this.listItemName);
-            if ([listItem, listItem.wrapped].indexOf(item) > -1) {
+            if ([listItem, listItem.data, listItem.wrapped].indexOf(item) > -1) {
                 tag.deconstruct();
                 tag.removeFromDOM();
                 this.tags.splice(i, 1);

@@ -129,14 +129,16 @@ var List = /** @class */ (function (_super) {
                     case 3:
                         _a.sent();
                         listScope.on("change:" + listKey, function (e) {
-                            if (e.oldValue instanceof WrappedArray_1.WrappedArray) {
-                                e.oldValue.map(function (item) {
-                                    _this.remove(item);
-                                });
-                                e.oldValue.offWithContext('add', _this);
-                                e.oldValue.offWithContext('remove', _this);
+                            if (e.oldValue) {
+                                if (e.oldValue instanceof WrappedArray_1.WrappedArray) {
+                                    e.oldValue.map(function (item) {
+                                        _this.remove(item);
+                                    });
+                                    e.oldValue.offWithContext('add', _this);
+                                    e.oldValue.offWithContext('remove', _this);
+                                }
+                                _this.addExistingItems(e.value);
                             }
-                            _this.addExistingItems(e.value);
                         });
                         if (!this.tag.hasRawAttribute('initial-items')) return [3 /*break*/, 7];
                         toAdd = parseInt(this.tag.getRawAttributeValue('initial-items'));
@@ -238,7 +240,7 @@ var List = /** @class */ (function (_super) {
         for (var i = 0; i < this.tags.length; i++) {
             var tag = this.tags[i];
             var listItem = tag.scope.get(this.listItemName);
-            if ([listItem, listItem.wrapped].indexOf(item) > -1) {
+            if ([listItem, listItem.data, listItem.wrapped].indexOf(item) > -1) {
                 tag.deconstruct();
                 tag.removeFromDOM();
                 this.tags.splice(i, 1);
