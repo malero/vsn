@@ -82,7 +82,8 @@ export class List extends Attribute {
             }
         }
 
-        this.tags = [];
+        this.tags = this.tags || [];
+        this.tags.length = 0;
 
         if (defaultList)
             for (const existingItem of defaultList) {

@@ -89,7 +89,10 @@ var ListItem = /** @class */ (function (_super) {
                         return [4 /*yield*/, Registry_1.Registry.instance.models.get(modelName)];
                     case 2:
                         cls = _a.sent();
-                        this.instantiateModel(cls);
+                        if (!(this.tag.scope.data instanceof cls) &&
+                            !(this.tag.scope.wrapped instanceof cls)) {
+                            this.instantiateModel(cls);
+                        }
                         _a.label = 3;
                     case 3:
                         this.tag.scope.set(this.listItemName, this.tag.scope);

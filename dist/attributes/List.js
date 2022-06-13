@@ -176,7 +176,8 @@ var List = /** @class */ (function (_super) {
                                 tag.removeFromDOM();
                             }
                         }
-                        this.tags = [];
+                        this.tags = this.tags || [];
+                        this.tags.length = 0;
                         if (!defaultList) return [3 /*break*/, 4];
                         _c = 0, defaultList_1 = defaultList;
                         _f.label = 1;

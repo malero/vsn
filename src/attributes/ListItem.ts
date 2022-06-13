@@ -21,7 +21,13 @@ export class ListItem extends Attribute {
         const modelName: string = (await this.getList()).listItemModel;
         if (modelName) {
             const cls = await Registry.instance.models.get(modelName);
-            this.instantiateModel(cls);
+            if (
+                !(this.tag.scope.data instanceof cls) &&
+                !(this.tag.scope.wrapped instanceof cls)
+            ) {
+                this.instantiateModel(cls);
+            }
+
         }
         this.tag.scope.set(this.listItemName, this.tag.scope);
         await super.setup();
