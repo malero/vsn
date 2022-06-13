@@ -199,19 +199,21 @@ export class DOM extends EventDispatcher {
         const newTags: Tag[] = [];
         const toBuild: HTMLElement[] = [];
 
-        const checkElement = (e: HTMLElement) => {
+        const checkElement = (e: HTMLElement): boolean => {
             if (ElementHelper.hasVisionAttribute(e)) {
                 if (
                     (!forComponent && e.hasAttribute('slot'))
-                ) return;
-                if (this.queued.indexOf(e) > -1) return;
+                ) return false;
+                if (this.queued.indexOf(e) > -1) return false;
                 this.queued.push(e);
                 toBuild.push(e);
             }
+
+            return true;
         }
         const scanChildren = (e: HTMLElement) => {
             for (const element of Array.from(e.children) as HTMLElement[]) {
-                checkElement(element);
+                if (!checkElement(element)) continue;
                 if (element.tagName.toLowerCase() !== 'template')
                     scanChildren(element);
             }

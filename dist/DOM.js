@@ -337,17 +337,19 @@ var DOM = /** @class */ (function (_super) {
                         checkElement = function (e) {
                             if (ElementHelper_1.ElementHelper.hasVisionAttribute(e)) {
                                 if ((!forComponent && e.hasAttribute('slot')))
-                                    return;
+                                    return false;
                                 if (_this.queued.indexOf(e) > -1)
-                                    return;
+                                    return false;
                                 _this.queued.push(e);
                                 toBuild.push(e);
                             }
+                            return true;
                         };
                         scanChildren = function (e) {
                             for (var _i = 0, _a = Array.from(e.children); _i < _a.length; _i++) {
                                 var element = _a[_i];
-                                checkElement(element);
+                                if (!checkElement(element))
+                                    continue;
                                 if (element.tagName.toLowerCase() !== 'template')
                                     scanChildren(element);
                             }
