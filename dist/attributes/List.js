@@ -160,44 +160,52 @@ var List = /** @class */ (function (_super) {
         });
     };
     List.prototype.addExistingItems = function (defaultList) {
+        var _a;
         return __awaiter(this, void 0, void 0, function () {
-            var _i, defaultList_1, existingItem, _a, _b, element, tag;
-            return __generator(this, function (_c) {
-                switch (_c.label) {
+            var _i, _b, tag, _c, defaultList_1, existingItem, _d, _e, element, tag;
+            return __generator(this, function (_f) {
+                switch (_f.label) {
                     case 0:
                         this.items = defaultList || new WrappedArray_1.WrappedArray();
+                        if (((_a = this.tags) === null || _a === void 0 ? void 0 : _a.length) > 0) {
+                            for (_i = 0, _b = this.tags; _i < _b.length; _i++) {
+                                tag = _b[_i];
+                                tag.deconstruct();
+                                tag.removeFromDOM();
+                            }
+                        }
                         this.tags = [];
                         if (!defaultList) return [3 /*break*/, 4];
-                        _i = 0, defaultList_1 = defaultList;
-                        _c.label = 1;
+                        _c = 0, defaultList_1 = defaultList;
+                        _f.label = 1;
                     case 1:
-                        if (!(_i < defaultList_1.length)) return [3 /*break*/, 4];
-                        existingItem = defaultList_1[_i];
+                        if (!(_c < defaultList_1.length)) return [3 /*break*/, 4];
+                        existingItem = defaultList_1[_c];
                         return [4 /*yield*/, this.add(existingItem)];
                     case 2:
-                        _c.sent();
-                        _c.label = 3;
+                        _f.sent();
+                        _f.label = 3;
                     case 3:
-                        _i++;
+                        _c++;
                         return [3 /*break*/, 1];
                     case 4:
-                        _a = 0, _b = Array.from(this.tag.element.querySelectorAll('*'));
-                        _c.label = 5;
+                        _d = 0, _e = Array.from(this.tag.element.querySelectorAll('*'));
+                        _f.label = 5;
                     case 5:
-                        if (!(_a < _b.length)) return [3 /*break*/, 8];
-                        element = _b[_a];
+                        if (!(_d < _e.length)) return [3 /*break*/, 8];
+                        element = _e[_d];
                         if (!ElementHelper_1.ElementHelper.hasVisionAttribute(element, 'vsn-list-item'))
                             return [3 /*break*/, 7];
                         return [4 /*yield*/, this.tag.dom.getTagForElement(element)];
                     case 6:
-                        tag = _c.sent();
+                        tag = _f.sent();
                         if (tag) {
                             this.tags.push(tag);
                             this.items.push(tag.scope.wrapped || tag.scope);
                         }
-                        _c.label = 7;
+                        _f.label = 7;
                     case 7:
-                        _a++;
+                        _d++;
                         return [3 /*break*/, 5];
                     case 8:
                         if (!(this.items instanceof WrappedArray_1.WrappedArray)) {

@@ -51,14 +51,16 @@ export class List extends Attribute {
         await this.addExistingItems(items);
 
         listScope.on(`change:${listKey}`, (e) => {
-            if (e.oldValue instanceof WrappedArray) {
-                e.oldValue.map((item) => {
-                    this.remove(item);
-                });
-                e.oldValue.offWithContext('add', this);
-                e.oldValue.offWithContext('remove', this);
+            if (e.oldValue) {
+                if (e.oldValue instanceof WrappedArray) {
+                    e.oldValue.map((item) => {
+                        this.remove(item);
+                    });
+                    e.oldValue.offWithContext('add', this);
+                    e.oldValue.offWithContext('remove', this);
+                }
+                this.addExistingItems(e.value);
             }
-            this.addExistingItems(e.value);
         });
 
         if (this.tag.hasRawAttribute('initial-items')) {
@@ -72,6 +74,14 @@ export class List extends Attribute {
 
     protected async addExistingItems(defaultList: any[] | null) {
         this.items = defaultList || new WrappedArray();
+
+        if (this.tags?.length > 0) {
+            for (const tag of this.tags) {
+                tag.deconstruct();
+                tag.removeFromDOM();
+            }
+        }
+
         this.tags = [];
 
         if (defaultList)
