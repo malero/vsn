@@ -75,43 +75,26 @@ var ListItem = /** @class */ (function (_super) {
     });
     ListItem.prototype.setup = function () {
         return __awaiter(this, void 0, void 0, function () {
-            var modelName, cls;
-            return __generator(this, function (_a) {
-                switch (_a.label) {
+            var _a, _b;
+            return __generator(this, function (_c) {
+                switch (_c.label) {
                     case 0:
                         this._list = this.tag.findAncestorByAttribute('vsn-list');
                         if (!this._list)
                             throw Error(ListItem_1.ERROR_NO_PARENT);
-                        return [4 /*yield*/, this.getList()];
+                        _b = (_a = this.tag.scope).set;
+                        return [4 /*yield*/, this.getListAttribute()];
                     case 1:
-                        modelName = (_a.sent()).listItemModel;
-                        if (!modelName) return [3 /*break*/, 3];
-                        return [4 /*yield*/, Registry_1.Registry.instance.models.get(modelName)];
-                    case 2:
-                        cls = _a.sent();
-                        if (!(this.tag.scope.data instanceof cls) &&
-                            !(this.tag.scope.wrapped instanceof cls)) {
-                            this.instantiateModel(cls);
-                        }
-                        _a.label = 3;
-                    case 3:
-                        this.tag.scope.set(this.listItemName, this.tag.scope);
+                        _b.apply(_a, [(_c.sent()).listItemName, this.tag.scope]);
                         return [4 /*yield*/, _super.prototype.setup.call(this)];
-                    case 4:
-                        _a.sent();
+                    case 2:
+                        _c.sent();
                         return [2 /*return*/];
                 }
             });
         });
     };
-    Object.defineProperty(ListItem.prototype, "listItemName", {
-        get: function () {
-            return this.getAttributeBinding('item');
-        },
-        enumerable: false,
-        configurable: true
-    });
-    ListItem.prototype.getList = function () {
+    ListItem.prototype.getListAttribute = function () {
         return __awaiter(this, void 0, void 0, function () {
             return __generator(this, function (_a) {
                 switch (_a.label) {
@@ -120,9 +103,6 @@ var ListItem = /** @class */ (function (_super) {
                 }
             });
         });
-    };
-    ListItem.prototype.instantiateModel = function (model) {
-        this.tag.wrap(model, false, true);
     };
     var ListItem_1;
     ListItem.canDefer = false;

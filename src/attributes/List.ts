@@ -113,11 +113,11 @@ export class List extends Attribute {
     }
 
     public get listItemName(): string {
-        return this.tag.getRawAttributeValue('vsn-list-item-name', 'item');
+        return this.tag.getRawAttributeValue('list-item-name', 'item');
     }
 
     public get listItemModel(): string {
-        return this.tag.getRawAttributeValue('vsn-list-item-model');
+        return this.tag.getRawAttributeValue('list-item-model');
     }
 
     public remove(item: any) {
@@ -135,6 +135,7 @@ export class List extends Attribute {
     }
 
     protected async add(obj) {
+        // Setup new HTML element
         const clone = this.template.cloneNode(true);
         let element: HTMLElement;
         if (clone instanceof DocumentFragment) {
@@ -144,20 +145,29 @@ export class List extends Attribute {
         }
         delete element[Tag.TaggedVariable];
 
-        this.tag.element.appendChild(element);
+        // Setup new tag
+        const tag = await this.tag.dom.buildTag(element, true);
+        tag.createScope(true);
 
-        await this.tag.dom.buildFrom(this.tag.element);
-        const tag: Tag = await this.tag.dom.getTagForElement(element);
-        this.tags.push(tag);
+        // Setup new scope & class, if defined
+        const modelName: string = this.listItemModel;
+        let cls;
+        if (modelName)
+            cls = await Registry.instance.models.get(modelName);
 
-        if (obj) {
-            if (tag.scope.wrapped) {
-                tag.scope.data.setData(obj);
-            } else {
-                tag.wrap(obj);
+        if (cls) {
+            if (!obj || !(obj instanceof cls)) {
+                obj = new cls(obj);
             }
         }
 
+        tag.scope.set(this.listItemName, tag.scope);
+        tag.wrap(obj);
+
+        // Add to DOM & build
+        this.tag.element.appendChild(element);
+        await this.tag.dom.buildFrom(this.tag.element);
+        this.tags.push(tag);
         this.tag.dispatch('add', obj);
     }
 }

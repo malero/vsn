@@ -189,16 +189,8 @@ export class DOM extends EventDispatcher {
         }
     }
 
-    async buildFrom(ele: any, isRoot: boolean = false, forComponent: boolean = false) {
-        if (isRoot) {
-            document.body.setAttribute('vsn-root', '');
-            document.ondragover = (e) => e.cancelable && e.preventDefault();  // Allow dragging over document
-        }
-
-        // Create tags for each html element with a v-attribute
-        const newTags: Tag[] = [];
-        const toBuild: HTMLElement[] = [];
-
+    async discover(ele: HTMLElement, forComponent: boolean = false): Promise<HTMLElement[]> {
+        const discovered: HTMLElement[] = [];
         const checkElement = (e: HTMLElement): boolean => {
             if (ElementHelper.hasVisionAttribute(e)) {
                 if (
@@ -206,7 +198,7 @@ export class DOM extends EventDispatcher {
                 ) return false;
                 if (this.queued.indexOf(e) > -1) return false;
                 this.queued.push(e);
-                toBuild.push(e);
+                discovered.push(e);
             }
 
             return true;
@@ -221,11 +213,30 @@ export class DOM extends EventDispatcher {
         checkElement(ele);
         scanChildren(ele);
 
+        return discovered;
+    }
+
+    async buildTag(element: HTMLElement, returnExisting: boolean = false): Promise<Tag> {
+        if (element[Tag.TaggedVariable]) return returnExisting ? element[Tag.TaggedVariable] : null;
+        const tag: Tag = new Tag(element, this);
+        this.tags.push(tag);
+        return tag;
+    }
+
+    async buildFrom(ele: any, isRoot: boolean = false, forComponent: boolean = false) {
+        if (isRoot) {
+            document.body.setAttribute('vsn-root', '');
+            document.ondragover = (e) => e.cancelable && e.preventDefault();  // Allow dragging over document
+        }
+
+        // Create tags for each html element with a vsn-attribute
+        const newTags: Tag[] = [];
+        const toBuild: HTMLElement[] = await this.discover(ele, forComponent);
+
         for (const element of toBuild) {
-            if (element[Tag.TaggedVariable]) continue;
-            const tag: Tag = new Tag(element, this);
-            this.tags.push(tag);
-            newTags.push(tag);
+            const tag = await this.buildTag(element);
+            if (tag)
+                newTags.push(tag);
         }
 
         if (isRoot)

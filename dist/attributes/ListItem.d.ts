@@ -8,7 +8,5 @@ export declare class ListItem extends Attribute {
     protected _list: Tag;
     get list(): Tag;
     setup(): Promise<void>;
-    get listItemName(): string;
-    getList(): Promise<List>;
-    private instantiateModel;
+    getListAttribute(): Promise<List>;
 }

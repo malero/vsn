@@ -225,14 +225,14 @@ var List = /** @class */ (function (_super) {
     };
     Object.defineProperty(List.prototype, "listItemName", {
         get: function () {
-            return this.tag.getRawAttributeValue('vsn-list-item-name', 'item');
+            return this.tag.getRawAttributeValue('list-item-name', 'item');
         },
         enumerable: false,
         configurable: true
     });
     Object.defineProperty(List.prototype, "listItemModel", {
         get: function () {
-            return this.tag.getRawAttributeValue('vsn-list-item-model');
+            return this.tag.getRawAttributeValue('list-item-model');
         },
         enumerable: false,
         configurable: true
@@ -251,7 +251,7 @@ var List = /** @class */ (function (_super) {
     };
     List.prototype.add = function (obj) {
         return __awaiter(this, void 0, void 0, function () {
-            var clone, element, tag;
+            var clone, element, tag, modelName, cls;
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
@@ -263,22 +263,30 @@ var List = /** @class */ (function (_super) {
                             element = clone;
                         }
                         delete element[Tag_1.Tag.TaggedVariable];
-                        this.tag.element.appendChild(element);
-                        return [4 /*yield*/, this.tag.dom.buildFrom(this.tag.element)];
+                        return [4 /*yield*/, this.tag.dom.buildTag(element, true)];
                     case 1:
-                        _a.sent();
-                        return [4 /*yield*/, this.tag.dom.getTagForElement(element)];
-                    case 2:
                         tag = _a.sent();
-                        this.tags.push(tag);
-                        if (obj) {
-                            if (tag.scope.wrapped) {
-                                tag.scope.data.setData(obj);
-                            }
-                            else {
-                                tag.wrap(obj);
+                        tag.createScope(true);
+                        modelName = this.listItemModel;
+                        if (!modelName) return [3 /*break*/, 3];
+                        return [4 /*yield*/, Registry_1.Registry.instance.models.get(modelName)];
+                    case 2:
+                        cls = _a.sent();
+                        _a.label = 3;
+                    case 3:
+                        if (cls) {
+                            if (!obj || !(obj instanceof cls)) {
+                                obj = new cls(obj);
                             }
                         }
+                        tag.scope.set(this.listItemName, tag.scope);
+                        tag.wrap(obj);
+                        // Add to DOM & build
+                        this.tag.element.appendChild(element);
+                        return [4 /*yield*/, this.tag.dom.buildFrom(this.tag.element)];
+                    case 4:
+                        _a.sent();
+                        this.tags.push(tag);
                         this.tag.dispatch('add', obj);
                         return [2 /*return*/];
                 }

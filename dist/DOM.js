@@ -319,12 +319,57 @@ var DOM = /** @class */ (function (_super) {
             });
         });
     };
+    DOM.prototype.discover = function (ele, forComponent) {
+        if (forComponent === void 0) { forComponent = false; }
+        return __awaiter(this, void 0, void 0, function () {
+            var discovered, checkElement, scanChildren;
+            var _this = this;
+            return __generator(this, function (_a) {
+                discovered = [];
+                checkElement = function (e) {
+                    if (ElementHelper_1.ElementHelper.hasVisionAttribute(e)) {
+                        if ((!forComponent && e.hasAttribute('slot')))
+                            return false;
+                        if (_this.queued.indexOf(e) > -1)
+                            return false;
+                        _this.queued.push(e);
+                        discovered.push(e);
+                    }
+                    return true;
+                };
+                scanChildren = function (e) {
+                    for (var _i = 0, _a = Array.from(e.children); _i < _a.length; _i++) {
+                        var element = _a[_i];
+                        if (!checkElement(element))
+                            continue;
+                        if (element.tagName.toLowerCase() !== 'template')
+                            scanChildren(element);
+                    }
+                };
+                checkElement(ele);
+                scanChildren(ele);
+                return [2 /*return*/, discovered];
+            });
+        });
+    };
+    DOM.prototype.buildTag = function (element, returnExisting) {
+        if (returnExisting === void 0) { returnExisting = false; }
+        return __awaiter(this, void 0, void 0, function () {
+            var tag;
+            return __generator(this, function (_a) {
+                if (element[Tag_1.Tag.TaggedVariable])
+                    return [2 /*return*/, returnExisting ? element[Tag_1.Tag.TaggedVariable] : null];
+                tag = new Tag_1.Tag(element, this);
+                this.tags.push(tag);
+                return [2 /*return*/, tag];
+            });
+        });
+    };
     DOM.prototype.buildFrom = function (ele, isRoot, forComponent) {
         if (isRoot === void 0) { isRoot = false; }
         if (forComponent === void 0) { forComponent = false; }
         return __awaiter(this, void 0, void 0, function () {
-            var newTags, toBuild, checkElement, scanChildren, _i, toBuild_1, element, tag, _a, _b, newTags_1, tag, _c, newTags_2, tag, _d, newTags_3, tag, _e, newTags_4, tag, _f, newTags_5, tag, _g, newTags_6, tag, _h, newTags_7, tag;
-            var _this = this;
+            var newTags, toBuild, _i, toBuild_1, element, tag, _a, _b, newTags_1, tag, _c, newTags_2, tag, _d, newTags_3, tag, _e, newTags_4, tag, _f, newTags_5, tag, _g, newTags_6, tag, _h, newTags_7, tag;
             return __generator(this, function (_j) {
                 switch (_j.label) {
                     case 0:
@@ -333,123 +378,110 @@ var DOM = /** @class */ (function (_super) {
                             document.ondragover = function (e) { return e.cancelable && e.preventDefault(); }; // Allow dragging over document
                         }
                         newTags = [];
-                        toBuild = [];
-                        checkElement = function (e) {
-                            if (ElementHelper_1.ElementHelper.hasVisionAttribute(e)) {
-                                if ((!forComponent && e.hasAttribute('slot')))
-                                    return false;
-                                if (_this.queued.indexOf(e) > -1)
-                                    return false;
-                                _this.queued.push(e);
-                                toBuild.push(e);
-                            }
-                            return true;
-                        };
-                        scanChildren = function (e) {
-                            for (var _i = 0, _a = Array.from(e.children); _i < _a.length; _i++) {
-                                var element = _a[_i];
-                                if (!checkElement(element))
-                                    continue;
-                                if (element.tagName.toLowerCase() !== 'template')
-                                    scanChildren(element);
-                            }
-                        };
-                        checkElement(ele);
-                        scanChildren(ele);
-                        for (_i = 0, toBuild_1 = toBuild; _i < toBuild_1.length; _i++) {
-                            element = toBuild_1[_i];
-                            if (element[Tag_1.Tag.TaggedVariable])
-                                continue;
-                            tag = new Tag_1.Tag(element, this);
-                            this.tags.push(tag);
-                            newTags.push(tag);
-                        }
-                        if (!isRoot) return [3 /*break*/, 2];
-                        _a = this;
-                        return [4 /*yield*/, this.getTagForElement(document.body)];
+                        return [4 /*yield*/, this.discover(ele, forComponent)];
                     case 1:
-                        _a._root = _j.sent();
+                        toBuild = _j.sent();
+                        _i = 0, toBuild_1 = toBuild;
                         _j.label = 2;
                     case 2:
-                        _b = 0, newTags_1 = newTags;
-                        _j.label = 3;
+                        if (!(_i < toBuild_1.length)) return [3 /*break*/, 5];
+                        element = toBuild_1[_i];
+                        return [4 /*yield*/, this.buildTag(element)];
                     case 3:
-                        if (!(_b < newTags_1.length)) return [3 /*break*/, 6];
-                        tag = newTags_1[_b];
-                        return [4 /*yield*/, tag.buildAttributes()];
+                        tag = _j.sent();
+                        if (tag)
+                            newTags.push(tag);
+                        _j.label = 4;
                     case 4:
-                        _j.sent();
-                        _j.label = 5;
+                        _i++;
+                        return [3 /*break*/, 2];
                     case 5:
-                        _b++;
-                        return [3 /*break*/, 3];
+                        if (!isRoot) return [3 /*break*/, 7];
+                        _a = this;
+                        return [4 /*yield*/, this.getTagForElement(document.body)];
                     case 6:
-                        _c = 0, newTags_2 = newTags;
+                        _a._root = _j.sent();
                         _j.label = 7;
                     case 7:
-                        if (!(_c < newTags_2.length)) return [3 /*break*/, 10];
+                        _b = 0, newTags_1 = newTags;
+                        _j.label = 8;
+                    case 8:
+                        if (!(_b < newTags_1.length)) return [3 /*break*/, 11];
+                        tag = newTags_1[_b];
+                        return [4 /*yield*/, tag.buildAttributes()];
+                    case 9:
+                        _j.sent();
+                        _j.label = 10;
+                    case 10:
+                        _b++;
+                        return [3 /*break*/, 8];
+                    case 11:
+                        _c = 0, newTags_2 = newTags;
+                        _j.label = 12;
+                    case 12:
+                        if (!(_c < newTags_2.length)) return [3 /*break*/, 15];
                         tag = newTags_2[_c];
                         return [4 /*yield*/, tag.compileAttributes()];
-                    case 8:
+                    case 13:
                         _j.sent();
-                        _j.label = 9;
-                    case 9:
+                        _j.label = 14;
+                    case 14:
                         _c++;
-                        return [3 /*break*/, 7];
-                    case 10:
+                        return [3 /*break*/, 12];
+                    case 15:
                         _d = 0, newTags_3 = newTags;
-                        _j.label = 11;
-                    case 11:
-                        if (!(_d < newTags_3.length)) return [3 /*break*/, 14];
+                        _j.label = 16;
+                    case 16:
+                        if (!(_d < newTags_3.length)) return [3 /*break*/, 19];
                         tag = newTags_3[_d];
                         return [4 /*yield*/, tag.setupAttributes()];
-                    case 12:
+                    case 17:
                         _j.sent();
-                        _j.label = 13;
-                    case 13:
+                        _j.label = 18;
+                    case 18:
                         _d++;
-                        return [3 /*break*/, 11];
-                    case 14:
+                        return [3 /*break*/, 16];
+                    case 19:
                         _e = 0, newTags_4 = newTags;
-                        _j.label = 15;
-                    case 15:
-                        if (!(_e < newTags_4.length)) return [3 /*break*/, 18];
+                        _j.label = 20;
+                    case 20:
+                        if (!(_e < newTags_4.length)) return [3 /*break*/, 23];
                         tag = newTags_4[_e];
                         return [4 /*yield*/, tag.extractAttributes()];
-                    case 16:
+                    case 21:
                         _j.sent();
-                        _j.label = 17;
-                    case 17:
+                        _j.label = 22;
+                    case 22:
                         _e++;
-                        return [3 /*break*/, 15];
-                    case 18:
+                        return [3 /*break*/, 20];
+                    case 23:
                         _f = 0, newTags_5 = newTags;
-                        _j.label = 19;
-                    case 19:
-                        if (!(_f < newTags_5.length)) return [3 /*break*/, 22];
+                        _j.label = 24;
+                    case 24:
+                        if (!(_f < newTags_5.length)) return [3 /*break*/, 27];
                         tag = newTags_5[_f];
                         return [4 /*yield*/, tag.connectAttributes()];
-                    case 20:
+                    case 25:
                         _j.sent();
-                        _j.label = 21;
-                    case 21:
+                        _j.label = 26;
+                    case 26:
                         _f++;
-                        return [3 /*break*/, 19];
-                    case 22:
+                        return [3 /*break*/, 24];
+                    case 27:
                         _g = 0, newTags_6 = newTags;
-                        _j.label = 23;
-                    case 23:
-                        if (!(_g < newTags_6.length)) return [3 /*break*/, 26];
+                        _j.label = 28;
+                    case 28:
+                        if (!(_g < newTags_6.length)) return [3 /*break*/, 31];
                         tag = newTags_6[_g];
                         return [4 /*yield*/, tag.finalize()];
-                    case 24:
+                    case 29:
                         _j.sent();
                         this.queued.splice(this.queued.indexOf(tag.element), 1);
-                        _j.label = 25;
-                    case 25:
+                        _j.label = 30;
+                    case 30:
                         _g++;
-                        return [3 /*break*/, 23];
-                    case 26:
+                        return [3 /*break*/, 28];
+                    case 31:
                         for (_h = 0, newTags_7 = newTags; _h < newTags_7.length; _h++) {
                             tag = newTags_7[_h];
                             this.observer.observe(tag.element, {

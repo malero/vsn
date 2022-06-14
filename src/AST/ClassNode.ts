@@ -227,7 +227,7 @@ export class ClassNode extends Node implements TreeNode {
         }
 
         const classNode: ClassNode = Registry.instance.classes.getSynchronous(selector);
-        if (classNode) {
+        if (classNode && tag) {
             await classNode.constructTag(tag, dom);
         }
 

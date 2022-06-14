@@ -400,7 +400,7 @@ var ClassNode = /** @class */ (function (_super) {
                         _a.label = 2;
                     case 2:
                         classNode = Registry_1.Registry.instance.classes.getSynchronous(selector);
-                        if (!classNode) return [3 /*break*/, 4];
+                        if (!(classNode && tag)) return [3 /*break*/, 4];
                         return [4 /*yield*/, classNode.constructTag(tag, dom)];
                     case 3:
                         _a.sent();

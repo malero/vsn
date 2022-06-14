@@ -41,7 +41,7 @@ describe('ListItem', () => {
 
     it("vsn-list-item should find it's parent list", (done) => {
         document.body.innerHTML = `
-            <ul vsn-list:list vsn-list-item-model="ListItemSpecTestItem" id="test"><li vsn-list-item:item id="test-item"></li></ul>
+            <ul vsn-list:list list-item-model="ListItemSpecTestItem" id="test"><li vsn-list-item id="test-item"></li></ul>
         `;
 
         const dom = new DOM(document);
@@ -58,7 +58,7 @@ describe('ListItem', () => {
     it("should properly wrap list item class", (done) => {
         document.body.innerHTML = `
             <div vsn-controller:controller="ListItemController">
-                <ul vsn-list:controller.items vsn-list-item-model="ListItemSpecTestItem" id="test">
+                <ul vsn-list:controller.items list-item-model="ListItemSpecTestItem" id="test">
                     <li vsn-template vsn-list-item:item></li>
                 </ul>
             </div>
@@ -89,7 +89,7 @@ describe('ListItem', () => {
 
     it("vsn-list-item should work with vsn-set", (done) => {
         document.body.innerHTML = `
-            <ul vsn-list:list vsn-list-item-model="ListItemSpecTestItem" id="test"><li vsn-list-item:item id="test-item" vsn-set:item.testing|integer="1"></li></ul>
+            <ul vsn-list:list list-item-model="ListItemSpecTestItem" id="test"><li vsn-list-item:item id="test-item" vsn-set:item.testing|integer="1"></li></ul>
         `;
 
         const dom = new DOM(document);
@@ -105,14 +105,15 @@ describe('ListItem', () => {
 
     it("vsn-list-item should work with vsn-exec", (done) => {
         document.body.innerHTML = `
-            <ul vsn-list:list vsn-list-item-model="ListItemSpecTestItem" id="test"><li vsn-list-item:item id="test-item" vsn-exec="item.test = 1"></li></ul>
+            <ul vsn-list:list list-item-model="ListItemSpecTestItem" id="test">
+                <li vsn-list-item id="test-item" vsn-exec="item.test = 1"></li>
+            </ul>
         `;
 
+        console.log('################# building dom');
         const dom = new DOM(document);
         dom.once('built', async () => {
-            const list = await dom.getTagForElement(document.getElementById('test'));
             const listItem = await dom.getTagForElement(document.getElementById('test-item'));
-            const listItemAttr: ListItem = await listItem.getAttribute('vsn-list-item') as ListItem;
             console.log('test keys', listItem.scope.keys);
             expect(listItem.scope.get('test')).toBe(1);
             done();

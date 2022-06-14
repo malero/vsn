@@ -18,30 +18,13 @@ export class ListItem extends Attribute {
         this._list = this.tag.findAncestorByAttribute('vsn-list');
         if (!this._list)
             throw Error(ListItem.ERROR_NO_PARENT);
-        const modelName: string = (await this.getList()).listItemModel;
-        if (modelName) {
-            const cls = await Registry.instance.models.get(modelName);
-            if (
-                !(this.tag.scope.data instanceof cls) &&
-                !(this.tag.scope.wrapped instanceof cls)
-            ) {
-                this.instantiateModel(cls);
-            }
 
-        }
-        this.tag.scope.set(this.listItemName, this.tag.scope);
+        this.tag.scope.set((await this.getListAttribute()).listItemName, this.tag.scope);
+
         await super.setup();
     }
 
-    public get listItemName(): string {
-        return this.getAttributeBinding('item');
-    }
-
-    public async getList(): Promise<List> {
+    public async getListAttribute(): Promise<List> {
         return await this._list.getAttribute<List>('vsn-list');
-    }
-
-    private instantiateModel(model: any) {
-        this.tag.wrap(model, false, true);
     }
 }

@@ -38,6 +38,8 @@ export declare class DOM extends EventDispatcher {
     exec(code: string): Promise<any>;
     evaluate(): Promise<void>;
     mutation(mutations: MutationRecord[]): Promise<void>;
+    discover(ele: HTMLElement, forComponent?: boolean): Promise<HTMLElement[]>;
+    buildTag(element: HTMLElement, returnExisting?: boolean): Promise<Tag>;
     buildFrom(ele: any, isRoot?: boolean, forComponent?: boolean): Promise<void>;
     getTagsForElements(elements: Element[], create?: boolean): Promise<TagList>;
     getTagForElement(element: Element, create?: boolean, forComponent?: boolean): any;
