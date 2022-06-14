@@ -19,8 +19,8 @@ export class ListItem extends Attribute {
         if (!this._list)
             throw Error(ListItem.ERROR_NO_PARENT);
 
-        this.tag.scope.set((await this.getListAttribute()).listItemName, this.tag.scope);
-
+        const listAttr = await this.getListAttribute();
+        await listAttr.setupTag(this.tag, {});
         await super.setup();
     }
 

@@ -13,4 +13,5 @@ export declare class List extends Attribute {
     get listItemModel(): string;
     remove(item: any): void;
     protected add(obj: any): Promise<void>;
+    setupTag(tag: Tag, obj: any): Promise<void>;
 }

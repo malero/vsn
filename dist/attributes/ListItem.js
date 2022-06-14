@@ -75,20 +75,22 @@ var ListItem = /** @class */ (function (_super) {
     });
     ListItem.prototype.setup = function () {
         return __awaiter(this, void 0, void 0, function () {
-            var _a, _b;
-            return __generator(this, function (_c) {
-                switch (_c.label) {
+            var listAttr;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
                     case 0:
                         this._list = this.tag.findAncestorByAttribute('vsn-list');
                         if (!this._list)
                             throw Error(ListItem_1.ERROR_NO_PARENT);
-                        _b = (_a = this.tag.scope).set;
                         return [4 /*yield*/, this.getListAttribute()];
                     case 1:
-                        _b.apply(_a, [(_c.sent()).listItemName, this.tag.scope]);
-                        return [4 /*yield*/, _super.prototype.setup.call(this)];
+                        listAttr = _a.sent();
+                        return [4 /*yield*/, listAttr.setupTag(this.tag, {})];
                     case 2:
-                        _c.sent();
+                        _a.sent();
+                        return [4 /*yield*/, _super.prototype.setup.call(this)];
+                    case 3:
+                        _a.sent();
                         return [2 /*return*/];
                 }
             });

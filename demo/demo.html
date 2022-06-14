@@ -201,7 +201,7 @@
     <input type="text" vsn-bind="test.age"/>
     <button vsn-on:click="test.reset()" vsn-if="test.name">Reset</button>
     <button vsn-on:click="test.add();">Add New List Item</button>
-    <ul vsn-list:test.items vsn-list-item-model="TestItem" vsn-name="list">
+    <ul vsn-list:test.items list-item-model="TestItem" vsn-name="list">
         <li vsn-list-item>
             <span vsn-bind="item.name">Tom</span>, <span vsn-bind="item.age">22</span> Years Old <input type="text"
                                                                                                         vsn-bind="item.name"/>

@@ -251,7 +251,7 @@ var List = /** @class */ (function (_super) {
     };
     List.prototype.add = function (obj) {
         return __awaiter(this, void 0, void 0, function () {
-            var clone, element, tag, modelName, cls;
+            var clone, element, tag;
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
@@ -266,28 +266,43 @@ var List = /** @class */ (function (_super) {
                         return [4 /*yield*/, this.tag.dom.buildTag(element, true)];
                     case 1:
                         tag = _a.sent();
-                        tag.createScope(true);
-                        modelName = this.listItemModel;
-                        if (!modelName) return [3 /*break*/, 3];
-                        return [4 /*yield*/, Registry_1.Registry.instance.models.get(modelName)];
+                        return [4 /*yield*/, this.setupTag(tag, obj)];
                     case 2:
-                        cls = _a.sent();
-                        _a.label = 3;
-                    case 3:
-                        if (cls) {
-                            if (!obj || !(obj instanceof cls)) {
-                                obj = new cls(obj);
-                            }
-                        }
-                        tag.scope.set(this.listItemName, tag.scope);
-                        tag.wrap(obj);
+                        _a.sent();
                         // Add to DOM & build
                         this.tag.element.appendChild(element);
                         return [4 /*yield*/, this.tag.dom.buildFrom(this.tag.element)];
-                    case 4:
+                    case 3:
                         _a.sent();
                         this.tags.push(tag);
                         this.tag.dispatch('add', obj);
+                        return [2 /*return*/];
+                }
+            });
+        });
+    };
+    List.prototype.setupTag = function (tag, obj) {
+        return __awaiter(this, void 0, void 0, function () {
+            var modelName, cls;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0:
+                        tag.createScope(true);
+                        modelName = this.listItemModel;
+                        if (!modelName) return [3 /*break*/, 2];
+                        return [4 /*yield*/, Registry_1.Registry.instance.models.get(modelName)];
+                    case 1:
+                        cls = _a.sent();
+                        _a.label = 2;
+                    case 2:
+                        if (cls) {
+                            if (!obj || !(obj instanceof cls))
+                                obj = new cls(obj);
+                        }
+                        // Check if the class is set up already
+                        if (!cls || (!(tag.scope.data instanceof cls) && !(tag.scope.wrapped instanceof cls)))
+                            tag.wrap(obj);
+                        tag.scope.set(this.listItemName, tag.scope);
                         return [2 /*return*/];
                 }
             });

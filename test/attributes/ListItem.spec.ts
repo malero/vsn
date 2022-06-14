@@ -89,15 +89,12 @@ describe('ListItem', () => {
 
     it("vsn-list-item should work with vsn-set", (done) => {
         document.body.innerHTML = `
-            <ul vsn-list:list list-item-model="ListItemSpecTestItem" id="test"><li vsn-list-item:item id="test-item" vsn-set:item.testing|integer="1"></li></ul>
+            <ul vsn-list:list list-item-model="ListItemSpecTestItem" id="test"><li vsn-list-item id="test-item" vsn-set:item.testing|integer="1"></li></ul>
         `;
 
         const dom = new DOM(document);
         dom.once('built', async () => {
-            const list = await dom.getTagForElement(document.getElementById('test'));
             const listItem = await dom.getTagForElement(document.getElementById('test-item'));
-            const listItemAttr: ListItem = await listItem.getAttribute('vsn-list-item') as ListItem;
-
             expect(listItem.scope.get('testing')).toBe(1);
             done();
         });

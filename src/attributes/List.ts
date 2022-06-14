@@ -147,6 +147,17 @@ export class List extends Attribute {
 
         // Setup new tag
         const tag = await this.tag.dom.buildTag(element, true);
+
+        await this.setupTag(tag, obj);
+
+        // Add to DOM & build
+        this.tag.element.appendChild(element);
+        await this.tag.dom.buildFrom(this.tag.element);
+        this.tags.push(tag);
+        this.tag.dispatch('add', obj);
+    }
+
+    async setupTag(tag: Tag, obj: any) {
         tag.createScope(true);
 
         // Setup new scope & class, if defined
@@ -156,18 +167,14 @@ export class List extends Attribute {
             cls = await Registry.instance.models.get(modelName);
 
         if (cls) {
-            if (!obj || !(obj instanceof cls)) {
+            if (!obj || !(obj instanceof cls))
                 obj = new cls(obj);
-            }
         }
 
-        tag.scope.set(this.listItemName, tag.scope);
-        tag.wrap(obj);
+        // Check if the class is set up already
+        if (!cls || (!(tag.scope.data instanceof cls) && !(tag.scope.wrapped instanceof cls)))
+            tag.wrap(obj);
 
-        // Add to DOM & build
-        this.tag.element.appendChild(element);
-        await this.tag.dom.buildFrom(this.tag.element);
-        this.tags.push(tag);
-        this.tag.dispatch('add', obj);
+        tag.scope.set(this.listItemName, tag.scope);
     }
 }
