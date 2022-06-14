@@ -85,7 +85,7 @@ var ListItem = /** @class */ (function (_super) {
                         return [4 /*yield*/, this.getListAttribute()];
                     case 1:
                         listAttr = _a.sent();
-                        return [4 /*yield*/, listAttr.setupTag(this.tag, {})];
+                        return [4 /*yield*/, listAttr.setupTagScope(this.tag, {})];
                     case 2:
                         _a.sent();
                         return [4 /*yield*/, _super.prototype.setup.call(this)];

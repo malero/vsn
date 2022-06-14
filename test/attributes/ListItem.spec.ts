@@ -107,7 +107,6 @@ describe('ListItem', () => {
             </ul>
         `;
 
-        console.log('################# building dom');
         const dom = new DOM(document);
         dom.once('built', async () => {
             const listItem = await dom.getTagForElement(document.getElementById('test-item'));

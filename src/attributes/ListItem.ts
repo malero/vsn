@@ -20,7 +20,7 @@ export class ListItem extends Attribute {
             throw Error(ListItem.ERROR_NO_PARENT);
 
         const listAttr = await this.getListAttribute();
-        await listAttr.setupTag(this.tag, {});
+        await listAttr.setupTagScope(this.tag, {});
         await super.setup();
     }
 

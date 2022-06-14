@@ -489,7 +489,6 @@ export class Tag extends DOMObject {
             for (const attr of tag.getAttributesWithState(AttributeState.Instantiated)) {
                 await attr.compile();
             }
-
         }
         this._state = TagState.AttributesCompiled;
     }

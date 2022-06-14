@@ -51,7 +51,7 @@ export class List extends Attribute {
         await this.addExistingItems(items);
 
         listScope.on(`change:${listKey}`, (e) => {
-            if (e.oldValue) {
+            if (e?.oldValue) {
                 if (e.oldValue instanceof WrappedArray) {
                     e.oldValue.map((item) => {
                         this.remove(item);
@@ -147,17 +147,17 @@ export class List extends Attribute {
 
         // Setup new tag
         const tag = await this.tag.dom.buildTag(element, true);
-
-        await this.setupTag(tag, obj);
+        await this.setupTagScope(tag, obj);
 
         // Add to DOM & build
         this.tag.element.appendChild(element);
+        await this.tag.dom.setupTags([tag]);
         await this.tag.dom.buildFrom(this.tag.element);
         this.tags.push(tag);
         this.tag.dispatch('add', obj);
     }
 
-    async setupTag(tag: Tag, obj: any) {
+    async setupTagScope(tag: Tag, obj: any) {
         tag.createScope(true);
 
         // Setup new scope & class, if defined
@@ -172,8 +172,11 @@ export class List extends Attribute {
         }
 
         // Check if the class is set up already
-        if (!cls || (!(tag.scope.data instanceof cls) && !(tag.scope.wrapped instanceof cls)))
+        if (!cls || (!(tag.scope.data instanceof cls) && !(tag.scope.wrapped instanceof cls))) {
+            if (tag.scope.wrapped)
+                tag.scope.unwrap();
             tag.wrap(obj);
+        }
 
         tag.scope.set(this.listItemName, tag.scope);
     }

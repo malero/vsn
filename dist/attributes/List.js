@@ -129,7 +129,7 @@ var List = /** @class */ (function (_super) {
                     case 3:
                         _a.sent();
                         listScope.on("change:" + listKey, function (e) {
-                            if (e.oldValue) {
+                            if (e === null || e === void 0 ? void 0 : e.oldValue) {
                                 if (e.oldValue instanceof WrappedArray_1.WrappedArray) {
                                     e.oldValue.map(function (item) {
                                         _this.remove(item);
@@ -266,13 +266,16 @@ var List = /** @class */ (function (_super) {
                         return [4 /*yield*/, this.tag.dom.buildTag(element, true)];
                     case 1:
                         tag = _a.sent();
-                        return [4 /*yield*/, this.setupTag(tag, obj)];
+                        return [4 /*yield*/, this.setupTagScope(tag, obj)];
                     case 2:
                         _a.sent();
                         // Add to DOM & build
                         this.tag.element.appendChild(element);
-                        return [4 /*yield*/, this.tag.dom.buildFrom(this.tag.element)];
+                        return [4 /*yield*/, this.tag.dom.setupTags([tag])];
                     case 3:
+                        _a.sent();
+                        return [4 /*yield*/, this.tag.dom.buildFrom(this.tag.element)];
+                    case 4:
                         _a.sent();
                         this.tags.push(tag);
                         this.tag.dispatch('add', obj);
@@ -281,7 +284,7 @@ var List = /** @class */ (function (_super) {
             });
         });
     };
-    List.prototype.setupTag = function (tag, obj) {
+    List.prototype.setupTagScope = function (tag, obj) {
         return __awaiter(this, void 0, void 0, function () {
             var modelName, cls;
             return __generator(this, function (_a) {
@@ -300,8 +303,11 @@ var List = /** @class */ (function (_super) {
                                 obj = new cls(obj);
                         }
                         // Check if the class is set up already
-                        if (!cls || (!(tag.scope.data instanceof cls) && !(tag.scope.wrapped instanceof cls)))
+                        if (!cls || (!(tag.scope.data instanceof cls) && !(tag.scope.wrapped instanceof cls))) {
+                            if (tag.scope.wrapped)
+                                tag.scope.unwrap();
                             tag.wrap(obj);
+                        }
                         tag.scope.set(this.listItemName, tag.scope);
                         return [2 /*return*/];
                 }
