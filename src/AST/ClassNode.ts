@@ -226,8 +226,13 @@ export class ClassNode extends Node implements TreeNode {
             tag = await dom.getTagForElement(element, true);
         }
 
+        if (!tag) {
+            console.error('no tag found for element', element);
+            return;
+        }
+
         const classNode: ClassNode = Registry.instance.classes.getSynchronous(selector);
-        if (classNode && tag) {
+        if (classNode) {
             await classNode.constructTag(tag, dom);
         }
 

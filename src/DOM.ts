@@ -223,6 +223,38 @@ export class DOM extends EventDispatcher {
         return tag;
     }
 
+    async setupTags(tags: Tag[]) {
+         // Configure, setup & execute attributes
+        for (const tag of tags)
+            await tag.buildAttributes();
+
+        for (const tag of tags)
+            await tag.compileAttributes();
+
+        for (const tag of tags)
+            await tag.setupAttributes();
+
+        for (const tag of tags)
+            await tag.extractAttributes();
+
+        for (const tag of tags)
+            await tag.connectAttributes();
+
+        for (const tag of tags) {
+            await tag.finalize();
+            this.queued.splice(this.queued.indexOf(tag.element), 1);
+        }
+
+        for (const tag of tags) {
+            this.observer.observe(tag.element, {
+                attributes: true,
+                characterData: true,
+                childList: true,
+                subtree: true
+            });
+        }
+    }
+
     async buildFrom(ele: any, isRoot: boolean = false, forComponent: boolean = false) {
         if (isRoot) {
             document.body.setAttribute('vsn-root', '');
@@ -242,35 +274,7 @@ export class DOM extends EventDispatcher {
         if (isRoot)
             this._root = await this.getTagForElement(document.body);
 
-        // Configure, setup & execute attributes
-        for (const tag of newTags)
-            await tag.buildAttributes();
-
-        for (const tag of newTags)
-            await tag.compileAttributes();
-
-        for (const tag of newTags)
-            await tag.setupAttributes();
-
-        for (const tag of newTags)
-            await tag.extractAttributes();
-
-        for (const tag of newTags)
-            await tag.connectAttributes();
-
-        for (const tag of newTags) {
-            await tag.finalize();
-            this.queued.splice(this.queued.indexOf(tag.element), 1);
-        }
-
-        for (const tag of newTags) {
-            this.observer.observe(tag.element, {
-                attributes: true,
-                characterData: true,
-                childList: true,
-                subtree: true
-            });
-        }
+       await this.setupTags(newTags);
 
         if (isRoot) {
             this._built = true;

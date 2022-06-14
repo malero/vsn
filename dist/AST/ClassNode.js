@@ -399,8 +399,12 @@ var ClassNode = /** @class */ (function (_super) {
                         tag = _a.sent();
                         _a.label = 2;
                     case 2:
+                        if (!tag) {
+                            console.error('no tag found for element', element);
+                            return [2 /*return*/];
+                        }
                         classNode = Registry_1.Registry.instance.classes.getSynchronous(selector);
-                        if (!(classNode && tag)) return [3 /*break*/, 4];
+                        if (!classNode) return [3 /*break*/, 4];
                         return [4 /*yield*/, classNode.constructTag(tag, dom)];
                     case 3:
                         _a.sent();

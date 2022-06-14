@@ -365,13 +365,112 @@ var DOM = /** @class */ (function (_super) {
             });
         });
     };
+    DOM.prototype.setupTags = function (tags) {
+        return __awaiter(this, void 0, void 0, function () {
+            var _i, tags_1, tag, _a, tags_2, tag, _b, tags_3, tag, _c, tags_4, tag, _d, tags_5, tag, _e, tags_6, tag, _f, tags_7, tag;
+            return __generator(this, function (_g) {
+                switch (_g.label) {
+                    case 0:
+                        _i = 0, tags_1 = tags;
+                        _g.label = 1;
+                    case 1:
+                        if (!(_i < tags_1.length)) return [3 /*break*/, 4];
+                        tag = tags_1[_i];
+                        return [4 /*yield*/, tag.buildAttributes()];
+                    case 2:
+                        _g.sent();
+                        _g.label = 3;
+                    case 3:
+                        _i++;
+                        return [3 /*break*/, 1];
+                    case 4:
+                        _a = 0, tags_2 = tags;
+                        _g.label = 5;
+                    case 5:
+                        if (!(_a < tags_2.length)) return [3 /*break*/, 8];
+                        tag = tags_2[_a];
+                        return [4 /*yield*/, tag.compileAttributes()];
+                    case 6:
+                        _g.sent();
+                        _g.label = 7;
+                    case 7:
+                        _a++;
+                        return [3 /*break*/, 5];
+                    case 8:
+                        _b = 0, tags_3 = tags;
+                        _g.label = 9;
+                    case 9:
+                        if (!(_b < tags_3.length)) return [3 /*break*/, 12];
+                        tag = tags_3[_b];
+                        return [4 /*yield*/, tag.setupAttributes()];
+                    case 10:
+                        _g.sent();
+                        _g.label = 11;
+                    case 11:
+                        _b++;
+                        return [3 /*break*/, 9];
+                    case 12:
+                        _c = 0, tags_4 = tags;
+                        _g.label = 13;
+                    case 13:
+                        if (!(_c < tags_4.length)) return [3 /*break*/, 16];
+                        tag = tags_4[_c];
+                        return [4 /*yield*/, tag.extractAttributes()];
+                    case 14:
+                        _g.sent();
+                        _g.label = 15;
+                    case 15:
+                        _c++;
+                        return [3 /*break*/, 13];
+                    case 16:
+                        _d = 0, tags_5 = tags;
+                        _g.label = 17;
+                    case 17:
+                        if (!(_d < tags_5.length)) return [3 /*break*/, 20];
+                        tag = tags_5[_d];
+                        return [4 /*yield*/, tag.connectAttributes()];
+                    case 18:
+                        _g.sent();
+                        _g.label = 19;
+                    case 19:
+                        _d++;
+                        return [3 /*break*/, 17];
+                    case 20:
+                        _e = 0, tags_6 = tags;
+                        _g.label = 21;
+                    case 21:
+                        if (!(_e < tags_6.length)) return [3 /*break*/, 24];
+                        tag = tags_6[_e];
+                        return [4 /*yield*/, tag.finalize()];
+                    case 22:
+                        _g.sent();
+                        this.queued.splice(this.queued.indexOf(tag.element), 1);
+                        _g.label = 23;
+                    case 23:
+                        _e++;
+                        return [3 /*break*/, 21];
+                    case 24:
+                        for (_f = 0, tags_7 = tags; _f < tags_7.length; _f++) {
+                            tag = tags_7[_f];
+                            this.observer.observe(tag.element, {
+                                attributes: true,
+                                characterData: true,
+                                childList: true,
+                                subtree: true
+                            });
+                        }
+                        return [2 /*return*/];
+                }
+            });
+        });
+    };
     DOM.prototype.buildFrom = function (ele, isRoot, forComponent) {
         if (isRoot === void 0) { isRoot = false; }
         if (forComponent === void 0) { forComponent = false; }
         return __awaiter(this, void 0, void 0, function () {
-            var newTags, toBuild, _i, toBuild_1, element, tag, _a, _b, newTags_1, tag, _c, newTags_2, tag, _d, newTags_3, tag, _e, newTags_4, tag, _f, newTags_5, tag, _g, newTags_6, tag, _h, newTags_7, tag;
-            return __generator(this, function (_j) {
-                switch (_j.label) {
+            var newTags, toBuild, _i, toBuild_1, element, tag, _a;
+            return __generator(this, function (_b) {
+                switch (_b.label) {
                     case 0:
                         if (isRoot) {
                             document.body.setAttribute('vsn-root', '');
@@ -380,18 +479,18 @@ var DOM = /** @class */ (function (_super) {
                         newTags = [];
                         return [4 /*yield*/, this.discover(ele, forComponent)];
                     case 1:
-                        toBuild = _j.sent();
+                        toBuild = _b.sent();
                         _i = 0, toBuild_1 = toBuild;
-                        _j.label = 2;
+                        _b.label = 2;
                     case 2:
                         if (!(_i < toBuild_1.length)) return [3 /*break*/, 5];
                         element = toBuild_1[_i];
                         return [4 /*yield*/, this.buildTag(element)];
                     case 3:
-                        tag = _j.sent();
+                        tag = _b.sent();
                         if (tag)
                             newTags.push(tag);
-                        _j.label = 4;
+                        _b.label = 4;
                     case 4:
                         _i++;
                         return [3 /*break*/, 2];
@@ -400,97 +499,11 @@ var DOM = /** @class */ (function (_super) {
                         _a = this;
                         return [4 /*yield*/, this.getTagForElement(document.body)];
                     case 6:
-                        _a._root = _j.sent();
-                        _j.label = 7;
-                    case 7:
-                        _b = 0, newTags_1 = newTags;
-                        _j.label = 8;
+                        _a._root = _b.sent();
+                        _b.label = 7;
+                    case 7: return [4 /*yield*/, this.setupTags(newTags)];
                     case 8:
-                        if (!(_b < newTags_1.length)) return [3 /*break*/, 11];
-                        tag = newTags_1[_b];
-                        return [4 /*yield*/, tag.buildAttributes()];
-                    case 9:
-                        _j.sent();
-                        _j.label = 10;
-                    case 10:
-                        _b++;
-                        return [3 /*break*/, 8];
-                    case 11:
-                        _c = 0, newTags_2 = newTags;
-                        _j.label = 12;
-                    case 12:
-                        if (!(_c < newTags_2.length)) return [3 /*break*/, 15];
-                        tag = newTags_2[_c];
-                        return [4 /*yield*/, tag.compileAttributes()];
-                    case 13:
-                        _j.sent();
-                        _j.label = 14;
-                    case 14:
-                        _c++;
-                        return [3 /*break*/, 12];
-                    case 15:
-                        _d = 0, newTags_3 = newTags;
-                        _j.label = 16;
-                    case 16:
-                        if (!(_d < newTags_3.length)) return [3 /*break*/, 19];
-                        tag = newTags_3[_d];
-                        return [4 /*yield*/, tag.setupAttributes()];
-                    case 17:
-                        _j.sent();
-                        _j.label = 18;
-                    case 18:
-                        _d++;
-                        return [3 /*break*/, 16];
-                    case 19:
-                        _e = 0, newTags_4 = newTags;
-                        _j.label = 20;
-                    case 20:
-                        if (!(_e < newTags_4.length)) return [3 /*break*/, 23];
-                        tag = newTags_4[_e];
-                        return [4 /*yield*/, tag.extractAttributes()];
-                    case 21:
-                        _j.sent();
-                        _j.label = 22;
-                    case 22:
-                        _e++;
-                        return [3 /*break*/, 20];
-                    case 23:
-                        _f = 0, newTags_5 = newTags;
-                        _j.label = 24;
-                    case 24:
-                        if (!(_f < newTags_5.length)) return [3 /*break*/, 27];
-                        tag = newTags_5[_f];
-                        return [4 /*yield*/, tag.connectAttributes()];
-                    case 25:
-                        _j.sent();
-                        _j.label = 26;
-                    case 26:
-                        _f++;
-                        return [3 /*break*/, 24];
-                    case 27:
-                        _g = 0, newTags_6 = newTags;
-                        _j.label = 28;
-                    case 28:
-                        if (!(_g < newTags_6.length)) return [3 /*break*/, 31];
-                        tag = newTags_6[_g];
-                        return [4 /*yield*/, tag.finalize()];
-                    case 29:
-                        _j.sent();
-                        this.queued.splice(this.queued.indexOf(tag.element), 1);
-                        _j.label = 30;
-                    case 30:
-                        _g++;
-                        return [3 /*break*/, 28];
-                    case 31:
-                        for (_h = 0, newTags_7 = newTags; _h < newTags_7.length; _h++) {
-                            tag = newTags_7[_h];
-                            this.observer.observe(tag.element, {
-                                attributes: true,
-                                characterData: true,
-                                childList: true,
-                                subtree: true
-                            });
-                        }
+                        _b.sent();
                         if (isRoot) {
                             this._built = true;
                             this.dispatch('builtRoot');
