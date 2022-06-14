@@ -55,7 +55,7 @@ export class FunctionCallNode<T = any> extends Node implements TreeNode {
 
             for (const _tag of tags) {
                 let tagNum = 0;
-                for (const className of _tag.element[ClassNode.ClassesVariable]) {
+                for (const className of _tag.element[ClassNode.ClassesVariable] || []) {
                     tagNum++;
                     const cls = Registry.instance.classes.getSynchronous(className);
                     if (cls) {

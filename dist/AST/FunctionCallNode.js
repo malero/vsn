@@ -127,7 +127,7 @@ var FunctionCallNode = /** @class */ (function (_super) {
                         if (!(_i < tags_1.length)) return [3 /*break*/, 14];
                         _tag = tags_1[_i];
                         tagNum = 0;
-                        _a = 0, _b = _tag.element[ClassNode_1.ClassNode.ClassesVariable];
+                        _a = 0, _b = _tag.element[ClassNode_1.ClassNode.ClassesVariable] || [];
                         _f.label = 9;
                     case 9:
                         if (!(_a < _b.length)) return [3 /*break*/, 13];

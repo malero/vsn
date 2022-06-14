@@ -26,6 +26,7 @@ export class Tag extends DOMObject {
     public readonly parsedAttributes: { [key: string]: string[]; };
     public readonly deferredAttributes: Attribute[] = [];
     protected _state: TagState;
+    protected _meta: { [key: string]: any; };
     protected attributes: Attribute[];
     protected _nonDeferredAttributes: Attribute[] = [];
     protected _parentTag: Tag;
@@ -67,6 +68,12 @@ export class Tag extends DOMObject {
                 console.log('slot change', e, this.element.assignedSlot);
             })
         }
+    }
+
+    public get meta() {
+        if (!this._meta)
+            this._meta = {};
+        return this._meta;
     }
 
     public slotted(slot: HTMLSlotElement) {

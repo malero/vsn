@@ -69,6 +69,7 @@ var List = /** @class */ (function (_super) {
     function List() {
         return _super !== null && _super.apply(this, arguments) || this;
     }
+    List_1 = List;
     List.prototype.setup = function () {
         return __awaiter(this, void 0, void 0, function () {
             var template, templateTag, templateNode;
@@ -290,6 +291,8 @@ var List = /** @class */ (function (_super) {
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
+                        if (tag.meta[List_1.MetaItemSetupFlag])
+                            return [2 /*return*/];
                         tag.createScope(true);
                         modelName = this.listItemModel;
                         if (!modelName) return [3 /*break*/, 2];
@@ -309,14 +312,17 @@ var List = /** @class */ (function (_super) {
                             tag.wrap(obj);
                         }
                         tag.scope.set(this.listItemName, tag.scope);
+                        tag.meta[List_1.MetaItemSetupFlag] = true;
                         return [2 /*return*/];
                 }
             });
         });
     };
+    var List_1;
+    List.MetaItemSetupFlag = 'vsn-list-item-setup';
     List.canDefer = false;
     List.scoped = true;
-    List = __decorate([
+    List = List_1 = __decorate([
         Registry_1.Registry.attribute('vsn-list')
     ], List);
     return List;

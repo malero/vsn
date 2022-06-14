@@ -1,6 +1,7 @@
 import { Attribute } from "../Attribute";
 import { Tag } from "../Tag";
 export declare class List extends Attribute {
+    static readonly MetaItemSetupFlag = "vsn-list-item-setup";
     static readonly canDefer: boolean;
     static readonly scoped: boolean;
     items: any[];

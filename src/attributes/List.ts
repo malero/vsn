@@ -8,6 +8,7 @@ import {Scope} from "../Scope";
 
 @Registry.attribute('vsn-list')
 export class List extends Attribute {
+    public static readonly MetaItemSetupFlag = 'vsn-list-item-setup';
     public static readonly canDefer: boolean = false;
     public static readonly scoped: boolean = true;
 
@@ -158,6 +159,9 @@ export class List extends Attribute {
     }
 
     async setupTagScope(tag: Tag, obj: any) {
+        if (tag.meta[List.MetaItemSetupFlag])
+            return;
+
         tag.createScope(true);
 
         // Setup new scope & class, if defined
@@ -179,5 +183,6 @@ export class List extends Attribute {
         }
 
         tag.scope.set(this.listItemName, tag.scope);
+        tag.meta[List.MetaItemSetupFlag] = true;
     }
 }

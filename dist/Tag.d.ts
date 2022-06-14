@@ -25,6 +25,9 @@ export declare class Tag extends DOMObject {
     };
     readonly deferredAttributes: Attribute[];
     protected _state: TagState;
+    protected _meta: {
+        [key: string]: any;
+    };
     protected attributes: Attribute[];
     protected _nonDeferredAttributes: Attribute[];
     protected _parentTag: Tag;
@@ -34,6 +37,9 @@ export declare class Tag extends DOMObject {
     protected inputTags: string[];
     get uniqueScope(): boolean;
     constructor(element: HTMLElement, dom: DOM, ...props: any[]);
+    get meta(): {
+        [key: string]: any;
+    };
     slotted(slot: HTMLSlotElement): void;
     protected onAttributeStateChange(event: any): void;
     getAttributesWithState(state: AttributeState): Attribute[];

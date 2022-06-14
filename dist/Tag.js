@@ -117,6 +117,15 @@ var Tag = /** @class */ (function (_super) {
         configurable: true
     });
     ;
+    Object.defineProperty(Tag.prototype, "meta", {
+        get: function () {
+            if (!this._meta)
+                this._meta = {};
+            return this._meta;
+        },
+        enumerable: false,
+        configurable: true
+    });
     Tag.prototype.slotted = function (slot) {
         this.slot = slot;
         console.log('i am slotted', slot);
