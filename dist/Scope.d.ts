@@ -14,7 +14,7 @@ export declare class Scope extends EventDispatcher {
     removeChild(scope: Scope): void;
     getReference(path: string, createIfNotFound?: boolean): ScopeReference;
     get(key: string, searchParents?: boolean): any;
-    set(key: string, value: any): void;
+    set(key: string, value: any, detectType?: boolean): void;
     get keys(): string[];
     has(key: string): boolean;
     setType(key: string, type: string): void;

@@ -91,7 +91,7 @@ var ObjectNode = /** @class */ (function (_super) {
                         _c = [_d.sent()];
                         return [4 /*yield*/, val.evaluate(scope, dom, tag)];
                     case 3:
-                        _b.apply(_a, _c.concat([_d.sent()]));
+                        _b.apply(_a, _c.concat([_d.sent(), true]));
                         _d.label = 4;
                     case 4:
                         i++;

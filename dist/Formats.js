@@ -27,7 +27,10 @@ var Formats = /** @class */ (function () {
             setup();
         }
         value = ("" + value).replace(/[^0-9.]+/, '');
-        return Formats.CurrencyFormatter.format(parseFloat(value));
+        value = parseFloat(value);
+        if (isNaN(value))
+            return '';
+        return Formats.CurrencyFormatter.format(value);
     };
     Formats.date = function (value) {
         return value ? value.toLocaleString() : '';

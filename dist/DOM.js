@@ -61,11 +61,14 @@ var Tag_1 = require("./Tag");
 var ElementHelper_1 = require("./helpers/ElementHelper");
 var Configuration_1 = require("./Configuration");
 var AST_1 = require("./AST");
-var List_1 = require("./Tag/List");
+var TagList_1 = require("./Tag/TagList");
 var WrappedWindow_1 = require("./DOM/WrappedWindow");
 var WrappedDocument_1 = require("./DOM/WrappedDocument");
 var EventDispatcher_1 = require("./EventDispatcher");
 var ClassNode_1 = require("./AST/ClassNode");
+var Registry_1 = require("./Registry");
+var SlotTag_1 = require("./Tag/SlotTag");
+var SlottedTag_1 = require("./Tag/SlottedTag");
 var EQuerySelectDirection;
 (function (EQuerySelectDirection) {
     EQuerySelectDirection[EQuerySelectDirection["ALL"] = 0] = "ALL";
@@ -135,9 +138,9 @@ var DOM = /** @class */ (function (_super) {
                             case 'body': return [3 /*break*/, 3];
                         }
                         return [3 /*break*/, 4];
-                    case 1: return [2 /*return*/, new List_1.TagList(this.window)];
-                    case 2: return [2 /*return*/, new List_1.TagList(this.document)];
-                    case 3: return [2 /*return*/, new List_1.TagList(this.root)];
+                    case 1: return [2 /*return*/, new TagList_1.TagList(this.window)];
+                    case 2: return [2 /*return*/, new TagList_1.TagList(this.document)];
+                    case 3: return [2 /*return*/, new TagList_1.TagList(this.root)];
                     case 4:
                         nodes = void 0;
                         if (direction === EQuerySelectDirection.DOWN) {
@@ -327,6 +330,10 @@ var DOM = /** @class */ (function (_super) {
             return __generator(this, function (_a) {
                 discovered = [];
                 checkElement = function (e) {
+                    var _a;
+                    if (Registry_1.Registry.instance.components.has((_a = e === null || e === void 0 ? void 0 : e.tagName) === null || _a === void 0 ? void 0 : _a.toLowerCase())) {
+                        return false;
+                    }
                     if (ElementHelper_1.ElementHelper.hasVisionAttribute(e)) {
                         if ((!forComponent && e.hasAttribute('slot')))
                             return false;
@@ -352,14 +359,19 @@ var DOM = /** @class */ (function (_super) {
             });
         });
     };
-    DOM.prototype.buildTag = function (element, returnExisting) {
+    DOM.prototype.buildTag = function (element, returnExisting, cls) {
         if (returnExisting === void 0) { returnExisting = false; }
+        if (cls === void 0) { cls = Tag_1.Tag; }
         return __awaiter(this, void 0, void 0, function () {
             var tag;
             return __generator(this, function (_a) {
                 if (element[Tag_1.Tag.TaggedVariable])
                     return [2 /*return*/, returnExisting ? element[Tag_1.Tag.TaggedVariable] : null];
-                tag = new Tag_1.Tag(element, this);
+                if (element.tagName.toLowerCase() === 'slot')
+                    cls = SlotTag_1.SlotTag;
+                else if (element.hasAttribute('slot'))
+                    cls = SlottedTag_1.SlottedTag;
+                tag = new cls(element, this);
                 this.tags.push(tag);
                 return [2 /*return*/, tag];
             });
@@ -468,42 +480,67 @@ var DOM = /** @class */ (function (_super) {
         if (isRoot === void 0) { isRoot = false; }
         if (forComponent === void 0) { forComponent = false; }
         return __awaiter(this, void 0, void 0, function () {
-            var newTags, toBuild, _i, toBuild_1, element, tag, _a;
-            return __generator(this, function (_b) {
-                switch (_b.label) {
+            var templateNodes, components, _i, _a, n, tag, newTags, toBuild, _b, toBuild_1, element, tag, _c;
+            return __generator(this, function (_d) {
+                switch (_d.label) {
                     case 0:
                         if (isRoot) {
                             document.body.setAttribute('vsn-root', '');
                             document.ondragover = function (e) { return e.cancelable && e.preventDefault(); }; // Allow dragging over document
                         }
+                        templateNodes = this.querySelectorElement(ele, 'template');
+                        components = [];
+                        _i = 0, _a = Array.from(templateNodes);
+                        _d.label = 1;
+                    case 1:
+                        if (!(_i < _a.length)) return [3 /*break*/, 4];
+                        n = _a[_i];
+                        if (!ElementHelper_1.ElementHelper.hasVisionAttribute(n))
+                            return [3 /*break*/, 3];
+                        return [4 /*yield*/, this.buildTag(n)];
+                    case 2:
+                        tag = _d.sent();
+                        if (tag)
+                            components.push(tag);
+                        _d.label = 3;
+                    case 3:
+                        _i++;
+                        return [3 /*break*/, 1];
+                    case 4:
+                        if (!components.length) return [3 /*break*/, 6];
+                        return [4 /*yield*/, this.setupTags(components)];
+                    case 5:
+                        _d.sent();
+                        _d.label = 6;
+                    case 6:
                         newTags = [];
                         return [4 /*yield*/, this.discover(ele, forComponent)];
-                    case 1:
-                        toBuild = _b.sent();
-                        _i = 0, toBuild_1 = toBuild;
-                        _b.label = 2;
-                    case 2:
-                        if (!(_i < toBuild_1.length)) return [3 /*break*/, 5];
-                        element = toBuild_1[_i];
+                    case 7:
+                        toBuild = _d.sent();
+                        _b = 0, toBuild_1 = toBuild;
+                        _d.label = 8;
+                    case 8:
+                        if (!(_b < toBuild_1.length)) return [3 /*break*/, 11];
+                        element = toBuild_1[_b];
                         return [4 /*yield*/, this.buildTag(element)];
-                    case 3:
-                        tag = _b.sent();
+                    case 9:
+                        tag = _d.sent();
                         if (tag)
                             newTags.push(tag);
-                        _b.label = 4;
-                    case 4:
-                        _i++;
-                        return [3 /*break*/, 2];
-                    case 5:
-                        if (!isRoot) return [3 /*break*/, 7];
-                        _a = this;
+                        _d.label = 10;
+                    case 10:
+                        _b++;
+                        return [3 /*break*/, 8];
+                    case 11:
+                        if (!isRoot) return [3 /*break*/, 13];
+                        _c = this;
                         return [4 /*yield*/, this.getTagForElement(document.body)];
-                    case 6:
-                        _a._root = _b.sent();
-                        _b.label = 7;
-                    case 7: return [4 /*yield*/, this.setupTags(newTags)];
-                    case 8:
-                        _b.sent();
+                    case 12:
+                        _c._root = _d.sent();
+                        _d.label = 13;
+                    case 13: return [4 /*yield*/, this.setupTags(newTags)];
+                    case 14:
+                        _d.sent();
                         if (isRoot) {
                             this._built = true;
                             this.dispatch('builtRoot');
@@ -521,7 +558,7 @@ var DOM = /** @class */ (function (_super) {
             return __generator(this, function (_d) {
                 switch (_d.label) {
                     case 0:
-                        tags = new List_1.TagList();
+                        tags = new TagList_1.TagList();
                         found = [];
                         for (_i = 0, elements_2 = elements; _i < elements_2.length; _i++) {
                             element = elements_2[_i];

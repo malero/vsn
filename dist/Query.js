@@ -37,7 +37,7 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Query = void 0;
-var List_1 = require("./Tag/List");
+var TagList_1 = require("./Tag/TagList");
 var VisionHelper_1 = require("./helpers/VisionHelper");
 var DOM_1 = require("./DOM");
 var WrappedWindow_1 = require("./DOM/WrappedWindow");
@@ -57,7 +57,7 @@ function Query(selector, dom) {
                     if (tagList.length == 1 || tagList.length == 1 && (tagList[0] instanceof WrappedWindow_1.WrappedWindow || tagList[0] instanceof WrappedDocument_1.WrappedDocument))
                         return [2 /*return*/, tagList[0]];
                     return [2 /*return*/, tagList];
-                case 2: return [2 /*return*/, new List_1.TagList()];
+                case 2: return [2 /*return*/, new TagList_1.TagList()];
             }
         });
     });

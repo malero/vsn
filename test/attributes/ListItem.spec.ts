@@ -72,7 +72,7 @@ describe('ListItem', () => {
             list.on('add', () => {
                 const listItem = listAttr.tags[0];
 
-                expect(listItem.scope.data instanceof ListItemSpecTestItem).toBeTrue();
+                expect(listItem.scope.get('item').data instanceof ListItemSpecTestItem).toBeTrue();
                 expect(controller.items.length).toBe(1);
                 expect(controller.items[0] instanceof ListItemSpecTestItem).toBeTrue();
 
@@ -95,7 +95,7 @@ describe('ListItem', () => {
         const dom = new DOM(document);
         dom.once('built', async () => {
             const listItem = await dom.getTagForElement(document.getElementById('test-item'));
-            expect(listItem.scope.get('testing')).toBe(1);
+            expect(listItem.scope.get('item').get('testing')).toBe(1);
             done();
         });
     });

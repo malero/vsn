@@ -40,6 +40,13 @@ var DOMObject = /** @class */ (function (_super) {
         enumerable: false,
         configurable: true
     });
+    Object.defineProperty(DOMObject.prototype, "isSlotted", {
+        get: function () {
+            return this.element.hasAttribute('slot');
+        },
+        enumerable: false,
+        configurable: true
+    });
     Object.defineProperty(DOMObject.prototype, "scope", {
         get: function () {
             if (!!this._scope)

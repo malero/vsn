@@ -16,6 +16,7 @@ export declare abstract class DOMObject extends EventDispatcher {
     readonly delegates: HTMLElement[];
     constructor(element: HTMLElement, props: any);
     get isSlot(): boolean;
+    get isSlotted(): boolean;
     get scope(): Scope;
     set scope(scope: Scope);
     watchAttribute(attr: string): void;

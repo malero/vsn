@@ -80,4 +80,4 @@ var TagList = /** @class */ (function (_super) {
 exports.TagList = TagList;
 if (VisionHelper_1.VisionHelper.inDevelopment && VisionHelper_1.VisionHelper.window)
     window['TagList'] = TagList;
-//# sourceMappingURL=List.js.map
+//# sourceMappingURL=TagList.js.map

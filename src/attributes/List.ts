@@ -5,6 +5,7 @@ import {ElementHelper} from "../helpers/ElementHelper";
 import {Registry} from "../Registry";
 import {DOM} from "../DOM";
 import {Scope} from "../Scope";
+import {ScopeData} from "../Scope/ScopeData";
 
 @Registry.attribute('vsn-list')
 export class List extends Attribute {
@@ -146,6 +147,13 @@ export class List extends Attribute {
         }
         delete element[Tag.TaggedVariable];
 
+        // Collect raw data
+        let data;
+        if (obj instanceof ScopeData)
+            data = obj.getData();
+        else
+            data = Object.assign({}, obj);
+
         // Setup new tag
         const tag = await this.tag.dom.buildTag(element, true);
         await this.setupTagScope(tag, obj);
@@ -154,6 +162,13 @@ export class List extends Attribute {
         this.tag.element.appendChild(element);
         await this.tag.dom.setupTags([tag]);
         await this.tag.dom.buildFrom(this.tag.element);
+
+        // Make sure we're using the correct data (Template may have vsn-bind values that are not desired)
+        const itemScope = tag.scope.get(this.listItemName);
+        if (itemScope instanceof Scope && data) {
+            itemScope.data.setData(data);
+        }
+
         this.tags.push(tag);
         this.tag.dispatch('add', obj);
     }
@@ -163,26 +178,28 @@ export class List extends Attribute {
             return;
 
         tag.createScope(true);
+        const itemScope = new Scope(tag.scope);
 
-        // Setup new scope & class, if defined
+        // Setup new scope & model class, if defined
         const modelName: string = this.listItemModel;
         let cls;
         if (modelName)
             cls = await Registry.instance.models.get(modelName);
 
         if (cls) {
-            if (!obj || !(obj instanceof cls))
+            if (!obj || !(obj instanceof cls)) {
                 obj = new cls(obj);
+            }
         }
 
         // Check if the class is set up already
-        if (!cls || (!(tag.scope.data instanceof cls) && !(tag.scope.wrapped instanceof cls))) {
-            if (tag.scope.wrapped)
-                tag.scope.unwrap();
-            tag.wrap(obj);
+        if (!cls || (!(itemScope.data instanceof cls) && !(itemScope.wrapped instanceof cls))) {
+            if (itemScope.wrapped)
+                itemScope.unwrap();
+            itemScope.wrap(obj, true, true);
         }
 
-        tag.scope.set(this.listItemName, tag.scope);
+        tag.scope.set(this.listItemName, itemScope);
         tag.meta[List.MetaItemSetupFlag] = true;
     }
 }

@@ -20,17 +20,21 @@ export class ScopeAttribute extends Attribute {
 
     public async extract() {
         if (this.tree) {
-            const value = await this.tree.evaluate(this.tag.scope, this.tag.dom, this.tag);
-            if (!(value instanceof Scope)) {
-                throw new Error(`vsn-scope value must be an object, got ${typeof value}`);
+            const binding = this.getAttributeBinding();
+
+            const scope = await this.tree.evaluate(this.tag.scope, this.tag.dom, this.tag);
+            if (!(scope instanceof Scope)) {
+                throw new Error(`vsn-scope value must be an object, got ${typeof scope}`);
             }
-            for (const key of value.data.keys) {
-                this.tag.scope.set(key, value.data[key]);
+
+            if (binding) {
+                this.tag.scope.set(binding, scope);
+            } else {
+                for (const key of scope.data.keys) {
+                    this.tag.scope.set(key, scope.data[key]);
+                }
             }
         }
-        const binding = this.getAttributeBinding();
-        if (binding)
-            this.tag.scope.parentScope.set(binding, this.tag.scope);
         await super.extract();
     }
 }

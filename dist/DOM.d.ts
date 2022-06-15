@@ -1,5 +1,5 @@
 import { Tag } from "./Tag";
-import { TagList } from "./Tag/List";
+import { TagList } from "./Tag/TagList";
 import { WrappedWindow } from "./DOM/WrappedWindow";
 import { WrappedDocument } from "./DOM/WrappedDocument";
 import { Scope } from "./Scope";
@@ -22,7 +22,6 @@ export declare class DOM extends EventDispatcher {
     protected window: WrappedWindow;
     protected document: WrappedDocument;
     protected _built: boolean;
-    selected: Tag;
     constructor(rootElement: Document, build?: boolean, debug?: boolean);
     get built(): boolean;
     get root(): Tag;
@@ -39,7 +38,7 @@ export declare class DOM extends EventDispatcher {
     evaluate(): Promise<void>;
     mutation(mutations: MutationRecord[]): Promise<void>;
     discover(ele: HTMLElement, forComponent?: boolean): Promise<HTMLElement[]>;
-    buildTag(element: HTMLElement, returnExisting?: boolean): Promise<Tag>;
+    buildTag(element: HTMLElement, returnExisting?: boolean, cls?: any): Promise<Tag>;
     setupTags(tags: Tag[]): Promise<void>;
     buildFrom(ele: any, isRoot?: boolean, forComponent?: boolean): Promise<void>;
     getTagsForElements(elements: Element[], create?: boolean): Promise<TagList>;

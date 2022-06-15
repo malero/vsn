@@ -31,6 +31,10 @@ export abstract class DOMObject extends EventDispatcher {
         return this.element instanceof HTMLSlotElement;
     }
 
+    public get isSlotted(): boolean {
+        return this.element.hasAttribute('slot');
+    }
+
     public get scope(): Scope {
         if (!!this._scope)
             return this._scope;

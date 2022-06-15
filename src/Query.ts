@@ -1,4 +1,4 @@
-import {TagList} from "./Tag/List";
+import {TagList} from "./Tag/TagList";
 import {VisionHelper} from "./helpers/VisionHelper";
 import {DOM} from "./DOM";
 import {WrappedWindow} from "./DOM/WrappedWindow";

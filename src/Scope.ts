@@ -94,7 +94,20 @@ export class Scope extends EventDispatcher {
         return value;
     }
 
-    set(key: string, value: any) {
+    set(key: string, value: any, detectType: boolean = false): void {
+        if (detectType) {
+            const type = typeof value;
+            if (type === 'number') {
+                if (value % 1 === 0)
+                    this.setType(key, 'integer');
+                else
+                    this.setType(key, 'float');
+            } else if (type === 'string') {
+                this.setType(key, 'string');
+            } else if (type === 'boolean') {
+                this.setType(key, 'boolean');
+            }
+        }
         if (!this._data.hasProperty(key))
             this._data.createProperty(key);
         this._data[key] = value;

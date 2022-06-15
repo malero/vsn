@@ -1,6 +1,6 @@
 import {DOM} from "../../src/DOM";
 import {Query} from "../../src/Query";
-import {TagList} from "../../src/Tag/List";
+import {TagList} from "../../src/Tag/TagList";
 import {DOMObject} from "../../src/DOM/DOMObject";
 
 describe('TagList', () => {

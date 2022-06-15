@@ -107,7 +107,23 @@ var Scope = /** @class */ (function (_super) {
         }
         return value;
     };
-    Scope.prototype.set = function (key, value) {
+    Scope.prototype.set = function (key, value, detectType) {
+        if (detectType === void 0) { detectType = false; }
+        if (detectType) {
+            var type = typeof value;
+            if (type === 'number') {
+                if (value % 1 === 0)
+                    this.setType(key, 'integer');
+                else
+                    this.setType(key, 'float');
+            }
+            else if (type === 'string') {
+                this.setType(key, 'string');
+            }
+            else if (type === 'boolean') {
+                this.setType(key, 'boolean');
+            }
+        }
         if (!this._data.hasProperty(key))
             this._data.createProperty(key);
         this._data[key] = value;

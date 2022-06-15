@@ -64,6 +64,8 @@ var WrappedArray_1 = require("../Scope/WrappedArray");
 var ElementHelper_1 = require("../helpers/ElementHelper");
 var Registry_1 = require("../Registry");
 var DOM_1 = require("../DOM");
+var Scope_1 = require("../Scope");
+var ScopeData_1 = require("../Scope/ScopeData");
 var List = /** @class */ (function (_super) {
     __extends(List, _super);
     function List() {
@@ -252,7 +254,7 @@ var List = /** @class */ (function (_super) {
     };
     List.prototype.add = function (obj) {
         return __awaiter(this, void 0, void 0, function () {
-            var clone, element, tag;
+            var clone, element, data, tag, itemScope;
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
@@ -264,6 +266,10 @@ var List = /** @class */ (function (_super) {
                             element = clone;
                         }
                         delete element[Tag_1.Tag.TaggedVariable];
+                        if (obj instanceof ScopeData_1.ScopeData)
+                            data = obj.getData();
+                        else
+                            data = Object.assign({}, obj);
                         return [4 /*yield*/, this.tag.dom.buildTag(element, true)];
                     case 1:
                         tag = _a.sent();
@@ -278,6 +284,10 @@ var List = /** @class */ (function (_super) {
                         return [4 /*yield*/, this.tag.dom.buildFrom(this.tag.element)];
                     case 4:
                         _a.sent();
+                        itemScope = tag.scope.get(this.listItemName);
+                        if (itemScope instanceof Scope_1.Scope && data) {
+                            itemScope.data.setData(data);
+                        }
                         this.tags.push(tag);
                         this.tag.dispatch('add', obj);
                         return [2 /*return*/];
@@ -287,13 +297,14 @@ var List = /** @class */ (function (_super) {
     };
     List.prototype.setupTagScope = function (tag, obj) {
         return __awaiter(this, void 0, void 0, function () {
-            var modelName, cls;
+            var itemScope, modelName, cls;
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
                         if (tag.meta[List_1.MetaItemSetupFlag])
                             return [2 /*return*/];
                         tag.createScope(true);
+                        itemScope = new Scope_1.Scope(tag.scope);
                         modelName = this.listItemModel;
                         if (!modelName) return [3 /*break*/, 2];
                         return [4 /*yield*/, Registry_1.Registry.instance.models.get(modelName)];
@@ -302,16 +313,17 @@ var List = /** @class */ (function (_super) {
                         _a.label = 2;
                     case 2:
                         if (cls) {
-                            if (!obj || !(obj instanceof cls))
+                            if (!obj || !(obj instanceof cls)) {
                                 obj = new cls(obj);
+                            }
                         }
                         // Check if the class is set up already
-                        if (!cls || (!(tag.scope.data instanceof cls) && !(tag.scope.wrapped instanceof cls))) {
-                            if (tag.scope.wrapped)
-                                tag.scope.unwrap();
-                            tag.wrap(obj);
+                        if (!cls || (!(itemScope.data instanceof cls) && !(itemScope.wrapped instanceof cls))) {
+                            if (itemScope.wrapped)
+                                itemScope.unwrap();
+                            itemScope.wrap(obj, true, true);
                         }
-                        tag.scope.set(this.listItemName, tag.scope);
+                        tag.scope.set(this.listItemName, itemScope);
                         tag.meta[List_1.MetaItemSetupFlag] = true;
                         return [2 /*return*/];
                 }

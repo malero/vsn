@@ -28,6 +28,7 @@ export class Tag extends DOMObject {
     protected _state: TagState;
     protected _meta: { [key: string]: any; };
     protected attributes: Attribute[];
+    protected attributeMap: { [key: string]: Attribute; };
     protected _nonDeferredAttributes: Attribute[] = [];
     protected _parentTag: Tag;
     protected _children: Tag[] = [];
@@ -60,14 +61,10 @@ export class Tag extends DOMObject {
         this.rawAttributes = {};
         this.parsedAttributes = {};
         this.attributes = [];
+        this.attributeMap = {};
         this.onEventHandlers = {};
         this.analyzeElementAttributes();
         this._state = TagState.Instantiated;
-        if (this.hasAttribute('slot')) {
-            this.addEventHandler('slotted',[], (e) => {
-                console.log('slot change', e, this.element.assignedSlot);
-            })
-        }
     }
 
     public get meta() {
@@ -76,9 +73,11 @@ export class Tag extends DOMObject {
         return this._meta;
     }
 
-    public slotted(slot: HTMLSlotElement) {
+    public async slotted(slot: HTMLSlotElement) {
         this.slot = slot;
-        console.log('i am slotted', slot);
+        this.parentTag = await this.dom.getTagForElement(slot);
+        await this.dom.setupTags([this]);
+        await this.dom.buildFrom(this.element, false, true);
     }
 
     protected onAttributeStateChange(event) {
@@ -439,7 +438,6 @@ export class Tag extends DOMObject {
     public async buildAttributes() {
         let requiresScope = false;
         let defer: boolean = false;
-        this.attributes.length = 0;
         const isMobile: boolean = VisionHelper.isMobile();
         if (this.element.offsetParent === null ||
             this.hasAttribute('hidden') ||
@@ -452,17 +450,15 @@ export class Tag extends DOMObject {
         const slot: Tag = this.isSlot ? this : null;
         for (const tag of tags) {
             for (let attr in this.rawAttributes) {
-                if (this.hasModifier(attr, 'mobile')) {
-                    if (!isMobile) {
-                        continue;
-                    }
-                }
+                if (tag.attributeMap[attr])
+                    continue;
 
-                if (this.hasModifier(attr, 'desktop')) {
-                    if (isMobile) {
-                        continue;
-                    }
-                }
+                if (this.hasModifier(attr, 'mobile') && !isMobile)
+                    continue;
+
+
+                if (this.hasModifier(attr, 'desktop') && isMobile)
+                    continue;
 
                 const attrClass = await this.getAttributeClass(attr);
                 if (attrClass) {
@@ -470,7 +466,9 @@ export class Tag extends DOMObject {
                         requiresScope = true;
 
                     const attrObj = attrClass.create(tag, attr, attrClass, slot);
+
                     tag.attributes.push(attrObj);
+                    tag.attributeMap[attr] = attrObj;
                     if (defer && attrClass.canDefer) {
                         await attrObj.defer();
                         tag.deferredAttributes.push(attrObj);

@@ -29,6 +29,9 @@ export declare class Tag extends DOMObject {
         [key: string]: any;
     };
     protected attributes: Attribute[];
+    protected attributeMap: {
+        [key: string]: Attribute;
+    };
     protected _nonDeferredAttributes: Attribute[];
     protected _parentTag: Tag;
     protected _children: Tag[];
@@ -40,7 +43,7 @@ export declare class Tag extends DOMObject {
     get meta(): {
         [key: string]: any;
     };
-    slotted(slot: HTMLSlotElement): void;
+    slotted(slot: HTMLSlotElement): Promise<void>;
     protected onAttributeStateChange(event: any): void;
     getAttributesWithState(state: AttributeState): Attribute[];
     get nonDeferredAttributes(): Attribute[];
@@ -87,7 +90,7 @@ export declare class Tag extends DOMObject {
     getRawAttributeValue(key: string, fallback?: any): any;
     hasRawAttribute(mod: string): boolean;
     getParsedAttributeValue(key: string, index?: number, fallback?: any): any;
-    getTagsToBuild(): Promise<import("./Tag/List").TagList | this[]>;
+    getTagsToBuild(): Promise<import("./Tag/TagList").TagList | this[]>;
     buildAttributes(): Promise<void>;
     compileAttributes(): Promise<void>;
     setupAttributes(): Promise<void>;

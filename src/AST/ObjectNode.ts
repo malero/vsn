@@ -21,7 +21,7 @@ export class ObjectNode extends Node implements TreeNode {
         for (let i = 0; i < this.values.length; i++) {
             const key = this.keys[i];
             const val = this.values[i];
-            obj.set(await key.evaluate(scope, dom, tag), await val.evaluate(scope, dom, tag));
+            obj.set(await key.evaluate(scope, dom, tag), await val.evaluate(scope, dom, tag), true);
         }
         return obj;
     }

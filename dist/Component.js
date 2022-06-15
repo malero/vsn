@@ -54,6 +54,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.Component = void 0;
 var Registry_1 = require("./Registry");
 var DOM_1 = require("./DOM");
+var SlotTag_1 = require("./Tag/SlotTag");
+var SlottedTag_1 = require("./Tag/SlottedTag");
 var Component = /** @class */ (function (_super) {
     __extends(Component, _super);
     function Component() {
@@ -71,6 +73,7 @@ var Component = /** @class */ (function (_super) {
         _this.setAttribute('vsn-ref', '');
         _this.shadow.appendChild(template.content.cloneNode(true));
         _this.shadow.querySelectorAll('slot').forEach(function (slot) {
+            var slotTagPromise = DOM_1.DOM.instance.buildTag(slot, false, SlotTag_1.SlotTag);
             slot.addEventListener('slotchange', function (e) { return __awaiter(_this, void 0, void 0, function () {
                 var _i, _a, child, t;
                 return __generator(this, function (_b) {
@@ -79,17 +82,23 @@ var Component = /** @class */ (function (_super) {
                             _i = 0, _a = slot.assignedNodes();
                             _b.label = 1;
                         case 1:
-                            if (!(_i < _a.length)) return [3 /*break*/, 4];
+                            if (!(_i < _a.length)) return [3 /*break*/, 5];
                             child = _a[_i];
-                            return [4 /*yield*/, DOM_1.DOM.instance.getTagForElement(child, true, true)];
+                            return [4 /*yield*/, DOM_1.DOM.instance.buildTag(child, false, SlottedTag_1.SlottedTag)];
                         case 2:
                             t = _b.sent();
-                            t === null || t === void 0 ? void 0 : t.slotted(slot);
-                            _b.label = 3;
+                            return [4 /*yield*/, (t === null || t === void 0 ? void 0 : t.slotted(slot))];
                         case 3:
+                            _b.sent();
+                            _b.label = 4;
+                        case 4:
                             _i++;
                             return [3 /*break*/, 1];
-                        case 4: return [2 /*return*/];
+                        case 5:
+                            slotTagPromise.then(function (slotTag) {
+                                slotTag.buildAttributes();
+                            });
+                            return [2 /*return*/];
                     }
                 });
             }); });

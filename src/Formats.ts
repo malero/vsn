@@ -20,7 +20,10 @@ export class Formats {
             setup();
         }
         value = `${value}`.replace(/[^0-9.]+/, '');
-        return Formats.CurrencyFormatter.format(parseFloat(value));
+        value = parseFloat(value);
+        if (isNaN(value))
+            return '';
+        return Formats.CurrencyFormatter.format(value);
     }
 
     @Registry.format('date')

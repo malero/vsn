@@ -2,13 +2,15 @@ import {Tag} from "./Tag";
 import {ElementHelper} from "./helpers/ElementHelper";
 import {Configuration} from "./Configuration";
 import {Tree} from "./AST";
-import {TagList} from "./Tag/List";
+import {TagList} from "./Tag/TagList";
 import {WrappedWindow} from "./DOM/WrappedWindow";
 import {WrappedDocument} from "./DOM/WrappedDocument";
 import {Scope} from "./Scope";
 import {EventDispatcher} from "./EventDispatcher";
 import {ClassNode} from "./AST/ClassNode";
 import {Registry} from "./Registry";
+import {SlotTag} from "./Tag/SlotTag";
+import {SlottedTag} from "./Tag/SlottedTag";
 
 export enum EQuerySelectDirection {
     ALL,
@@ -27,7 +29,6 @@ export class DOM extends EventDispatcher {
     protected window: WrappedWindow;
     protected document: WrappedDocument;
     protected _built: boolean = false;
-    public selected: Tag;
 
     constructor(
         protected rootElement: Document,
@@ -192,6 +193,10 @@ export class DOM extends EventDispatcher {
     async discover(ele: HTMLElement, forComponent: boolean = false): Promise<HTMLElement[]> {
         const discovered: HTMLElement[] = [];
         const checkElement = (e: HTMLElement): boolean => {
+            if (Registry.instance.components.has(e?.tagName?.toLowerCase())) {
+                return false;
+            }
+
             if (ElementHelper.hasVisionAttribute(e)) {
                 if (
                     (!forComponent && e.hasAttribute('slot'))
@@ -216,9 +221,14 @@ export class DOM extends EventDispatcher {
         return discovered;
     }
 
-    async buildTag(element: HTMLElement, returnExisting: boolean = false): Promise<Tag> {
+    async buildTag(element: HTMLElement, returnExisting: boolean = false, cls: any = Tag): Promise<Tag> {
         if (element[Tag.TaggedVariable]) return returnExisting ? element[Tag.TaggedVariable] : null;
-        const tag: Tag = new Tag(element, this);
+        if (element.tagName.toLowerCase() === 'slot')
+            cls = SlotTag;
+        else if (element.hasAttribute('slot'))
+            cls = SlottedTag;
+
+        const tag: Tag = new cls(element, this);
         this.tags.push(tag);
         return tag;
     }
@@ -261,6 +271,20 @@ export class DOM extends EventDispatcher {
             document.ondragover = (e) => e.cancelable && e.preventDefault();  // Allow dragging over document
         }
 
+        // Setup components first
+        const templateNodes = this.querySelectorElement(ele, 'template');
+        const components: Tag[] = [];
+        for (const n of Array.from(templateNodes) as HTMLElement[]) {
+            if (!ElementHelper.hasVisionAttribute(n))
+                continue;
+
+            const tag = await this.buildTag(n);
+            if (tag)
+                components.push(tag);
+        }
+        if (components.length)
+            await this.setupTags(components);
+
         // Create tags for each html element with a vsn-attribute
         const newTags: Tag[] = [];
         const toBuild: HTMLElement[] = await this.discover(ele, forComponent);
@@ -270,7 +294,6 @@ export class DOM extends EventDispatcher {
             if (tag)
                 newTags.push(tag);
         }
-
         if (isRoot)
             this._root = await this.getTagForElement(document.body);
 

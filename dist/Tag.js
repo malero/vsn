@@ -99,14 +99,10 @@ var Tag = /** @class */ (function (_super) {
         _this.rawAttributes = {};
         _this.parsedAttributes = {};
         _this.attributes = [];
+        _this.attributeMap = {};
         _this.onEventHandlers = {};
         _this.analyzeElementAttributes();
         _this._state = TagState.Instantiated;
-        if (_this.hasAttribute('slot')) {
-            _this.addEventHandler('slotted', [], function (e) {
-                console.log('slot change', e, _this.element.assignedSlot);
-            });
-        }
         return _this;
     }
     Object.defineProperty(Tag.prototype, "uniqueScope", {
@@ -127,8 +123,26 @@ var Tag = /** @class */ (function (_super) {
         configurable: true
     });
     Tag.prototype.slotted = function (slot) {
-        this.slot = slot;
-        console.log('i am slotted', slot);
+        return __awaiter(this, void 0, void 0, function () {
+            var _a;
+            return __generator(this, function (_b) {
+                switch (_b.label) {
+                    case 0:
+                        this.slot = slot;
+                        _a = this;
+                        return [4 /*yield*/, this.dom.getTagForElement(slot)];
+                    case 1:
+                        _a.parentTag = _b.sent();
+                        return [4 /*yield*/, this.dom.setupTags([this])];
+                    case 2:
+                        _b.sent();
+                        return [4 /*yield*/, this.dom.buildFrom(this.element, false, true)];
+                    case 3:
+                        _b.sent();
+                        return [2 /*return*/];
+                }
+            });
+        });
     };
     Tag.prototype.onAttributeStateChange = function (event) {
         if (event.previouseState === Attribute_1.AttributeState.Deferred) // @todo: what is this?
@@ -552,7 +566,6 @@ var Tag = /** @class */ (function (_super) {
                     case 0:
                         requiresScope = false;
                         defer = false;
-                        this.attributes.length = 0;
                         isMobile = VisionHelper_1.VisionHelper.isMobile();
                         if (this.element.offsetParent === null ||
                             this.hasAttribute('hidden') ||
@@ -576,16 +589,12 @@ var Tag = /** @class */ (function (_super) {
                     case 3:
                         if (!(_c < _a.length)) return [3 /*break*/, 7];
                         attr = _a[_c];
-                        if (this.hasModifier(attr, 'mobile')) {
-                            if (!isMobile) {
-                                return [3 /*break*/, 6];
-                            }
-                        }
-                        if (this.hasModifier(attr, 'desktop')) {
-                            if (isMobile) {
-                                return [3 /*break*/, 6];
-                            }
-                        }
+                        if (tag.attributeMap[attr])
+                            return [3 /*break*/, 6];
+                        if (this.hasModifier(attr, 'mobile') && !isMobile)
+                            return [3 /*break*/, 6];
+                        if (this.hasModifier(attr, 'desktop') && isMobile)
+                            return [3 /*break*/, 6];
                         return [4 /*yield*/, this.getAttributeClass(attr)];
                     case 4:
                         attrClass = _d.sent();
@@ -594,6 +603,7 @@ var Tag = /** @class */ (function (_super) {
                             requiresScope = true;
                         attrObj = attrClass.create(tag, attr, attrClass, slot);
                         tag.attributes.push(attrObj);
+                        tag.attributeMap[attr] = attrObj;
                         if (!(defer && attrClass.canDefer)) return [3 /*break*/, 6];
                         return [4 /*yield*/, attrObj.defer()];
                     case 5:

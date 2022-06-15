@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Component Slots</title>
+
+    <style></style>
+</head>
+<body>
+<test-component>
+    <button slot="cta" type="button">Component One <span vsn-bind="data.count"></span></button>
+</test-component>
+
+<test-component>
+    <button slot="cta" type="button">Component Two <span vsn-bind="data.count"></span></button>
+</test-component>
+
+<script type="text/javascript" src="../vsn.js"></script>
+
+<template vsn-component:test-component>
+    <div vsn-scope:data="{'count': -1}">
+        <slot name="cta" vsn-on:click="data.count += 1;"></slot>
+    </div>
+</template>
+</body>
+</html>

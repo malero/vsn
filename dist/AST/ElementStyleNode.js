@@ -52,7 +52,7 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ElementStyleNode = void 0;
-var List_1 = require("../Tag/List");
+var TagList_1 = require("../Tag/TagList");
 var Node_1 = require("./Node");
 var LiteralNode_1 = require("./LiteralNode");
 var ElementStyleNode = /** @class */ (function (_super) {
@@ -101,7 +101,7 @@ var ElementStyleNode = /** @class */ (function (_super) {
                         return [3 /*break*/, 3];
                     case 2:
                         if (tag) {
-                            tags = new List_1.TagList(tag);
+                            tags = new TagList_1.TagList(tag);
                         }
                         else {
                             return [2 /*return*/];

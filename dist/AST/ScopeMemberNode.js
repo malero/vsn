@@ -53,7 +53,7 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ScopeMemberNode = void 0;
 var Scope_1 = require("../Scope");
-var List_1 = require("../Tag/List");
+var TagList_1 = require("../Tag/TagList");
 var DOMObject_1 = require("../DOM/DOMObject");
 var ElementQueryNode_1 = require("./ElementQueryNode");
 var ScopeNodeAbstract_1 = require("./ScopeNodeAbstract");
@@ -94,7 +94,7 @@ var ScopeMemberNode = /** @class */ (function (_super) {
                     case 2: return [4 /*yield*/, this.scope.evaluate(scope, dom, tag)];
                     case 3:
                         evalScope = _c.sent();
-                        if (evalScope instanceof List_1.TagList) {
+                        if (evalScope instanceof TagList_1.TagList) {
                             scopes = evalScope;
                         }
                         else {

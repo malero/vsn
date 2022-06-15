@@ -90,27 +90,29 @@ var ScopeAttribute = /** @class */ (function (_super) {
     };
     ScopeAttribute.prototype.extract = function () {
         return __awaiter(this, void 0, void 0, function () {
-            var value, _i, _a, key, binding;
+            var binding, scope, _i, _a, key;
             return __generator(this, function (_b) {
                 switch (_b.label) {
                     case 0:
                         if (!this.tree) return [3 /*break*/, 2];
+                        binding = this.getAttributeBinding();
                         return [4 /*yield*/, this.tree.evaluate(this.tag.scope, this.tag.dom, this.tag)];
                     case 1:
-                        value = _b.sent();
-                        if (!(value instanceof Scope_1.Scope)) {
-                            throw new Error("vsn-scope value must be an object, got " + typeof value);
+                        scope = _b.sent();
+                        if (!(scope instanceof Scope_1.Scope)) {
+                            throw new Error("vsn-scope value must be an object, got " + typeof scope);
                         }
-                        for (_i = 0, _a = value.data.keys; _i < _a.length; _i++) {
-                            key = _a[_i];
-                            this.tag.scope.set(key, value.data[key]);
+                        if (binding) {
+                            this.tag.scope.set(binding, scope);
+                        }
+                        else {
+                            for (_i = 0, _a = scope.data.keys; _i < _a.length; _i++) {
+                                key = _a[_i];
+                                this.tag.scope.set(key, scope.data[key]);
+                            }
                         }
                         _b.label = 2;
-                    case 2:
-                        binding = this.getAttributeBinding();
-                        if (binding)
-                            this.tag.scope.parentScope.set(binding, this.tag.scope);
-                        return [4 /*yield*/, _super.prototype.extract.call(this)];
+                    case 2: return [4 /*yield*/, _super.prototype.extract.call(this)];
                     case 3:
                         _b.sent();
                         return [2 /*return*/];

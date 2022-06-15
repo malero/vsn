@@ -52,7 +52,7 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ElementAttributeNode = void 0;
-var List_1 = require("../Tag/List");
+var TagList_1 = require("../Tag/TagList");
 var Node_1 = require("./Node");
 var ElementQueryNode_1 = require("./ElementQueryNode");
 var LiteralNode_1 = require("./LiteralNode");
@@ -107,16 +107,16 @@ var ElementAttributeNode = /** @class */ (function (_super) {
                         return [4 /*yield*/, this.elementRef.evaluate(scope, dom, tag, true)];
                     case 3:
                         indexResult = _a.sent();
-                        if (indexResult instanceof List_1.TagList) {
+                        if (indexResult instanceof TagList_1.TagList) {
                             tags = indexResult;
                         }
                         else {
-                            tags = new List_1.TagList(indexResult);
+                            tags = new TagList_1.TagList(indexResult);
                         }
                         return [3 /*break*/, 5];
                     case 4:
                         if (tag) {
-                            tags = new List_1.TagList(tag);
+                            tags = new TagList_1.TagList(tag);
                         }
                         else {
                             return [2 /*return*/];
@@ -145,7 +145,7 @@ var ElementAttributeNode = /** @class */ (function (_super) {
                         return [4 /*yield*/, this.elementRef.evaluate(scope, dom, tag, true)];
                     case 2:
                         tags = _a.sent();
-                        if (!(tags instanceof List_1.TagList)) return [3 /*break*/, 7];
+                        if (!(tags instanceof TagList_1.TagList)) return [3 /*break*/, 7];
                         _i = 0, tags_1 = tags;
                         _a.label = 3;
                     case 3:
