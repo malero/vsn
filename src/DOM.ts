@@ -269,6 +269,9 @@ export class DOM extends EventDispatcher {
         if (isRoot) {
             document.body.setAttribute('vsn-root', '');
             document.ondragover = (e) => e.cancelable && e.preventDefault();  // Allow dragging over document
+            this._root = await this.buildTag(document.body, true);
+            this._root.createScope(true);
+            await this.setupTags([this._root]);
         }
 
         // Setup components first
@@ -294,8 +297,6 @@ export class DOM extends EventDispatcher {
             if (tag)
                 newTags.push(tag);
         }
-        if (isRoot)
-            this._root = await this.getTagForElement(document.body);
 
        await this.setupTags(newTags);
 
@@ -370,7 +371,7 @@ export class DOM extends EventDispatcher {
             await this.resetBranch(t);
         }
 
-        if (tag && tag.uniqueScope && tag.parentTag) {
+        if (tag && tag.parentTag && tag.uniqueScope) {
             tag.scope.parentScope = tag.parentTag.scope;
         }
     }

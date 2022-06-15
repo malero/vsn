@@ -99,7 +99,7 @@ export class List extends Attribute {
             const tag: Tag = await this.tag.dom.getTagForElement(element);
             if (tag) {
                 this.tags.push(tag);
-                this.items.push(tag.scope.wrapped || tag.scope);
+                this.items.push(tag.scope.get(this.listItemName) || tag.scope.wrapped || tag.scope);
             }
         }
 

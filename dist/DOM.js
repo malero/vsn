@@ -480,66 +480,68 @@ var DOM = /** @class */ (function (_super) {
         if (isRoot === void 0) { isRoot = false; }
         if (forComponent === void 0) { forComponent = false; }
         return __awaiter(this, void 0, void 0, function () {
-            var templateNodes, components, _i, _a, n, tag, newTags, toBuild, _b, toBuild_1, element, tag, _c;
+            var _a, templateNodes, components, _i, _b, n, tag, newTags, toBuild, _c, toBuild_1, element, tag;
             return __generator(this, function (_d) {
                 switch (_d.label) {
                     case 0:
-                        if (isRoot) {
-                            document.body.setAttribute('vsn-root', '');
-                            document.ondragover = function (e) { return e.cancelable && e.preventDefault(); }; // Allow dragging over document
-                        }
+                        if (!isRoot) return [3 /*break*/, 3];
+                        document.body.setAttribute('vsn-root', '');
+                        document.ondragover = function (e) { return e.cancelable && e.preventDefault(); }; // Allow dragging over document
+                        _a = this;
+                        return [4 /*yield*/, this.buildTag(document.body, true)];
+                    case 1:
+                        _a._root = _d.sent();
+                        this._root.createScope(true);
+                        return [4 /*yield*/, this.setupTags([this._root])];
+                    case 2:
+                        _d.sent();
+                        _d.label = 3;
+                    case 3:
                         templateNodes = this.querySelectorElement(ele, 'template');
                         components = [];
-                        _i = 0, _a = Array.from(templateNodes);
-                        _d.label = 1;
-                    case 1:
-                        if (!(_i < _a.length)) return [3 /*break*/, 4];
-                        n = _a[_i];
+                        _i = 0, _b = Array.from(templateNodes);
+                        _d.label = 4;
+                    case 4:
+                        if (!(_i < _b.length)) return [3 /*break*/, 7];
+                        n = _b[_i];
                         if (!ElementHelper_1.ElementHelper.hasVisionAttribute(n))
-                            return [3 /*break*/, 3];
+                            return [3 /*break*/, 6];
                         return [4 /*yield*/, this.buildTag(n)];
-                    case 2:
+                    case 5:
                         tag = _d.sent();
                         if (tag)
                             components.push(tag);
-                        _d.label = 3;
-                    case 3:
-                        _i++;
-                        return [3 /*break*/, 1];
-                    case 4:
-                        if (!components.length) return [3 /*break*/, 6];
-                        return [4 /*yield*/, this.setupTags(components)];
-                    case 5:
-                        _d.sent();
                         _d.label = 6;
                     case 6:
+                        _i++;
+                        return [3 /*break*/, 4];
+                    case 7:
+                        if (!components.length) return [3 /*break*/, 9];
+                        return [4 /*yield*/, this.setupTags(components)];
+                    case 8:
+                        _d.sent();
+                        _d.label = 9;
+                    case 9:
                         newTags = [];
                         return [4 /*yield*/, this.discover(ele, forComponent)];
-                    case 7:
+                    case 10:
                         toBuild = _d.sent();
-                        _b = 0, toBuild_1 = toBuild;
-                        _d.label = 8;
-                    case 8:
-                        if (!(_b < toBuild_1.length)) return [3 /*break*/, 11];
-                        element = toBuild_1[_b];
+                        _c = 0, toBuild_1 = toBuild;
+                        _d.label = 11;
+                    case 11:
+                        if (!(_c < toBuild_1.length)) return [3 /*break*/, 14];
+                        element = toBuild_1[_c];
                         return [4 /*yield*/, this.buildTag(element)];
-                    case 9:
+                    case 12:
                         tag = _d.sent();
                         if (tag)
                             newTags.push(tag);
-                        _d.label = 10;
-                    case 10:
-                        _b++;
-                        return [3 /*break*/, 8];
-                    case 11:
-                        if (!isRoot) return [3 /*break*/, 13];
-                        _c = this;
-                        return [4 /*yield*/, this.getTagForElement(document.body)];
-                    case 12:
-                        _c._root = _d.sent();
                         _d.label = 13;
-                    case 13: return [4 /*yield*/, this.setupTags(newTags)];
-                    case 14:
+                    case 13:
+                        _c++;
+                        return [3 /*break*/, 11];
+                    case 14: return [4 /*yield*/, this.setupTags(newTags)];
+                    case 15:
                         _d.sent();
                         if (isRoot) {
                             this._built = true;
@@ -653,7 +655,7 @@ var DOM = /** @class */ (function (_super) {
                         _i++;
                         return [3 /*break*/, 1];
                     case 4:
-                        if (tag && tag.uniqueScope && tag.parentTag) {
+                        if (tag && tag.parentTag && tag.uniqueScope) {
                             tag.scope.parentScope = tag.parentTag.scope;
                         }
                         return [2 /*return*/];

@@ -207,7 +207,7 @@ var List = /** @class */ (function (_super) {
                         tag = _f.sent();
                         if (tag) {
                             this.tags.push(tag);
-                            this.items.push(tag.scope.wrapped || tag.scope);
+                            this.items.push(tag.scope.get(this.listItemName) || tag.scope.wrapped || tag.scope);
                         }
                         _f.label = 7;
                     case 7:
