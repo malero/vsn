@@ -167,7 +167,7 @@ var List = /** @class */ (function (_super) {
     List.prototype.addExistingItems = function (defaultList) {
         var _a;
         return __awaiter(this, void 0, void 0, function () {
-            var _i, _b, tag, _c, defaultList_1, existingItem, _d, _e, element, tag;
+            var _i, _b, tag, _c, defaultList_1, existingItem, _d, _e, element, tag, listModel;
             return __generator(this, function (_f) {
                 switch (_f.label) {
                     case 0:
@@ -207,7 +207,8 @@ var List = /** @class */ (function (_super) {
                         tag = _f.sent();
                         if (tag) {
                             this.tags.push(tag);
-                            this.items.push(tag.scope.get(this.listItemName) || tag.scope.wrapped || tag.scope);
+                            listModel = tag.scope.get(this.listItemName);
+                            this.items.push((listModel === null || listModel === void 0 ? void 0 : listModel.wrapped) || listModel || tag.scope.wrapped || tag.scope);
                         }
                         _f.label = 7;
                     case 7:
