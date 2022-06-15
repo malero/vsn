@@ -298,6 +298,7 @@ var List = /** @class */ (function (_super) {
     List.prototype.setupTagScope = function (tag, obj) {
         return __awaiter(this, void 0, void 0, function () {
             var itemScope, modelName, cls;
+            var _this = this;
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
@@ -315,6 +316,10 @@ var List = /** @class */ (function (_super) {
                         if (cls) {
                             if (!obj || !(obj instanceof cls)) {
                                 obj = new cls(obj);
+                                this.tag.once('$built', function () {
+                                    if (obj['$built'])
+                                        obj['$built'](_this.tag, _this.tag.scope, _this.tag.element);
+                                });
                             }
                         }
                         // Check if the class is set up already

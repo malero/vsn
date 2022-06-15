@@ -789,6 +789,7 @@ var Tag = /** @class */ (function (_super) {
             return __generator(this, function (_a) {
                 this._state = TagState.Built;
                 this.callOnWrapped('$built', this, this.scope, this.element);
+                this.dispatch('$built', this);
                 VisionHelper_1.VisionHelper.nice(this.setupDeferredAttributes.bind(this));
                 return [2 /*return*/];
             });

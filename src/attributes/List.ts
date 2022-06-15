@@ -189,6 +189,10 @@ export class List extends Attribute {
         if (cls) {
             if (!obj || !(obj instanceof cls)) {
                 obj = new cls(obj);
+                this.tag.once('$built', () => {
+                    if (obj['$built'])
+                        obj['$built'](this.tag, this.tag.scope, this.tag.element);
+                });
             }
         }
 

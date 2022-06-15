@@ -561,6 +561,7 @@ export class Tag extends DOMObject {
     public async finalize() {
         this._state = TagState.Built;
         this.callOnWrapped('$built', this, this.scope, this.element);
+        this.dispatch('$built', this);
         VisionHelper.nice(this.setupDeferredAttributes.bind(this));
     }
 
