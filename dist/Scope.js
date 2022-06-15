@@ -50,6 +50,8 @@ var Scope = /** @class */ (function (_super) {
             return this._parentScope;
         },
         set: function (scope) {
+            if (this._parentScope && this._parentScope !== scope)
+                this._parentScope.removeChild(this);
             if (scope) {
                 this._parentScope = scope;
                 scope.addChild(this);

@@ -221,15 +221,15 @@ export class DOM extends EventDispatcher {
         return discovered;
     }
 
-    async buildTag(element: HTMLElement, returnExisting: boolean = false, cls: any = Tag): Promise<Tag> {
+    async buildTag<T = Tag>(element: HTMLElement, returnExisting: boolean = false, cls: any = Tag): Promise<T> {
         if (element[Tag.TaggedVariable]) return returnExisting ? element[Tag.TaggedVariable] : null;
         if (element.tagName.toLowerCase() === 'slot')
             cls = SlotTag;
         else if (element.hasAttribute('slot'))
             cls = SlottedTag;
 
-        const tag: Tag = new cls(element, this);
-        this.tags.push(tag);
+        const tag: T = new cls(element, this);
+        this.tags.push(tag as any);
         return tag;
     }
 
@@ -265,7 +265,7 @@ export class DOM extends EventDispatcher {
         }
     }
 
-    async buildFrom(ele: any, isRoot: boolean = false, forComponent: boolean = false) {
+    async buildFrom(ele: any, isRoot: boolean = false, forComponent: boolean = false): Promise<Tag[]> {
         if (isRoot) {
             document.body.setAttribute('vsn-root', '');
             document.ondragover = (e) => e.cancelable && e.preventDefault();  // Allow dragging over document
@@ -304,6 +304,7 @@ export class DOM extends EventDispatcher {
             this.dispatch('builtRoot')
         }
         this.dispatch('built', newTags);
+        return newTags;
     }
 
     async getTagsForElements(elements: Element[], create: boolean = false) {
@@ -357,10 +358,38 @@ export class DOM extends EventDispatcher {
         return null;
     }
 
+    public async resetBranch(e: Tag | HTMLElement) {
+        if (e instanceof Tag)
+            e = e.element;
+        const tag = e[Tag.TaggedVariable];
+        if (tag)
+            tag.parentTag = null;
+
+        const children = Array.from(e.children) as HTMLElement[]
+        for (const t of children) {
+            await this.resetBranch(t);
+        }
+
+        if (tag && tag.uniqueScope && tag.parentTag) {
+            tag.scope.parentScope = tag.parentTag.scope;
+        }
+    }
+
     public static get instance(): DOM {
         if (!DOM._instance)
             DOM._instance = new DOM(document ,false, false);
 
         return DOM._instance;
+    }
+
+    public static getParentElement(element: HTMLElement): HTMLElement {
+        if (element.parentElement) {
+            return element.parentElement as HTMLElement;
+        } else if (element.assignedSlot) {
+            return element.assignedSlot.parentElement as HTMLElement;
+        } else if (element['shadowParent']) {
+            return element['shadowParent'];
+        }
+        return null;
     }
 }

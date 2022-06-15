@@ -546,7 +546,7 @@ var DOM = /** @class */ (function (_super) {
                             this.dispatch('builtRoot');
                         }
                         this.dispatch('built', newTags);
-                        return [2 /*return*/];
+                        return [2 /*return*/, newTags];
                 }
             });
         });
@@ -628,6 +628,39 @@ var DOM = /** @class */ (function (_super) {
             });
         });
     };
+    DOM.prototype.resetBranch = function (e) {
+        return __awaiter(this, void 0, void 0, function () {
+            var tag, children, _i, children_1, t;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0:
+                        if (e instanceof Tag_1.Tag)
+                            e = e.element;
+                        tag = e[Tag_1.Tag.TaggedVariable];
+                        if (tag)
+                            tag.parentTag = null;
+                        children = Array.from(e.children);
+                        _i = 0, children_1 = children;
+                        _a.label = 1;
+                    case 1:
+                        if (!(_i < children_1.length)) return [3 /*break*/, 4];
+                        t = children_1[_i];
+                        return [4 /*yield*/, this.resetBranch(t)];
+                    case 2:
+                        _a.sent();
+                        _a.label = 3;
+                    case 3:
+                        _i++;
+                        return [3 /*break*/, 1];
+                    case 4:
+                        if (tag && tag.uniqueScope && tag.parentTag) {
+                            tag.scope.parentScope = tag.parentTag.scope;
+                        }
+                        return [2 /*return*/];
+                }
+            });
+        });
+    };
     Object.defineProperty(DOM, "instance", {
         get: function () {
             if (!DOM._instance)
@@ -637,6 +670,18 @@ var DOM = /** @class */ (function (_super) {
         enumerable: false,
         configurable: true
     });
+    DOM.getParentElement = function (element) {
+        if (element.parentElement) {
+            return element.parentElement;
+        }
+        else if (element.assignedSlot) {
+            return element.assignedSlot.parentElement;
+        }
+        else if (element['shadowParent']) {
+            return element['shadowParent'];
+        }
+        return null;
+    };
     return DOM;
 }(EventDispatcher_1.EventDispatcher));
 exports.DOM = DOM;

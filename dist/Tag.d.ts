@@ -43,7 +43,6 @@ export declare class Tag extends DOMObject {
     get meta(): {
         [key: string]: any;
     };
-    slotted(slot: HTMLSlotElement): Promise<void>;
     protected onAttributeStateChange(event: any): void;
     getAttributesWithState(state: AttributeState): Attribute[];
     get nonDeferredAttributes(): Attribute[];
@@ -67,7 +66,9 @@ export declare class Tag extends DOMObject {
     set checked(value: boolean);
     get checked(): boolean;
     addChild(tag: Tag): void;
+    removeChild(tag: Tag): void;
     get children(): Tag[];
+    findParentTag(): Tag;
     get parentTag(): Tag;
     set parentTag(tag: Tag);
     get scope(): Scope;

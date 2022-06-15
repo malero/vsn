@@ -122,28 +122,6 @@ var Tag = /** @class */ (function (_super) {
         enumerable: false,
         configurable: true
     });
-    Tag.prototype.slotted = function (slot) {
-        return __awaiter(this, void 0, void 0, function () {
-            var _a;
-            return __generator(this, function (_b) {
-                switch (_b.label) {
-                    case 0:
-                        this.slot = slot;
-                        _a = this;
-                        return [4 /*yield*/, this.dom.getTagForElement(slot)];
-                    case 1:
-                        _a.parentTag = _b.sent();
-                        return [4 /*yield*/, this.dom.setupTags([this])];
-                    case 2:
-                        _b.sent();
-                        return [4 /*yield*/, this.dom.buildFrom(this.element, false, true)];
-                    case 3:
-                        _b.sent();
-                        return [2 /*return*/];
-                }
-            });
-        });
-    };
     Tag.prototype.onAttributeStateChange = function (event) {
         if (event.previouseState === Attribute_1.AttributeState.Deferred) // @todo: what is this?
             this._nonDeferredAttributes.length = 0;
@@ -351,6 +329,9 @@ var Tag = /** @class */ (function (_super) {
     Tag.prototype.addChild = function (tag) {
         this._children.push(tag);
     };
+    Tag.prototype.removeChild = function (tag) {
+        this._children.splice(this._children.indexOf(tag), 1);
+    };
     Object.defineProperty(Tag.prototype, "children", {
         get: function () {
             return __spreadArray([], this._children);
@@ -358,39 +339,41 @@ var Tag = /** @class */ (function (_super) {
         enumerable: false,
         configurable: true
     });
+    Tag.prototype.findParentTag = function () {
+        var parentElement = DOM_1.DOM.getParentElement(this.element);
+        var foundParent = false;
+        while (parentElement) {
+            if (parentElement[Tag.TaggedVariable]) {
+                foundParent = true;
+                this.parentTag = parentElement[Tag.TaggedVariable];
+                break;
+            }
+            parentElement = DOM_1.DOM.getParentElement(parentElement);
+        }
+        if (!foundParent && DOM_1.DOM.instance.root !== this)
+            return DOM_1.DOM.instance.root;
+    };
     Object.defineProperty(Tag.prototype, "parentTag", {
         get: function () {
             if (!this._parentTag) {
-                var parentElement = this.element.parentElement;
-                var foundParent = false;
-                while (parentElement) {
-                    if (parentElement[Tag.TaggedVariable]) {
-                        foundParent = true;
-                        this.parentTag = parentElement[Tag.TaggedVariable];
-                        break;
-                    }
-                    if (parentElement.parentElement) {
-                        parentElement = parentElement.parentElement;
-                    }
-                    else if (parentElement.assignedSlot) {
-                        parentElement = parentElement.assignedSlot.parentElement;
-                    }
-                    else {
-                        parentElement = null;
-                    }
-                }
-                if (!foundParent && DOM_1.DOM.instance.root !== this)
-                    return DOM_1.DOM.instance.root;
+                this.findParentTag();
             }
             return this._parentTag;
         },
         set: function (tag) {
             if (this.element === document.body)
                 return;
+            if (this._parentTag && this._parentTag !== tag) {
+                this._parentTag.removeChild(this);
+                this.scope.parentScope = null;
+            }
             this._parentTag = tag;
-            tag.addChild(this);
-            if (this.scope !== tag.scope)
-                this.scope.parentScope = tag.scope;
+            if (tag) {
+                tag.addChild(this);
+                if (this.scope !== tag.scope) {
+                    this.scope.parentScope = tag.scope;
+                }
+            }
         },
         enumerable: false,
         configurable: true

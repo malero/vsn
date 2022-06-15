@@ -32,6 +32,9 @@ export class Scope extends EventDispatcher {
     }
 
     public set parentScope(scope: Scope) {
+        if (this._parentScope && this._parentScope !== scope)
+            this._parentScope.removeChild(this);
+
         if (scope) {
             this._parentScope = scope;
             scope.addChild(this);

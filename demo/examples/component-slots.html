@@ -19,7 +19,7 @@
 
 <template vsn-component:test-component>
     <div vsn-scope:data="{'count': -1}">
-        <slot name="cta" vsn-on:click="data.count += 1;"></slot>
+        <slot name="cta" vsn-on:click="data.count += 1; log(data.count);"></slot>
     </div>
 </template>
 </body>

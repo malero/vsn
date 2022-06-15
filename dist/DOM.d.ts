@@ -38,11 +38,13 @@ export declare class DOM extends EventDispatcher {
     evaluate(): Promise<void>;
     mutation(mutations: MutationRecord[]): Promise<void>;
     discover(ele: HTMLElement, forComponent?: boolean): Promise<HTMLElement[]>;
-    buildTag(element: HTMLElement, returnExisting?: boolean, cls?: any): Promise<Tag>;
+    buildTag<T = Tag>(element: HTMLElement, returnExisting?: boolean, cls?: any): Promise<T>;
     setupTags(tags: Tag[]): Promise<void>;
-    buildFrom(ele: any, isRoot?: boolean, forComponent?: boolean): Promise<void>;
+    buildFrom(ele: any, isRoot?: boolean, forComponent?: boolean): Promise<Tag[]>;
     getTagsForElements(elements: Element[], create?: boolean): Promise<TagList>;
     getTagForElement(element: Element, create?: boolean, forComponent?: boolean): any;
     getTagForScope(scope: Scope): Promise<Tag>;
+    resetBranch(e: Tag | HTMLElement): Promise<void>;
     static get instance(): DOM;
+    static getParentElement(element: HTMLElement): HTMLElement;
 }

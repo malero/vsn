@@ -1,6 +1,6 @@
 {
   "name": "vsn",
-  "version": "0.1.99",
+  "version": "0.1.100",
   "description": "SEO Friendly Javascript/Typescript Framework",
   "keywords": [
     "framework",
@@ -9,7 +9,12 @@
     "ajax",
     "hateoas",
     "rest",
-    "seo"
+    "seo",
+    "reactive",
+    "component",
+    "web component",
+    "web components",
+    "web component framework"
   ],
   "main": "./dist/vsn.js",
   "scripts": {

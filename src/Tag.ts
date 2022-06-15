@@ -73,13 +73,6 @@ export class Tag extends DOMObject {
         return this._meta;
     }
 
-    public async slotted(slot: HTMLSlotElement) {
-        this.slot = slot;
-        this.parentTag = await this.dom.getTagForElement(slot);
-        await this.dom.setupTags([this]);
-        await this.dom.buildFrom(this.element, false, true);
-    }
-
     protected onAttributeStateChange(event) {
         if (event.previouseState === AttributeState.Deferred)  // @todo: what is this?
             this._nonDeferredAttributes.length = 0;
@@ -241,33 +234,33 @@ export class Tag extends DOMObject {
         this._children.push(tag);
     }
 
+    public removeChild(tag: Tag) {
+        this._children.splice(this._children.indexOf(tag), 1);
+    }
+
     public get children(): Tag[] {
         return [...this._children];
     }
 
+    public findParentTag() {
+        let parentElement: HTMLElement = DOM.getParentElement(this.element);
+        let foundParent = false;
+        while (parentElement) {
+            if (parentElement[Tag.TaggedVariable]) {
+                foundParent = true;
+                this.parentTag = parentElement[Tag.TaggedVariable];
+                break;
+            }
+            parentElement = DOM.getParentElement(parentElement);
+        }
+
+        if (!foundParent && DOM.instance.root !== this)
+            return DOM.instance.root;
+    }
+
     public get parentTag(): Tag {
         if (!this._parentTag) {
-            let parentElement: HTMLElement = this.element.parentElement as HTMLElement;
-            let foundParent = false;
-            while (parentElement) {
-                if (parentElement[Tag.TaggedVariable]) {
-                    foundParent = true;
-                    this.parentTag = parentElement[Tag.TaggedVariable];
-                    break;
-                }
-
-                if (parentElement.parentElement) {
-                    parentElement = parentElement.parentElement as HTMLElement;
-                } else if (parentElement.assignedSlot) {
-                    parentElement = parentElement.assignedSlot.parentElement as HTMLElement;
-                } else {
-                    parentElement = null;
-                }
-
-            }
-
-            if (!foundParent && DOM.instance.root !== this)
-                return DOM.instance.root;
+            this.findParentTag();
         }
 
         return this._parentTag;
@@ -277,11 +270,19 @@ export class Tag extends DOMObject {
         if (this.element === document.body)
             return;
 
-        this._parentTag = tag;
-        tag.addChild(this);
+        if (this._parentTag && this._parentTag !== tag) {
+            this._parentTag.removeChild(this);
+            this.scope.parentScope = null;
+        }
 
-        if (this.scope !== tag.scope)
-            this.scope.parentScope = tag.scope;
+        this._parentTag = tag;
+        if (tag) {
+            tag.addChild(this);
+
+            if (this.scope !== tag.scope) {
+                this.scope.parentScope = tag.scope;
+            }
+        }
     }
 
     public get scope(): Scope {
