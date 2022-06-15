@@ -104,7 +104,14 @@ var Vision = /** @class */ (function (_super) {
         return _this;
     }
     Vision.prototype.defineComponent = function (name, cls) {
-        customElements.define(name, cls);
+        if (this.dom.built) {
+            customElements.define(name, cls);
+        }
+        else {
+            this.dom.once('built', function () {
+                customElements.define(name, cls);
+            });
+        }
     };
     Object.defineProperty(Vision.prototype, "dom", {
         get: function () {
