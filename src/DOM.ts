@@ -362,17 +362,15 @@ export class DOM extends EventDispatcher {
     public async resetBranch(e: Tag | HTMLElement) {
         if (e instanceof Tag)
             e = e.element;
+
         const tag = e[Tag.TaggedVariable];
-        if (tag)
-            tag.parentTag = null;
+        if (tag) {
+            tag.findParentTag();
+        }
 
         const children = Array.from(e.children) as HTMLElement[]
         for (const t of children) {
             await this.resetBranch(t);
-        }
-
-        if (tag && tag.parentTag && tag.uniqueScope) {
-            tag.scope.parentScope = tag.parentTag.scope;
         }
     }
 

@@ -639,8 +639,9 @@ var DOM = /** @class */ (function (_super) {
                         if (e instanceof Tag_1.Tag)
                             e = e.element;
                         tag = e[Tag_1.Tag.TaggedVariable];
-                        if (tag)
-                            tag.parentTag = null;
+                        if (tag) {
+                            tag.findParentTag();
+                        }
                         children = Array.from(e.children);
                         _i = 0, children_1 = children;
                         _a.label = 1;
@@ -654,11 +655,7 @@ var DOM = /** @class */ (function (_super) {
                     case 3:
                         _i++;
                         return [3 /*break*/, 1];
-                    case 4:
-                        if (tag && tag.parentTag && tag.uniqueScope) {
-                            tag.scope.parentScope = tag.parentTag.scope;
-                        }
-                        return [2 /*return*/];
+                    case 4: return [2 /*return*/];
                 }
             });
         });
