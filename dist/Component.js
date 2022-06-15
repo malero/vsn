@@ -99,7 +99,7 @@ var Component = /** @class */ (function (_super) {
                             case 4:
                                 _i++;
                                 return [3 /*break*/, 1];
-                            case 5: return [4 /*yield*/, slotTag.buildAttributes()];
+                            case 5: return [4 /*yield*/, DOM_1.DOM.instance.setupTags([slotTag])];
                             case 6:
                                 _b.sent();
                                 return [2 /*return*/];

@@ -9,10 +9,12 @@
 <body>
 <test-component>
     <button slot="cta" type="button">Component One <span vsn-bind="data.count"></span></button>
+    <h1 slot="display">Hihi</h1>
 </test-component>
 
 <test-component>
     <button slot="cta" type="button">Component Two <span vsn-bind="data.count"></span></button>
+    <h1 slot="display">Hihi</h1>
 </test-component>
 
 <script type="text/javascript" src="../vsn.js"></script>
@@ -20,6 +22,7 @@
 <template vsn-component:test-component>
     <div vsn-scope:data="{'count': -1}">
         <slot name="cta" vsn-on:click="data.count += 1; log(data.count);"></slot>
+        <slot name="display" vsn-if="data.count >= 5"></slot>
     </div>
 </template>
 </body>

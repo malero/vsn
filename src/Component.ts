@@ -33,7 +33,7 @@ export class Component extends HTMLElement {
                         const t = await DOM.instance.buildTag<SlottedTag>(child as HTMLElement, false, SlottedTag);
                         await t?.slotted(slotTag);
                     }
-                    await slotTag.buildAttributes();
+                    await DOM.instance.setupTags([slotTag]);
                 });
             });
         });

@@ -9,6 +9,7 @@ export class If extends Attribute {
 
     public async compile() {
         const statement: string = this.getAttributeValue();
+        console.log('if statement for', this.tag.element, statement);
         this.tree = new Tree(statement);
         await this.tree.prepare(this.tag.scope, this.tag.dom, this.tag);
         await super.compile();
@@ -33,8 +34,10 @@ export class If extends Attribute {
         const result: boolean = await this.tree.evaluate(this.tag.scope, this.tag.dom, this.tag);
         if (result) {
             this.tag.show();
+            console.log('show', this.tag.element);
         } else {
             this.tag.hide();
+            console.log('hide', this.tag.element);
         }
     }
 }

@@ -304,20 +304,20 @@ var TOKEN_PATTERNS = [
         pattern: /^!=/
     },
     {
-        type: TokenType.GREATER_THAN,
-        pattern: /^>/
-    },
-    {
-        type: TokenType.LESS_THAN,
-        pattern: /^</
-    },
-    {
         type: TokenType.GREATER_THAN_EQUAL,
         pattern: /^>=/
     },
     {
         type: TokenType.LESS_THAN_EQUAL,
         pattern: /^<=/
+    },
+    {
+        type: TokenType.GREATER_THAN,
+        pattern: /^>/
+    },
+    {
+        type: TokenType.LESS_THAN,
+        pattern: /^</
     },
     {
         type: TokenType.COLON,

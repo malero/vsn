@@ -73,6 +73,7 @@ var If = /** @class */ (function (_super) {
                 switch (_a.label) {
                     case 0:
                         statement = this.getAttributeValue();
+                        console.log('if statement for', this.tag.element, statement);
                         this.tree = new AST_1.Tree(statement);
                         return [4 /*yield*/, this.tree.prepare(this.tag.scope, this.tag.dom, this.tag)];
                     case 1:
@@ -140,9 +141,11 @@ var If = /** @class */ (function (_super) {
                         result = _a.sent();
                         if (result) {
                             this.tag.show();
+                            console.log('show', this.tag.element);
                         }
                         else {
                             this.tag.hide();
+                            console.log('hide', this.tag.element);
                         }
                         return [2 /*return*/];
                 }
