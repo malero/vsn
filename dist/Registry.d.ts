@@ -14,6 +14,7 @@ export declare class RegistryStore<T = any> extends EventDispatcher {
 }
 export declare class Registry extends EventDispatcher {
     protected static _instance: Registry;
+    readonly tags: RegistryStore;
     readonly components: RegistryStore;
     readonly functions: RegistryStore;
     readonly controllers: RegistryStore;

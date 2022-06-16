@@ -79,7 +79,7 @@ var Vision = /** @class */ (function (_super) {
         var _this = _super.call(this) || this;
         _this.registry = Registry_1.Registry.instance;
         _this.config = Configuration_1.Configuration.instance;
-        Registry_1.Registry.instance.components.on('register', _this.defineComponent, _this);
+        Registry_1.Registry.instance.tags.on('register', _this.defineComponent, _this);
         if (VisionHelper_1.VisionHelper.document) {
             document.addEventListener("DOMContentLoaded", _this.setup.bind(_this));
         }

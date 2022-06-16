@@ -84,6 +84,7 @@ var Registry = /** @class */ (function (_super) {
     __extends(Registry, _super);
     function Registry() {
         var _this = _super.call(this) || this;
+        _this.tags = new RegistryStore();
         _this.components = new RegistryStore();
         _this.functions = new RegistryStore();
         _this.controllers = new RegistryStore();

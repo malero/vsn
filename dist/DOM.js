@@ -331,7 +331,7 @@ var DOM = /** @class */ (function (_super) {
                 discovered = [];
                 checkElement = function (e) {
                     var _a;
-                    if (Registry_1.Registry.instance.components.has((_a = e === null || e === void 0 ? void 0 : e.tagName) === null || _a === void 0 ? void 0 : _a.toLowerCase())) {
+                    if (Registry_1.Registry.instance.tags.has((_a = e === null || e === void 0 ? void 0 : e.tagName) === null || _a === void 0 ? void 0 : _a.toLowerCase())) {
                         return false;
                     }
                     if (ElementHelper_1.ElementHelper.hasVisionAttribute(e)) {

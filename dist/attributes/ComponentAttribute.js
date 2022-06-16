@@ -73,7 +73,7 @@ var ComponentAttribute = /** @class */ (function (_super) {
                 switch (_a.label) {
                     case 0:
                         name = this.getAttributeBinding();
-                        if (!!Registry_1.Registry.instance.components.has(name)) return [3 /*break*/, 4];
+                        if (!!Registry_1.Registry.instance.tags.has(name)) return [3 /*break*/, 4];
                         return [4 /*yield*/, _super.prototype.extract.call(this)];
                     case 1:
                         _a.sent();
@@ -93,7 +93,7 @@ var ComponentAttribute = /** @class */ (function (_super) {
                                 }
                                 return cls;
                             }(Component_1.Component));
-                        Registry_1.Registry.instance.components.register(name, cls);
+                        Registry_1.Registry.instance.tags.register(name, cls);
                         _a.label = 4;
                     case 4: return [2 /*return*/];
                 }

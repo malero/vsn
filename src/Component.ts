@@ -42,11 +42,8 @@ export class Component extends HTMLElement {
     async connectedCallback() {
         const tag = await DOM.instance.buildTag(this, true);
         tag.createScope(true);
-        const componentTags = await DOM.instance.buildFrom(this.shadow);
+        await DOM.instance.buildFrom(this.shadow);
         await DOM.instance.resetBranch(tag);
-        for (const componentTag of componentTags) {
-            await DOM.instance.resetBranch(componentTag);
-        }
         await DOM.instance.setupTags([tag]);
     }
 }

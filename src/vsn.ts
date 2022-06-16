@@ -19,7 +19,7 @@ export class Vision extends EventDispatcher {
 
     constructor() {
         super();
-        Registry.instance.components.on('register', this.defineComponent, this);
+        Registry.instance.tags.on('register', this.defineComponent, this);
         if (VisionHelper.document) {
             document.addEventListener(
                 "DOMContentLoaded",

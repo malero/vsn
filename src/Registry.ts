@@ -62,6 +62,7 @@ export class RegistryStore<T = any> extends EventDispatcher {
 
 export class Registry extends EventDispatcher {
     protected static _instance: Registry;
+    public readonly tags: RegistryStore;
     public readonly components: RegistryStore;
     public readonly functions: RegistryStore;
     public readonly controllers: RegistryStore;
@@ -76,6 +77,7 @@ export class Registry extends EventDispatcher {
 
     constructor() {
         super();
+        this.tags = new RegistryStore();
         this.components = new RegistryStore();
         this.functions = new RegistryStore();
         this.controllers = new RegistryStore();

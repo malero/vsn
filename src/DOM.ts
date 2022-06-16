@@ -193,7 +193,7 @@ export class DOM extends EventDispatcher {
     async discover(ele: HTMLElement, forComponent: boolean = false): Promise<HTMLElement[]> {
         const discovered: HTMLElement[] = [];
         const checkElement = (e: HTMLElement): boolean => {
-            if (Registry.instance.components.has(e?.tagName?.toLowerCase())) {
+            if (Registry.instance.tags.has(e?.tagName?.toLowerCase())) {
                 return false;
             }
 
@@ -363,7 +363,7 @@ export class DOM extends EventDispatcher {
         if (e instanceof Tag)
             e = e.element;
 
-        const tag = e[Tag.TaggedVariable];
+        const tag: Tag = e[Tag.TaggedVariable];
         if (tag) {
             tag.findParentTag();
         }

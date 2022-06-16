@@ -112,7 +112,7 @@ var Component = /** @class */ (function (_super) {
     }
     Component.prototype.connectedCallback = function () {
         return __awaiter(this, void 0, void 0, function () {
-            var tag, componentTags, _i, componentTags_1, componentTag;
+            var tag;
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0: return [4 /*yield*/, DOM_1.DOM.instance.buildTag(this, true)];
@@ -121,24 +121,12 @@ var Component = /** @class */ (function (_super) {
                         tag.createScope(true);
                         return [4 /*yield*/, DOM_1.DOM.instance.buildFrom(this.shadow)];
                     case 2:
-                        componentTags = _a.sent();
+                        _a.sent();
                         return [4 /*yield*/, DOM_1.DOM.instance.resetBranch(tag)];
                     case 3:
                         _a.sent();
-                        _i = 0, componentTags_1 = componentTags;
-                        _a.label = 4;
+                        return [4 /*yield*/, DOM_1.DOM.instance.setupTags([tag])];
                     case 4:
-                        if (!(_i < componentTags_1.length)) return [3 /*break*/, 7];
-                        componentTag = componentTags_1[_i];
-                        return [4 /*yield*/, DOM_1.DOM.instance.resetBranch(componentTag)];
-                    case 5:
-                        _a.sent();
-                        _a.label = 6;
-                    case 6:
-                        _i++;
-                        return [3 /*break*/, 4];
-                    case 7: return [4 /*yield*/, DOM_1.DOM.instance.setupTags([tag])];
-                    case 8:
                         _a.sent();
                         return [2 /*return*/];
                 }
