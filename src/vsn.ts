@@ -47,10 +47,10 @@ export class Vision extends EventDispatcher {
     }
 
     protected defineComponent(name, cls) {
-        if (this.dom.built) {
+        if (DOM.instance.built) {
             customElements.define(name, cls);
         } else {
-            this.dom.once('built', () => {
+            DOM.instance.once('built', () => {
                 customElements.define(name, cls);
             });
         }

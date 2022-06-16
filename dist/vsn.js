@@ -104,11 +104,11 @@ var Vision = /** @class */ (function (_super) {
         return _this;
     }
     Vision.prototype.defineComponent = function (name, cls) {
-        if (this.dom.built) {
+        if (DOM_1.DOM.instance.built) {
             customElements.define(name, cls);
         }
         else {
-            this.dom.once('built', function () {
+            DOM_1.DOM.instance.once('built', function () {
                 customElements.define(name, cls);
             });
         }
