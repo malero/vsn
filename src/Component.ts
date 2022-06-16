@@ -47,5 +47,6 @@ export class Component extends HTMLElement {
         for (const componentTag of componentTags) {
             await DOM.instance.resetBranch(componentTag);
         }
+        await DOM.instance.setupTags([tag]);
     }
 }

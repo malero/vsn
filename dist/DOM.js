@@ -212,19 +212,19 @@ var DOM = /** @class */ (function (_super) {
                 for (var _i = 0, _a = Array.from(this.querySelectorElement(element, _q)); _i < _a.length; _i++) {
                     var _element = _a[_i];
                     if (rest.length > 0) {
-                        nodeList.push.apply(nodeList, Array.from(this.querySelectorElement(_element.parentElement, rest)));
+                        nodeList.push.apply(nodeList, Array.from(this.querySelectorElement(DOM.getParentElement(_element), rest)));
                     }
                     else {
-                        nodeList.push(_element.parentElement);
+                        nodeList.push(DOM.getParentElement(_element));
                     }
                 }
                 return nodeList;
             }
             else if (rest.length === 0) {
-                return [element.parentElement];
+                return [DOM.getParentElement(element)];
             }
             else {
-                return this.querySelectorElement(element.parentElement, rest);
+                return this.querySelectorElement(DOM.getParentElement(element), rest);
             }
         }
         var matches = element.querySelectorAll(q);

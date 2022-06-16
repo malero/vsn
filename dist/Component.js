@@ -137,7 +137,10 @@ var Component = /** @class */ (function (_super) {
                     case 6:
                         _i++;
                         return [3 /*break*/, 4];
-                    case 7: return [2 /*return*/];
+                    case 7: return [4 /*yield*/, DOM_1.DOM.instance.setupTags([tag])];
+                    case 8:
+                        _a.sent();
+                        return [2 /*return*/];
                 }
             });
         });

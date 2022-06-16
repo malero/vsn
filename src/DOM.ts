@@ -132,16 +132,16 @@ export class DOM extends EventDispatcher {
                 const nodeList = [];
                 for (const _element of Array.from(this.querySelectorElement(element, _q))) {
                     if (rest.length > 0) {
-                        nodeList.push(...Array.from(this.querySelectorElement(_element.parentElement, rest)));
+                        nodeList.push(...Array.from(this.querySelectorElement(DOM.getParentElement(_element as HTMLElement), rest)));
                     } else {
-                        nodeList.push(_element.parentElement);
+                        nodeList.push(DOM.getParentElement(_element as HTMLElement));
                     }
                 }
                 return nodeList;
             } else if (rest.length === 0) {
-                return [element.parentElement];
+                return [DOM.getParentElement(element as HTMLElement)];
             } else {
-                return this.querySelectorElement(element.parentElement, rest);
+                return this.querySelectorElement(DOM.getParentElement(element as HTMLElement), rest);
             }
         }
         let matches = element.querySelectorAll(q);

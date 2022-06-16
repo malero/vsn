@@ -30,6 +30,9 @@ import {FunctionNode} from "./AST/FunctionNode";
 import {ClassNode} from "./AST/ClassNode";
 import {OnNode} from "./AST/OnNode";
 import {ModifierNode} from "./AST/ModifierNode";
+import {DispatchEventNode} from "./AST/DispatchEventNode";
+import {WithNode} from "./AST/WithNode";
+import {AsNode} from "./AST/AsNode";
 
 function lower(str: string): string {
     return str ? str.toLowerCase() : null;
@@ -64,7 +67,9 @@ export enum TokenType {
     RETURN,
     NOT,
     OF,
+    AS,
     IN,
+    WITH,
     FOR,
     IF,
     ELSE_IF,
@@ -119,6 +124,7 @@ export enum TokenType {
     XHR_PUT,
     XHR_DELETE,
     MODIFIER,
+    DISPATCH_EVENT,
 }
 
 const TOKEN_PATTERNS: TokenPattern[] = [
@@ -141,6 +147,10 @@ const TOKEN_PATTERNS: TokenPattern[] = [
     {
         type: TokenType.XHR_DELETE,
         pattern: /^></
+    },
+    {
+        type: TokenType.DISPATCH_EVENT,
+        pattern: /^!!!?([_a-zA-Z][-_a-zA-Z0-9]+)/
     },
     {
         type: TokenType.TYPE_INT,
@@ -185,6 +195,14 @@ const TOKEN_PATTERNS: TokenPattern[] = [
     {
         type: TokenType.IN,
         pattern: /^in\s/
+    },
+    {
+        type: TokenType.AS,
+        pattern: /^as\s/
+    },
+    {
+        type: TokenType.WITH,
+        pattern: /^with\s/
     },
     {
         type: TokenType.FOR,
@@ -499,6 +517,12 @@ export class Tree {
                 tokens.shift()
             } else if (XHRNode.match(tokens)) {
                 node = XHRNode.parse(node, tokens[0], tokens);
+            } else if (token.type === TokenType.DISPATCH_EVENT) {
+                node = DispatchEventNode.parse(node, tokens[0], tokens);
+            } else if (token.type === TokenType.WITH) {
+                node = WithNode.parse(node, tokens[0], tokens);
+            } else if (token.type === TokenType.AS) {
+                node = AsNode.parse(node, tokens[0], tokens);
             } else if (token.type === TokenType.IF) {
                 node = IfStatementNode.parse(node, token, tokens);
                 blockNodes.push(node);
@@ -730,13 +754,13 @@ export class Tree {
         for (let i: number = 0; i < tokens.length; i++) {
             const token: Token = tokens[i];
             if (!(token.type === blockInfo.open && i === 0)) { // Skip opener
-                if (token.type === TokenType.L_PAREN)
+                if (token.type === TokenType.L_PAREN && terminator !== TokenType.L_PAREN)
                     openParens += 1;
 
-                if (token.type === TokenType.L_BRACE)
+                if (token.type === TokenType.L_BRACE && terminator !== TokenType.L_BRACE)
                     openBraces += 1;
 
-                if (token.type === TokenType.L_BRACKET)
+                if (token.type === TokenType.L_BRACKET && terminator !== TokenType.L_BRACKET)
                     openBrackets += 1;
             }
 
