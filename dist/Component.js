@@ -76,38 +76,59 @@ var Component = /** @class */ (function (_super) {
             var child = _a[_i];
             child['shadowParent'] = _this;
         }
+        var slotPromises = [];
+        var tagsToSetup = [];
         _this.shadow.querySelectorAll('slot').forEach(function (slot) {
             var slotTagPromise = DOM_1.DOM.instance.buildTag(slot, false, SlotTag_1.SlotTag);
-            slot.addEventListener('slotchange', function (e) {
-                slotTagPromise.then(function (slotTag) { return __awaiter(_this, void 0, void 0, function () {
-                    var _i, _a, child, t;
-                    return __generator(this, function (_b) {
-                        switch (_b.label) {
-                            case 0:
-                                _i = 0, _a = slot.assignedNodes();
-                                _b.label = 1;
-                            case 1:
-                                if (!(_i < _a.length)) return [3 /*break*/, 5];
-                                child = _a[_i];
-                                return [4 /*yield*/, DOM_1.DOM.instance.buildTag(child, false, SlottedTag_1.SlottedTag)];
-                            case 2:
-                                t = _b.sent();
-                                return [4 /*yield*/, (t === null || t === void 0 ? void 0 : t.slotted(slotTag))];
-                            case 3:
-                                _b.sent();
-                                _b.label = 4;
-                            case 4:
-                                _i++;
-                                return [3 /*break*/, 1];
-                            case 5: return [4 /*yield*/, DOM_1.DOM.instance.setupTags([slotTag])];
-                            case 6:
-                                _b.sent();
-                                return [2 /*return*/];
-                        }
-                    });
-                }); });
+            var promise = new Promise(function (resolve, reject) {
+                slot.addEventListener('slotchange', function (e) {
+                    slotTagPromise.then(function (slotTag) { return __awaiter(_this, void 0, void 0, function () {
+                        var _i, _a, child, t;
+                        return __generator(this, function (_b) {
+                            switch (_b.label) {
+                                case 0:
+                                    _i = 0, _a = slot.assignedNodes();
+                                    _b.label = 1;
+                                case 1:
+                                    if (!(_i < _a.length)) return [3 /*break*/, 5];
+                                    child = _a[_i];
+                                    return [4 /*yield*/, DOM_1.DOM.instance.buildTag(child, false, SlottedTag_1.SlottedTag)];
+                                case 2:
+                                    t = _b.sent();
+                                    return [4 /*yield*/, (t === null || t === void 0 ? void 0 : t.slotted(slotTag))];
+                                case 3:
+                                    _b.sent();
+                                    tagsToSetup.push(t);
+                                    _b.label = 4;
+                                case 4:
+                                    _i++;
+                                    return [3 /*break*/, 1];
+                                case 5:
+                                    resolve(slotTag);
+                                    return [2 /*return*/];
+                            }
+                        });
+                    }); });
+                });
             });
+            slotPromises.push(promise);
         });
+        Promise.all(slotPromises).then(function (slotTags) { return __awaiter(_this, void 0, void 0, function () {
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0: return [4 /*yield*/, DOM_1.DOM.instance.buildFrom(this, false, true)];
+                    case 1:
+                        _a.sent();
+                        return [4 /*yield*/, DOM_1.DOM.instance.setupTags(slotTags)];
+                    case 2:
+                        _a.sent();
+                        return [4 /*yield*/, DOM_1.DOM.instance.setupTags(tagsToSetup)];
+                    case 3:
+                        _a.sent();
+                        return [2 /*return*/];
+                }
+            });
+        }); });
         return _this;
     }
     Component.prototype.connectedCallback = function () {
@@ -122,10 +143,10 @@ var Component = /** @class */ (function (_super) {
                         return [4 /*yield*/, DOM_1.DOM.instance.buildFrom(this.shadow)];
                     case 2:
                         _a.sent();
-                        return [4 /*yield*/, DOM_1.DOM.instance.resetBranch(tag)];
+                        return [4 /*yield*/, tag.dom.resetBranch(tag)];
                     case 3:
                         _a.sent();
-                        return [4 /*yield*/, DOM_1.DOM.instance.setupTags([tag])];
+                        return [4 /*yield*/, tag.dom.setupTags([tag])];
                     case 4:
                         _a.sent();
                         return [2 /*return*/];

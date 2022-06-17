@@ -7,6 +7,15 @@ export abstract class Controller extends ScopeData {
     protected _tag: Tag;
     protected _element: HTMLElement;
 
+    constructor() {
+        super();
+        for (const k in this) {
+            if (this[k] as any instanceof Function) {
+                this.__properties__.push(k);
+            }
+        }
+    }
+
     public get scope(): Scope {
         return this._scope;
     }
@@ -23,13 +32,5 @@ export abstract class Controller extends ScopeData {
         this._scope = scope;
         this._tag = tag;
         this._element = element;
-    }
-
-    public get(key: string): any {
-        return this._scope?.get(key);
-    }
-
-    public set(key: string, value: any): void {
-        this._scope?.set(key, value);
     }
 }

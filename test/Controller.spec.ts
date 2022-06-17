@@ -28,15 +28,18 @@ class TestController extends Controller {
 describe('Controller', () => {
     it("methods should be callable from vsn-script", async () => {
         document.body.innerHTML = `
-            <div vsn-controller:test="ControllerTestController" vsn-set:test.test="notTest" vsn-bind="test.test"></div>
+            <div id="controller" vsn-controller:test="ControllerTestController" vsn-set:test.test="notTest" vsn-bind="test.test"></div>
         `;
         const dom = new DOM(document);
         const deferred = SimplePromise.defer();
         dom.once('built', async () => {
-            expect(await dom.exec('test.test')).toBe('notTest');
-            expect(await dom.exec('test.isValid()')).toBe(false);
-            await dom.exec('test.test = "test"');
-            expect(await dom.exec('test.isValid()')).toBe(true);
+            const tag = await dom.exec('#controller');
+            expect(tag.scope.keys).toEqual(['test']);
+            expect(tag.scope.get('test').wrapped).toBeInstanceOf(TestController);
+            expect(await tag.exec('test.isValid()')).toBe(false);
+            expect(await tag.exec('test.test')).toBe('notTest');
+            await tag.exec('test.test = "test"');
+            expect(await tag.exec('test.isValid()')).toBe(true);
             deferred.resolve();
         });
         await deferred.promise;

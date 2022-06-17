@@ -25,17 +25,29 @@ export class Component extends HTMLElement {
         for (const child of Array.from(this.shadow.children)) {
             child['shadowParent'] = this;
         }
+        const slotPromises = [];
+        const tagsToSetup = [];
         this.shadow.querySelectorAll('slot').forEach((slot) => {
             const slotTagPromise = DOM.instance.buildTag(slot,false, SlotTag);
-            slot.addEventListener('slotchange', (e) => {
-                slotTagPromise.then(async (slotTag) => {
-                    for (const child of slot.assignedNodes()) {
-                        const t = await DOM.instance.buildTag<SlottedTag>(child as HTMLElement, false, SlottedTag);
-                        await t?.slotted(slotTag);
-                    }
-                    await DOM.instance.setupTags([slotTag]);
+            const promise = new Promise<SlotTag>((resolve, reject) => {
+                slot.addEventListener('slotchange', (e) => {
+                    slotTagPromise.then(async (slotTag) => {
+
+                        for (const child of slot.assignedNodes()) {
+                            const t = await DOM.instance.buildTag<SlottedTag>(child as HTMLElement, false, SlottedTag);
+                            await t?.slotted(slotTag);
+                            tagsToSetup.push(t);
+                        }
+                        resolve(slotTag);
+                    });
                 });
-            });
+            })
+            slotPromises.push(promise);
+        });
+        Promise.all(slotPromises).then(async (slotTags: SlotTag[]) => {
+            await DOM.instance.buildFrom(this, false, true);
+            await DOM.instance.setupTags(slotTags);
+            await DOM.instance.setupTags(tagsToSetup);
         });
     }
 
@@ -43,7 +55,7 @@ export class Component extends HTMLElement {
         const tag = await DOM.instance.buildTag(this, true);
         tag.createScope(true);
         await DOM.instance.buildFrom(this.shadow);
-        await DOM.instance.resetBranch(tag);
-        await DOM.instance.setupTags([tag]);
+        await tag.dom.resetBranch(tag);
+        await tag.dom.setupTags([tag]);
     }
 }

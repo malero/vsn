@@ -7,9 +7,7 @@ export class SlottedTag extends Tag {
     public async slotted(slot: SlotTag) {
         this.slotTag = slot;
         this.slot = slot.element as HTMLSlotElement;
-        this.parentTag = slot;
-        await this.dom.setupTags([this]);
-        await this.dom.buildFrom(this.element, false, true);
+        this.findParentTag();
     }
 
     findParentTag(): Tag {

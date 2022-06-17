@@ -21,7 +21,7 @@ export class SetAttribute extends Attribute {
         return this.boundScope.get(this.key, false);
     }
 
-    public async setup() {
+    public async extract() {
         this.property = this.getAttributeBinding();
         let ref: ScopeReference;
         try {
@@ -31,10 +31,6 @@ export class SetAttribute extends Attribute {
         }
         this.key = await ref.getKey();
         this.boundScope = await ref.getScope();
-        await super.setup();
-    }
-
-    public async extract() {
         let value = this.getAttributeValue(null);
         for (const m of this.getAttributeModifiers()) {
             const t = Registry.instance.types.getSynchronous(m);

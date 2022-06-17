@@ -9,7 +9,6 @@ export declare class Bind extends Attribute {
     protected formatter: (v: string) => string;
     compile(): Promise<void>;
     setup(): Promise<void>;
-    extract(): Promise<void>;
     connect(): Promise<void>;
     evaluate(): Promise<void>;
     set value(v: any);

@@ -16,6 +16,7 @@ export class Bind extends Attribute {
     public async compile() {
         const tree: Tree = new Tree(this.getAttributeValue());
         await tree.prepare(this.tag.scope, this.tag.dom, this.tag);
+
         await super.compile();
     }
 
@@ -32,7 +33,7 @@ export class Bind extends Attribute {
         await super.setup();
     }
 
-    public async extract() {
+    public async connect() {
         let scopeKey: string = this.getAttributeValue();
         let ref: ScopeReference;
         try {
@@ -47,10 +48,6 @@ export class Bind extends Attribute {
         if (!!this.valueFromElement)
             this.updateFrom();
 
-        await super.extract();
-    }
-
-    public async connect() {
         if (this.doUpdateTo) {
             this.updateTo();
             this.boundScope.on(`change:${this.key}`, this.updateTo, this);

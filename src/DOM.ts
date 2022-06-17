@@ -298,7 +298,7 @@ export class DOM extends EventDispatcher {
                 newTags.push(tag);
         }
 
-       await this.setupTags(newTags);
+        await this.setupTags(newTags);
 
         if (isRoot) {
             this._built = true;
@@ -352,7 +352,7 @@ export class DOM extends EventDispatcher {
 
     async getTagForScope(scope: Scope) {
         for (const tag of this.tags) {
-            if (tag.scope === scope)
+            if (tag.uniqueScope && tag.scope === scope)
                 return tag;
         }
 

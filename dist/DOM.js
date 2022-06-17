@@ -623,7 +623,7 @@ var DOM = /** @class */ (function (_super) {
             return __generator(this, function (_b) {
                 for (_i = 0, _a = this.tags; _i < _a.length; _i++) {
                     tag = _a[_i];
-                    if (tag.scope === scope)
+                    if (tag.uniqueScope && tag.scope === scope)
                         return [2 /*return*/, tag];
                 }
                 return [2 /*return*/, null];

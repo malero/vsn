@@ -61,19 +61,10 @@ var SlottedTag = /** @class */ (function (_super) {
     SlottedTag.prototype.slotted = function (slot) {
         return __awaiter(this, void 0, void 0, function () {
             return __generator(this, function (_a) {
-                switch (_a.label) {
-                    case 0:
-                        this.slotTag = slot;
-                        this.slot = slot.element;
-                        this.parentTag = slot;
-                        return [4 /*yield*/, this.dom.setupTags([this])];
-                    case 1:
-                        _a.sent();
-                        return [4 /*yield*/, this.dom.buildFrom(this.element, false, true)];
-                    case 2:
-                        _a.sent();
-                        return [2 /*return*/];
-                }
+                this.slotTag = slot;
+                this.slot = slot.element;
+                this.findParentTag();
+                return [2 /*return*/];
             });
         });
     };

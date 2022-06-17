@@ -29,8 +29,12 @@ export class FunctionCallNode<T = any> extends Node implements TreeNode {
         // @todo: Need to rewrite/refactor this. It's a bit of a mess with element queries.
         let tags: Tag[] = [];
         let functionScope: Scope = scope;
+        let functionName: string = '';
+        let instanceOfScopeMemberNode = false;
         if (this.fnc instanceof ScopeMemberNode) {
+            instanceOfScopeMemberNode = true
             functionScope = await this.fnc.scope.evaluate(scope, dom, tag);
+            functionName = await this.fnc.name.evaluate(scope, dom, tag);
             if (this.fnc.scope instanceof ElementQueryNode) {
                 const _tags = await this.fnc.scope.evaluate(scope, dom, tag);
                 if (_tags instanceof Array) {
@@ -47,6 +51,7 @@ export class FunctionCallNode<T = any> extends Node implements TreeNode {
 
         const values = await this.args.evaluate(scope, dom, tag);
         let func = await this.fnc.evaluate(scope, dom, tag);
+        console.log(tag?.element, functionName, func, scope.keys, functionScope?.keys, instanceOfScopeMemberNode);
         if (!func || func instanceof Array) {
             const functionName = await (this.fnc as any).name.evaluate(scope, dom, tag);
             const returnValues = [];

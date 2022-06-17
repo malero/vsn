@@ -111,7 +111,7 @@ var Bind = /** @class */ (function (_super) {
             });
         });
     };
-    Bind.prototype.extract = function () {
+    Bind.prototype.connect = function () {
         return __awaiter(this, void 0, void 0, function () {
             var scopeKey, ref, _a, _b;
             return __generator(this, function (_c) {
@@ -135,26 +135,13 @@ var Bind = /** @class */ (function (_super) {
                         _b.boundScope = _c.sent();
                         if (!!this.valueFromElement)
                             this.updateFrom();
-                        return [4 /*yield*/, _super.prototype.extract.call(this)];
-                    case 3:
-                        _c.sent();
-                        return [2 /*return*/];
-                }
-            });
-        });
-    };
-    Bind.prototype.connect = function () {
-        return __awaiter(this, void 0, void 0, function () {
-            return __generator(this, function (_a) {
-                switch (_a.label) {
-                    case 0:
                         if (this.doUpdateTo) {
                             this.updateTo();
                             this.boundScope.on("change:" + this.key, this.updateTo, this);
                         }
                         return [4 /*yield*/, _super.prototype.connect.call(this)];
-                    case 1:
-                        _a.sent();
+                    case 3:
+                        _c.sent();
                         return [2 /*return*/];
                 }
             });

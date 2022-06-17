@@ -23,8 +23,8 @@ export class ScopeDataAbstract extends EventDispatcher {
             return this.getProperty(name);
         }
         config = config || {};
-        const instance = new propertyType(config.default, config),
-            propDesc = Object.getOwnPropertyDescriptor(this, name);
+        const instance = new propertyType(config.default, config);
+        const propDesc = Object.getOwnPropertyDescriptor(this, name);
         this['__'+name] = instance;
         this.__properties__.push(name);
 
@@ -101,11 +101,11 @@ export class ScopeDataAbstract extends EventDispatcher {
         return data;
     }
 
-    get(key: string) {
+    public get(key: string) {
         return this[key];
     }
 
-    set(key: string, value: any) {
+    public set(key: string, value: any) {
         this[key] = value;
     }
 
