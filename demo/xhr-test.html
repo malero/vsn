@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>VSN Post Replace Test</title>
+</head>
+<body>
+
+<div id="test"></div>
+
+<form method="post" action="./xhr-response.html" vsn-xhr="#submit.@value = response">
+    <input type="hidden" name="csrf_token" value="1234567890" />
+    <input type="submit" value="Submit" id="submit" />
+</form>
+
+<a href="./xhr-response.html" vsn-xhr="#link.@text = response" id="link">Link</a>
+
+<script type="text/javascript" src="vsn.js"></script>
+</body>
+</html>

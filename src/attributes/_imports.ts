@@ -27,3 +27,4 @@ export {StandardAttribute} from "./StandardAttribute";
 export {StyleAttribute} from "./StyleAttribute";
 export {TemplateAttribute} from "./TemplateAttribute";
 export {TypeAttribute} from "./TypeAttribute";
+export {XHRAttribute} from "./XHRAttribute";

@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.TypeAttribute = exports.TemplateAttribute = exports.StyleAttribute = exports.StandardAttribute = exports.SetAttribute = exports.ServiceAttribute = exports.ScriptAttribute = exports.ScopeChange = exports.ScopeAttribute = exports.RootAttribute = exports.Referenced = exports.On = exports.Name = exports.ModelAttribute = exports.ListItemModel = exports.ListItem = exports.List = exports.LazyAttribute = exports.KeyUp = exports.KeyDown = exports.JSONAttribute = exports.If = exports.Format = exports.Exec = exports.DisableIf = exports.ControllerAttribute = exports.ComponentAttribute = exports.Bind = exports.AddClassIf = void 0;
+exports.XHRAttribute = exports.TypeAttribute = exports.TemplateAttribute = exports.StyleAttribute = exports.StandardAttribute = exports.SetAttribute = exports.ServiceAttribute = exports.ScriptAttribute = exports.ScopeChange = exports.ScopeAttribute = exports.RootAttribute = exports.Referenced = exports.On = exports.Name = exports.ModelAttribute = exports.ListItemModel = exports.ListItem = exports.List = exports.LazyAttribute = exports.KeyUp = exports.KeyDown = exports.JSONAttribute = exports.If = exports.Format = exports.Exec = exports.DisableIf = exports.ControllerAttribute = exports.ComponentAttribute = exports.Bind = exports.AddClassIf = void 0;
 var AddClassIf_1 = require("./AddClassIf");
 Object.defineProperty(exports, "AddClassIf", { enumerable: true, get: function () { return AddClassIf_1.AddClassIf; } });
 var Bind_1 = require("./Bind");
@@ -59,4 +59,6 @@ var TemplateAttribute_1 = require("./TemplateAttribute");
 Object.defineProperty(exports, "TemplateAttribute", { enumerable: true, get: function () { return TemplateAttribute_1.TemplateAttribute; } });
 var TypeAttribute_1 = require("./TypeAttribute");
 Object.defineProperty(exports, "TypeAttribute", { enumerable: true, get: function () { return TypeAttribute_1.TypeAttribute; } });
+var XHRAttribute_1 = require("./XHRAttribute");
+Object.defineProperty(exports, "XHRAttribute", { enumerable: true, get: function () { return XHRAttribute_1.XHRAttribute; } });
 //# sourceMappingURL=_imports.js.map
