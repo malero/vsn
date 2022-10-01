@@ -20,7 +20,13 @@ var ScopeData_1 = require("./Scope/ScopeData");
 var Controller = /** @class */ (function (_super) {
     __extends(Controller, _super);
     function Controller() {
-        return _super !== null && _super.apply(this, arguments) || this;
+        var _this = _super.call(this) || this;
+        for (var k in _this) {
+            if (_this[k] instanceof Function) {
+                _this.__properties__.push(k);
+            }
+        }
+        return _this;
     }
     Object.defineProperty(Controller.prototype, "scope", {
         get: function () {
@@ -47,14 +53,6 @@ var Controller = /** @class */ (function (_super) {
         this._scope = scope;
         this._tag = tag;
         this._element = element;
-    };
-    Controller.prototype.get = function (key) {
-        var _a;
-        return (_a = this._scope) === null || _a === void 0 ? void 0 : _a.get(key);
-    };
-    Controller.prototype.set = function (key, value) {
-        var _a;
-        (_a = this._scope) === null || _a === void 0 ? void 0 : _a.set(key, value);
     };
     return Controller;
 }(ScopeData_1.ScopeData));

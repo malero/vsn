@@ -120,6 +120,8 @@ var ScopeMemberNode = /** @class */ (function (_super) {
                         return [4 /*yield*/, this.applyModifiers(name_1, parent_1, dom, tag)];
                     case 9:
                         _c.sent();
+                        if (!parent_1.get)
+                            console.log('nani?', parent_1);
                         value = parent_1.get(name_1, false);
                         values.push(value instanceof Scope_1.Scope && value.wrapped || value);
                         _c.label = 10;

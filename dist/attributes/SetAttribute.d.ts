@@ -7,6 +7,5 @@ export declare class SetAttribute extends Attribute {
     protected boundScope?: Scope;
     set value(v: any);
     get value(): any;
-    setup(): Promise<void>;
     extract(): Promise<void>;
 }

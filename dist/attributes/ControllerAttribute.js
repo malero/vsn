@@ -58,38 +58,39 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ControllerAttribute = void 0;
+var Scope_1 = require("../Scope");
 var Attribute_1 = require("../Attribute");
 var Registry_1 = require("../Registry");
+var Controller_1 = require("../Controller");
 var ControllerAttribute = /** @class */ (function (_super) {
     __extends(ControllerAttribute, _super);
     function ControllerAttribute() {
         var _this = _super !== null && _super.apply(this, arguments) || this;
         _this.registryName = 'controllers';
-        _this.assignToParent = true;
         return _this;
     }
     ControllerAttribute.prototype.setup = function () {
         return __awaiter(this, void 0, void 0, function () {
-            var parentScope, cls, obj;
+            var cls, controllerScope, obj;
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
-                        parentScope = this.tag.parentTag.scope;
-                        if (!parentScope)
-                            return [2 /*return*/];
                         this.attributeKey = this.getAttributeBinding();
                         this.className = this.getAttributeValue(this.defaultClassName);
                         return [4 /*yield*/, Registry_1.Registry.instance[this.registryName].get(this.className)];
                     case 1:
                         cls = _a.sent();
-                        obj = this.instantiateClass(cls);
-                        if (this.attributeKey && obj) {
-                            if (this.assignToParent && parentScope) {
-                                parentScope.set(this.attributeKey, obj);
+                        if (this.attributeKey) {
+                            controllerScope = new Scope_1.Scope(this.tag.scope);
+                            obj = new cls();
+                            if (obj instanceof Controller_1.Controller) {
+                                obj.init(this.tag.scope, this.tag, this.tag.element);
                             }
-                            else {
-                                this.tag.scope.set(this.attributeKey, obj);
-                            }
+                            controllerScope.wrap(obj);
+                            this.tag.scope.set(this.attributeKey, controllerScope);
+                        }
+                        else {
+                            this.instantiateClass(cls);
                         }
                         return [4 /*yield*/, _super.prototype.setup.call(this)];
                     case 2:

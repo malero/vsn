@@ -497,6 +497,14 @@ var Tag = /** @class */ (function (_super) {
                 if (classes.length)
                     (_b = this.element.classList).add.apply(_b, classes);
             }
+            else if (key === '@disabled') {
+                if (!!value) {
+                    this.element.setAttribute('disabled', '');
+                }
+                else {
+                    this.element.removeAttribute('disabled');
+                }
+            }
         }
         else {
             this.element.setAttribute(key, value);
@@ -512,6 +520,9 @@ var Tag = /** @class */ (function (_super) {
                 return this.value;
             else if (key === '@class') {
                 return Array.from(this.element.classList);
+            }
+            else if (key === '@disabled') {
+                return this.element.hasAttribute('disabled');
             }
         }
         return this.element.getAttribute(key);
@@ -988,7 +999,8 @@ var Tag = /** @class */ (function (_super) {
         '@text',
         '@html',
         '@class',
-        '@value'
+        '@value',
+        '@disabled'
     ];
     return Tag;
 }(DOMObject_1.DOMObject));

@@ -134,6 +134,8 @@
     </li>
 </template>
 
+<input type="button" vsn-on:click="@disabled= true" value="Disable me" />
+
 <div id="test-container"></div>
 <a href="./markup.html" vsn-on:click|preventdefault="#test-container.@html = << @href">Fill Container</a>
 <a vsn-on:click|preventdefault="#test-container.@html = ''">Clear Container</a>

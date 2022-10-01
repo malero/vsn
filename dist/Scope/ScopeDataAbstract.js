@@ -39,7 +39,8 @@ var ScopeDataAbstract = /** @class */ (function (_super) {
             return this.getProperty(name);
         }
         config = config || {};
-        var instance = new propertyType(config.default, config), propDesc = Object.getOwnPropertyDescriptor(this, name);
+        var instance = new propertyType(config.default, config);
+        var propDesc = Object.getOwnPropertyDescriptor(this, name);
         this['__' + name] = instance;
         this.__properties__.push(name);
         // property getter

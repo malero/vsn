@@ -79,11 +79,11 @@ var SetAttribute = /** @class */ (function (_super) {
         enumerable: false,
         configurable: true
     });
-    SetAttribute.prototype.setup = function () {
+    SetAttribute.prototype.extract = function () {
         return __awaiter(this, void 0, void 0, function () {
-            var ref, _a, _b;
-            return __generator(this, function (_c) {
-                switch (_c.label) {
+            var ref, _a, _b, value, _i, _c, m, t;
+            return __generator(this, function (_d) {
+                switch (_d.label) {
                     case 0:
                         this.property = this.getAttributeBinding();
                         try {
@@ -95,34 +95,23 @@ var SetAttribute = /** @class */ (function (_super) {
                         _a = this;
                         return [4 /*yield*/, ref.getKey()];
                     case 1:
-                        _a.key = _c.sent();
+                        _a.key = _d.sent();
                         _b = this;
                         return [4 /*yield*/, ref.getScope()];
                     case 2:
-                        _b.boundScope = _c.sent();
-                        return [4 /*yield*/, _super.prototype.setup.call(this)];
-                    case 3:
-                        _c.sent();
+                        _b.boundScope = _d.sent();
+                        value = this.getAttributeValue(null);
+                        for (_i = 0, _c = this.getAttributeModifiers(); _i < _c.length; _i++) {
+                            m = _c[_i];
+                            t = Registry_1.Registry.instance.types.getSynchronous(m);
+                            if (t) {
+                                this.boundScope.setType(this.key, m);
+                                break;
+                            }
+                        }
+                        this.boundScope.set(this.key, value);
                         return [2 /*return*/];
                 }
-            });
-        });
-    };
-    SetAttribute.prototype.extract = function () {
-        return __awaiter(this, void 0, void 0, function () {
-            var value, _i, _a, m, t;
-            return __generator(this, function (_b) {
-                value = this.getAttributeValue(null);
-                for (_i = 0, _a = this.getAttributeModifiers(); _i < _a.length; _i++) {
-                    m = _a[_i];
-                    t = Registry_1.Registry.instance.types.getSynchronous(m);
-                    if (t) {
-                        this.boundScope.setType(this.key, m);
-                        break;
-                    }
-                }
-                this.boundScope.set(this.key, value);
-                return [2 /*return*/];
             });
         });
     };

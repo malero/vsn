@@ -38,7 +38,8 @@ export class Tag extends DOMObject {
         '@text',
         '@html',
         '@class',
-        '@value'
+        '@value',
+        '@disabled'
     ];
 
     protected inputTags: string[] = [
@@ -395,6 +396,12 @@ export class Tag extends DOMObject {
                 const classes: string[] = value instanceof Array ? value : [value];
                 if (classes.length)
                     this.element.classList.add(...classes);
+            } else if (key === '@disabled') {
+                if (!!value) {
+                    this.element.setAttribute('disabled', '');
+                } else {
+                    this.element.removeAttribute('disabled');
+                }
             }
         } else {
             this.element.setAttribute(key, value);
@@ -411,6 +418,8 @@ export class Tag extends DOMObject {
                 return this.value;
             else if (key === '@class') {
                 return Array.from(this.element.classList);
+            } else if (key === '@disabled') {
+                return this.element.hasAttribute('disabled');
             }
         }
         return this.element.getAttribute(key);
