@@ -132,7 +132,6 @@ var XHRAttribute = /** @class */ (function (_super) {
                     case 0:
                         e.preventDefault();
                         request = new XMLHttpRequest();
-                        request.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
                         if (this.isForm) {
                             url = this.tag.element.getAttribute('action');
                             method = this.getAttributeBinding(this.tag.element.getAttribute('method'));
@@ -161,6 +160,7 @@ var XHRAttribute = /** @class */ (function (_super) {
                             });
                         }); };
                         request.open(method, url);
+                        request.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
                         request.send(data);
                         return [4 /*yield*/, this.tree.evaluate(this.tag.scope, this.tag.dom, this.tag)];
                     case 1:

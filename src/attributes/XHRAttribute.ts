@@ -37,7 +37,6 @@ export class XHRAttribute extends Attribute {
     public async handleEvent(e) {
         e.preventDefault();
         const request = new XMLHttpRequest();
-        request.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
         let method;
         let url;
         let data;
@@ -60,6 +59,7 @@ export class XHRAttribute extends Attribute {
             }
         }
         request.open(method, url);
+        request.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
         request.send(data);
 
         await this.tree.evaluate(this.tag.scope, this.tag.dom, this.tag);
