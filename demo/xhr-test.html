@@ -8,12 +8,14 @@
 
 <div id="test"></div>
 
-<form method="post" action="./xhr-response.html" vsn-xhr="#submit.@value = response">
+<form method="post" action="./xhr-response.html" vsn-xhr vsn-on:success="#submit.@value = response">
     <input type="hidden" name="csrf_token" value="1234567890" />
     <input type="submit" value="Submit" id="submit" />
 </form>
 
-<a href="./xhr-response.html" vsn-xhr="#link.@text = response" id="link">Link</a>
+<a href="./xhr-response.html" vsn-xhr="@text = response" id="link">Link</a>
+
+<a href="./xhr-response.html" vsn-xhr:put="@text = response" vsn-on:xhr-error="@text='error';wait(3);@text='Try Again'" id="link-put">Link</a>
 
 <script type="text/javascript" src="vsn.js"></script>
 </body>

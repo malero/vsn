@@ -90,6 +90,13 @@ var Vision = /** @class */ (function (_super) {
         _this.registry.functions.register('warn', console.warn);
         _this.registry.functions.register('error', console.error);
         _this.registry.functions.register('info', console.info);
+        _this.registry.functions.register('wait', function (seconds) { return __awaiter(_this, void 0, void 0, function () {
+            return __generator(this, function (_a) {
+                return [2 /*return*/, new Promise(function (resolve) {
+                        setTimeout(resolve, seconds * 1000);
+                    })];
+            });
+        }); });
         _this.registry.models.register('Object', Object);
         _this.registry.controllers.register('WrappedArray', WrappedArray_1.WrappedArray);
         _this.registry.controllers.register('Data', DynamicScopeData_1.DynamicScopeData);

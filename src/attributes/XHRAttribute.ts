@@ -6,6 +6,7 @@ import {Tree} from "../AST";
 export class XHRAttribute extends Attribute {
     public static readonly canDefer: boolean = false;
     protected tree: Tree;
+    protected request: XMLHttpRequest;
 
     public get code() {
         return this.getAttributeValue();
@@ -36,7 +37,9 @@ export class XHRAttribute extends Attribute {
 
     public async handleEvent(e) {
         e.preventDefault();
-        const request = new XMLHttpRequest();
+        if (this.request) return;
+
+        this.request = new XMLHttpRequest();
         let method;
         let url;
         let data;
@@ -49,19 +52,28 @@ export class XHRAttribute extends Attribute {
             method = this.getAttributeBinding('GET');
         }
 
-        request.onload = async () => {
-            this.tag.scope.set('status', request.status);
-            if (request.status >= 200 && request.status < 300) {
-                this.tag.scope.set('response', request.response);
-                await this.tree.evaluate(this.tag.scope, this.tag.dom, this.tag);
-            } else {
-                console.error(request.statusText);
-            }
-        }
-        request.open(method, url);
-        request.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
-        request.send(data);
+        this.request.addEventListener('loadend', this.handleXHREvent.bind(this));
+        this.request.addEventListener('error', this.handleXHREvent.bind(this));
+        this.request.open(method, url);
+        this.request.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+        this.request.send(data);
+    }
 
-        await this.tree.evaluate(this.tag.scope, this.tag.dom, this.tag);
+    public async handleXHREvent(e) {
+        this.tag.scope.set('status', this.request.status);
+        this.tag.scope.set('response', this.request.response);
+        if (this.request.status >= 200 && this.request.status < 300) {
+            await this.tree.evaluate(this.tag.scope, this.tag.dom, this.tag);
+            this.tag.element.dispatchEvent(new Event('xhr-success'));
+        } else if (this.request.status >= 300 && this.request.status < 400) {
+            this.tag.element.dispatchEvent(new Event('xhr-redirect'));
+        } else if (this.request.status >= 400 && this.request.status < 500) {
+            this.tag.element.dispatchEvent(new Event('xhr-client-error'));
+            this.tag.element.dispatchEvent(new Event('xhr-error'));
+        } else {
+            this.tag.element.dispatchEvent(new Event('xhr-server-error'));
+            this.tag.element.dispatchEvent(new Event('xhr-error'));
+        }
+        this.request = null;
     }
 }

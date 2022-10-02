@@ -32,6 +32,11 @@ export class Vision extends EventDispatcher {
         this.registry.functions.register('warn', console.warn);
         this.registry.functions.register('error', console.error);
         this.registry.functions.register('info', console.info);
+        this.registry.functions.register('wait', async (seconds) => {
+            return new Promise((resolve) => {
+                setTimeout(resolve, seconds * 1000);
+            });
+        });
         this.registry.models.register('Object', Object);
         this.registry.controllers.register('WrappedArray', WrappedArray);
         this.registry.controllers.register('Data', DynamicScopeData);

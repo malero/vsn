@@ -125,46 +125,58 @@ var XHRAttribute = /** @class */ (function (_super) {
     });
     XHRAttribute.prototype.handleEvent = function (e) {
         return __awaiter(this, void 0, void 0, function () {
-            var request, method, url, data;
-            var _this = this;
+            var method, url, data;
+            return __generator(this, function (_a) {
+                e.preventDefault();
+                if (this.request)
+                    return [2 /*return*/];
+                this.request = new XMLHttpRequest();
+                if (this.isForm) {
+                    url = this.tag.element.getAttribute('action');
+                    method = this.getAttributeBinding(this.tag.element.getAttribute('method'));
+                    data = new FormData(this.tag.element);
+                }
+                else if (this.isAnchor) {
+                    url = this.tag.element.getAttribute('href');
+                    method = this.getAttributeBinding('GET');
+                }
+                this.request.addEventListener('loadend', this.handleXHREvent.bind(this));
+                this.request.addEventListener('error', this.handleXHREvent.bind(this));
+                this.request.open(method, url);
+                this.request.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+                this.request.send(data);
+                return [2 /*return*/];
+            });
+        });
+    };
+    XHRAttribute.prototype.handleXHREvent = function (e) {
+        return __awaiter(this, void 0, void 0, function () {
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
-                        e.preventDefault();
-                        request = new XMLHttpRequest();
-                        if (this.isForm) {
-                            url = this.tag.element.getAttribute('action');
-                            method = this.getAttributeBinding(this.tag.element.getAttribute('method'));
-                            data = new FormData(this.tag.element);
-                        }
-                        else if (this.isAnchor) {
-                            url = this.tag.element.getAttribute('href');
-                            method = this.getAttributeBinding('GET');
-                        }
-                        request.onload = function () { return __awaiter(_this, void 0, void 0, function () {
-                            return __generator(this, function (_a) {
-                                switch (_a.label) {
-                                    case 0:
-                                        this.tag.scope.set('status', request.status);
-                                        if (!(request.status >= 200 && request.status < 300)) return [3 /*break*/, 2];
-                                        this.tag.scope.set('response', request.response);
-                                        return [4 /*yield*/, this.tree.evaluate(this.tag.scope, this.tag.dom, this.tag)];
-                                    case 1:
-                                        _a.sent();
-                                        return [3 /*break*/, 3];
-                                    case 2:
-                                        console.error(request.statusText);
-                                        _a.label = 3;
-                                    case 3: return [2 /*return*/];
-                                }
-                            });
-                        }); };
-                        request.open(method, url);
-                        request.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
-                        request.send(data);
+                        this.tag.scope.set('status', this.request.status);
+                        this.tag.scope.set('response', this.request.response);
+                        if (!(this.request.status >= 200 && this.request.status < 300)) return [3 /*break*/, 2];
                         return [4 /*yield*/, this.tree.evaluate(this.tag.scope, this.tag.dom, this.tag)];
                     case 1:
                         _a.sent();
+                        this.tag.element.dispatchEvent(new Event('xhr-success'));
+                        return [3 /*break*/, 3];
+                    case 2:
+                        if (this.request.status >= 300 && this.request.status < 400) {
+                            this.tag.element.dispatchEvent(new Event('xhr-redirect'));
+                        }
+                        else if (this.request.status >= 400 && this.request.status < 500) {
+                            this.tag.element.dispatchEvent(new Event('xhr-client-error'));
+                            this.tag.element.dispatchEvent(new Event('xhr-error'));
+                        }
+                        else {
+                            this.tag.element.dispatchEvent(new Event('xhr-server-error'));
+                            this.tag.element.dispatchEvent(new Event('xhr-error'));
+                        }
+                        _a.label = 3;
+                    case 3:
+                        this.request = null;
                         return [2 /*return*/];
                 }
             });
