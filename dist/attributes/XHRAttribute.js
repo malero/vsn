@@ -61,6 +61,7 @@ exports.XHRAttribute = void 0;
 var Registry_1 = require("../Registry");
 var Attribute_1 = require("../Attribute");
 var AST_1 = require("../AST");
+var VisionHelper_1 = require("../helpers/VisionHelper");
 var XHRAttribute = /** @class */ (function (_super) {
     __extends(XHRAttribute, _super);
     function XHRAttribute() {
@@ -125,7 +126,7 @@ var XHRAttribute = /** @class */ (function (_super) {
     });
     XHRAttribute.prototype.handleEvent = function (e) {
         return __awaiter(this, void 0, void 0, function () {
-            var method, url, data;
+            var method, url, formData, data, formKeys, _i, formKeys_1, key;
             return __generator(this, function (_a) {
                 e.preventDefault();
                 if (this.request)
@@ -134,7 +135,18 @@ var XHRAttribute = /** @class */ (function (_super) {
                 if (this.isForm) {
                     url = this.tag.element.getAttribute('action');
                     method = this.getAttributeBinding(this.tag.element.getAttribute('method'));
-                    data = new FormData(this.tag.element);
+                    method = method.toUpperCase();
+                    formData = new FormData(this.tag.element);
+                    if (method == 'GET') {
+                        data = {};
+                        formKeys = Array.from(formData.keys());
+                        for (_i = 0, formKeys_1 = formKeys; _i < formKeys_1.length; _i++) {
+                            key = formKeys_1[_i];
+                            data[key] = formData.get(key);
+                        }
+                        url = VisionHelper_1.VisionHelper.getUriWithParams(url, data);
+                        formData = null;
+                    }
                 }
                 else if (this.isAnchor) {
                     url = this.tag.element.getAttribute('href');
@@ -144,7 +156,7 @@ var XHRAttribute = /** @class */ (function (_super) {
                 this.request.addEventListener('error', this.handleXHREvent.bind(this));
                 this.request.open(method, url);
                 this.request.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
-                this.request.send(data);
+                this.request.send(formData);
                 return [2 /*return*/];
             });
         });

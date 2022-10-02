@@ -8,7 +8,7 @@
 
 <div id="test"></div>
 
-<form method="post" action="./xhr-response.html" vsn-xhr vsn-on:success="#submit.@value = response">
+<form method="get" action="./xhr-response.html?testing=1" vsn-xhr vsn-on:xhr-success="#submit.@value = response">
     <input type="hidden" name="csrf_token" value="1234567890" />
     <input type="submit" value="Submit" id="submit" />
 </form>
