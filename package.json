@@ -1,6 +1,6 @@
 {
   "name": "vsn",
-  "version": "0.1.114",
+  "version": "0.1.115",
   "description": "SEO Friendly Javascript/Typescript Framework",
   "keywords": [
     "framework",
@@ -21,7 +21,7 @@
     "build": "rm -rf ./dist/ && npm run-script version && tsc",
     "version": "echo \"export const VERSION = '${npm_package_version}';\n\" > src/version.ts",
     "build_dev": "rm -rf ./dist/ && webpack --env BUILD=development BENCHMARK=1",
-    "demo": "webpack --env BUILD=production BENCHMARK=1 && cp ./dist/vsn.min.js ./demo/vsn.js",
+    "demo": "webpack --env BUILD=production BENCHMARK=1 && cp ./dist/demo.min.js ./demo/vsn.js",
     "test": "karma start --single-run",
     "posttest": "codecov",
     "clean": "rm -rf ./dist/"

@@ -16,7 +16,7 @@ var __extends = (this && this.__extends) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Controller = void 0;
-var ScopeData_1 = require("./Scope/ScopeData");
+var ScopeObject_1 = require("./Scope/ScopeObject");
 var Controller = /** @class */ (function (_super) {
     __extends(Controller, _super);
     function Controller() {
@@ -55,6 +55,6 @@ var Controller = /** @class */ (function (_super) {
         this._element = element;
     };
     return Controller;
-}(ScopeData_1.ScopeData));
+}(ScopeObject_1.ScopeObject));
 exports.Controller = Controller;
 //# sourceMappingURL=Controller.js.map

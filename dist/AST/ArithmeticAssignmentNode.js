@@ -62,7 +62,7 @@ var ElementQueryNode_1 = require("./ElementQueryNode");
 var ElementAttributeNode_1 = require("./ElementAttributeNode");
 var ElementStyleNode_1 = require("./ElementStyleNode");
 var UnitLiteralNode_1 = require("./UnitLiteralNode");
-var vsn_1 = require("../vsn");
+var ScopeObject_1 = require("../Scope/ScopeObject");
 var ArithmeticAssignmentNode = /** @class */ (function (_super) {
     __extends(ArithmeticAssignmentNode, _super);
     function ArithmeticAssignmentNode(left, right, type) {
@@ -104,7 +104,7 @@ var ArithmeticAssignmentNode = /** @class */ (function (_super) {
                         else if (inner instanceof Scope_1.Scope) {
                             scopes.push(inner);
                         }
-                        else if (inner instanceof vsn_1.Controller) {
+                        else if (inner instanceof ScopeObject_1.ScopeObject) {
                             scopes.push(inner.scope);
                         }
                         else {

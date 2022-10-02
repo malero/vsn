@@ -120,7 +120,6 @@ var FunctionCallNode = /** @class */ (function (_super) {
                         return [4 /*yield*/, this.fnc.evaluate(scope, dom, tag)];
                     case 7:
                         func = _f.sent();
-                        console.log(tag === null || tag === void 0 ? void 0 : tag.element, functionName, func, scope.keys, functionScope === null || functionScope === void 0 ? void 0 : functionScope.keys, instanceOfScopeMemberNode);
                         if (!(!func || func instanceof Array)) return [3 /*break*/, 20];
                         return [4 /*yield*/, this.fnc.name.evaluate(scope, dom, tag)];
                     case 8:

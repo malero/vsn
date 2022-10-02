@@ -1,8 +1,8 @@
 import {Scope} from "./Scope";
 import {Tag} from "./Tag";
-import {ScopeData} from "./Scope/ScopeData";
+import {ScopeObject} from "./Scope/ScopeObject";
 
-export abstract class Controller extends ScopeData {
+export abstract class Controller extends ScopeObject {
     protected _scope: Scope;
     protected _tag: Tag;
     protected _element: HTMLElement;

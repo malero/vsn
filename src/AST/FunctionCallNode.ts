@@ -51,7 +51,6 @@ export class FunctionCallNode<T = any> extends Node implements TreeNode {
 
         const values = await this.args.evaluate(scope, dom, tag);
         let func = await this.fnc.evaluate(scope, dom, tag);
-        console.log(tag?.element, functionName, func, scope.keys, functionScope?.keys, instanceOfScopeMemberNode);
         if (!func || func instanceof Array) {
             const functionName = await (this.fnc as any).name.evaluate(scope, dom, tag);
             const returnValues = [];

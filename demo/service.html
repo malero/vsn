@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>VSN Service Attribute Demo</title>
+</head>
+<body>
+
+<div vsn-service:demo="ServiceDemo">
+    <button vsn-on:click="demo.add(1)">Add</button>
+    <span vsn-bind="demo.count"></span>
+</div>
+
+<div vsn-service:demo2="ServiceDemo">
+    <button vsn-on:click="demo2.add(1)">Add</button>
+    <span vsn-bind="demo2.count"></span>
+</div>
+
+<script type="text/javascript" src="vsn.js"></script>
+</body>
+</html>

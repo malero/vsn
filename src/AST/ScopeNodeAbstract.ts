@@ -9,6 +9,7 @@ export abstract class ScopeNodeAbstract extends Node implements TreeNode {
     async applyModifiers(name: string, scope: Scope, dom: DOM, tag: Tag) {
         let type: string;
         for (const modifier of this.modifiers) {
+            // Check for type cast modifier
             if (Registry.instance.types.has(modifier)) {
                 type = modifier;
                 break;

@@ -3,7 +3,10 @@ const webpack = require("webpack");
 const TerserPlugin = require("terser-webpack-plugin");
 
 const defaultConfiguration = {
-  entry: './src/vsn.ts',
+  entry: {
+    'vsn': './src/vsn.ts',
+    'demo': './src/demo.ts',
+  },
   module: {
     rules: [
       {
@@ -18,7 +21,7 @@ const defaultConfiguration = {
   },
   plugins: [],
   output: {
-    filename: 'vsn.min.js',
+    filename: '[name].min.js',
     path: path.resolve(__dirname, 'dist'),
   },
   optimization: {

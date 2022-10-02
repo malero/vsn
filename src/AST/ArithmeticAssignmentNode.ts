@@ -10,7 +10,7 @@ import {ElementQueryNode} from "./ElementQueryNode";
 import {ElementAttributeNode} from "./ElementAttributeNode";
 import {ElementStyleNode} from "./ElementStyleNode";
 import {UnitLiteral} from "./UnitLiteralNode";
-import {Controller} from "../vsn";
+import {ScopeObject} from "../Scope/ScopeObject";
 
 export class ArithmeticAssignmentNode extends Node implements TreeNode {
     constructor(
@@ -41,7 +41,7 @@ export class ArithmeticAssignmentNode extends Node implements TreeNode {
                 }
             } else if (inner instanceof Scope) {
                 scopes.push(inner);
-            } else if (inner instanceof Controller) {
+            } else if (inner instanceof ScopeObject) {
                 scopes.push(inner.scope);
             } else {
                 scopes.push(scope)
@@ -53,8 +53,9 @@ export class ArithmeticAssignmentNode extends Node implements TreeNode {
             } else {
                 scopes = elements;
             }
-        } else
+        } else {
             scopes.push(scope);
+        }
 
         const values = [];
         for (let localScope of scopes) {

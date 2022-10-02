@@ -66,6 +66,7 @@ var ScopeNodeAbstract = /** @class */ (function (_super) {
             return __generator(this, function (_b) {
                 for (_i = 0, _a = this.modifiers; _i < _a.length; _i++) {
                     modifier = _a[_i];
+                    // Check for type cast modifier
                     if (Registry_1.Registry.instance.types.has(modifier)) {
                         type = modifier;
                         break;

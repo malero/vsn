@@ -62,6 +62,7 @@ var Scope_1 = require("../Scope");
 var Attribute_1 = require("../Attribute");
 var Registry_1 = require("../Registry");
 var Controller_1 = require("../Controller");
+var Service_1 = require("../Service");
 var ControllerAttribute = /** @class */ (function (_super) {
     __extends(ControllerAttribute, _super);
     function ControllerAttribute() {
@@ -71,7 +72,7 @@ var ControllerAttribute = /** @class */ (function (_super) {
     }
     ControllerAttribute.prototype.setup = function () {
         return __awaiter(this, void 0, void 0, function () {
-            var cls, controllerScope, obj;
+            var cls, clsScope, obj;
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
@@ -81,13 +82,24 @@ var ControllerAttribute = /** @class */ (function (_super) {
                     case 1:
                         cls = _a.sent();
                         if (this.attributeKey) {
-                            controllerScope = new Scope_1.Scope(this.tag.scope);
-                            obj = new cls();
-                            if (obj instanceof Controller_1.Controller) {
-                                obj.init(this.tag.scope, this.tag, this.tag.element);
+                            clsScope = void 0;
+                            // Singleton?
+                            if (cls['instance'] instanceof cls) {
+                                clsScope = cls['instance'].scope;
+                                if (cls['instance'] instanceof Service_1.Service) {
+                                    this.tag.dom.root.scope.addChild(clsScope);
+                                    this.tag.dom.root.scope.set(this.attributeKey, clsScope);
+                                }
                             }
-                            controllerScope.wrap(obj);
-                            this.tag.scope.set(this.attributeKey, controllerScope);
+                            else {
+                                clsScope = new Scope_1.Scope(this.tag.scope);
+                                obj = new cls();
+                                if (obj instanceof Controller_1.Controller) {
+                                    obj.init(this.tag.scope, this.tag, this.tag.element);
+                                }
+                                clsScope.wrap(obj);
+                            }
+                            this.tag.scope.set(this.attributeKey, clsScope);
                         }
                         else {
                             this.instantiateClass(cls);

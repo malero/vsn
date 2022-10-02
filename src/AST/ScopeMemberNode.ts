@@ -51,8 +51,6 @@ export class ScopeMemberNode extends ScopeNodeAbstract implements TreeNode {
             }
             const name = await this.name.evaluate(scope, dom, tag);
             await this.applyModifiers(name, parent, dom, tag);
-            if (!parent.get)
-                console.log('nani?', parent);
             const value: any = parent.get(name, false);
             values.push(value instanceof Scope && value.wrapped || value);
         }

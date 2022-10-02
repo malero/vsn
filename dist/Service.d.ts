@@ -1,6 +1,6 @@
-import { ScopeData } from "./Scope/ScopeData";
 import { Scope } from "./Scope";
-export declare class Service extends ScopeData {
+import { ScopeObject } from "./Scope/ScopeObject";
+export declare class Service extends ScopeObject {
     protected static _instance: Service;
     protected _scope: Scope;
     constructor();
