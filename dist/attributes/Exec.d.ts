@@ -6,4 +6,5 @@ export declare class Exec extends Attribute {
     get code(): any;
     compile(): Promise<void>;
     extract(): Promise<void>;
+    execute(): Promise<void>;
 }

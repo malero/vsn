@@ -108,7 +108,10 @@ var XHRNode = /** @class */ (function (_super) {
                                 method = "GET";
                         }
                         request = {
-                            method: method
+                            method: method,
+                            headers: {
+                                'X-Requested-With': 'XMLHttpRequest'
+                            }
                         };
                         if (request.method === 'GET') {
                             url = VisionHelper_1.VisionHelper.getUriWithParams(url, data);

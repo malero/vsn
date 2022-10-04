@@ -2,6 +2,7 @@ import {Registry} from "../Registry";
 import {Attribute} from "../Attribute";
 import {Tree} from "../AST";
 import {VisionHelper} from "../helpers/VisionHelper";
+import {XHR} from "../contrib/XHR";
 
 @Registry.attribute('vsn-xhr')
 export class XHRAttribute extends Attribute {
@@ -61,12 +62,30 @@ export class XHRAttribute extends Attribute {
         } else if (this.isAnchor) {
             url = this.tag.element.getAttribute('href');
             method = this.getAttributeBinding('GET');
+            method = method.toUpperCase();
+            if (['POST', 'PUT'].indexOf(method) > -1) {
+                formData = new FormData();
+            }
         }
 
         this.request.addEventListener('loadend', this.handleXHREvent.bind(this));
         this.request.addEventListener('error', this.handleXHREvent.bind(this));
         this.request.open(method, url);
         this.request.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+        const siteHeaders = XHR.instance.getHeaders();
+        for (const key in siteHeaders) {
+            this.request.setRequestHeader(key, siteHeaders[key]);
+        }
+
+        if (formData instanceof FormData) {
+            const siteFormData = XHR.instance.getFormData();
+            if (siteFormData) {
+                for (const key in siteFormData) {
+                    formData.append(key, siteFormData[key]);
+                }
+            }
+        }
+
         this.request.send(formData);
     }
 

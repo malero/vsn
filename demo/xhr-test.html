@@ -6,14 +6,20 @@
 </head>
 <body>
 
-<div id="test"></div>
+<div vsn-service:xhr="XHR" id="test"></div>
+
+<script type="text/vsn" vsn-script|defer>
+    xhr.addHeader('X-Test', 'test');
+    xhr.addFormData('test', 'test');
+</script>
 
 <form method="get" action="./xhr-response.html?testing=1" vsn-xhr vsn-on:xhr-success="#submit.@value = response">
     <input type="hidden" name="csrf_token" value="1234567890" />
     <input type="submit" value="Submit" id="submit" />
 </form>
 
-<a href="./xhr-response.html" vsn-xhr="@text = response" id="link">Link</a>
+<a href="./xhr-response.html" vsn-xhr="@text = response" id="link">Get Link</a>
+<a href="./xhr-response.html" vsn-xhr:post="@text = response" id="post-link">Link</a>
 
 <a href="./xhr-response.html" vsn-xhr:put="@text = response" vsn-on:xhr-error="@text='error';wait(3);@text='Try Again'" id="link-put">Link</a>
 

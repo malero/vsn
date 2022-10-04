@@ -62,6 +62,7 @@ var Registry_1 = require("../Registry");
 var Attribute_1 = require("../Attribute");
 var AST_1 = require("../AST");
 var VisionHelper_1 = require("../helpers/VisionHelper");
+var XHR_1 = require("../contrib/XHR");
 var XHRAttribute = /** @class */ (function (_super) {
     __extends(XHRAttribute, _super);
     function XHRAttribute() {
@@ -126,7 +127,7 @@ var XHRAttribute = /** @class */ (function (_super) {
     });
     XHRAttribute.prototype.handleEvent = function (e) {
         return __awaiter(this, void 0, void 0, function () {
-            var method, url, formData, data, formKeys, _i, formKeys_1, key;
+            var method, url, formData, data, formKeys, _i, formKeys_1, key, siteHeaders, key, siteFormData, key;
             return __generator(this, function (_a) {
                 e.preventDefault();
                 if (this.request)
@@ -151,11 +152,27 @@ var XHRAttribute = /** @class */ (function (_super) {
                 else if (this.isAnchor) {
                     url = this.tag.element.getAttribute('href');
                     method = this.getAttributeBinding('GET');
+                    method = method.toUpperCase();
+                    if (['POST', 'PUT'].indexOf(method) > -1) {
+                        formData = new FormData();
+                    }
                 }
                 this.request.addEventListener('loadend', this.handleXHREvent.bind(this));
                 this.request.addEventListener('error', this.handleXHREvent.bind(this));
                 this.request.open(method, url);
                 this.request.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+                siteHeaders = XHR_1.XHR.instance.getHeaders();
+                for (key in siteHeaders) {
+                    this.request.setRequestHeader(key, siteHeaders[key]);
+                }
+                if (formData instanceof FormData) {
+                    siteFormData = XHR_1.XHR.instance.getFormData();
+                    if (siteFormData) {
+                        for (key in siteFormData) {
+                            formData.append(key, siteFormData[key]);
+                        }
+                    }
+                }
                 this.request.send(formData);
                 return [2 /*return*/];
             });

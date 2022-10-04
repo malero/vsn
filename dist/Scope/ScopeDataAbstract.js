@@ -30,8 +30,12 @@ var ScopeDataAbstract = /** @class */ (function (_super) {
         // Objects may have __properties__ from prototype
         if (!_this['__properties__'])
             _this.__properties__ = [];
+        if (!_this['__methods__'])
+            _this.__methods__ = [];
         return _this;
     }
+    ScopeDataAbstract.prototype.createMethod = function (name, method) {
+    };
     ScopeDataAbstract.prototype.createProperty = function (name, propertyType, config) {
         var _this = this;
         if (propertyType === void 0) { propertyType = Property_1.Property; }

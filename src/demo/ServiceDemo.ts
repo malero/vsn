@@ -5,7 +5,7 @@ export class ServiceDemo extends Service {
     @property(IntegerProperty)
     public count: number = 0;
 
-    add(num: number): number {
+    async add(num: number=1): Promise<number> {
         return this.count += num;
     }
 }

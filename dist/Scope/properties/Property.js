@@ -15,7 +15,7 @@ var __extends = (this && this.__extends) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.Property = exports.property = void 0;
+exports.Property = exports.method = exports.property = void 0;
 var EventDispatcher_1 = require("../../EventDispatcher");
 var Registry_1 = require("../../Registry");
 function property(propertyType, config) {
@@ -40,6 +40,27 @@ function property(propertyType, config) {
     };
 }
 exports.property = property;
+function method(config) {
+    if (config === void 0) { config = {}; }
+    return function (target, key) {
+        if (target.__methods__ == undefined) {
+            target.__methods__ = [];
+        }
+        // Abstract/extended classes share __properties__
+        if (target.__methods__.indexOf(key) == -1)
+            target.__methods__.push(key);
+        var getter = function () {
+            return config;
+        };
+        Object.defineProperty(target, '__' + key + '__', {
+            get: getter,
+            set: function (v) { },
+            enumerable: false,
+            configurable: true
+        });
+    };
+}
+exports.method = method;
 var Property = /** @class */ (function (_super) {
     __extends(Property, _super);
     function Property(value, config) {

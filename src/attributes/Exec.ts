@@ -18,7 +18,15 @@ export class Exec extends Attribute {
     }
 
     public async extract() {
-        await this.tree.evaluate(this.tag.scope, this.tag.dom, this.tag);
+        if (this.hasModifier('defer')) {
+            this.tag.dom.once('built', () => this.execute());
+        } else {
+            await this.execute();
+        }
         await super.extract();
+    }
+
+    public async execute() {
+        await this.tree.evaluate(this.tag.scope, this.tag.dom, this.tag);
     }
 }

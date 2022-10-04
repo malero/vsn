@@ -6,8 +6,10 @@ export interface IScopeData {
 export declare class ScopeDataAbstract extends EventDispatcher {
     [key: string]: any;
     __properties__: string[];
+    __methods__: string[];
     protected _lastData: any;
     constructor();
+    createMethod(name: string, method: (...args: any[]) => any): void;
     createProperty(name: string, propertyType?: any, config?: IPropertyConfig): any;
     hasProperty(name: string): boolean;
     get keys(): string[];

@@ -8,6 +8,7 @@ export interface IScopeData {
 export class ScopeDataAbstract extends EventDispatcher {
     [key: string]: any;
     __properties__: string[];
+    __methods__: string[];
     protected _lastData: any;
 
     constructor() {
@@ -16,6 +17,13 @@ export class ScopeDataAbstract extends EventDispatcher {
         // Objects may have __properties__ from prototype
         if(!this['__properties__'])
             this.__properties__ = [];
+
+        if(!this['__methods__'])
+            this.__methods__ = [];
+    }
+
+    createMethod(name: string, method: (...args: any[]) => any) {
+
     }
 
     createProperty(name: string, propertyType: any = Property, config?: IPropertyConfig): any {

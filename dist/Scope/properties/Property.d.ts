@@ -1,5 +1,6 @@
 import { EventDispatcher } from "../../EventDispatcher";
 export declare function property(propertyType?: typeof Property, config?: {} | null): (target: any, key: string) => void;
+export declare function method(config?: {} | null): (target: any, key: string) => void;
 export declare type TValidator = (value: any) => string[];
 export interface IPropertyConfig {
     type?: string;

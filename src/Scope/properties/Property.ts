@@ -24,6 +24,29 @@ export function property(propertyType = Property, config: {} | null = {}) {
     }
 }
 
+export function method(config: {} | null = {}) {
+    return function(target: any, key: string) {
+        if(target.__methods__ == undefined) {
+            target.__methods__ = [];
+        }
+
+        // Abstract/extended classes share __properties__
+        if(target.__methods__.indexOf(key) == -1)
+            target.__methods__.push(key);
+
+        const getter = function() {
+            return config;
+        };
+
+        Object.defineProperty(target, '__'+key+'__', {
+            get: getter,
+            set: v => {},
+            enumerable:false,
+            configurable: true
+        });
+    }
+}
+
 export type TValidator = (value: any) => string[];
 
 export interface IPropertyConfig {

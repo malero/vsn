@@ -48,7 +48,10 @@ export class XHRNode extends Node implements TreeNode {
         }
 
         let request = {
-            method: method
+            method: method,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
         };
 
         if (request.method === 'GET') {

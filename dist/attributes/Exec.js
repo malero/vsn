@@ -92,13 +92,31 @@ var Exec = /** @class */ (function (_super) {
     };
     Exec.prototype.extract = function () {
         return __awaiter(this, void 0, void 0, function () {
+            var _this = this;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0:
+                        if (!this.hasModifier('defer')) return [3 /*break*/, 1];
+                        this.tag.dom.once('built', function () { return _this.execute(); });
+                        return [3 /*break*/, 3];
+                    case 1: return [4 /*yield*/, this.execute()];
+                    case 2:
+                        _a.sent();
+                        _a.label = 3;
+                    case 3: return [4 /*yield*/, _super.prototype.extract.call(this)];
+                    case 4:
+                        _a.sent();
+                        return [2 /*return*/];
+                }
+            });
+        });
+    };
+    Exec.prototype.execute = function () {
+        return __awaiter(this, void 0, void 0, function () {
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0: return [4 /*yield*/, this.tree.evaluate(this.tag.scope, this.tag.dom, this.tag)];
                     case 1:
-                        _a.sent();
-                        return [4 /*yield*/, _super.prototype.extract.call(this)];
-                    case 2:
                         _a.sent();
                         return [2 /*return*/];
                 }
