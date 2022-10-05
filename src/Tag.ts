@@ -39,7 +39,24 @@ export class Tag extends DOMObject {
         '@html',
         '@class',
         '@value',
-        '@disabled'
+        '@disabled',
+        '@hidden',
+        '@selected',
+        '@readonly',
+        '@multiple',
+        '@required',
+        '@autofocus',
+    ];
+
+    public static readonly flagAttributes: string[] = [
+        '@disabled',
+        '@hidden',
+        '@checked',
+        '@selected',
+        '@readonly',
+        '@multiple',
+        '@required',
+        '@autofocus',
     ];
 
     protected inputTags: string[] = [
@@ -396,11 +413,12 @@ export class Tag extends DOMObject {
                 const classes: string[] = value instanceof Array ? value : [value];
                 if (classes.length)
                     this.element.classList.add(...classes);
-            } else if (key === '@disabled') {
+            } else if (Tag.flagAttributes.indexOf(key) > -1) {
+                const attrKey = key.replace('@', '');
                 if (!!value) {
-                    this.element.setAttribute('disabled', '');
+                    this.element.setAttribute(attrKey, '');
                 } else {
-                    this.element.removeAttribute('disabled');
+                    this.element.removeAttribute(attrKey);
                 }
             }
         } else {
@@ -418,8 +436,9 @@ export class Tag extends DOMObject {
                 return this.value;
             else if (key === '@class') {
                 return Array.from(this.element.classList);
-            } else if (key === '@disabled') {
-                return this.element.hasAttribute('disabled');
+            } else if (Tag.flagAttributes.indexOf(key) > -1) {
+                const attrKey = key.replace('@', '');
+                return this.element.hasAttribute(attrKey);
             }
         }
         return this.element.getAttribute(key);

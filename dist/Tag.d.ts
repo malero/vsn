@@ -37,6 +37,7 @@ export declare class Tag extends DOMObject {
     protected _children: Tag[];
     protected _controller: Controller;
     static readonly magicAttributes: string[];
+    static readonly flagAttributes: string[];
     protected inputTags: string[];
     get uniqueScope(): boolean;
     constructor(element: HTMLElement, dom: DOM, ...props: any[]);
