@@ -497,12 +497,13 @@ var Tag = /** @class */ (function (_super) {
                 if (classes.length)
                     (_b = this.element.classList).add.apply(_b, classes);
             }
-            else if (key === '@disabled') {
+            else if (Tag.flagAttributes.indexOf(key) > -1) {
+                var attrKey = key.replace('@', '');
                 if (!!value) {
-                    this.element.setAttribute('disabled', '');
+                    this.element.setAttribute(attrKey, '');
                 }
                 else {
-                    this.element.removeAttribute('disabled');
+                    this.element.removeAttribute(attrKey);
                 }
             }
         }
@@ -521,8 +522,9 @@ var Tag = /** @class */ (function (_super) {
             else if (key === '@class') {
                 return Array.from(this.element.classList);
             }
-            else if (key === '@disabled') {
-                return this.element.hasAttribute('disabled');
+            else if (Tag.flagAttributes.indexOf(key) > -1) {
+                var attrKey = key.replace('@', '');
+                return this.element.hasAttribute(attrKey);
             }
         }
         return this.element.getAttribute(key);
@@ -1000,7 +1002,23 @@ var Tag = /** @class */ (function (_super) {
         '@html',
         '@class',
         '@value',
-        '@disabled'
+        '@disabled',
+        '@hidden',
+        '@selected',
+        '@readonly',
+        '@multiple',
+        '@required',
+        '@autofocus',
+    ];
+    Tag.flagAttributes = [
+        '@disabled',
+        '@hidden',
+        '@checked',
+        '@selected',
+        '@readonly',
+        '@multiple',
+        '@required',
+        '@autofocus',
     ];
     return Tag;
 }(DOMObject_1.DOMObject));
