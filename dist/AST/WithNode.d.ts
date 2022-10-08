@@ -7,6 +7,7 @@ import { BlockNode } from "./BlockNode";
 export declare class WithNode extends Node implements TreeNode {
     readonly context: Node;
     readonly statements: BlockNode;
+    protected requiresPrep: boolean;
     constructor(context: Node, statements: BlockNode);
     protected _getChildNodes(): Node[];
     evaluate(scope: Scope, dom: DOM, tag?: Tag): Promise<any>;

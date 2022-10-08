@@ -223,7 +223,7 @@ var TOKEN_PATTERNS = [
     },
     {
         type: TokenType.WITH,
-        pattern: /^with\s/
+        pattern: /^with(?=\||\s)?/ // Allows with|sequential
     },
     {
         type: TokenType.FOR,
@@ -533,9 +533,12 @@ var Tree = /** @class */ (function () {
         }
         return tokens;
     };
-    Tree.processTokens = function (tokens) {
+    Tree.processTokens = function (tokens, _node, _lastBlock) {
+        if (_node === void 0) { _node = null; }
+        if (_lastBlock === void 0) { _lastBlock = null; }
         var blockNodes = [];
-        var node = null;
+        var lastBlock = _lastBlock;
+        var node = _node;
         var count = 0;
         Tree.stripWhiteSpace(tokens);
         while (tokens.length > 0) {
@@ -557,32 +560,40 @@ var Tree = /** @class */ (function () {
             }
             else if (token.type === TokenType.WITH) {
                 node = WithNode_1.WithNode.parse(node, tokens[0], tokens);
+                lastBlock = node;
+                blockNodes.push(node);
+                node = null;
             }
             else if (token.type === TokenType.AS) {
                 node = AsNode_1.AsNode.parse(node, tokens[0], tokens);
             }
             else if (token.type === TokenType.IF) {
                 node = IfStatementNode_1.IfStatementNode.parse(node, token, tokens);
+                lastBlock = node;
                 blockNodes.push(node);
                 node = null;
             }
             else if (token.type === TokenType.FOR) {
                 node = ForStatementNode_1.ForStatementNode.parse(node, token, tokens);
+                lastBlock = node;
                 blockNodes.push(node);
                 node = null;
             }
             else if (token.type === TokenType.FUNC) {
                 node = FunctionNode_1.FunctionNode.parse(node, token, tokens);
+                lastBlock = node;
                 blockNodes.push(node);
                 node = null;
             }
             else if (token.type === TokenType.ON) {
                 node = OnNode_1.OnNode.parse(node, token, tokens);
+                lastBlock = node;
                 blockNodes.push(node);
                 node = null;
             }
             else if (token.type === TokenType.CLASS) {
                 node = ClassNode_1.ClassNode.parse(node, token, tokens);
+                lastBlock = node;
                 blockNodes.push(node);
                 node = null;
             }
@@ -680,7 +691,7 @@ var Tree = /** @class */ (function () {
                 node = NotNode_1.NotNode.parse(node, tokens[0], tokens);
             }
             else if (tokens[0].type === TokenType.MODIFIER) {
-                node = ModifierNode_1.ModifierNode.parse(node, tokens[0], tokens);
+                ModifierNode_1.ModifierNode.parse(node ? node : lastBlock, tokens[0], tokens);
             }
             else {
                 var code = Tree.toCode(tokens, 10);

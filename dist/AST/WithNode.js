@@ -52,6 +52,7 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.WithNode = void 0;
+var Scope_1 = require("../Scope");
 var Tag_1 = require("../Tag");
 var AST_1 = require("../AST");
 var Node_1 = require("./Node");
@@ -62,6 +63,7 @@ var WithNode = /** @class */ (function (_super) {
         var _this = _super.call(this) || this;
         _this.context = context;
         _this.statements = statements;
+        _this.requiresPrep = true;
         return _this;
     }
     WithNode.prototype._getChildNodes = function () {
@@ -73,12 +75,13 @@ var WithNode = /** @class */ (function (_super) {
     WithNode.prototype.evaluate = function (scope, dom, tag) {
         if (tag === void 0) { tag = null; }
         return __awaiter(this, void 0, void 0, function () {
-            var context, tags, ret, _i, tags_1, _tag, _a, _b;
-            return __generator(this, function (_c) {
-                switch (_c.label) {
+            var context, tags, ret, _i, tags_1, _tag, _a, _b, promises, _c, tags_2, _tag, _scope, _d, _e;
+            return __generator(this, function (_f) {
+                switch (_f.label) {
                     case 0: return [4 /*yield*/, this.context.evaluate(scope, dom, tag)];
                     case 1:
-                        context = _c.sent();
+                        context = _f.sent();
+                        tags = [];
                         if (context instanceof TagList_1.TagList) {
                             tags = context;
                         }
@@ -86,20 +89,57 @@ var WithNode = /** @class */ (function (_super) {
                             tags = [context];
                         }
                         ret = [];
+                        if (!tags.length) return [3 /*break*/, 14];
+                        if (!this.hasModifier('sequential')) return [3 /*break*/, 7];
                         _i = 0, tags_1 = tags;
-                        _c.label = 2;
+                        _f.label = 2;
                     case 2:
-                        if (!(_i < tags_1.length)) return [3 /*break*/, 5];
+                        if (!(_i < tags_1.length)) return [3 /*break*/, 6];
                         _tag = tags_1[_i];
+                        return [4 /*yield*/, this.statements.prepare(_tag.scope, dom, _tag)];
+                    case 3:
+                        _f.sent();
                         _b = (_a = ret).push;
                         return [4 /*yield*/, this.statements.evaluate(_tag.scope, dom, _tag)];
-                    case 3:
-                        _b.apply(_a, [_c.sent()]);
-                        _c.label = 4;
                     case 4:
+                        _b.apply(_a, [_f.sent()]);
+                        _f.label = 5;
+                    case 5:
                         _i++;
                         return [3 /*break*/, 2];
-                    case 5: return [2 /*return*/, ret.length === 1 ? ret[0] : ret];
+                    case 6: return [3 /*break*/, 13];
+                    case 7:
+                        promises = [];
+                        _c = 0, tags_2 = tags;
+                        _f.label = 8;
+                    case 8:
+                        if (!(_c < tags_2.length)) return [3 /*break*/, 11];
+                        _tag = tags_2[_c];
+                        return [4 /*yield*/, this.statements.prepare(_tag.scope, dom, _tag)];
+                    case 9:
+                        _f.sent();
+                        promises.push(this.statements.evaluate(_tag.scope, dom, _tag));
+                        _f.label = 10;
+                    case 10:
+                        _c++;
+                        return [3 /*break*/, 8];
+                    case 11: return [4 /*yield*/, Promise.all(promises)];
+                    case 12:
+                        ret = _f.sent();
+                        _f.label = 13;
+                    case 13: return [3 /*break*/, 16];
+                    case 14:
+                        _scope = void 0;
+                        if (context instanceof Scope_1.Scope) {
+                            _scope = context;
+                        }
+                        if (!_scope) return [3 /*break*/, 16];
+                        _e = (_d = ret).push;
+                        return [4 /*yield*/, this.statements.evaluate(_scope, dom, tag)];
+                    case 15:
+                        _e.apply(_d, [_f.sent()]);
+                        _f.label = 16;
+                    case 16: return [2 /*return*/, ret.length === 1 ? ret[0] : ret];
                 }
             });
         });
@@ -108,6 +148,7 @@ var WithNode = /** @class */ (function (_super) {
         tokens.shift(); // Consume with
         var contextTokens = AST_1.Tree.getTokensUntil(tokens, AST_1.TokenType.L_BRACE, false, false, true);
         var statementTokens = AST_1.Tree.getNextStatementTokens(tokens);
+        this.moveModifiers(contextTokens, tokens);
         return new WithNode(AST_1.Tree.processTokens(contextTokens), AST_1.Tree.processTokens(statementTokens));
     };
     return WithNode;

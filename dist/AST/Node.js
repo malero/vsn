@@ -37,6 +37,7 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Node = void 0;
+var AST_1 = require("../AST");
 var Node = /** @class */ (function () {
     function Node() {
         this.requiresPrep = false;
@@ -135,6 +136,14 @@ var Node = /** @class */ (function () {
         if (cacheKey !== null)
             this.nodeCache[cacheKey] = nodes;
         return nodes;
+    };
+    Node.prototype.hasModifier = function (modifier) {
+        return this.modifiers.indexOf(modifier) !== -1;
+    };
+    Node.moveModifiers = function (from, to) {
+        while (from[0].type == AST_1.TokenType.MODIFIER) {
+            to.unshift(from.shift());
+        }
     };
     return Node;
 }());

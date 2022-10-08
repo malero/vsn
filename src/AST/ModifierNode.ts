@@ -24,7 +24,9 @@ export class ModifierNode extends Node implements TreeNode {
 
     public static parse(lastNode, token, tokens: Token[]): Node {
         const modifier = tokens.shift().value.substr(1);
-        lastNode.modifiers.push(modifier);
+        if (lastNode) {
+            lastNode.modifiers.push(modifier);
+        }
         return lastNode;
     }
 }

@@ -4,6 +4,7 @@ import {QueryReference} from "./Scope/QueryReference";
 import {WrappedArray} from "./Scope/WrappedArray";
 import {ScopeData} from "./Scope/ScopeData";
 import {DynamicScopeData} from "./Scope/DynamicScopeData";
+import {DOM} from "./DOM";
 
 
 export class Scope extends EventDispatcher {
@@ -28,7 +29,11 @@ export class Scope extends EventDispatcher {
     }
 
     public get parentScope(): Scope {
-        return this._parentScope;
+        if (this._parentScope)
+            return this._parentScope;
+
+        const rootScope = DOM.instance.root.scope;
+        return this == rootScope ? null : rootScope;
     }
 
     public set parentScope(scope: Scope) {

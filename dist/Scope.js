@@ -27,6 +27,7 @@ var QueryReference_1 = require("./Scope/QueryReference");
 var WrappedArray_1 = require("./Scope/WrappedArray");
 var ScopeData_1 = require("./Scope/ScopeData");
 var DynamicScopeData_1 = require("./Scope/DynamicScopeData");
+var DOM_1 = require("./DOM");
 var Scope = /** @class */ (function (_super) {
     __extends(Scope, _super);
     function Scope(parent) {
@@ -47,7 +48,10 @@ var Scope = /** @class */ (function (_super) {
     });
     Object.defineProperty(Scope.prototype, "parentScope", {
         get: function () {
-            return this._parentScope;
+            if (this._parentScope)
+                return this._parentScope;
+            var rootScope = DOM_1.DOM.instance.root.scope;
+            return this == rootScope ? null : rootScope;
         },
         set: function (scope) {
             if (this._parentScope && this._parentScope !== scope)

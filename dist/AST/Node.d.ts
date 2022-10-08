@@ -1,7 +1,7 @@
 import { Scope } from "../Scope";
 import { DOM } from "../DOM";
 import { Tag } from "../Tag";
-import { TreeNode } from "../AST";
+import { Token, TreeNode } from "../AST";
 export interface INodeMeta {
     [key: string]: string | number | boolean | null;
 }
@@ -21,4 +21,6 @@ export declare abstract class Node implements TreeNode {
     getChildNodes(): Node[];
     findChildrenByType<T = Node>(t: any): T[];
     findChildrenByTypes<T = Node>(types: any[], cacheKey?: string): T[];
+    hasModifier(modifier: string): boolean;
+    static moveModifiers(from: Token[], to: Token[]): void;
 }

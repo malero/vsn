@@ -79,7 +79,9 @@ var ModifierNode = /** @class */ (function (_super) {
     };
     ModifierNode.parse = function (lastNode, token, tokens) {
         var modifier = tokens.shift().value.substr(1);
-        lastNode.modifiers.push(modifier);
+        if (lastNode) {
+            lastNode.modifiers.push(modifier);
+        }
         return lastNode;
     };
     return ModifierNode;

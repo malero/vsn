@@ -1,7 +1,7 @@
 import {Scope} from "../Scope";
 import {DOM} from "../DOM";
 import {Tag} from "../Tag";
-import {TreeNode} from "../AST";
+import {Token, TokenType, TreeNode} from "../AST";
 
 export interface INodeMeta {
     [key: string]: string | number | boolean | null;
@@ -77,6 +77,16 @@ export abstract class Node implements TreeNode {
             this.nodeCache[cacheKey] = nodes as any;
 
         return nodes;
+    }
+
+    hasModifier(modifier: string): boolean {
+        return this.modifiers.indexOf(modifier) !== -1;
+    }
+
+    public static moveModifiers(from: Token[], to: Token[]) {
+        while (from[0].type == TokenType.MODIFIER) {
+            to.unshift(from.shift());
+        }
     }
 }
 

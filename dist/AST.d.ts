@@ -113,7 +113,7 @@ export declare class Tree {
     bindToScopeChanges(scope: any, fnc: any, dom: DOM, tag?: Tag): Promise<void>;
     static tokenize(code: string): Token[];
     static stripWhiteSpace(tokens: Token[]): Token[];
-    static processTokens(tokens: Token[]): BlockNode;
+    static processTokens(tokens: Token[], _node?: Node, _lastBlock?: Node): BlockNode;
     static toCode(tokens: Token[], limit?: any): string;
     static getBlockInfo(tokens: Token[]): IBlockInfo;
     static getNextStatementTokens(tokens: Token[], consumeClosingToken?: boolean, consumeOpeningToken?: boolean, includeClosingToken?: boolean): Token[];

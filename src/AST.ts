@@ -202,7 +202,7 @@ const TOKEN_PATTERNS: TokenPattern[] = [
     },
     {
         type: TokenType.WITH,
-        pattern: /^with\s/
+        pattern: /^with(?=\||\s)?/  // Allows with|sequential
     },
     {
         type: TokenType.FOR,
@@ -495,9 +495,10 @@ export class Tree {
         return tokens;
     }
 
-    public static processTokens(tokens: Token[]): BlockNode {
+    public static processTokens(tokens: Token[], _node: Node=null, _lastBlock: Node=null): BlockNode {
         let blockNodes: Node[] = [];
-        let node: Node = null;
+        let lastBlock: Node = _lastBlock;
+        let node: Node = _node;
         let count: number = 0;
 
         Tree.stripWhiteSpace(tokens);
@@ -521,26 +522,34 @@ export class Tree {
                 node = DispatchEventNode.parse(node, tokens[0], tokens);
             } else if (token.type === TokenType.WITH) {
                 node = WithNode.parse(node, tokens[0], tokens);
+                lastBlock = node;
+                blockNodes.push(node);
+                node = null;
             } else if (token.type === TokenType.AS) {
                 node = AsNode.parse(node, tokens[0], tokens);
             } else if (token.type === TokenType.IF) {
                 node = IfStatementNode.parse(node, token, tokens);
+                lastBlock = node;
                 blockNodes.push(node);
                 node = null;
             } else if (token.type === TokenType.FOR) {
                 node = ForStatementNode.parse(node, token, tokens);
+                lastBlock = node;
                 blockNodes.push(node);
                 node = null;
             } else if (token.type === TokenType.FUNC) {
                 node = FunctionNode.parse(node, token, tokens);
+                lastBlock = node;
                 blockNodes.push(node);
                 node = null;
             } else if (token.type === TokenType.ON) {
                 node = OnNode.parse(node, token, tokens);
+                lastBlock = node;
                 blockNodes.push(node);
                 node = null;
             } else if (token.type === TokenType.CLASS) {
                 node = ClassNode.parse(node, token, tokens);
+                lastBlock = node;
                 blockNodes.push(node);
                 node = null;
             } else if (StringFormatNode.match(tokens)) {
@@ -618,7 +627,7 @@ export class Tree {
             } else if (tokens[0].type === TokenType.EXCLAMATION_POINT) {
                 node = NotNode.parse(node, tokens[0], tokens);
             } else if (tokens[0].type === TokenType.MODIFIER) {
-                node = ModifierNode.parse(node, tokens[0], tokens);
+                ModifierNode.parse(node ? node : lastBlock, tokens[0], tokens);
             } else {
                 let code: string = Tree.toCode(tokens, 10);
                 throw Error(`Syntax Error. Near ${code}`);
