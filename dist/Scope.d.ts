@@ -6,6 +6,7 @@ export declare class Scope extends EventDispatcher {
     protected _data: ScopeData;
     protected children: Scope[];
     protected _parentScope: Scope;
+    protected _isGarbage: boolean;
     constructor(parent?: Scope);
     get data(): ScopeData;
     get parentScope(): Scope;
@@ -22,6 +23,7 @@ export declare class Scope extends EventDispatcher {
     extend(data: any): void;
     clear(): void;
     cleanup(): void;
+    get isGarbage(): boolean;
     collectGarbage(force?: boolean): void;
     deconstruct(): void;
     wrap(toWrap: any, triggerUpdates?: boolean, updateFromWrapped?: boolean): void;

@@ -12,6 +12,7 @@ export class Scope extends EventDispatcher {
     protected _data: ScopeData;
     protected children: Scope[];
     protected _parentScope: Scope;
+    protected _isGarbage: boolean = false;
 
     constructor(
         parent?: Scope
@@ -159,7 +160,12 @@ export class Scope extends EventDispatcher {
         this.parentScope = null;
     }
 
+    public get isGarbage(): boolean {
+        return this._isGarbage;
+    }
+
     collectGarbage(force: boolean = false) {
+        this._isGarbage = true;
         for (const child of this.children) {
             child.collectGarbage(force);
         }
@@ -289,6 +295,5 @@ export class FunctionScope extends Scope {
 
     collectGarbage(force: boolean = true) {
         super.collectGarbage(true);
-        this.cleanup();
     }
 }

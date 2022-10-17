@@ -51,7 +51,7 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
     }
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.ArithmeticAssignmentNode = void 0;
+exports.AssignmentNode = void 0;
 var Scope_1 = require("../Scope");
 var DOMObject_1 = require("../DOM/DOMObject");
 var AST_1 = require("../AST");
@@ -63,22 +63,22 @@ var ElementAttributeNode_1 = require("./ElementAttributeNode");
 var ElementStyleNode_1 = require("./ElementStyleNode");
 var UnitLiteralNode_1 = require("./UnitLiteralNode");
 var ScopeObject_1 = require("../Scope/ScopeObject");
-var ArithmeticAssignmentNode = /** @class */ (function (_super) {
-    __extends(ArithmeticAssignmentNode, _super);
-    function ArithmeticAssignmentNode(left, right, type) {
+var AssignmentNode = /** @class */ (function (_super) {
+    __extends(AssignmentNode, _super);
+    function AssignmentNode(left, right, type) {
         var _this = _super.call(this) || this;
         _this.left = left;
         _this.right = right;
         _this.type = type;
         return _this;
     }
-    ArithmeticAssignmentNode.prototype._getChildNodes = function () {
+    AssignmentNode.prototype._getChildNodes = function () {
         return [
             this.left,
             this.right
         ];
     };
-    ArithmeticAssignmentNode.prototype.evaluate = function (scope, dom, tag) {
+    AssignmentNode.prototype.evaluate = function (scope, dom, tag) {
         if (tag === void 0) { tag = null; }
         return __awaiter(this, void 0, void 0, function () {
             var scopes, name, inner, elements, values, _i, scopes_1, localScope, left, right;
@@ -86,6 +86,9 @@ var ArithmeticAssignmentNode = /** @class */ (function (_super) {
                 switch (_a.label) {
                     case 0:
                         scopes = [];
+                        if (scope.isGarbage && tag) { // Current garbage collection implementation is naive
+                            scope = tag.scope;
+                        }
                         return [4 /*yield*/, this.left.name.evaluate(scope, dom, tag)];
                     case 1:
                         name = _a.sent();
@@ -159,7 +162,7 @@ var ArithmeticAssignmentNode = /** @class */ (function (_super) {
             });
         });
     };
-    ArithmeticAssignmentNode.prototype.handle = function (name, left, right, localScope) {
+    AssignmentNode.prototype.handle = function (name, left, right, localScope) {
         if (left instanceof Array) {
             left = this.handleArray(name, left, right, localScope);
         }
@@ -174,7 +177,7 @@ var ArithmeticAssignmentNode = /** @class */ (function (_super) {
         }
         return left;
     };
-    ArithmeticAssignmentNode.prototype.handleNumber = function (key, left, right, scope) {
+    AssignmentNode.prototype.handleNumber = function (key, left, right, scope) {
         if (right !== null && !Number.isFinite(right))
             right = parseFloat("" + right);
         left = left;
@@ -199,7 +202,7 @@ var ArithmeticAssignmentNode = /** @class */ (function (_super) {
         scope.set(key, left);
         return left;
     };
-    ArithmeticAssignmentNode.prototype.handleString = function (key, left, right, scope) {
+    AssignmentNode.prototype.handleString = function (key, left, right, scope) {
         switch (this.type) {
             case AST_1.TokenType.ASSIGN:
                 left = right;
@@ -220,7 +223,7 @@ var ArithmeticAssignmentNode = /** @class */ (function (_super) {
         scope.set(key, left);
         return left;
     };
-    ArithmeticAssignmentNode.prototype.handleUnit = function (key, left, right, scope) {
+    AssignmentNode.prototype.handleUnit = function (key, left, right, scope) {
         if (!(left instanceof UnitLiteralNode_1.UnitLiteral)) {
             left = new UnitLiteralNode_1.UnitLiteral(left);
         }
@@ -248,7 +251,7 @@ var ArithmeticAssignmentNode = /** @class */ (function (_super) {
         scope.set(key, left);
         return left;
     };
-    ArithmeticAssignmentNode.prototype.handleDOMObject = function (key, dom, scope, domObject, tag) {
+    AssignmentNode.prototype.handleDOMObject = function (key, dom, scope, domObject, tag) {
         return __awaiter(this, void 0, void 0, function () {
             var left, right;
             return __generator(this, function (_a) {
@@ -263,7 +266,7 @@ var ArithmeticAssignmentNode = /** @class */ (function (_super) {
             });
         });
     };
-    ArithmeticAssignmentNode.prototype.handleArray = function (key, left, right, scope) {
+    AssignmentNode.prototype.handleArray = function (key, left, right, scope) {
         if (!(right instanceof Array))
             right = [right];
         switch (this.type) {
@@ -302,7 +305,7 @@ var ArithmeticAssignmentNode = /** @class */ (function (_super) {
         scope.dispatch("change:" + key);
         return left;
     };
-    ArithmeticAssignmentNode.match = function (tokens) {
+    AssignmentNode.match = function (tokens) {
         return [
             AST_1.TokenType.ASSIGN,
             AST_1.TokenType.ADD_ASSIGN,
@@ -312,7 +315,7 @@ var ArithmeticAssignmentNode = /** @class */ (function (_super) {
             AST_1.TokenType.TILDE,
         ].indexOf(tokens[0].type) > -1;
     };
-    ArithmeticAssignmentNode.parse = function (lastNode, token, tokens) {
+    AssignmentNode.parse = function (lastNode, token, tokens) {
         if (!(lastNode instanceof RootScopeMemberNode_1.RootScopeMemberNode) && !(lastNode instanceof ScopeMemberNode_1.ScopeMemberNode) && !(lastNode instanceof ElementAttributeNode_1.ElementAttributeNode) && !(lastNode instanceof ElementStyleNode_1.ElementStyleNode)) {
             throw SyntaxError("Invalid assignment syntax near " + AST_1.Tree.toCode(tokens.splice(0, 10)));
         }
@@ -325,9 +328,9 @@ var ArithmeticAssignmentNode = /** @class */ (function (_super) {
             openCharacter: '',
             closeCharacter: ';',
         });
-        return new ArithmeticAssignmentNode(lastNode, AST_1.Tree.processTokens(assignmentTokens), token.type);
+        return new AssignmentNode(lastNode, AST_1.Tree.processTokens(assignmentTokens), token.type);
     };
-    return ArithmeticAssignmentNode;
+    return AssignmentNode;
 }(Node_1.Node));
-exports.ArithmeticAssignmentNode = ArithmeticAssignmentNode;
-//# sourceMappingURL=ArithmeticAssignmentNode.js.map
+exports.AssignmentNode = AssignmentNode;
+//# sourceMappingURL=AssignmentNode.js.map

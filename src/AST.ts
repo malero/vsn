@@ -20,7 +20,7 @@ import {FunctionArgumentNode} from "./AST/FunctionArgumentNode";
 import {InNode} from "./AST/InNode";
 import {ComparisonNode} from "./AST/ComparisonNode";
 import {ArithmeticNode} from "./AST/ArithmeticNode";
-import {ArithmeticAssignmentNode} from "./AST/ArithmeticAssignmentNode";
+import {AssignmentNode} from "./AST/AssignmentNode";
 import {UnitLiteralNode} from "./AST/UnitLiteralNode";
 import {BooleanLiteralNode} from "./AST/BooleanLiteralNode";
 import {NotNode} from "./AST/NotNode";
@@ -33,6 +33,7 @@ import {ModifierNode} from "./AST/ModifierNode";
 import {DispatchEventNode} from "./AST/DispatchEventNode";
 import {WithNode} from "./AST/WithNode";
 import {AsNode} from "./AST/AsNode";
+import {NamedStackNode} from "./AST/NamedStackNode";
 
 function lower(str: string): string {
     return str ? str.toLowerCase() : null;
@@ -70,6 +71,7 @@ export enum TokenType {
     AS,
     IN,
     WITH,
+    NAMED_STACK,
     FOR,
     IF,
     ELSE_IF,
@@ -203,6 +205,10 @@ const TOKEN_PATTERNS: TokenPattern[] = [
     {
         type: TokenType.WITH,
         pattern: /^with(?=\||\s)?/  // Allows with|sequential
+    },
+    {
+        type: TokenType.NAMED_STACK,
+        pattern: /^stack(?=\||\s)?/
     },
     {
         type: TokenType.FOR,
@@ -525,6 +531,11 @@ export class Tree {
                 lastBlock = node;
                 blockNodes.push(node);
                 node = null;
+            } else if (token.type === TokenType.NAMED_STACK) {
+                node = NamedStackNode.parse(node, tokens[0], tokens);
+                lastBlock = node;
+                blockNodes.push(node);
+                node = null;
             } else if (token.type === TokenType.AS) {
                 node = AsNode.parse(node, tokens[0], tokens);
             } else if (token.type === TokenType.IF) {
@@ -611,8 +622,8 @@ export class Tree {
                 node = ComparisonNode.parse(node, token, tokens);
             } else if (ArithmeticNode.match(tokens)) {
                 node = ArithmeticNode.parse(node, token, tokens);
-            } else if (ArithmeticAssignmentNode.match(tokens)) {
-                node = ArithmeticAssignmentNode.parse(node, token, tokens);
+            } else if (AssignmentNode.match(tokens)) {
+                node = AssignmentNode.parse(node, token, tokens);
             } else if (tokens[0].type === TokenType.WHITESPACE) {
                 tokens.shift()
             } else if (tokens[0].type === TokenType.UNIT) {

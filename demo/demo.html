@@ -82,39 +82,6 @@
 </head>
 <body>
 
-<template vsn-component:test-component>
-    <script vsn-script type="text/vsn">
-    class test-component {
-        class .test-class {
-            func construct() {
-                log('hmm?');
-                $color = "#ff00ff";
-            }
-            class button {
-                func construct() {
-                    $color = "#ff00ff";
-                }
-
-                on click() {
-                    log(@class);
-                    @class -= 'test-class';
-                    @class ~ 'huh';
-                    log(@class);
-                }
-            }
-        }
-    }
-    </script>
-    <div class="test-class">
-        <h1>Test Component</h1>
-        <p>
-            <button>Click Me</button>
-        </p>
-    </div>
-</template>
-
-<test-component></test-component>
-
 <template vsn-template id="vsn-template">
     <span>Hello, world!</span>
 </template>

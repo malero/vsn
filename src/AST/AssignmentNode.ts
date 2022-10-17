@@ -12,7 +12,7 @@ import {ElementStyleNode} from "./ElementStyleNode";
 import {UnitLiteral} from "./UnitLiteralNode";
 import {ScopeObject} from "../Scope/ScopeObject";
 
-export class ArithmeticAssignmentNode extends Node implements TreeNode {
+export class AssignmentNode extends Node implements TreeNode {
     constructor(
         public readonly left: RootScopeMemberNode | ScopeMemberNode,
         public readonly right: TreeNode,
@@ -30,6 +30,10 @@ export class ArithmeticAssignmentNode extends Node implements TreeNode {
 
     async evaluate(scope: Scope, dom: DOM, tag: Tag = null) {
         let scopes = [];
+        if (scope.isGarbage && tag) { // Current garbage collection implementation is naive
+            scope = tag.scope;
+        }
+
         const name: string = await this.left.name.evaluate(scope, dom, tag);
         if (this.left instanceof ScopeMemberNode) {
             const inner = await this.left.scope.evaluate(scope, dom, tag);
@@ -230,7 +234,7 @@ export class ArithmeticAssignmentNode extends Node implements TreeNode {
         ].indexOf(tokens[0].type) > -1;
     }
 
-    public static parse(lastNode: any, token, tokens: Token[]): ArithmeticAssignmentNode {
+    public static parse(lastNode: any, token, tokens: Token[]): AssignmentNode {
         if (!(lastNode instanceof RootScopeMemberNode) && !(lastNode instanceof ScopeMemberNode) && !(lastNode instanceof ElementAttributeNode) && !(lastNode instanceof ElementStyleNode)) {
             throw SyntaxError(`Invalid assignment syntax near ${Tree.toCode(tokens.splice(0, 10))}`);
         }
@@ -244,7 +248,7 @@ export class ArithmeticAssignmentNode extends Node implements TreeNode {
             closeCharacter: ';',
         });
 
-        return new ArithmeticAssignmentNode(
+        return new AssignmentNode(
             lastNode as RootScopeMemberNode,
             Tree.processTokens(assignmentTokens),
             token.type

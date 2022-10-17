@@ -32,6 +32,7 @@ var Scope = /** @class */ (function (_super) {
     __extends(Scope, _super);
     function Scope(parent) {
         var _this = _super.call(this) || this;
+        _this._isGarbage = false;
         if (parent)
             _this.parentScope = parent;
         _this.children = [];
@@ -172,8 +173,16 @@ var Scope = /** @class */ (function (_super) {
         this.children.length = 0;
         this.parentScope = null;
     };
+    Object.defineProperty(Scope.prototype, "isGarbage", {
+        get: function () {
+            return this._isGarbage;
+        },
+        enumerable: false,
+        configurable: true
+    });
     Scope.prototype.collectGarbage = function (force) {
         if (force === void 0) { force = false; }
+        this._isGarbage = true;
         for (var _i = 0, _a = this.children; _i < _a.length; _i++) {
             var child = _a[_i];
             child.collectGarbage(force);
@@ -300,7 +309,6 @@ var FunctionScope = /** @class */ (function (_super) {
     FunctionScope.prototype.collectGarbage = function (force) {
         if (force === void 0) { force = true; }
         _super.prototype.collectGarbage.call(this, true);
-        this.cleanup();
     };
     return FunctionScope;
 }(Scope));

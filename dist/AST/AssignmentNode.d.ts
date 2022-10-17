@@ -6,7 +6,7 @@ import { Token, TokenType, TreeNode } from "../AST";
 import { Node } from "./Node";
 import { RootScopeMemberNode } from "./RootScopeMemberNode";
 import { ScopeMemberNode } from "./ScopeMemberNode";
-export declare class ArithmeticAssignmentNode extends Node implements TreeNode {
+export declare class AssignmentNode extends Node implements TreeNode {
     readonly left: RootScopeMemberNode | ScopeMemberNode;
     readonly right: TreeNode;
     readonly type: TokenType;
@@ -20,5 +20,5 @@ export declare class ArithmeticAssignmentNode extends Node implements TreeNode {
     handleDOMObject(key: string, dom: DOM, scope: Scope, domObject: DOMObject, tag: Tag): Promise<any>;
     handleArray(key: any, left: any, right: any, scope: any): any;
     static match(tokens: Token[]): boolean;
-    static parse(lastNode: any, token: any, tokens: Token[]): ArithmeticAssignmentNode;
+    static parse(lastNode: any, token: any, tokens: Token[]): AssignmentNode;
 }

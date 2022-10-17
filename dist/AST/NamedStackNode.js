@@ -51,112 +51,87 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
     }
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.ElementStyleNode = void 0;
-var TagList_1 = require("../Tag/TagList");
+exports.NamedStackNode = void 0;
+var AST_1 = require("../AST");
 var Node_1 = require("./Node");
 var LiteralNode_1 = require("./LiteralNode");
-var ElementStyleNode = /** @class */ (function (_super) {
-    __extends(ElementStyleNode, _super);
-    function ElementStyleNode(elementRef, attr) {
+var NamedStackNode = /** @class */ (function (_super) {
+    __extends(NamedStackNode, _super);
+    function NamedStackNode(stackName, statements) {
         var _this = _super.call(this) || this;
-        _this.elementRef = elementRef;
-        _this.attr = attr;
+        _this.stackName = stackName;
+        _this.statements = statements;
         _this.requiresPrep = true;
         return _this;
     }
-    Object.defineProperty(ElementStyleNode.prototype, "name", {
-        get: function () {
-            return new LiteralNode_1.LiteralNode("$" + this.attributeName);
-        },
-        enumerable: false,
-        configurable: true
-    });
-    ElementStyleNode.prototype._getChildNodes = function () {
-        var nodes = [];
-        if (this.elementRef)
-            nodes.push(this.elementRef);
-        return nodes;
+    NamedStackNode.prototype._getChildNodes = function () {
+        return [
+            this.stackName,
+            this.statements
+        ];
     };
-    Object.defineProperty(ElementStyleNode.prototype, "attributeName", {
-        get: function () {
-            if (this.attr.startsWith('.'))
-                return this.attr.substring(2);
-            return this.attr.substring(1);
-        },
-        enumerable: false,
-        configurable: true
-    });
-    ElementStyleNode.prototype.evaluate = function (scope, dom, tag) {
+    NamedStackNode.prototype.evaluate = function (scope, dom, tag) {
         if (tag === void 0) { tag = null; }
         return __awaiter(this, void 0, void 0, function () {
-            var tags;
-            var _this = this;
+            var stackName, execute;
             return __generator(this, function (_a) {
                 switch (_a.label) {
-                    case 0: return [4 /*yield*/, this.prepare(scope, dom, tag)];
+                    case 0: return [4 /*yield*/, this.stackName.evaluate(scope, dom, tag)];
                     case 1:
-                        _a.sent();
-                        if (!this.elementRef) return [3 /*break*/, 3];
-                        return [4 /*yield*/, this.elementRef.evaluate(scope, dom, tag, true)];
-                    case 2:
-                        tags = _a.sent();
-                        return [3 /*break*/, 4];
-                    case 3:
-                        if (tag) {
-                            tags = new TagList_1.TagList(tag);
+                        stackName = _a.sent();
+                        execute = false;
+                        if (!NamedStackNode.stacks[stackName]) {
+                            NamedStackNode.stacks[stackName] = [];
                         }
-                        else {
-                            return [2 /*return*/];
+                        if (NamedStackNode.executions.indexOf(stackName) === -1)
+                            execute = true;
+                        NamedStackNode.stacks[stackName].push({
+                            block: this.statements,
+                            scope: scope,
+                            dom: dom,
+                            tag: tag
+                        });
+                        if (execute) {
+                            NamedStackNode.execute(stackName);
                         }
-                        _a.label = 4;
-                    case 4:
-                        if (tags.length === 1)
-                            return [2 /*return*/, tags[0].scope.get("$" + this.attributeName)];
-                        return [2 /*return*/, tags.map(function (tag) { return tag.scope.get("$" + _this.attributeName); })];
+                        return [2 /*return*/];
                 }
             });
         });
     };
-    ElementStyleNode.prototype.prepare = function (scope, dom, tag, meta) {
-        if (tag === void 0) { tag = null; }
-        if (meta === void 0) { meta = null; }
+    NamedStackNode.execute = function (stackName) {
         return __awaiter(this, void 0, void 0, function () {
-            var tags, _i, tags_1, t;
+            var stack;
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
-                        if (!this.elementRef) return [3 /*break*/, 7];
-                        return [4 /*yield*/, this.elementRef.prepare(scope, dom, tag, meta)];
+                        if (!(NamedStackNode.stacks[stackName].length > 0)) return [3 /*break*/, 3];
+                        stack = NamedStackNode.stacks[stackName].shift();
+                        if (NamedStackNode.executions.indexOf(stackName) === -1)
+                            NamedStackNode.executions.push(stackName);
+                        return [4 /*yield*/, stack.block.evaluate(stack.scope, stack.dom, stack.tag)];
                     case 1:
                         _a.sent();
-                        return [4 /*yield*/, this.elementRef.evaluate(scope, dom, tag, true)];
+                        return [4 /*yield*/, NamedStackNode.execute(stackName)];
                     case 2:
-                        tags = _a.sent();
-                        _i = 0, tags_1 = tags;
-                        _a.label = 3;
-                    case 3:
-                        if (!(_i < tags_1.length)) return [3 /*break*/, 6];
-                        t = tags_1[_i];
-                        return [4 /*yield*/, t.watchStyle(this.attributeName)];
-                    case 4:
-                        _a.sent();
-                        _a.label = 5;
-                    case 5:
-                        _i++;
-                        return [3 /*break*/, 3];
-                    case 6: return [3 /*break*/, 9];
-                    case 7:
-                        if (!tag) return [3 /*break*/, 9];
-                        return [4 /*yield*/, tag.watchStyle(this.attributeName)];
-                    case 8:
-                        _a.sent();
-                        _a.label = 9;
-                    case 9: return [2 /*return*/];
+                        if (!(_a.sent())) {
+                            NamedStackNode.executions.splice(NamedStackNode.executions.indexOf(stackName), 1);
+                        }
+                        return [2 /*return*/, true];
+                    case 3: return [2 /*return*/, false];
                 }
             });
         });
     };
-    return ElementStyleNode;
+    NamedStackNode.parse = function (lastNode, token, tokens) {
+        tokens.shift(); // Consume stack
+        var stackName = tokens.shift();
+        var statementTokens = AST_1.Tree.getNextStatementTokens(tokens);
+        return new NamedStackNode(new LiteralNode_1.LiteralNode(stackName.value), AST_1.Tree.processTokens(statementTokens));
+    };
+    NamedStackNode.stacks = {};
+    NamedStackNode.executions = [];
+    return NamedStackNode;
 }(Node_1.Node));
-exports.ElementStyleNode = ElementStyleNode;
-//# sourceMappingURL=ElementStyleNode.js.map
+exports.NamedStackNode = NamedStackNode;
+//# sourceMappingURL=NamedStackNode.js.map
