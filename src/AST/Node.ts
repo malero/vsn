@@ -2,6 +2,7 @@ import {Scope} from "../Scope";
 import {DOM} from "../DOM";
 import {Tag} from "../Tag";
 import {Token, TokenType, TreeNode} from "../AST";
+import {Modifiers} from "../Modifiers";
 
 export interface INodeMeta {
     [key: string]: string | number | boolean | null;
@@ -12,7 +13,7 @@ export abstract class Node implements TreeNode {
     protected _isPreparationRequired: boolean;
     protected childNodes: Node[];
     protected nodeCache: {[key: string]: Node[]} = {};
-    public readonly modifiers: string[] = [];
+    public readonly modifiers: Modifiers = new Modifiers();
     abstract evaluate(scope: Scope, dom: DOM, tag?: Tag);
 
     isPreparationRequired(): boolean {
@@ -80,13 +81,17 @@ export abstract class Node implements TreeNode {
     }
 
     hasModifier(modifier: string): boolean {
-        return this.modifiers.indexOf(modifier) !== -1;
+        return this.modifiers.has(modifier);
     }
 
-    public static moveModifiers(from: Token[], to: Token[]) {
-        while (from[0].type == TokenType.MODIFIER) {
-            to.unshift(from.shift());
+    public static moveModifiers(from: Token[], to: Token[] = null): Token[] {
+        to = to || [];
+        if (from && from.length) {
+            while (from[0] && from[0].type == TokenType.MODIFIER) {
+                to.unshift(from.shift());
+            }
         }
+        return to;
     }
 }
 

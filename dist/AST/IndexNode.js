@@ -50,6 +50,17 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
+var __values = (this && this.__values) || function(o) {
+    var s = typeof Symbol === "function" && Symbol.iterator, m = s && o[s], i = 0;
+    if (m) return m.call(o);
+    if (o && typeof o.length === "number") return {
+        next: function () {
+            if (o && i >= o.length) o = void 0;
+            return { value: o && o[i++], done: !o };
+        }
+    };
+    throw new TypeError(s ? "Object is not iterable." : "Symbol.iterator is not defined.");
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.IndexNode = void 0;
 var AST_1 = require("../AST");
@@ -112,11 +123,21 @@ var IndexNode = /** @class */ (function (_super) {
         return tokens[0].type === AST_1.TokenType.L_BRACKET;
     };
     IndexNode.parse = function (lastNode, token, tokens) {
+        var e_1, _a;
         var valueTokens = AST_1.Tree.getBlockTokens(tokens, AST_1.TokenType.COLON);
         var values = [];
-        for (var _i = 0, valueTokens_1 = valueTokens; _i < valueTokens_1.length; _i++) {
-            var arg = valueTokens_1[_i];
-            values.push(AST_1.Tree.processTokens(arg));
+        try {
+            for (var valueTokens_1 = __values(valueTokens), valueTokens_1_1 = valueTokens_1.next(); !valueTokens_1_1.done; valueTokens_1_1 = valueTokens_1.next()) {
+                var arg = valueTokens_1_1.value;
+                values.push(AST_1.Tree.processTokens(arg));
+            }
+        }
+        catch (e_1_1) { e_1 = { error: e_1_1 }; }
+        finally {
+            try {
+                if (valueTokens_1_1 && !valueTokens_1_1.done && (_a = valueTokens_1.return)) _a.call(valueTokens_1);
+            }
+            finally { if (e_1) throw e_1.error; }
         }
         return new IndexNode(lastNode, values[0], values.length > 1 && values[1]);
     };

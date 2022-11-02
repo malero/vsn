@@ -9,7 +9,7 @@ export class OnNode extends FunctionNode implements TreeNode {
         const classPrep = meta?.ClassNodePrepare; // Don't add event handler if we're in class prep
         if (tag && !classPrep) {
             const func = await this.getFunction(scope, dom, tag);
-            tag.addEventHandler(this.name, [], async (...args) => {
+            tag.addEventHandler(this.name, this.modifiers, async (...args) => {
                 await func(...args);
                 await this.collectGarbage();
             }, this);

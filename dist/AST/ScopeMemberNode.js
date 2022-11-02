@@ -50,6 +50,17 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
+var __values = (this && this.__values) || function(o) {
+    var s = typeof Symbol === "function" && Symbol.iterator, m = s && o[s], i = 0;
+    if (m) return m.call(o);
+    if (o && typeof o.length === "number") return {
+        next: function () {
+            if (o && i >= o.length) o = void 0;
+            return { value: o && o[i++], done: !o };
+        }
+    };
+    throw new TypeError(s ? "Object is not iterable." : "Symbol.iterator is not defined.");
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ScopeMemberNode = void 0;
 var Scope_1 = require("../Scope");
@@ -74,16 +85,17 @@ var ScopeMemberNode = /** @class */ (function (_super) {
     ScopeMemberNode.prototype.evaluate = function (scope, dom, tag) {
         if (tag === void 0) { tag = null; }
         return __awaiter(this, void 0, void 0, function () {
-            var scopes, values, elements, evalScope, _i, scopes_1, parent_1, _a, _b, name_1, value;
-            return __generator(this, function (_c) {
-                switch (_c.label) {
+            var scopes, values, elements, evalScope, scopes_1, scopes_1_1, parent_1, _a, _b, name_1, value, e_1_1;
+            var e_1, _c;
+            return __generator(this, function (_d) {
+                switch (_d.label) {
                     case 0:
                         scopes = [];
                         values = [];
                         if (!(this.scope instanceof ElementQueryNode_1.ElementQueryNode)) return [3 /*break*/, 2];
                         return [4 /*yield*/, this.scope.evaluate(scope, dom, tag)];
                     case 1:
-                        elements = _c.sent();
+                        elements = _d.sent();
                         if (this.scope.first) {
                             scopes.push(elements);
                         }
@@ -93,40 +105,52 @@ var ScopeMemberNode = /** @class */ (function (_super) {
                         return [3 /*break*/, 4];
                     case 2: return [4 /*yield*/, this.scope.evaluate(scope, dom, tag)];
                     case 3:
-                        evalScope = _c.sent();
+                        evalScope = _d.sent();
                         if (evalScope instanceof TagList_1.TagList) {
                             scopes = evalScope;
                         }
                         else {
                             scopes.push(evalScope);
                         }
-                        _c.label = 4;
+                        _d.label = 4;
                     case 4:
-                        _i = 0, scopes_1 = scopes;
-                        _c.label = 5;
+                        _d.trys.push([4, 12, 13, 14]);
+                        scopes_1 = __values(scopes), scopes_1_1 = scopes_1.next();
+                        _d.label = 5;
                     case 5:
-                        if (!(_i < scopes_1.length)) return [3 /*break*/, 11];
-                        parent_1 = scopes_1[_i];
+                        if (!!scopes_1_1.done) return [3 /*break*/, 11];
+                        parent_1 = scopes_1_1.value;
                         if (parent_1 instanceof DOMObject_1.DOMObject)
                             parent_1 = parent_1.scope;
                         if (!!parent_1) return [3 /*break*/, 7];
                         _a = Error;
                         _b = "Cannot access \"";
                         return [4 /*yield*/, this.name.evaluate(scope, dom, tag)];
-                    case 6: throw _a.apply(void 0, [_b + (_c.sent()) + "\" of undefined."]);
+                    case 6: throw _a.apply(void 0, [_b + (_d.sent()) + "\" of undefined."]);
                     case 7: return [4 /*yield*/, this.name.evaluate(scope, dom, tag)];
                     case 8:
-                        name_1 = _c.sent();
+                        name_1 = _d.sent();
                         return [4 /*yield*/, this.applyModifiers(name_1, parent_1, dom, tag)];
                     case 9:
-                        _c.sent();
+                        _d.sent();
                         value = parent_1.get(name_1, false);
                         values.push(value instanceof Scope_1.Scope && value.wrapped || value);
-                        _c.label = 10;
+                        _d.label = 10;
                     case 10:
-                        _i++;
+                        scopes_1_1 = scopes_1.next();
                         return [3 /*break*/, 5];
-                    case 11: return [2 /*return*/, values.length === 1 ? values[0] : values];
+                    case 11: return [3 /*break*/, 14];
+                    case 12:
+                        e_1_1 = _d.sent();
+                        e_1 = { error: e_1_1 };
+                        return [3 /*break*/, 14];
+                    case 13:
+                        try {
+                            if (scopes_1_1 && !scopes_1_1.done && (_c = scopes_1.return)) _c.call(scopes_1);
+                        }
+                        finally { if (e_1) throw e_1.error; }
+                        return [7 /*endfinally*/];
+                    case 14: return [2 /*return*/, values.length === 1 ? values[0] : values];
                 }
             });
         });

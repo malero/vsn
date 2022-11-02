@@ -18,21 +18,22 @@ export abstract class On extends Attribute {
         'unload',
     ];
 
-    public async compile() {
-        const code: string = this.getAttributeValue();
-        this.handler = new Tree(code);
-        await this.handler.prepare(this.tag.scope, this.tag.dom, this.tag);
-        await super.compile();
+    protected async getTree(): Promise<Tree> {
+        if (!this.handler) {
+            const code: string = this.getAttributeValue();
+            this.handler = new Tree(code);
+            await this.handler.prepare(this.tag.scope, this.tag.dom, this.tag);
+        }
+        return this.handler;
     }
 
     async handleEvent(e) {
-        if (this.hasModifier('preventdefault') && e.cancelable)
-            e.preventDefault();
-        await this.handler.evaluate(this.tag.scope, this.tag.dom, this.tag);
+        const tree = await this.getTree();
+        await tree.evaluate(this.tag.scope, this.tag.dom, this.tag);
     }
 
     public async connect() {
-        this.tag.addEventHandler(this.getAttributeBinding(), this.getAttributeModifiers(), this.handleEvent, this);
+        this.tag.addEventHandler(this.getAttributeBinding(), this.modifiers, this.handleEvent, this);
         await super.connect();
     }
 }

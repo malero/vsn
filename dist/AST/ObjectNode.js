@@ -50,6 +50,22 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
+var __read = (this && this.__read) || function (o, n) {
+    var m = typeof Symbol === "function" && o[Symbol.iterator];
+    if (!m) return o;
+    var i = m.call(o), r, ar = [], e;
+    try {
+        while ((n === void 0 || n-- > 0) && !(r = i.next()).done) ar.push(r.value);
+    }
+    catch (error) { e = { error: error }; }
+    finally {
+        try {
+            if (r && !r.done && (m = i["return"])) m.call(i);
+        }
+        finally { if (e) throw e.error; }
+    }
+    return ar;
+};
 var __spreadArray = (this && this.__spreadArray) || function (to, from) {
     for (var i = 0, il = from.length, j = to.length; i < il; i++, j++)
         to[j] = from[i];
@@ -69,7 +85,7 @@ var ObjectNode = /** @class */ (function (_super) {
         return _this;
     }
     ObjectNode.prototype._getChildNodes = function () {
-        return new (Array.bind.apply(Array, __spreadArray([void 0], this.values)))();
+        return new (Array.bind.apply(Array, __spreadArray([void 0], __read(this.values))))();
     };
     ObjectNode.prototype.evaluate = function (scope, dom, tag) {
         if (tag === void 0) { tag = null; }

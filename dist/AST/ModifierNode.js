@@ -80,7 +80,7 @@ var ModifierNode = /** @class */ (function (_super) {
     ModifierNode.parse = function (lastNode, token, tokens) {
         var modifier = tokens.shift().value.substr(1);
         if (lastNode) {
-            lastNode.modifiers.push(modifier);
+            lastNode.modifiers.add(modifier);
         }
         return lastNode;
     };

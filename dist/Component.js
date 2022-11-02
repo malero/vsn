@@ -50,6 +50,17 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
+var __values = (this && this.__values) || function(o) {
+    var s = typeof Symbol === "function" && Symbol.iterator, m = s && o[s], i = 0;
+    if (m) return m.call(o);
+    if (o && typeof o.length === "number") return {
+        next: function () {
+            if (o && i >= o.length) o = void 0;
+            return { value: o && o[i++], done: !o };
+        }
+    };
+    throw new TypeError(s ? "Object is not iterable." : "Symbol.iterator is not defined.");
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Component = void 0;
 var Registry_1 = require("./Registry");
@@ -59,6 +70,7 @@ var SlottedTag_1 = require("./Tag/SlottedTag");
 var Component = /** @class */ (function (_super) {
     __extends(Component, _super);
     function Component() {
+        var e_1, _a;
         var _this = _super.call(this) || this;
         Object.setPrototypeOf(_this, Component.prototype);
         _this.shadow = _this.attachShadow({ mode: 'open' });
@@ -72,9 +84,18 @@ var Component = /** @class */ (function (_super) {
         }
         _this.setAttribute('vsn-scope', '');
         _this.shadow.appendChild(template.content.cloneNode(true));
-        for (var _i = 0, _a = Array.from(_this.shadow.children); _i < _a.length; _i++) {
-            var child = _a[_i];
-            child['shadowParent'] = _this;
+        try {
+            for (var _b = __values(Array.from(_this.shadow.children)), _c = _b.next(); !_c.done; _c = _b.next()) {
+                var child = _c.value;
+                child['shadowParent'] = _this;
+            }
+        }
+        catch (e_1_1) { e_1 = { error: e_1_1 }; }
+        finally {
+            try {
+                if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
+            }
+            finally { if (e_1) throw e_1.error; }
         }
         var slotPromises = [];
         var tagsToSetup = [];
@@ -83,27 +104,40 @@ var Component = /** @class */ (function (_super) {
             var promise = new Promise(function (resolve, reject) {
                 slot.addEventListener('slotchange', function (e) {
                     slotTagPromise.then(function (slotTag) { return __awaiter(_this, void 0, void 0, function () {
-                        var _i, _a, child, t;
-                        return __generator(this, function (_b) {
-                            switch (_b.label) {
+                        var _a, _b, child, t, e_2_1;
+                        var e_2, _c;
+                        return __generator(this, function (_d) {
+                            switch (_d.label) {
                                 case 0:
-                                    _i = 0, _a = slot.assignedNodes();
-                                    _b.label = 1;
+                                    _d.trys.push([0, 6, 7, 8]);
+                                    _a = __values(slot.assignedNodes()), _b = _a.next();
+                                    _d.label = 1;
                                 case 1:
-                                    if (!(_i < _a.length)) return [3 /*break*/, 5];
-                                    child = _a[_i];
+                                    if (!!_b.done) return [3 /*break*/, 5];
+                                    child = _b.value;
                                     return [4 /*yield*/, DOM_1.DOM.instance.buildTag(child, false, SlottedTag_1.SlottedTag)];
                                 case 2:
-                                    t = _b.sent();
+                                    t = _d.sent();
                                     return [4 /*yield*/, (t === null || t === void 0 ? void 0 : t.slotted(slotTag))];
                                 case 3:
-                                    _b.sent();
+                                    _d.sent();
                                     tagsToSetup.push(t);
-                                    _b.label = 4;
+                                    _d.label = 4;
                                 case 4:
-                                    _i++;
+                                    _b = _a.next();
                                     return [3 /*break*/, 1];
-                                case 5:
+                                case 5: return [3 /*break*/, 8];
+                                case 6:
+                                    e_2_1 = _d.sent();
+                                    e_2 = { error: e_2_1 };
+                                    return [3 /*break*/, 8];
+                                case 7:
+                                    try {
+                                        if (_b && !_b.done && (_c = _a.return)) _c.call(_a);
+                                    }
+                                    finally { if (e_2) throw e_2.error; }
+                                    return [7 /*endfinally*/];
+                                case 8:
                                     resolve(slotTag);
                                     return [2 /*return*/];
                             }

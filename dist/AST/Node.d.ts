@@ -2,6 +2,7 @@ import { Scope } from "../Scope";
 import { DOM } from "../DOM";
 import { Tag } from "../Tag";
 import { Token, TreeNode } from "../AST";
+import { Modifiers } from "../Modifiers";
 export interface INodeMeta {
     [key: string]: string | number | boolean | null;
 }
@@ -12,7 +13,7 @@ export declare abstract class Node implements TreeNode {
     protected nodeCache: {
         [key: string]: Node[];
     };
-    readonly modifiers: string[];
+    readonly modifiers: Modifiers;
     abstract evaluate(scope: Scope, dom: DOM, tag?: Tag): any;
     isPreparationRequired(): boolean;
     prepare(scope: Scope, dom: DOM, tag?: Tag, meta?: INodeMeta): Promise<void>;
@@ -22,5 +23,5 @@ export declare abstract class Node implements TreeNode {
     findChildrenByType<T = Node>(t: any): T[];
     findChildrenByTypes<T = Node>(types: any[], cacheKey?: string): T[];
     hasModifier(modifier: string): boolean;
-    static moveModifiers(from: Token[], to: Token[]): void;
+    static moveModifiers(from: Token[], to?: Token[]): Token[];
 }

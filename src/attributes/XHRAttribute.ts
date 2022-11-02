@@ -22,9 +22,9 @@ export class XHRAttribute extends Attribute {
 
     public async connect() {
         if (this.isForm) {
-            this.tag.addEventHandler('submit', this.getAttributeModifiers(), this.handleEvent, this);
+            this.tag.addEventHandler('submit', this.modifiers, this.handleEvent, this);
         } else if (this.isAnchor) {
-            this.tag.addEventHandler('click', this.getAttributeModifiers(), this.handleEvent, this);
+            this.tag.addEventHandler('click', this.modifiers, this.handleEvent, this);
         }
         await super.connect();
     }

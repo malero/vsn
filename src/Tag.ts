@@ -9,6 +9,7 @@ import {Registry} from "./Registry";
 import {DOMObject} from "./DOM/DOMObject";
 import {Tree} from "./AST";
 import {StyleAttribute} from "./attributes/StyleAttribute";
+import {Modifiers} from "./Modifiers";
 
 export enum TagState {
     Instantiated,
@@ -27,8 +28,7 @@ export class Tag extends DOMObject {
     public readonly deferredAttributes: Attribute[] = [];
     protected _state: TagState;
     protected _meta: { [key: string]: any; };
-    protected attributes: Attribute[];
-    protected attributeMap: { [key: string]: Attribute; };
+    protected attributes: Map<string, Attribute> = new Map<string, Attribute>();
     protected _nonDeferredAttributes: Attribute[] = [];
     protected _parentTag: Tag;
     protected _children: Tag[] = [];
@@ -78,8 +78,6 @@ export class Tag extends DOMObject {
         element[Tag.TaggedVariable] = this;
         this.rawAttributes = {};
         this.parsedAttributes = {};
-        this.attributes = [];
-        this.attributeMap = {};
         this.onEventHandlers = {};
         this.analyzeElementAttributes();
         this._state = TagState.Instantiated;
@@ -97,14 +95,23 @@ export class Tag extends DOMObject {
     }
 
     public getAttributesWithState(state: AttributeState): Attribute[] {
-        return this.attributes.filter(attr => attr.state === state);
+        const attrs: Attribute[] = [];
+        for (const attr of this.attributes.values()) {
+            if (attr.state === state)
+                attrs.push(attr);
+        }
+        return attrs;
     }
 
     public get nonDeferredAttributes(): Attribute[] {
         if (this._nonDeferredAttributes.length > 0)
             return this._nonDeferredAttributes;
 
-        const attrs: Attribute[] = this.attributes.filter(attr => attr.state !== AttributeState.Deferred);
+        const attrs: Attribute[] = [];
+        for (const attr of this.attributes.values()) {
+            if (attr.state !== AttributeState.Deferred)
+                attrs.push(attr);
+        }
         this._nonDeferredAttributes = attrs;
         return attrs;
     }
@@ -146,7 +153,7 @@ export class Tag extends DOMObject {
     }
 
     mutate(mutation: MutationRecord): void {
-        this.attributes.map(attr => attr.mutate(mutation));
+        this.attributes.forEach(attr => attr.mutate(mutation));
         this.dispatch('mutate', mutation);
     }
 
@@ -183,10 +190,6 @@ export class Tag extends DOMObject {
         }
 
         return null;
-    }
-
-    getAttributeModifiers(attr: string): string[] {
-        return attr.split('|').splice(1);
     }
 
     get isInput(): boolean {
@@ -390,7 +393,7 @@ export class Tag extends DOMObject {
     public async getAttribute<T = Attribute>(key: string): Promise<T> {
         const cls: any = await Registry.instance.attributes.get(key);
         if (!cls) return;
-        for (const attr of this.attributes)
+        for (const attr of this.attributes.values())
             if (attr instanceof cls)
                 return attr as any as T;
     }
@@ -481,8 +484,7 @@ export class Tag extends DOMObject {
         const slot: Tag = this.isSlot ? this : null;
         for (const tag of tags) {
             for (let attr in this.rawAttributes) {
-                if (tag.attributeMap[attr])
-                    continue;
+                if (tag.attributes.has(attr)) continue;
 
                 if (this.hasModifier(attr, 'mobile') && !isMobile)
                     continue;
@@ -498,8 +500,7 @@ export class Tag extends DOMObject {
 
                     const attrObj = attrClass.create(tag, attr, attrClass, slot);
 
-                    tag.attributes.push(attrObj);
-                    tag.attributeMap[attr] = attrObj;
+                    tag.attributes.set(attr, attrObj);
                     if (defer && attrClass.canDefer) {
                         await attrObj.defer();
                         tag.deferredAttributes.push(attrObj);
@@ -557,7 +558,7 @@ export class Tag extends DOMObject {
         const tags: Tag[] = await this.getTagsToBuild() as Tag[];
         for (const tag of tags) {
             if (tag.isInput) {
-                tag.addEventHandler('input', [], tag.inputMutation, tag);
+                tag.addEventHandler('input', null, tag.inputMutation, tag);
             }
 
             for (const attr of tag.getAttributesWithState(AttributeState.Extracted)) {
@@ -612,12 +613,42 @@ export class Tag extends DOMObject {
 
         this.scope.set('$event', e);
         this.scope.set('$value', this.value);
+        let preventedDefault = false;
         for (const handler of this.onEventHandlers[eventType]) {
-            handler.handler.call(handler.context, e);
+            if (!preventedDefault && handler.modifiers.has('preventdefault') && e.cancelable) {
+                e.preventDefault();
+                preventedDefault = true;
+            }
+
+            if (handler.modifiers.has('once'))
+                this.removeEventHandler(handler.event, handler.handler, handler.context);
+
+            if (handler.modifiers.has('throttle')) {
+                const modifierArguments = handler.modifiers.get('throttle').getArguments(['1000']);
+                const throttleTime = parseInt(modifierArguments[0]);
+                const now = Math.floor(Date.now());
+                if (!handler.state.lastCalled || handler.state.lastCalled + throttleTime < now) {
+                    handler.state.lastCalled = now;
+                } else {
+                    continue;
+                }
+            }
+
+            if (handler.modifiers.has('debounce')) {
+                clearTimeout(handler.state.debounceTimeout);
+                const modifierArguments = handler.modifiers.get('debounce').getArguments(['1000']);
+                const debounceTime = parseInt(modifierArguments[0]);
+                handler.state.debounceTimeout = setTimeout(async () => {
+                    await handler.handler.call(handler.context, e);
+                }, debounceTime);
+            } else {
+                handler.handler.call(handler.context, e);
+            }
         }
     }
 
     public hasModifier(attribute: string, modifier: string): boolean {
+        this.attributes
         return attribute.indexOf(`|${modifier}`) > -1;
     }
 
@@ -625,28 +656,32 @@ export class Tag extends DOMObject {
         return attribute.replace(`|${modifier}`, '');
     }
 
-    public addEventHandler(eventType: string, modifiers: string[], handler, context: any = null) {
+    public addEventHandler(eventType: string, modifiers: Modifiers, handler, context: any = null) {
         let passiveValue: boolean = null;
-        if (modifiers.indexOf('active') > -1) {
+        modifiers = modifiers || new Modifiers();
+
+        if (modifiers.has('active')) {
             passiveValue = false;
-        } else if (modifiers.indexOf('passive') > -1) {
+        } else if (modifiers.has('passive')) {
             passiveValue = true;
         }
 
         if (!this.onEventHandlers[eventType]) {
             this.onEventHandlers[eventType] = [];
             const element: HTMLElement | Window = On.WindowEvents.indexOf(eventType) > -1 && window ? window : this.element;
-            const opts: any = {};
+            const eventListenerOpts: any = {};
             if (eventType.indexOf('touch') > -1 || passiveValue !== null)
-                opts['passive'] = passiveValue === null && true || passiveValue;
+                eventListenerOpts['passive'] = passiveValue === null && true || passiveValue;
 
-            element.addEventListener(eventType, this.handleEvent.bind(this, eventType), opts);
+            element.addEventListener(eventType, this.handleEvent.bind(this, eventType), eventListenerOpts);
         }
 
         this.onEventHandlers[eventType].push({
             handler: handler,
             event: eventType,
             context: context,
+            modifiers: modifiers,
+            state: {}
         });
     }
 
@@ -689,32 +724,26 @@ export class Tag extends DOMObject {
     }
 
     async watchAttribute(attributeName: string) {
-        for (const attribute of this.attributes) {
-            if (attribute instanceof StandardAttribute && attribute.attributeName == attributeName) {
-                return attribute;
-            }
+        if (this.attributes.has(attributeName) && this.attributes.get(attributeName) instanceof StandardAttribute) {
+            return this.attributes.get(attributeName);
         }
 
         this.createScope(true);
-
         const standardAttribute = new StandardAttribute(this, attributeName);
-        this.attributes.push(standardAttribute);
+        this.attributes.set(attributeName, standardAttribute);
         await this.setupAttribute(standardAttribute);
 
         return standardAttribute;
     }
 
     async watchStyle(styleName: string) {
-        for (const attribute of this.attributes) {
-            if (attribute instanceof StyleAttribute) {
-                return attribute;
-            }
-        }
+        if (this.attributes.has('style'))
+            return this.attributes.get('style');
 
         this.createScope(true);
 
         const styleAttribute = new StyleAttribute(this, 'style');
-        this.attributes.push(styleAttribute);
+        this.attributes.set('style', styleAttribute);
         await this.setupAttribute(styleAttribute);
 
         return styleAttribute;
@@ -735,7 +764,7 @@ export class Tag extends DOMObject {
 
     deconstruct() {
         this.attributes.forEach(attr => attr.deconstruct());
-        this.attributes.length = 0;
+        this.attributes.clear();
         this._children.forEach(child => child.deconstruct());
         this._children.length = 0;
         super.deconstruct();

@@ -4,7 +4,7 @@ import { DOM } from "./DOM";
 import { Controller } from "./Controller";
 import { StandardAttribute } from "./attributes/StandardAttribute";
 import { DOMObject } from "./DOM/DOMObject";
-import { StyleAttribute } from "./attributes/StyleAttribute";
+import { Modifiers } from "./Modifiers";
 export declare enum TagState {
     Instantiated = 0,
     AttributesBuilt = 1,
@@ -28,10 +28,7 @@ export declare class Tag extends DOMObject {
     protected _meta: {
         [key: string]: any;
     };
-    protected attributes: Attribute[];
-    protected attributeMap: {
-        [key: string]: Attribute;
-    };
+    protected attributes: Map<string, Attribute>;
     protected _nonDeferredAttributes: Attribute[];
     protected _parentTag: Tag;
     protected _children: Tag[];
@@ -58,7 +55,6 @@ export declare class Tag extends DOMObject {
     getAttributeClass(attr: string): Promise<any>;
     getAttributeName(attr: string): string;
     getAttributeBinding(attr: string): string;
-    getAttributeModifiers(attr: string): string[];
     get isInput(): boolean;
     get isSelect(): boolean;
     get isMultipleSelect(): boolean;
@@ -104,12 +100,12 @@ export declare class Tag extends DOMObject {
     protected handleEvent(eventType: string, e: any): void;
     hasModifier(attribute: string, modifier: string): boolean;
     stripModifier(attribute: string, modifier: string): string;
-    addEventHandler(eventType: string, modifiers: string[], handler: any, context?: any): void;
+    addEventHandler(eventType: string, modifiers: Modifiers, handler: any, context?: any): void;
     removeEventHandler(eventType: string, handler: any, context?: any): void;
     removeContextEventHandlers(context: any): void;
     createScope(force?: boolean): Scope;
-    watchAttribute(attributeName: string): Promise<StandardAttribute>;
-    watchStyle(styleName: string): Promise<StyleAttribute>;
+    watchAttribute(attributeName: string): Promise<Attribute | StandardAttribute>;
+    watchStyle(styleName: string): Promise<Attribute>;
     private setupAttribute;
     private setupDeferredAttributes;
     deconstruct(): void;

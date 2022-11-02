@@ -14,6 +14,33 @@ var __extends = (this && this.__extends) || (function () {
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
     };
 })();
+var __values = (this && this.__values) || function(o) {
+    var s = typeof Symbol === "function" && Symbol.iterator, m = s && o[s], i = 0;
+    if (m) return m.call(o);
+    if (o && typeof o.length === "number") return {
+        next: function () {
+            if (o && i >= o.length) o = void 0;
+            return { value: o && o[i++], done: !o };
+        }
+    };
+    throw new TypeError(s ? "Object is not iterable." : "Symbol.iterator is not defined.");
+};
+var __read = (this && this.__read) || function (o, n) {
+    var m = typeof Symbol === "function" && o[Symbol.iterator];
+    if (!m) return o;
+    var i = m.call(o), r, ar = [], e;
+    try {
+        while ((n === void 0 || n-- > 0) && !(r = i.next()).done) ar.push(r.value);
+    }
+    catch (error) { e = { error: error }; }
+    finally {
+        try {
+            if (r && !r.done && (m = i["return"])) m.call(i);
+        }
+        finally { if (e) throw e.error; }
+    }
+    return ar;
+};
 var __spreadArray = (this && this.__spreadArray) || function (to, from) {
     for (var i = 0, il = from.length, j = to.length; i < il; i++, j++)
         to[j] = from[i];
@@ -156,17 +183,37 @@ var Scope = /** @class */ (function (_super) {
         return property === null || property === void 0 ? void 0 : property.type;
     };
     Scope.prototype.extend = function (data) {
-        for (var _i = 0, data_1 = data; _i < data_1.length; _i++) {
-            var key = data_1[_i];
-            this.set(key, data[key]);
+        var e_1, _a;
+        try {
+            for (var data_1 = __values(data), data_1_1 = data_1.next(); !data_1_1.done; data_1_1 = data_1.next()) {
+                var key = data_1_1.value;
+                this.set(key, data[key]);
+            }
+        }
+        catch (e_1_1) { e_1 = { error: e_1_1 }; }
+        finally {
+            try {
+                if (data_1_1 && !data_1_1.done && (_a = data_1.return)) _a.call(data_1);
+            }
+            finally { if (e_1) throw e_1.error; }
         }
     };
     Scope.prototype.clear = function () {
-        for (var _i = 0, _a = this._data.keys; _i < _a.length; _i++) {
-            var key = _a[_i];
-            if (['function', 'object'].indexOf(typeof this.get(key)) > -1)
-                continue;
-            this.set(key, null);
+        var e_2, _a;
+        try {
+            for (var _b = __values(this._data.keys), _c = _b.next(); !_c.done; _c = _b.next()) {
+                var key = _c.value;
+                if (['function', 'object'].indexOf(typeof this.get(key)) > -1)
+                    continue;
+                this.set(key, null);
+            }
+        }
+        catch (e_2_1) { e_2 = { error: e_2_1 }; }
+        finally {
+            try {
+                if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
+            }
+            finally { if (e_2) throw e_2.error; }
         }
     };
     Scope.prototype.cleanup = function () {
@@ -181,11 +228,21 @@ var Scope = /** @class */ (function (_super) {
         configurable: true
     });
     Scope.prototype.collectGarbage = function (force) {
+        var e_3, _a;
         if (force === void 0) { force = false; }
         this._isGarbage = true;
-        for (var _i = 0, _a = this.children; _i < _a.length; _i++) {
-            var child = _a[_i];
-            child.collectGarbage(force);
+        try {
+            for (var _b = __values(this.children), _c = _b.next(); !_c.done; _c = _b.next()) {
+                var child = _c.value;
+                child.collectGarbage(force);
+            }
+        }
+        catch (e_3_1) { e_3 = { error: e_3_1 }; }
+        finally {
+            try {
+                if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
+            }
+            finally { if (e_3) throw e_3.error; }
         }
         if (force)
             this.cleanup();
@@ -229,14 +286,14 @@ var Scope = /** @class */ (function (_super) {
             }
             if (this_1.wrapped[field] instanceof Array) {
                 if (!(this_1.wrapped[field] instanceof WrappedArray_1.WrappedArray)) {
-                    this_1.wrapped[field] = new (WrappedArray_1.WrappedArray.bind.apply(WrappedArray_1.WrappedArray, __spreadArray([void 0], toWrap[field])))();
+                    this_1.wrapped[field] = new (WrappedArray_1.WrappedArray.bind.apply(WrappedArray_1.WrappedArray, __spreadArray([void 0], __read(toWrap[field]))))();
                 }
                 this_1.wrapped[field].on('change', function () {
                     var args = [];
                     for (var _i = 0; _i < arguments.length; _i++) {
                         args[_i] = arguments[_i];
                     }
-                    _this.dispatch.apply(_this, __spreadArray(["change:" + field], args));
+                    _this.dispatch.apply(_this, __spreadArray(["change:" + field], __read(args)));
                 });
             }
             if (typeof this_1.wrapped[field] == 'object' && this_1.wrapped[field] && this_1.wrapped[field].constructor === Object) {

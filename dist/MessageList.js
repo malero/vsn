@@ -1,4 +1,15 @@
 "use strict";
+var __values = (this && this.__values) || function(o) {
+    var s = typeof Symbol === "function" && Symbol.iterator, m = s && o[s], i = 0;
+    if (m) return m.call(o);
+    if (o && typeof o.length === "number") return {
+        next: function () {
+            if (o && i >= o.length) o = void 0;
+            return { value: o && o[i++], done: !o };
+        }
+    };
+    throw new TypeError(s ? "Object is not iterable." : "Symbol.iterator is not defined.");
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.MessageList = void 0;
 var MessageList = /** @class */ (function () {
@@ -8,13 +19,23 @@ var MessageList = /** @class */ (function () {
             this.merge(messages);
     }
     MessageList.prototype.reset = function () {
+        var e_1, _a;
         // Reset the object
         var keys = this.keys;
         this._cachedList = undefined;
         if (keys.length > 0) {
-            for (var _i = 0, keys_1 = keys; _i < keys_1.length; _i++) {
-                var field = keys_1[_i];
-                delete this[field];
+            try {
+                for (var keys_1 = __values(keys), keys_1_1 = keys_1.next(); !keys_1_1.done; keys_1_1 = keys_1.next()) {
+                    var field = keys_1_1.value;
+                    delete this[field];
+                }
+            }
+            catch (e_1_1) { e_1 = { error: e_1_1 }; }
+            finally {
+                try {
+                    if (keys_1_1 && !keys_1_1.done && (_a = keys_1.return)) _a.call(keys_1);
+                }
+                finally { if (e_1) throw e_1.error; }
             }
         }
     };
@@ -54,12 +75,22 @@ var MessageList = /** @class */ (function () {
     };
     Object.defineProperty(MessageList.prototype, "list", {
         get: function () {
+            var e_2, _a;
             if (this._cachedList)
                 return this._cachedList;
             var list = {}, keys = this.keys;
-            for (var _i = 0, keys_2 = keys; _i < keys_2.length; _i++) {
-                var field = keys_2[_i];
-                list[field] = this[field];
+            try {
+                for (var keys_2 = __values(keys), keys_2_1 = keys_2.next(); !keys_2_1.done; keys_2_1 = keys_2.next()) {
+                    var field = keys_2_1.value;
+                    list[field] = this[field];
+                }
+            }
+            catch (e_2_1) { e_2 = { error: e_2_1 }; }
+            finally {
+                try {
+                    if (keys_2_1 && !keys_2_1.done && (_a = keys_2.return)) _a.call(keys_2);
+                }
+                finally { if (e_2) throw e_2.error; }
             }
             this._cachedList = list;
             return list;

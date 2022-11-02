@@ -1,8 +1,35 @@
 "use strict";
+var __read = (this && this.__read) || function (o, n) {
+    var m = typeof Symbol === "function" && o[Symbol.iterator];
+    if (!m) return o;
+    var i = m.call(o), r, ar = [], e;
+    try {
+        while ((n === void 0 || n-- > 0) && !(r = i.next()).done) ar.push(r.value);
+    }
+    catch (error) { e = { error: error }; }
+    finally {
+        try {
+            if (r && !r.done && (m = i["return"])) m.call(i);
+        }
+        finally { if (e) throw e.error; }
+    }
+    return ar;
+};
 var __spreadArray = (this && this.__spreadArray) || function (to, from) {
     for (var i = 0, il = from.length, j = to.length; i < il; i++, j++)
         to[j] = from[i];
     return to;
+};
+var __values = (this && this.__values) || function(o) {
+    var s = typeof Symbol === "function" && Symbol.iterator, m = s && o[s], i = 0;
+    if (m) return m.call(o);
+    if (o && typeof o.length === "number") return {
+        next: function () {
+            if (o && i >= o.length) o = void 0;
+            return { value: o && o[i++], done: !o };
+        }
+    };
+    throw new TypeError(s ? "Object is not iterable." : "Symbol.iterator is not defined.");
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.EventDispatcher = exports.EventCallback = void 0;
@@ -22,7 +49,7 @@ var EventCallback = /** @class */ (function () {
         }
         if (this.once && this.calls > 0)
             return false;
-        (_a = this.fnc).apply.apply(_a, __spreadArray([this.context], args));
+        (_a = this.fnc).apply.apply(_a, __spreadArray([this.context], __read(args)));
         this.calls += 1;
         return true;
     };
@@ -78,15 +105,25 @@ var EventDispatcher = /** @class */ (function () {
         });
     };
     EventDispatcher.prototype.off = function (event, key) {
+        var e_1, _a;
         if (!(event in this._listeners))
             return false;
         if (key) {
-            for (var _i = 0, _a = this._listeners[event]; _i < _a.length; _i++) {
-                var cb = _a[_i];
-                if (key == cb.key) {
-                    this._listeners[event].splice(this._listeners[event].indexOf(cb), 1);
-                    return true;
+            try {
+                for (var _b = __values(this._listeners[event]), _c = _b.next(); !_c.done; _c = _b.next()) {
+                    var cb = _c.value;
+                    if (key == cb.key) {
+                        this._listeners[event].splice(this._listeners[event].indexOf(cb), 1);
+                        return true;
+                    }
                 }
+            }
+            catch (e_1_1) { e_1 = { error: e_1_1 }; }
+            finally {
+                try {
+                    if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
+                }
+                finally { if (e_1) throw e_1.error; }
             }
         }
         else {
@@ -96,27 +133,56 @@ var EventDispatcher = /** @class */ (function () {
         return false;
     };
     EventDispatcher.prototype.offWithContext = function (event, context) {
+        var e_2, _a, e_3, _b;
         if (!(event in this._listeners))
             return 0;
         var toRemove = [], cnt = 0;
-        for (var _i = 0, _a = this._listeners[event]; _i < _a.length; _i++) {
-            var cb = _a[_i];
-            if (context == cb.context) {
-                toRemove.push(cb);
+        try {
+            for (var _c = __values(this._listeners[event]), _d = _c.next(); !_d.done; _d = _c.next()) {
+                var cb = _d.value;
+                if (context == cb.context) {
+                    toRemove.push(cb);
+                }
             }
         }
-        for (var _b = 0, toRemove_1 = toRemove; _b < toRemove_1.length; _b++) {
-            var cb = toRemove_1[_b];
-            this._listeners[event].splice(this._listeners[event].indexOf(cb), 1);
-            cnt++;
+        catch (e_2_1) { e_2 = { error: e_2_1 }; }
+        finally {
+            try {
+                if (_d && !_d.done && (_a = _c.return)) _a.call(_c);
+            }
+            finally { if (e_2) throw e_2.error; }
+        }
+        try {
+            for (var toRemove_1 = __values(toRemove), toRemove_1_1 = toRemove_1.next(); !toRemove_1_1.done; toRemove_1_1 = toRemove_1.next()) {
+                var cb = toRemove_1_1.value;
+                this._listeners[event].splice(this._listeners[event].indexOf(cb), 1);
+                cnt++;
+            }
+        }
+        catch (e_3_1) { e_3 = { error: e_3_1 }; }
+        finally {
+            try {
+                if (toRemove_1_1 && !toRemove_1_1.done && (_b = toRemove_1.return)) _b.call(toRemove_1);
+            }
+            finally { if (e_3) throw e_3.error; }
         }
         return cnt;
     };
     EventDispatcher.prototype.getListener = function (event, key) {
-        for (var _i = 0, _a = this._listeners[event]; _i < _a.length; _i++) {
-            var cb = _a[_i];
-            if (key == cb.key)
-                return cb;
+        var e_4, _a;
+        try {
+            for (var _b = __values(this._listeners[event]), _c = _b.next(); !_c.done; _c = _b.next()) {
+                var cb = _c.value;
+                if (key == cb.key)
+                    return cb;
+            }
+        }
+        catch (e_4_1) { e_4 = { error: e_4_1 }; }
+        finally {
+            try {
+                if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
+            }
+            finally { if (e_4) throw e_4.error; }
         }
     };
     EventDispatcher.prototype.all = function (fct, context, once) {
@@ -126,31 +192,61 @@ var EventDispatcher = /** @class */ (function () {
         return this._lastKey;
     };
     EventDispatcher.prototype.none = function (key) {
-        for (var _i = 0, _a = this._allListeners; _i < _a.length; _i++) {
-            var cb = _a[_i];
-            if (key == cb.key) {
-                this._allListeners.splice(this._allListeners.indexOf(cb), 1);
-                return true;
+        var e_5, _a;
+        try {
+            for (var _b = __values(this._allListeners), _c = _b.next(); !_c.done; _c = _b.next()) {
+                var cb = _c.value;
+                if (key == cb.key) {
+                    this._allListeners.splice(this._allListeners.indexOf(cb), 1);
+                    return true;
+                }
             }
+        }
+        catch (e_5_1) { e_5 = { error: e_5_1 }; }
+        finally {
+            try {
+                if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
+            }
+            finally { if (e_5) throw e_5.error; }
         }
         return false;
     };
     EventDispatcher.prototype.noneWithContext = function (context) {
+        var e_6, _a, e_7, _b;
         var toRemove = [], cnt = 0;
-        for (var _i = 0, _a = this._allListeners; _i < _a.length; _i++) {
-            var cb = _a[_i];
-            if (context == cb.context) {
-                toRemove.push(cb);
+        try {
+            for (var _c = __values(this._allListeners), _d = _c.next(); !_d.done; _d = _c.next()) {
+                var cb = _d.value;
+                if (context == cb.context) {
+                    toRemove.push(cb);
+                }
             }
         }
-        for (var _b = 0, toRemove_2 = toRemove; _b < toRemove_2.length; _b++) {
-            var cb = toRemove_2[_b];
-            this._allListeners.splice(this._allListeners.indexOf(cb), 1);
-            cnt++;
+        catch (e_6_1) { e_6 = { error: e_6_1 }; }
+        finally {
+            try {
+                if (_d && !_d.done && (_a = _c.return)) _a.call(_c);
+            }
+            finally { if (e_6) throw e_6.error; }
+        }
+        try {
+            for (var toRemove_2 = __values(toRemove), toRemove_2_1 = toRemove_2.next(); !toRemove_2_1.done; toRemove_2_1 = toRemove_2.next()) {
+                var cb = toRemove_2_1.value;
+                this._allListeners.splice(this._allListeners.indexOf(cb), 1);
+                cnt++;
+            }
+        }
+        catch (e_7_1) { e_7 = { error: e_7_1 }; }
+        finally {
+            try {
+                if (toRemove_2_1 && !toRemove_2_1.done && (_b = toRemove_2.return)) _b.call(toRemove_2);
+            }
+            finally { if (e_7) throw e_7.error; }
         }
         return cnt;
     };
     EventDispatcher.prototype.dispatch = function (event) {
+        var e_8, _a, e_9, _b;
         var args = [];
         for (var _i = 1; _i < arguments.length; _i++) {
             args[_i - 1] = arguments[_i];
@@ -168,16 +264,34 @@ var EventDispatcher = /** @class */ (function () {
                 cb.call(args);
             }
         }
-        for (var _a = 0, _b = this._allListeners; _a < _b.length; _a++) {
-            var cb = _b[_a];
-            if (cb.once) {
-                this.none(cb.key);
+        try {
+            for (var _c = __values(this._allListeners), _d = _c.next(); !_d.done; _d = _c.next()) {
+                var cb = _d.value;
+                if (cb.once) {
+                    this.none(cb.key);
+                }
+                cb.call(args);
             }
-            cb.call(args);
         }
-        for (var _c = 0, _d = this._relays; _c < _d.length; _c++) {
-            var relay = _d[_c];
-            relay.dispatch.apply(relay, __spreadArray([event], args));
+        catch (e_8_1) { e_8 = { error: e_8_1 }; }
+        finally {
+            try {
+                if (_d && !_d.done && (_a = _c.return)) _a.call(_c);
+            }
+            finally { if (e_8) throw e_8.error; }
+        }
+        try {
+            for (var _e = __values(this._relays), _f = _e.next(); !_f.done; _f = _e.next()) {
+                var relay = _f.value;
+                relay.dispatch.apply(relay, __spreadArray([event], __read(args)));
+            }
+        }
+        catch (e_9_1) { e_9 = { error: e_9_1 }; }
+        finally {
+            try {
+                if (_f && !_f.done && (_b = _e.return)) _b.call(_e);
+            }
+            finally { if (e_9) throw e_9.error; }
         }
     };
     EventDispatcher.sources = [];

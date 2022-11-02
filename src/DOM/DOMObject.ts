@@ -1,10 +1,13 @@
 import {Scope} from "../Scope";
 import {EventDispatcher} from "../EventDispatcher";
+import {Modifiers} from "../Modifiers";
 
 export interface IEventHandler {
     event: string;
     handler: (...args: any[]) => any;
-    context?: any;
+    context: any;
+    state: { [key: string]: any };
+    modifiers: Modifiers;
 }
 
 export abstract class DOMObject extends EventDispatcher {

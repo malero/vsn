@@ -8,10 +8,10 @@ import {Registry} from "../Registry";
 export abstract class ScopeNodeAbstract extends Node implements TreeNode {
     async applyModifiers(name: string, scope: Scope, dom: DOM, tag: Tag) {
         let type: string;
-        for (const modifier of this.modifiers) {
+        for (const modifier of this.modifiers.iter) {
             // Check for type cast modifier
-            if (Registry.instance.types.has(modifier)) {
-                type = modifier;
+            if (Registry.instance.types.has(modifier.name)) {
+                type = modifier.name;
                 break;
             }
         }

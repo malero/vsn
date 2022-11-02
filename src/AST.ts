@@ -392,7 +392,7 @@ const TOKEN_PATTERNS: TokenPattern[] = [
     },
     {
         type: TokenType.MODIFIER,
-        pattern: /^\|\S+/
+        pattern: /^\|[a-zA-Z0-9,]+/
     }
 ];
 

@@ -50,6 +50,17 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
+var __values = (this && this.__values) || function(o) {
+    var s = typeof Symbol === "function" && Symbol.iterator, m = s && o[s], i = 0;
+    if (m) return m.call(o);
+    if (o && typeof o.length === "number") return {
+        next: function () {
+            if (o && i >= o.length) o = void 0;
+            return { value: o && o[i++], done: !o };
+        }
+    };
+    throw new TypeError(s ? "Object is not iterable." : "Symbol.iterator is not defined.");
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.WithNode = void 0;
 var Scope_1 = require("../Scope");
@@ -75,12 +86,13 @@ var WithNode = /** @class */ (function (_super) {
     WithNode.prototype.evaluate = function (scope, dom, tag) {
         if (tag === void 0) { tag = null; }
         return __awaiter(this, void 0, void 0, function () {
-            var context, tags, ret, _i, tags_1, _tag, _a, _b, promises, _c, tags_2, _tag, _scope, _d, _e;
-            return __generator(this, function (_f) {
-                switch (_f.label) {
+            var context, tags, ret, tags_1, tags_1_1, _tag, _a, _b, e_1_1, promises, tags_2, tags_2_1, _tag, e_2_1, _scope, _c, _d;
+            var e_1, _e, e_2, _f;
+            return __generator(this, function (_g) {
+                switch (_g.label) {
                     case 0: return [4 /*yield*/, this.context.evaluate(scope, dom, tag)];
                     case 1:
-                        context = _f.sent();
+                        context = _g.sent();
                         tags = [];
                         if (context instanceof TagList_1.TagList) {
                             tags = context;
@@ -89,57 +101,85 @@ var WithNode = /** @class */ (function (_super) {
                             tags = [context];
                         }
                         ret = [];
-                        if (!tags.length) return [3 /*break*/, 14];
-                        if (!this.hasModifier('sequential')) return [3 /*break*/, 7];
-                        _i = 0, tags_1 = tags;
-                        _f.label = 2;
+                        if (!tags.length) return [3 /*break*/, 22];
+                        if (!this.hasModifier('sequential')) return [3 /*break*/, 11];
+                        _g.label = 2;
                     case 2:
-                        if (!(_i < tags_1.length)) return [3 /*break*/, 6];
-                        _tag = tags_1[_i];
-                        return [4 /*yield*/, this.statements.prepare(_tag.scope, dom, _tag)];
+                        _g.trys.push([2, 8, 9, 10]);
+                        tags_1 = __values(tags), tags_1_1 = tags_1.next();
+                        _g.label = 3;
                     case 3:
-                        _f.sent();
+                        if (!!tags_1_1.done) return [3 /*break*/, 7];
+                        _tag = tags_1_1.value;
+                        return [4 /*yield*/, this.statements.prepare(_tag.scope, dom, _tag)];
+                    case 4:
+                        _g.sent();
                         _b = (_a = ret).push;
                         return [4 /*yield*/, this.statements.evaluate(_tag.scope, dom, _tag)];
-                    case 4:
-                        _b.apply(_a, [_f.sent()]);
-                        _f.label = 5;
                     case 5:
-                        _i++;
-                        return [3 /*break*/, 2];
-                    case 6: return [3 /*break*/, 13];
-                    case 7:
-                        promises = [];
-                        _c = 0, tags_2 = tags;
-                        _f.label = 8;
+                        _b.apply(_a, [_g.sent()]);
+                        _g.label = 6;
+                    case 6:
+                        tags_1_1 = tags_1.next();
+                        return [3 /*break*/, 3];
+                    case 7: return [3 /*break*/, 10];
                     case 8:
-                        if (!(_c < tags_2.length)) return [3 /*break*/, 11];
-                        _tag = tags_2[_c];
-                        return [4 /*yield*/, this.statements.prepare(_tag.scope, dom, _tag)];
+                        e_1_1 = _g.sent();
+                        e_1 = { error: e_1_1 };
+                        return [3 /*break*/, 10];
                     case 9:
-                        _f.sent();
-                        promises.push(this.statements.evaluate(_tag.scope, dom, _tag));
-                        _f.label = 10;
-                    case 10:
-                        _c++;
-                        return [3 /*break*/, 8];
-                    case 11: return [4 /*yield*/, Promise.all(promises)];
+                        try {
+                            if (tags_1_1 && !tags_1_1.done && (_e = tags_1.return)) _e.call(tags_1);
+                        }
+                        finally { if (e_1) throw e_1.error; }
+                        return [7 /*endfinally*/];
+                    case 10: return [3 /*break*/, 21];
+                    case 11:
+                        promises = [];
+                        _g.label = 12;
                     case 12:
-                        ret = _f.sent();
-                        _f.label = 13;
-                    case 13: return [3 /*break*/, 16];
+                        _g.trys.push([12, 17, 18, 19]);
+                        tags_2 = __values(tags), tags_2_1 = tags_2.next();
+                        _g.label = 13;
+                    case 13:
+                        if (!!tags_2_1.done) return [3 /*break*/, 16];
+                        _tag = tags_2_1.value;
+                        return [4 /*yield*/, this.statements.prepare(_tag.scope, dom, _tag)];
                     case 14:
+                        _g.sent();
+                        promises.push(this.statements.evaluate(_tag.scope, dom, _tag));
+                        _g.label = 15;
+                    case 15:
+                        tags_2_1 = tags_2.next();
+                        return [3 /*break*/, 13];
+                    case 16: return [3 /*break*/, 19];
+                    case 17:
+                        e_2_1 = _g.sent();
+                        e_2 = { error: e_2_1 };
+                        return [3 /*break*/, 19];
+                    case 18:
+                        try {
+                            if (tags_2_1 && !tags_2_1.done && (_f = tags_2.return)) _f.call(tags_2);
+                        }
+                        finally { if (e_2) throw e_2.error; }
+                        return [7 /*endfinally*/];
+                    case 19: return [4 /*yield*/, Promise.all(promises)];
+                    case 20:
+                        ret = _g.sent();
+                        _g.label = 21;
+                    case 21: return [3 /*break*/, 24];
+                    case 22:
                         _scope = void 0;
                         if (context instanceof Scope_1.Scope) {
                             _scope = context;
                         }
-                        if (!_scope) return [3 /*break*/, 16];
-                        _e = (_d = ret).push;
+                        if (!_scope) return [3 /*break*/, 24];
+                        _d = (_c = ret).push;
                         return [4 /*yield*/, this.statements.evaluate(_scope, dom, tag)];
-                    case 15:
-                        _e.apply(_d, [_f.sent()]);
-                        _f.label = 16;
-                    case 16: return [2 /*return*/, ret.length === 1 ? ret[0] : ret];
+                    case 23:
+                        _d.apply(_c, [_g.sent()]);
+                        _g.label = 24;
+                    case 24: return [2 /*return*/, ret.length === 1 ? ret[0] : ret];
                 }
             });
         });

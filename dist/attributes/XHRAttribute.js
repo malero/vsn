@@ -56,6 +56,17 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
+var __values = (this && this.__values) || function(o) {
+    var s = typeof Symbol === "function" && Symbol.iterator, m = s && o[s], i = 0;
+    if (m) return m.call(o);
+    if (o && typeof o.length === "number") return {
+        next: function () {
+            if (o && i >= o.length) o = void 0;
+            return { value: o && o[i++], done: !o };
+        }
+    };
+    throw new TypeError(s ? "Object is not iterable." : "Symbol.iterator is not defined.");
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.XHRAttribute = void 0;
 var Registry_1 = require("../Registry");
@@ -98,10 +109,10 @@ var XHRAttribute = /** @class */ (function (_super) {
                 switch (_a.label) {
                     case 0:
                         if (this.isForm) {
-                            this.tag.addEventHandler('submit', this.getAttributeModifiers(), this.handleEvent, this);
+                            this.tag.addEventHandler('submit', this.modifiers, this.handleEvent, this);
                         }
                         else if (this.isAnchor) {
-                            this.tag.addEventHandler('click', this.getAttributeModifiers(), this.handleEvent, this);
+                            this.tag.addEventHandler('click', this.modifiers, this.handleEvent, this);
                         }
                         return [4 /*yield*/, _super.prototype.connect.call(this)];
                     case 1:
@@ -127,8 +138,9 @@ var XHRAttribute = /** @class */ (function (_super) {
     });
     XHRAttribute.prototype.handleEvent = function (e) {
         return __awaiter(this, void 0, void 0, function () {
-            var method, url, formData, data, formKeys, _i, formKeys_1, key, siteHeaders, key, siteFormData, key;
-            return __generator(this, function (_a) {
+            var method, url, formData, data, formKeys, formKeys_1, formKeys_1_1, key, siteHeaders, key, siteFormData, key;
+            var e_1, _a;
+            return __generator(this, function (_b) {
                 e.preventDefault();
                 if (this.request)
                     return [2 /*return*/];
@@ -141,9 +153,18 @@ var XHRAttribute = /** @class */ (function (_super) {
                     if (method == 'GET') {
                         data = {};
                         formKeys = Array.from(formData.keys());
-                        for (_i = 0, formKeys_1 = formKeys; _i < formKeys_1.length; _i++) {
-                            key = formKeys_1[_i];
-                            data[key] = formData.get(key);
+                        try {
+                            for (formKeys_1 = __values(formKeys), formKeys_1_1 = formKeys_1.next(); !formKeys_1_1.done; formKeys_1_1 = formKeys_1.next()) {
+                                key = formKeys_1_1.value;
+                                data[key] = formData.get(key);
+                            }
+                        }
+                        catch (e_1_1) { e_1 = { error: e_1_1 }; }
+                        finally {
+                            try {
+                                if (formKeys_1_1 && !formKeys_1_1.done && (_a = formKeys_1.return)) _a.call(formKeys_1);
+                            }
+                            finally { if (e_1) throw e_1.error; }
                         }
                         url = VisionHelper_1.VisionHelper.getUriWithParams(url, data);
                         formData = null;

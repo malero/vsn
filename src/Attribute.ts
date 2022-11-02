@@ -1,6 +1,7 @@
 import {Tag} from "./Tag";
 import {VisionHelper} from "./helpers/VisionHelper";
 import {EventDispatcher} from "./EventDispatcher";
+import {Modifiers} from "./Modifiers";
 
 export enum AttributeState {
     Instantiated,
@@ -14,6 +15,7 @@ export enum AttributeState {
 
 export abstract class Attribute extends EventDispatcher {
     protected _state: AttributeState;
+    public readonly modifiers: Modifiers;
     public static readonly scoped: boolean = false;
     public static readonly canDefer: boolean = true;
 
@@ -23,6 +25,7 @@ export abstract class Attribute extends EventDispatcher {
         public readonly slot?: Tag
     ) {
         super();
+        this.modifiers = Modifiers.fromAttribute(attributeName)
         this.configure();
     }
 
@@ -37,25 +40,30 @@ export abstract class Attribute extends EventDispatcher {
     protected async defer() {
         this.setState(AttributeState.Deferred);
     }
+
     protected async configure() {
         this.setState(AttributeState.Instantiated);
-    };
+    }
+
     public async compile() {
         this.setState(AttributeState.Compiled);
-    };
+    }
+
     public async setup() {
         this.setState(AttributeState.Setup);
-    };
+    }
 
     public async extract() {
         this.setState(AttributeState.Extracted);
-    };
+    }
+
     public async connect() {
         this.setState(AttributeState.Connected);
     }
+
     public async evaluate() {
         this.setState(AttributeState.Built);
-    };
+    }
 
     public getAttributeValue(fallback: any = null) {
         return this.origin.getRawAttributeValue(this.attributeName, fallback);
@@ -66,12 +74,15 @@ export abstract class Attribute extends EventDispatcher {
     }
 
     public getAttributeModifiers(fallback: any = []): string[] {
-        const modifiers = this.origin.getAttributeModifiers(this.attributeName);
-        return modifiers.length && modifiers || fallback;
+        return this.modifiers.length && this.modifiers.names || fallback;
+    }
+
+    public getAttributeModifierArguments(modifier: string, fallback: string[] = []): string[] {
+        return this.modifiers.has(modifier) ? this.modifiers.get(modifier).arguments : fallback;
     }
 
     public hasModifier(mod: string): boolean {
-        return this.getAttributeModifiers().indexOf(mod) > -1;
+        return this.modifiers.has(mod);
     }
 
     public mutate(mutation: MutationRecord): void {}

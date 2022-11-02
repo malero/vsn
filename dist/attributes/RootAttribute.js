@@ -56,6 +56,17 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
+var __values = (this && this.__values) || function(o) {
+    var s = typeof Symbol === "function" && Symbol.iterator, m = s && o[s], i = 0;
+    if (m) return m.call(o);
+    if (o && typeof o.length === "number") return {
+        next: function () {
+            if (o && i >= o.length) o = void 0;
+            return { value: o && o[i++], done: !o };
+        }
+    };
+    throw new TypeError(s ? "Object is not iterable." : "Symbol.iterator is not defined.");
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.RootAttribute = void 0;
 var Attribute_1 = require("../Attribute");
@@ -68,20 +79,30 @@ var RootAttribute = /** @class */ (function (_super) {
     }
     RootAttribute.prototype.setup = function () {
         return __awaiter(this, void 0, void 0, function () {
-            var _i, _a, key, fn;
-            return __generator(this, function (_b) {
-                switch (_b.label) {
+            var _a, _b, key, fn;
+            var e_1, _c;
+            return __generator(this, function (_d) {
+                switch (_d.label) {
                     case 0:
                         this.tag.scope.set('$mobile', VisionHelper_1.VisionHelper.isMobile());
-                        for (_i = 0, _a = Registry_1.Registry.instance.functions.keys; _i < _a.length; _i++) {
-                            key = _a[_i];
-                            fn = Registry_1.Registry.instance.functions.get(key);
-                            this.tag.scope.set(key, fn);
+                        try {
+                            for (_a = __values(Registry_1.Registry.instance.functions.keys), _b = _a.next(); !_b.done; _b = _a.next()) {
+                                key = _b.value;
+                                fn = Registry_1.Registry.instance.functions.get(key);
+                                this.tag.scope.set(key, fn);
+                            }
+                        }
+                        catch (e_1_1) { e_1 = { error: e_1_1 }; }
+                        finally {
+                            try {
+                                if (_b && !_b.done && (_c = _a.return)) _c.call(_a);
+                            }
+                            finally { if (e_1) throw e_1.error; }
                         }
                         Registry_1.Registry.instance.functions.on('register', this.registerFunction, this);
                         return [4 /*yield*/, _super.prototype.setup.call(this)];
                     case 1:
-                        _b.sent();
+                        _d.sent();
                         return [2 /*return*/];
                 }
             });

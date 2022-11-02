@@ -20,6 +20,17 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
     else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
     return c > 3 && r && Object.defineProperty(target, key, r), r;
 };
+var __values = (this && this.__values) || function(o) {
+    var s = typeof Symbol === "function" && Symbol.iterator, m = s && o[s], i = 0;
+    if (m) return m.call(o);
+    if (o && typeof o.length === "number") return {
+        next: function () {
+            if (o && i >= o.length) o = void 0;
+            return { value: o && o[i++], done: !o };
+        }
+    };
+    throw new TypeError(s ? "Object is not iterable." : "Symbol.iterator is not defined.");
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Model = void 0;
 var MessageList_1 = require("./MessageList");
@@ -39,15 +50,25 @@ var Model = /** @class */ (function (_super) {
     }
     Model.prototype._constructor = function () { };
     Model.prototype.validate = function () {
+        var e_1, _a;
         this._hasErrors = false;
         this._errors = new MessageList_1.MessageList;
-        for (var _i = 0, _a = this.getProperties(); _i < _a.length; _i++) {
-            var property = _a[_i];
-            var errors = this['__' + property].validate();
-            if (errors.length > 0) {
-                this._errors.add(property, errors, true);
-                this._hasErrors = true;
+        try {
+            for (var _b = __values(this.getProperties()), _c = _b.next(); !_c.done; _c = _b.next()) {
+                var property = _c.value;
+                var errors = this['__' + property].validate();
+                if (errors.length > 0) {
+                    this._errors.add(property, errors, true);
+                    this._hasErrors = true;
+                }
             }
+        }
+        catch (e_1_1) { e_1 = { error: e_1_1 }; }
+        finally {
+            try {
+                if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
+            }
+            finally { if (e_1) throw e_1.error; }
         }
         return this._errors;
     };

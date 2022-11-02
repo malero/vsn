@@ -56,6 +56,17 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
+var __values = (this && this.__values) || function(o) {
+    var s = typeof Symbol === "function" && Symbol.iterator, m = s && o[s], i = 0;
+    if (m) return m.call(o);
+    if (o && typeof o.length === "number") return {
+        next: function () {
+            if (o && i >= o.length) o = void 0;
+            return { value: o && o[i++], done: !o };
+        }
+    };
+    throw new TypeError(s ? "Object is not iterable." : "Symbol.iterator is not defined.");
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ScopeAttribute = void 0;
 var Attribute_1 = require("../Attribute");
@@ -90,15 +101,16 @@ var ScopeAttribute = /** @class */ (function (_super) {
     };
     ScopeAttribute.prototype.extract = function () {
         return __awaiter(this, void 0, void 0, function () {
-            var binding, scope, _i, _a, key;
-            return __generator(this, function (_b) {
-                switch (_b.label) {
+            var binding, scope, _a, _b, key;
+            var e_1, _c;
+            return __generator(this, function (_d) {
+                switch (_d.label) {
                     case 0:
                         if (!this.tree) return [3 /*break*/, 2];
                         binding = this.getAttributeBinding();
                         return [4 /*yield*/, this.tree.evaluate(this.tag.scope, this.tag.dom, this.tag)];
                     case 1:
-                        scope = _b.sent();
+                        scope = _d.sent();
                         if (!(scope instanceof Scope_1.Scope)) {
                             throw new Error("vsn-scope value must be an object, got " + typeof scope);
                         }
@@ -106,15 +118,24 @@ var ScopeAttribute = /** @class */ (function (_super) {
                             this.tag.scope.set(binding, scope);
                         }
                         else {
-                            for (_i = 0, _a = scope.data.keys; _i < _a.length; _i++) {
-                                key = _a[_i];
-                                this.tag.scope.set(key, scope.data[key]);
+                            try {
+                                for (_a = __values(scope.data.keys), _b = _a.next(); !_b.done; _b = _a.next()) {
+                                    key = _b.value;
+                                    this.tag.scope.set(key, scope.data[key]);
+                                }
+                            }
+                            catch (e_1_1) { e_1 = { error: e_1_1 }; }
+                            finally {
+                                try {
+                                    if (_b && !_b.done && (_c = _a.return)) _c.call(_a);
+                                }
+                                finally { if (e_1) throw e_1.error; }
                             }
                         }
-                        _b.label = 2;
+                        _d.label = 2;
                     case 2: return [4 /*yield*/, _super.prototype.extract.call(this)];
                     case 3:
-                        _b.sent();
+                        _d.sent();
                         return [2 /*return*/];
                 }
             });

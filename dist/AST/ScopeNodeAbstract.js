@@ -50,6 +50,17 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
+var __values = (this && this.__values) || function(o) {
+    var s = typeof Symbol === "function" && Symbol.iterator, m = s && o[s], i = 0;
+    if (m) return m.call(o);
+    if (o && typeof o.length === "number") return {
+        next: function () {
+            if (o && i >= o.length) o = void 0;
+            return { value: o && o[i++], done: !o };
+        }
+    };
+    throw new TypeError(s ? "Object is not iterable." : "Symbol.iterator is not defined.");
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ScopeNodeAbstract = void 0;
 var Node_1 = require("./Node");
@@ -62,15 +73,25 @@ var ScopeNodeAbstract = /** @class */ (function (_super) {
     }
     ScopeNodeAbstract.prototype.applyModifiers = function (name, scope, dom, tag) {
         return __awaiter(this, void 0, void 0, function () {
-            var type, _i, _a, modifier;
-            return __generator(this, function (_b) {
-                for (_i = 0, _a = this.modifiers; _i < _a.length; _i++) {
-                    modifier = _a[_i];
-                    // Check for type cast modifier
-                    if (Registry_1.Registry.instance.types.has(modifier)) {
-                        type = modifier;
-                        break;
+            var type, _a, _b, modifier;
+            var e_1, _c;
+            return __generator(this, function (_d) {
+                try {
+                    for (_a = __values(this.modifiers.iter), _b = _a.next(); !_b.done; _b = _a.next()) {
+                        modifier = _b.value;
+                        // Check for type cast modifier
+                        if (Registry_1.Registry.instance.types.has(modifier.name)) {
+                            type = modifier.name;
+                            break;
+                        }
                     }
+                }
+                catch (e_1_1) { e_1 = { error: e_1_1 }; }
+                finally {
+                    try {
+                        if (_b && !_b.done && (_c = _a.return)) _c.call(_a);
+                    }
+                    finally { if (e_1) throw e_1.error; }
                 }
                 if (type && scope instanceof Scope_1.Scope)
                     scope.setType(name, type);

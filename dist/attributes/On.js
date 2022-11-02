@@ -66,34 +66,34 @@ var On = /** @class */ (function (_super) {
     function On() {
         return _super !== null && _super.apply(this, arguments) || this;
     }
-    On.prototype.compile = function () {
+    On.prototype.getTree = function () {
         return __awaiter(this, void 0, void 0, function () {
             var code;
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
+                        if (!!this.handler) return [3 /*break*/, 2];
                         code = this.getAttributeValue();
                         this.handler = new AST_1.Tree(code);
                         return [4 /*yield*/, this.handler.prepare(this.tag.scope, this.tag.dom, this.tag)];
                     case 1:
                         _a.sent();
-                        return [4 /*yield*/, _super.prototype.compile.call(this)];
-                    case 2:
-                        _a.sent();
-                        return [2 /*return*/];
+                        _a.label = 2;
+                    case 2: return [2 /*return*/, this.handler];
                 }
             });
         });
     };
     On.prototype.handleEvent = function (e) {
         return __awaiter(this, void 0, void 0, function () {
+            var tree;
             return __generator(this, function (_a) {
                 switch (_a.label) {
-                    case 0:
-                        if (this.hasModifier('preventdefault') && e.cancelable)
-                            e.preventDefault();
-                        return [4 /*yield*/, this.handler.evaluate(this.tag.scope, this.tag.dom, this.tag)];
+                    case 0: return [4 /*yield*/, this.getTree()];
                     case 1:
+                        tree = _a.sent();
+                        return [4 /*yield*/, tree.evaluate(this.tag.scope, this.tag.dom, this.tag)];
+                    case 2:
                         _a.sent();
                         return [2 /*return*/];
                 }
@@ -105,7 +105,7 @@ var On = /** @class */ (function (_super) {
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
-                        this.tag.addEventHandler(this.getAttributeBinding(), this.getAttributeModifiers(), this.handleEvent, this);
+                        this.tag.addEventHandler(this.getAttributeBinding(), this.modifiers, this.handleEvent, this);
                         return [4 /*yield*/, _super.prototype.connect.call(this)];
                     case 1:
                         _a.sent();

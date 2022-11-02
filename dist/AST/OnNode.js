@@ -50,6 +50,27 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
+var __read = (this && this.__read) || function (o, n) {
+    var m = typeof Symbol === "function" && o[Symbol.iterator];
+    if (!m) return o;
+    var i = m.call(o), r, ar = [], e;
+    try {
+        while ((n === void 0 || n-- > 0) && !(r = i.next()).done) ar.push(r.value);
+    }
+    catch (error) { e = { error: error }; }
+    finally {
+        try {
+            if (r && !r.done && (m = i["return"])) m.call(i);
+        }
+        finally { if (e) throw e.error; }
+    }
+    return ar;
+};
+var __spreadArray = (this && this.__spreadArray) || function (to, from) {
+    for (var i = 0, il = from.length, j = to.length; i < il; i++, j++)
+        to[j] = from[i];
+    return to;
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.OnNode = void 0;
 var FunctionNode_1 = require("./FunctionNode");
@@ -71,7 +92,7 @@ var OnNode = /** @class */ (function (_super) {
                         return [4 /*yield*/, this.getFunction(scope, dom, tag)];
                     case 1:
                         func_1 = _a.sent();
-                        tag.addEventHandler(this.name, [], function () {
+                        tag.addEventHandler(this.name, this.modifiers, function () {
                             var args = [];
                             for (var _i = 0; _i < arguments.length; _i++) {
                                 args[_i] = arguments[_i];
@@ -79,7 +100,7 @@ var OnNode = /** @class */ (function (_super) {
                             return __awaiter(_this, void 0, void 0, function () {
                                 return __generator(this, function (_a) {
                                     switch (_a.label) {
-                                        case 0: return [4 /*yield*/, func_1.apply(void 0, args)];
+                                        case 0: return [4 /*yield*/, func_1.apply(void 0, __spreadArray([], __read(args)))];
                                         case 1:
                                             _a.sent();
                                             return [4 /*yield*/, this.collectGarbage()];

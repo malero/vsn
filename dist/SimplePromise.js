@@ -14,6 +14,17 @@ var __extends = (this && this.__extends) || (function () {
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
     };
 })();
+var __values = (this && this.__values) || function(o) {
+    var s = typeof Symbol === "function" && Symbol.iterator, m = s && o[s], i = 0;
+    if (m) return m.call(o);
+    if (o && typeof o.length === "number") return {
+        next: function () {
+            if (o && i >= o.length) o = void 0;
+            return { value: o && o[i++], done: !o };
+        }
+    };
+    throw new TypeError(s ? "Object is not iterable." : "Symbol.iterator is not defined.");
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SimplePromise = exports.noop = exports.EPromiseStates = void 0;
 var EventDispatcher_1 = require("./EventDispatcher");
@@ -96,42 +107,62 @@ var SimplePromise = /** @class */ (function (_super) {
      * rejected. This method can be useful for aggregating results of multiple promises.
      */
     SimplePromise.all = function (iter) {
+        var e_1, _a;
         var deferred = SimplePromise.defer();
         var done = true;
-        for (var _i = 0, iter_1 = iter; _i < iter_1.length; _i++) {
-            var promise = iter_1[_i];
-            if (promise.state == EPromiseStates.PENDING) {
-                done = false;
-                promise.once('fulfilled', function (result) {
-                    SimplePromise.poolResults(iter, deferred);
-                });
-                promise.once('rejected', function (reason) {
-                    deferred.reject(reason);
-                });
+        try {
+            for (var iter_1 = __values(iter), iter_1_1 = iter_1.next(); !iter_1_1.done; iter_1_1 = iter_1.next()) {
+                var promise = iter_1_1.value;
+                if (promise.state == EPromiseStates.PENDING) {
+                    done = false;
+                    promise.once('fulfilled', function (result) {
+                        SimplePromise.poolResults(iter, deferred);
+                    });
+                    promise.once('rejected', function (reason) {
+                        deferred.reject(reason);
+                    });
+                }
+                else if (promise.state == EPromiseStates.REJECTED) {
+                    deferred.reject(promise.result);
+                    done = false;
+                    break;
+                }
             }
-            else if (promise.state == EPromiseStates.REJECTED) {
-                deferred.reject(promise.result);
-                done = false;
-                break;
+        }
+        catch (e_1_1) { e_1 = { error: e_1_1 }; }
+        finally {
+            try {
+                if (iter_1_1 && !iter_1_1.done && (_a = iter_1.return)) _a.call(iter_1);
             }
+            finally { if (e_1) throw e_1.error; }
         }
         if (done)
             SimplePromise.poolResults(iter, deferred);
         return deferred.promise;
     };
     SimplePromise.poolResults = function (iter, deferred) {
+        var e_2, _a;
         var done = true;
         var results = [];
-        for (var _i = 0, iter_2 = iter; _i < iter_2.length; _i++) {
-            var p = iter_2[_i];
-            if (p.state === EPromiseStates.REJECTED) {
-                deferred.reject(p.result);
-                break;
+        try {
+            for (var iter_2 = __values(iter), iter_2_1 = iter_2.next(); !iter_2_1.done; iter_2_1 = iter_2.next()) {
+                var p = iter_2_1.value;
+                if (p.state === EPromiseStates.REJECTED) {
+                    deferred.reject(p.result);
+                    break;
+                }
+                else if (p.state === EPromiseStates.PENDING) {
+                    done = false;
+                }
+                results.push(p.result);
             }
-            else if (p.state === EPromiseStates.PENDING) {
-                done = false;
+        }
+        catch (e_2_1) { e_2 = { error: e_2_1 }; }
+        finally {
+            try {
+                if (iter_2_1 && !iter_2_1.done && (_a = iter_2.return)) _a.call(iter_2);
             }
-            results.push(p.result);
+            finally { if (e_2) throw e_2.error; }
         }
         if (done)
             deferred.resolve(results);
@@ -141,15 +172,25 @@ var SimplePromise = /** @class */ (function (_super) {
      * with the value or reason from that promise.
      */
     SimplePromise.race = function (iter) {
+        var e_3, _a;
         var deferred = SimplePromise.defer();
-        for (var _i = 0, iter_3 = iter; _i < iter_3.length; _i++) {
-            var promise = iter_3[_i];
-            promise.once('fulfilled', function (result) {
-                deferred.resolve(result);
-            });
-            promise.once('rejected', function (reason) {
-                deferred.reject(reason);
-            });
+        try {
+            for (var iter_3 = __values(iter), iter_3_1 = iter_3.next(); !iter_3_1.done; iter_3_1 = iter_3.next()) {
+                var promise = iter_3_1.value;
+                promise.once('fulfilled', function (result) {
+                    deferred.resolve(result);
+                });
+                promise.once('rejected', function (reason) {
+                    deferred.reject(reason);
+                });
+            }
+        }
+        catch (e_3_1) { e_3 = { error: e_3_1 }; }
+        finally {
+            try {
+                if (iter_3_1 && !iter_3_1.done && (_a = iter_3.return)) _a.call(iter_3);
+            }
+            finally { if (e_3) throw e_3.error; }
         }
         return deferred.promise;
     };

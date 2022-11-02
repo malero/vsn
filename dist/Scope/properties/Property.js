@@ -14,6 +14,17 @@ var __extends = (this && this.__extends) || (function () {
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
     };
 })();
+var __values = (this && this.__values) || function(o) {
+    var s = typeof Symbol === "function" && Symbol.iterator, m = s && o[s], i = 0;
+    if (m) return m.call(o);
+    if (o && typeof o.length === "number") return {
+        next: function () {
+            if (o && i >= o.length) o = void 0;
+            return { value: o && o[i++], done: !o };
+        }
+    };
+    throw new TypeError(s ? "Object is not iterable." : "Symbol.iterator is not defined.");
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Property = exports.method = exports.property = void 0;
 var EventDispatcher_1 = require("../../EventDispatcher");
@@ -113,10 +124,20 @@ var Property = /** @class */ (function (_super) {
         configurable: true
     });
     Property.prototype.validate = function () {
+        var e_1, _a;
         var errors = [];
-        for (var _i = 0, _a = this.config.validators || []; _i < _a.length; _i++) {
-            var validator = _a[_i];
-            errors.concat(validator(this.value));
+        try {
+            for (var _b = __values(this.config.validators || []), _c = _b.next(); !_c.done; _c = _b.next()) {
+                var validator = _c.value;
+                errors.concat(validator(this.value));
+            }
+        }
+        catch (e_1_1) { e_1 = { error: e_1_1 }; }
+        finally {
+            try {
+                if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
+            }
+            finally { if (e_1) throw e_1.error; }
         }
         return errors;
     };
@@ -154,11 +175,21 @@ var Property = /** @class */ (function (_super) {
         return this.config.labels.indexOf(label) !== -1;
     };
     Property.prototype.hasLabels = function (labels) {
-        for (var _i = 0, labels_1 = labels; _i < labels_1.length; _i++) {
-            var label = labels_1[_i];
-            if (!this.hasLabel(label)) {
-                return false;
+        var e_2, _a;
+        try {
+            for (var labels_1 = __values(labels), labels_1_1 = labels_1.next(); !labels_1_1.done; labels_1_1 = labels_1.next()) {
+                var label = labels_1_1.value;
+                if (!this.hasLabel(label)) {
+                    return false;
+                }
             }
+        }
+        catch (e_2_1) { e_2 = { error: e_2_1 }; }
+        finally {
+            try {
+                if (labels_1_1 && !labels_1_1.done && (_a = labels_1.return)) _a.call(labels_1);
+            }
+            finally { if (e_2) throw e_2.error; }
         }
         return true;
     };

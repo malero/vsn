@@ -32,6 +32,7 @@
             function TestItem(name = null, age = null) {
                 this.name = name;
                 this.age = age;
+                console.log('TestItem created', name, age);
             }
 
             TestItem.prototype.reset = function () {
@@ -113,6 +114,8 @@
     <span vsn-bind="toggle.show"></span>
 </div>
 <a id="click-test" vsn-on:click="if(@text != @clicktext){@text=@clicktext}else{@text='Click Me'}" clicktext="Clicked!">Click Me</a>
+<br />
+<a vsn-on:click|debounce,500="log('debounced')">Debounce</a>
 
 <h2>? Operator</h2>
 <p>Add/remove class to list of elements on click.</p>
@@ -225,7 +228,7 @@ class .testing-class {
     @text = 'Hovered!';
   }
 
-  on mouseleave() {
+  on mouseleave|debounce,50() {
     @text = 'Mouse left';
   }
 }

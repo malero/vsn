@@ -1,5 +1,6 @@
 import { Tag } from "./Tag";
 import { EventDispatcher } from "./EventDispatcher";
+import { Modifiers } from "./Modifiers";
 export declare enum AttributeState {
     Instantiated = 0,
     Deferred = 1,
@@ -14,6 +15,7 @@ export declare abstract class Attribute extends EventDispatcher {
     readonly attributeName: string;
     readonly slot?: Tag;
     protected _state: AttributeState;
+    readonly modifiers: Modifiers;
     static readonly scoped: boolean;
     static readonly canDefer: boolean;
     constructor(tag: Tag, attributeName: string, slot?: Tag);
@@ -29,6 +31,7 @@ export declare abstract class Attribute extends EventDispatcher {
     getAttributeValue(fallback?: any): any;
     getAttributeBinding(fallback?: any): string;
     getAttributeModifiers(fallback?: any): string[];
+    getAttributeModifierArguments(modifier: string, fallback?: string[]): string[];
     hasModifier(mod: string): boolean;
     mutate(mutation: MutationRecord): void;
     set value(value: string);

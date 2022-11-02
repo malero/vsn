@@ -50,9 +50,21 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
+var __values = (this && this.__values) || function(o) {
+    var s = typeof Symbol === "function" && Symbol.iterator, m = s && o[s], i = 0;
+    if (m) return m.call(o);
+    if (o && typeof o.length === "number") return {
+        next: function () {
+            if (o && i >= o.length) o = void 0;
+            return { value: o && o[i++], done: !o };
+        }
+    };
+    throw new TypeError(s ? "Object is not iterable." : "Symbol.iterator is not defined.");
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Attribute = exports.AttributeState = void 0;
 var EventDispatcher_1 = require("./EventDispatcher");
+var Modifiers_1 = require("./Modifiers");
 var AttributeState;
 (function (AttributeState) {
     AttributeState[AttributeState["Instantiated"] = 0] = "Instantiated";
@@ -70,6 +82,7 @@ var Attribute = /** @class */ (function (_super) {
         _this.tag = tag;
         _this.attributeName = attributeName;
         _this.slot = slot;
+        _this.modifiers = Modifiers_1.Modifiers.fromAttribute(attributeName);
         _this.configure();
         return _this;
     }
@@ -103,7 +116,6 @@ var Attribute = /** @class */ (function (_super) {
             });
         });
     };
-    ;
     Attribute.prototype.compile = function () {
         return __awaiter(this, void 0, void 0, function () {
             return __generator(this, function (_a) {
@@ -112,7 +124,6 @@ var Attribute = /** @class */ (function (_super) {
             });
         });
     };
-    ;
     Attribute.prototype.setup = function () {
         return __awaiter(this, void 0, void 0, function () {
             return __generator(this, function (_a) {
@@ -121,7 +132,6 @@ var Attribute = /** @class */ (function (_super) {
             });
         });
     };
-    ;
     Attribute.prototype.extract = function () {
         return __awaiter(this, void 0, void 0, function () {
             return __generator(this, function (_a) {
@@ -130,7 +140,6 @@ var Attribute = /** @class */ (function (_super) {
             });
         });
     };
-    ;
     Attribute.prototype.connect = function () {
         return __awaiter(this, void 0, void 0, function () {
             return __generator(this, function (_a) {
@@ -147,7 +156,6 @@ var Attribute = /** @class */ (function (_super) {
             });
         });
     };
-    ;
     Attribute.prototype.getAttributeValue = function (fallback) {
         if (fallback === void 0) { fallback = null; }
         return this.origin.getRawAttributeValue(this.attributeName, fallback);
@@ -158,11 +166,14 @@ var Attribute = /** @class */ (function (_super) {
     };
     Attribute.prototype.getAttributeModifiers = function (fallback) {
         if (fallback === void 0) { fallback = []; }
-        var modifiers = this.origin.getAttributeModifiers(this.attributeName);
-        return modifiers.length && modifiers || fallback;
+        return this.modifiers.length && this.modifiers.names || fallback;
+    };
+    Attribute.prototype.getAttributeModifierArguments = function (modifier, fallback) {
+        if (fallback === void 0) { fallback = []; }
+        return this.modifiers.has(modifier) ? this.modifiers.get(modifier).arguments : fallback;
     };
     Attribute.prototype.hasModifier = function (mod) {
-        return this.getAttributeModifiers().indexOf(mod) > -1;
+        return this.modifiers.has(mod);
     };
     Attribute.prototype.mutate = function (mutation) { };
     Object.defineProperty(Attribute.prototype, "value", {
@@ -177,23 +188,36 @@ var Attribute = /** @class */ (function (_super) {
     });
     Attribute.prototype.apply = function (fnc) {
         return __awaiter(this, void 0, void 0, function () {
-            var _i, _a, element;
-            return __generator(this, function (_b) {
-                switch (_b.label) {
+            var _a, _b, element, e_1_1;
+            var e_1, _c;
+            return __generator(this, function (_d) {
+                switch (_d.label) {
                     case 0:
-                        _i = 0, _a = this.origin.delegates;
-                        _b.label = 1;
+                        _d.trys.push([0, 5, 6, 7]);
+                        _a = __values(this.origin.delegates), _b = _a.next();
+                        _d.label = 1;
                     case 1:
-                        if (!(_i < _a.length)) return [3 /*break*/, 4];
-                        element = _a[_i];
+                        if (!!_b.done) return [3 /*break*/, 4];
+                        element = _b.value;
                         return [4 /*yield*/, fnc(element)];
                     case 2:
-                        _b.sent();
-                        _b.label = 3;
+                        _d.sent();
+                        _d.label = 3;
                     case 3:
-                        _i++;
+                        _b = _a.next();
                         return [3 /*break*/, 1];
-                    case 4: return [2 /*return*/];
+                    case 4: return [3 /*break*/, 7];
+                    case 5:
+                        e_1_1 = _d.sent();
+                        e_1 = { error: e_1_1 };
+                        return [3 /*break*/, 7];
+                    case 6:
+                        try {
+                            if (_b && !_b.done && (_c = _a.return)) _c.call(_a);
+                        }
+                        finally { if (e_1) throw e_1.error; }
+                        return [7 /*endfinally*/];
+                    case 7: return [2 /*return*/];
                 }
             });
         });

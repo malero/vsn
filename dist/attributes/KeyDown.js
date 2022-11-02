@@ -70,7 +70,7 @@ var KeyDown = /** @class */ (function (_super) {
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
-                        this.tag.addEventHandler('keydown', this.getAttributeModifiers(), this.handleEvent, this);
+                        this.tag.addEventHandler('keydown', this.modifiers, this.handleEvent, this);
                         return [4 /*yield*/, _super.prototype.connect.call(this)];
                     case 1:
                         _a.sent();

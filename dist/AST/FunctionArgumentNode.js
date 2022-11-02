@@ -50,10 +50,37 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
+var __read = (this && this.__read) || function (o, n) {
+    var m = typeof Symbol === "function" && o[Symbol.iterator];
+    if (!m) return o;
+    var i = m.call(o), r, ar = [], e;
+    try {
+        while ((n === void 0 || n-- > 0) && !(r = i.next()).done) ar.push(r.value);
+    }
+    catch (error) { e = { error: error }; }
+    finally {
+        try {
+            if (r && !r.done && (m = i["return"])) m.call(i);
+        }
+        finally { if (e) throw e.error; }
+    }
+    return ar;
+};
 var __spreadArray = (this && this.__spreadArray) || function (to, from) {
     for (var i = 0, il = from.length, j = to.length; i < il; i++, j++)
         to[j] = from[i];
     return to;
+};
+var __values = (this && this.__values) || function(o) {
+    var s = typeof Symbol === "function" && Symbol.iterator, m = s && o[s], i = 0;
+    if (m) return m.call(o);
+    if (o && typeof o.length === "number") return {
+        next: function () {
+            if (o && i >= o.length) o = void 0;
+            return { value: o && o[i++], done: !o };
+        }
+    };
+    throw new TypeError(s ? "Object is not iterable." : "Symbol.iterator is not defined.");
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.FunctionArgumentNode = void 0;
@@ -66,30 +93,45 @@ var FunctionArgumentNode = /** @class */ (function (_super) {
         return _this;
     }
     FunctionArgumentNode.prototype._getChildNodes = function () {
-        return __spreadArray([], this.args);
+        return __spreadArray([], __read(this.args));
     };
     FunctionArgumentNode.prototype.evaluate = function (scope, dom, tag) {
         if (tag === void 0) { tag = null; }
         return __awaiter(this, void 0, void 0, function () {
-            var values, _i, _a, arg, _b, _c;
-            return __generator(this, function (_d) {
-                switch (_d.label) {
+            var values, _a, _b, arg, _c, _d, e_1_1;
+            var e_1, _e;
+            return __generator(this, function (_f) {
+                switch (_f.label) {
                     case 0:
                         values = [];
-                        _i = 0, _a = this.args;
-                        _d.label = 1;
+                        _f.label = 1;
                     case 1:
-                        if (!(_i < _a.length)) return [3 /*break*/, 4];
-                        arg = _a[_i];
-                        _c = (_b = values).push;
-                        return [4 /*yield*/, arg.evaluate(scope, dom, tag)];
+                        _f.trys.push([1, 6, 7, 8]);
+                        _a = __values(this.args), _b = _a.next();
+                        _f.label = 2;
                     case 2:
-                        _c.apply(_b, [_d.sent()]);
-                        _d.label = 3;
+                        if (!!_b.done) return [3 /*break*/, 5];
+                        arg = _b.value;
+                        _d = (_c = values).push;
+                        return [4 /*yield*/, arg.evaluate(scope, dom, tag)];
                     case 3:
-                        _i++;
-                        return [3 /*break*/, 1];
-                    case 4: return [2 /*return*/, values];
+                        _d.apply(_c, [_f.sent()]);
+                        _f.label = 4;
+                    case 4:
+                        _b = _a.next();
+                        return [3 /*break*/, 2];
+                    case 5: return [3 /*break*/, 8];
+                    case 6:
+                        e_1_1 = _f.sent();
+                        e_1 = { error: e_1_1 };
+                        return [3 /*break*/, 8];
+                    case 7:
+                        try {
+                            if (_b && !_b.done && (_e = _a.return)) _e.call(_a);
+                        }
+                        finally { if (e_1) throw e_1.error; }
+                        return [7 /*endfinally*/];
+                    case 8: return [2 /*return*/, values];
                 }
             });
         });

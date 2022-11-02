@@ -50,6 +50,33 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
+var __values = (this && this.__values) || function(o) {
+    var s = typeof Symbol === "function" && Symbol.iterator, m = s && o[s], i = 0;
+    if (m) return m.call(o);
+    if (o && typeof o.length === "number") return {
+        next: function () {
+            if (o && i >= o.length) o = void 0;
+            return { value: o && o[i++], done: !o };
+        }
+    };
+    throw new TypeError(s ? "Object is not iterable." : "Symbol.iterator is not defined.");
+};
+var __read = (this && this.__read) || function (o, n) {
+    var m = typeof Symbol === "function" && o[Symbol.iterator];
+    if (!m) return o;
+    var i = m.call(o), r, ar = [], e;
+    try {
+        while ((n === void 0 || n-- > 0) && !(r = i.next()).done) ar.push(r.value);
+    }
+    catch (error) { e = { error: error }; }
+    finally {
+        try {
+            if (r && !r.done && (m = i["return"])) m.call(i);
+        }
+        finally { if (e) throw e.error; }
+    }
+    return ar;
+};
 var __spreadArray = (this && this.__spreadArray) || function (to, from) {
     for (var i = 0, il = from.length, j = to.length; i < il; i++, j++)
         to[j] = from[i];
@@ -68,6 +95,7 @@ var Registry_1 = require("./Registry");
 var DOMObject_1 = require("./DOM/DOMObject");
 var AST_1 = require("./AST");
 var StyleAttribute_1 = require("./attributes/StyleAttribute");
+var Modifiers_1 = require("./Modifiers");
 var TagState;
 (function (TagState) {
     TagState[TagState["Instantiated"] = 0] = "Instantiated";
@@ -88,6 +116,7 @@ var Tag = /** @class */ (function (_super) {
         var _this = _super.call(this, element, props) || this;
         _this.dom = dom;
         _this.deferredAttributes = [];
+        _this.attributes = new Map();
         _this._nonDeferredAttributes = [];
         _this._children = [];
         _this.inputTags = [
@@ -98,8 +127,6 @@ var Tag = /** @class */ (function (_super) {
         element[Tag.TaggedVariable] = _this;
         _this.rawAttributes = {};
         _this.parsedAttributes = {};
-        _this.attributes = [];
-        _this.attributeMap = {};
         _this.onEventHandlers = {};
         _this.analyzeElementAttributes();
         _this._state = TagState.Instantiated;
@@ -127,13 +154,44 @@ var Tag = /** @class */ (function (_super) {
             this._nonDeferredAttributes.length = 0;
     };
     Tag.prototype.getAttributesWithState = function (state) {
-        return this.attributes.filter(function (attr) { return attr.state === state; });
+        var e_1, _a;
+        var attrs = [];
+        try {
+            for (var _b = __values(this.attributes.values()), _c = _b.next(); !_c.done; _c = _b.next()) {
+                var attr = _c.value;
+                if (attr.state === state)
+                    attrs.push(attr);
+            }
+        }
+        catch (e_1_1) { e_1 = { error: e_1_1 }; }
+        finally {
+            try {
+                if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
+            }
+            finally { if (e_1) throw e_1.error; }
+        }
+        return attrs;
     };
     Object.defineProperty(Tag.prototype, "nonDeferredAttributes", {
         get: function () {
+            var e_2, _a;
             if (this._nonDeferredAttributes.length > 0)
                 return this._nonDeferredAttributes;
-            var attrs = this.attributes.filter(function (attr) { return attr.state !== Attribute_1.AttributeState.Deferred; });
+            var attrs = [];
+            try {
+                for (var _b = __values(this.attributes.values()), _c = _b.next(); !_c.done; _c = _b.next()) {
+                    var attr = _c.value;
+                    if (attr.state !== Attribute_1.AttributeState.Deferred)
+                        attrs.push(attr);
+                }
+            }
+            catch (e_2_1) { e_2 = { error: e_2_1 }; }
+            finally {
+                try {
+                    if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
+                }
+                finally { if (e_2) throw e_2.error; }
+            }
             this._nonDeferredAttributes = attrs;
             return attrs;
         },
@@ -189,29 +247,42 @@ var Tag = /** @class */ (function (_super) {
     };
     Tag.prototype.evaluate = function () {
         return __awaiter(this, void 0, void 0, function () {
-            var _i, _a, attr;
-            return __generator(this, function (_b) {
-                switch (_b.label) {
+            var _a, _b, attr, e_3_1;
+            var e_3, _c;
+            return __generator(this, function (_d) {
+                switch (_d.label) {
                     case 0:
-                        _i = 0, _a = this.nonDeferredAttributes;
-                        _b.label = 1;
+                        _d.trys.push([0, 5, 6, 7]);
+                        _a = __values(this.nonDeferredAttributes), _b = _a.next();
+                        _d.label = 1;
                     case 1:
-                        if (!(_i < _a.length)) return [3 /*break*/, 4];
-                        attr = _a[_i];
+                        if (!!_b.done) return [3 /*break*/, 4];
+                        attr = _b.value;
                         return [4 /*yield*/, attr.evaluate()];
                     case 2:
-                        _b.sent();
-                        _b.label = 3;
+                        _d.sent();
+                        _d.label = 3;
                     case 3:
-                        _i++;
+                        _b = _a.next();
                         return [3 /*break*/, 1];
-                    case 4: return [2 /*return*/];
+                    case 4: return [3 /*break*/, 7];
+                    case 5:
+                        e_3_1 = _d.sent();
+                        e_3 = { error: e_3_1 };
+                        return [3 /*break*/, 7];
+                    case 6:
+                        try {
+                            if (_b && !_b.done && (_c = _a.return)) _c.call(_a);
+                        }
+                        finally { if (e_3) throw e_3.error; }
+                        return [7 /*endfinally*/];
+                    case 7: return [2 /*return*/];
                 }
             });
         });
     };
     Tag.prototype.mutate = function (mutation) {
-        this.attributes.map(function (attr) { return attr.mutate(mutation); });
+        this.attributes.forEach(function (attr) { return attr.mutate(mutation); });
         this.dispatch('mutate', mutation);
     };
     Tag.prototype.get = function (attr) {
@@ -245,9 +316,6 @@ var Tag = /** @class */ (function (_super) {
             return parts[1];
         }
         return null;
-    };
-    Tag.prototype.getAttributeModifiers = function (attr) {
-        return attr.split('|').splice(1);
     };
     Object.defineProperty(Tag.prototype, "isInput", {
         get: function () {
@@ -283,11 +351,21 @@ var Tag = /** @class */ (function (_super) {
             }
         },
         set: function (value) {
+            var e_4, _a;
             if (this.isInput) {
                 if (this.isMultipleSelect) {
-                    for (var _i = 0, _a = Array.from(this.element.options); _i < _a.length; _i++) {
-                        var option = _a[_i];
-                        option.selected = value.indexOf(option.value) > -1;
+                    try {
+                        for (var _b = __values(Array.from(this.element.options)), _c = _b.next(); !_c.done; _c = _b.next()) {
+                            var option = _c.value;
+                            option.selected = value.indexOf(option.value) > -1;
+                        }
+                    }
+                    catch (e_4_1) { e_4 = { error: e_4_1 }; }
+                    finally {
+                        try {
+                            if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
+                        }
+                        finally { if (e_4) throw e_4.error; }
                     }
                 }
                 else {
@@ -334,7 +412,7 @@ var Tag = /** @class */ (function (_super) {
     };
     Object.defineProperty(Tag.prototype, "children", {
         get: function () {
-            return __spreadArray([], this._children);
+            return __spreadArray([], __read(this._children));
         },
         enumerable: false,
         configurable: true
@@ -441,13 +519,23 @@ var Tag = /** @class */ (function (_super) {
         return this.parentTag ? this.parentTag.findAncestorByAttribute(attr, true) : null;
     };
     Tag.prototype.findDescendantsByAttribute = function (attr, includeSelf) {
+        var e_5, _a;
         if (includeSelf === void 0) { includeSelf = false; }
         var tags = [];
         if (includeSelf && this.hasAttribute(attr))
             tags.push(this);
-        for (var _i = 0, _a = this.children; _i < _a.length; _i++) {
-            var child = _a[_i];
-            tags.concat(child.findDescendantsByAttribute(attr, true));
+        try {
+            for (var _b = __values(this.children), _c = _b.next(); !_c.done; _c = _b.next()) {
+                var child = _c.value;
+                tags.concat(child.findDescendantsByAttribute(attr, true));
+            }
+        }
+        catch (e_5_1) { e_5 = { error: e_5_1 }; }
+        finally {
+            try {
+                if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
+            }
+            finally { if (e_5) throw e_5.error; }
         }
         return tags;
     };
@@ -459,18 +547,28 @@ var Tag = /** @class */ (function (_super) {
     };
     Tag.prototype.getAttribute = function (key) {
         return __awaiter(this, void 0, void 0, function () {
-            var cls, _i, _a, attr;
-            return __generator(this, function (_b) {
-                switch (_b.label) {
+            var cls, _a, _b, attr;
+            var e_6, _c;
+            return __generator(this, function (_d) {
+                switch (_d.label) {
                     case 0: return [4 /*yield*/, Registry_1.Registry.instance.attributes.get(key)];
                     case 1:
-                        cls = _b.sent();
+                        cls = _d.sent();
                         if (!cls)
                             return [2 /*return*/];
-                        for (_i = 0, _a = this.attributes; _i < _a.length; _i++) {
-                            attr = _a[_i];
-                            if (attr instanceof cls)
-                                return [2 /*return*/, attr];
+                        try {
+                            for (_a = __values(this.attributes.values()), _b = _a.next(); !_b.done; _b = _a.next()) {
+                                attr = _b.value;
+                                if (attr instanceof cls)
+                                    return [2 /*return*/, attr];
+                            }
+                        }
+                        catch (e_6_1) { e_6 = { error: e_6_1 }; }
+                        finally {
+                            try {
+                                if (_b && !_b.done && (_c = _a.return)) _c.call(_a);
+                            }
+                            finally { if (e_6) throw e_6.error; }
                         }
                         return [2 /*return*/];
                 }
@@ -494,10 +592,10 @@ var Tag = /** @class */ (function (_super) {
             else if (key === '@value')
                 this.value = value;
             else if (key === '@class' && value) {
-                (_a = this.element.classList).remove.apply(_a, Array.from(this.element.classList));
+                (_a = this.element.classList).remove.apply(_a, __spreadArray([], __read(Array.from(this.element.classList))));
                 var classes = value instanceof Array ? value : [value];
                 if (classes.length)
-                    (_b = this.element.classList).add.apply(_b, classes);
+                    (_b = this.element.classList).add.apply(_b, __spreadArray([], __read(classes)));
             }
             else if (Tag.flagAttributes.indexOf(key) > -1) {
                 var attrKey = key.replace('@', '');
@@ -558,7 +656,8 @@ var Tag = /** @class */ (function (_super) {
     };
     Tag.prototype.buildAttributes = function () {
         return __awaiter(this, void 0, void 0, function () {
-            var requiresScope, defer, isMobile, tags, slot, _i, tags_1, tag, _a, _b, _c, attr, attrClass, attrObj;
+            var requiresScope, defer, isMobile, tags, slot, tags_1, tags_1_1, tag, _a, _b, _i, attr, attrClass, attrObj, e_7_1;
+            var e_7, _c;
             return __generator(this, function (_d) {
                 switch (_d.label) {
                     case 0:
@@ -574,55 +673,68 @@ var Tag = /** @class */ (function (_super) {
                     case 1:
                         tags = _d.sent();
                         slot = this.isSlot ? this : null;
-                        _i = 0, tags_1 = tags;
                         _d.label = 2;
                     case 2:
-                        if (!(_i < tags_1.length)) return [3 /*break*/, 9];
-                        tag = tags_1[_i];
+                        _d.trys.push([2, 11, 12, 13]);
+                        tags_1 = __values(tags), tags_1_1 = tags_1.next();
+                        _d.label = 3;
+                    case 3:
+                        if (!!tags_1_1.done) return [3 /*break*/, 10];
+                        tag = tags_1_1.value;
                         _a = [];
                         for (_b in this.rawAttributes)
                             _a.push(_b);
-                        _c = 0;
-                        _d.label = 3;
-                    case 3:
-                        if (!(_c < _a.length)) return [3 /*break*/, 7];
-                        attr = _a[_c];
-                        if (tag.attributeMap[attr])
-                            return [3 /*break*/, 6];
-                        if (this.hasModifier(attr, 'mobile') && !isMobile)
-                            return [3 /*break*/, 6];
-                        if (this.hasModifier(attr, 'desktop') && isMobile)
-                            return [3 /*break*/, 6];
-                        return [4 /*yield*/, this.getAttributeClass(attr)];
+                        _i = 0;
+                        _d.label = 4;
                     case 4:
+                        if (!(_i < _a.length)) return [3 /*break*/, 8];
+                        attr = _a[_i];
+                        if (tag.attributes.has(attr))
+                            return [3 /*break*/, 7];
+                        if (this.hasModifier(attr, 'mobile') && !isMobile)
+                            return [3 /*break*/, 7];
+                        if (this.hasModifier(attr, 'desktop') && isMobile)
+                            return [3 /*break*/, 7];
+                        return [4 /*yield*/, this.getAttributeClass(attr)];
+                    case 5:
                         attrClass = _d.sent();
-                        if (!attrClass) return [3 /*break*/, 6];
+                        if (!attrClass) return [3 /*break*/, 7];
                         if (attrClass.scoped)
                             requiresScope = true;
                         attrObj = attrClass.create(tag, attr, attrClass, slot);
-                        tag.attributes.push(attrObj);
-                        tag.attributeMap[attr] = attrObj;
-                        if (!(defer && attrClass.canDefer)) return [3 /*break*/, 6];
+                        tag.attributes.set(attr, attrObj);
+                        if (!(defer && attrClass.canDefer)) return [3 /*break*/, 7];
                         return [4 /*yield*/, attrObj.defer()];
-                    case 5:
+                    case 6:
                         _d.sent();
                         tag.deferredAttributes.push(attrObj);
                         attrObj.on('state', tag.onAttributeStateChange, tag);
-                        _d.label = 6;
-                    case 6:
-                        _c++;
-                        return [3 /*break*/, 3];
+                        _d.label = 7;
                     case 7:
+                        _i++;
+                        return [3 /*break*/, 4];
+                    case 8:
                         if (tag.element.getAttribute('id'))
                             requiresScope = true;
                         if (requiresScope && !tag.uniqueScope) {
                             tag._uniqueScope = true;
                         }
-                        _d.label = 8;
-                    case 8:
-                        _i++;
-                        return [3 /*break*/, 2];
+                        _d.label = 9;
                     case 9:
+                        tags_1_1 = tags_1.next();
+                        return [3 /*break*/, 3];
+                    case 10: return [3 /*break*/, 13];
+                    case 11:
+                        e_7_1 = _d.sent();
+                        e_7 = { error: e_7_1 };
+                        return [3 /*break*/, 13];
+                    case 12:
+                        try {
+                            if (tags_1_1 && !tags_1_1.done && (_c = tags_1.return)) _c.call(tags_1);
+                        }
+                        finally { if (e_7) throw e_7.error; }
+                        return [7 /*endfinally*/];
+                    case 13:
                         this._state = TagState.AttributesBuilt;
                         return [2 /*return*/];
                 }
@@ -631,33 +743,62 @@ var Tag = /** @class */ (function (_super) {
     };
     Tag.prototype.compileAttributes = function () {
         return __awaiter(this, void 0, void 0, function () {
-            var tags, _i, tags_2, tag, _a, _b, attr;
-            return __generator(this, function (_c) {
-                switch (_c.label) {
+            var tags, tags_2, tags_2_1, tag, _a, _b, attr, e_8_1, e_9_1;
+            var e_9, _c, e_8, _d;
+            return __generator(this, function (_e) {
+                switch (_e.label) {
                     case 0: return [4 /*yield*/, this.getTagsToBuild()];
                     case 1:
-                        tags = _c.sent();
-                        _i = 0, tags_2 = tags;
-                        _c.label = 2;
+                        tags = _e.sent();
+                        _e.label = 2;
                     case 2:
-                        if (!(_i < tags_2.length)) return [3 /*break*/, 7];
-                        tag = tags_2[_i];
-                        _a = 0, _b = tag.getAttributesWithState(Attribute_1.AttributeState.Instantiated);
-                        _c.label = 3;
+                        _e.trys.push([2, 13, 14, 15]);
+                        tags_2 = __values(tags), tags_2_1 = tags_2.next();
+                        _e.label = 3;
                     case 3:
-                        if (!(_a < _b.length)) return [3 /*break*/, 6];
-                        attr = _b[_a];
-                        return [4 /*yield*/, attr.compile()];
+                        if (!!tags_2_1.done) return [3 /*break*/, 12];
+                        tag = tags_2_1.value;
+                        _e.label = 4;
                     case 4:
-                        _c.sent();
-                        _c.label = 5;
+                        _e.trys.push([4, 9, 10, 11]);
+                        _a = (e_8 = void 0, __values(tag.getAttributesWithState(Attribute_1.AttributeState.Instantiated))), _b = _a.next();
+                        _e.label = 5;
                     case 5:
-                        _a++;
-                        return [3 /*break*/, 3];
+                        if (!!_b.done) return [3 /*break*/, 8];
+                        attr = _b.value;
+                        return [4 /*yield*/, attr.compile()];
                     case 6:
-                        _i++;
-                        return [3 /*break*/, 2];
+                        _e.sent();
+                        _e.label = 7;
                     case 7:
+                        _b = _a.next();
+                        return [3 /*break*/, 5];
+                    case 8: return [3 /*break*/, 11];
+                    case 9:
+                        e_8_1 = _e.sent();
+                        e_8 = { error: e_8_1 };
+                        return [3 /*break*/, 11];
+                    case 10:
+                        try {
+                            if (_b && !_b.done && (_d = _a.return)) _d.call(_a);
+                        }
+                        finally { if (e_8) throw e_8.error; }
+                        return [7 /*endfinally*/];
+                    case 11:
+                        tags_2_1 = tags_2.next();
+                        return [3 /*break*/, 3];
+                    case 12: return [3 /*break*/, 15];
+                    case 13:
+                        e_9_1 = _e.sent();
+                        e_9 = { error: e_9_1 };
+                        return [3 /*break*/, 15];
+                    case 14:
+                        try {
+                            if (tags_2_1 && !tags_2_1.done && (_c = tags_2.return)) _c.call(tags_2);
+                        }
+                        finally { if (e_9) throw e_9.error; }
+                        return [7 /*endfinally*/];
+                    case 15:
                         this._state = TagState.AttributesCompiled;
                         return [2 /*return*/];
                 }
@@ -666,33 +807,62 @@ var Tag = /** @class */ (function (_super) {
     };
     Tag.prototype.setupAttributes = function () {
         return __awaiter(this, void 0, void 0, function () {
-            var tags, _i, tags_3, tag, _a, _b, attr;
-            return __generator(this, function (_c) {
-                switch (_c.label) {
+            var tags, tags_3, tags_3_1, tag, _a, _b, attr, e_10_1, e_11_1;
+            var e_11, _c, e_10, _d;
+            return __generator(this, function (_e) {
+                switch (_e.label) {
                     case 0: return [4 /*yield*/, this.getTagsToBuild()];
                     case 1:
-                        tags = _c.sent();
-                        _i = 0, tags_3 = tags;
-                        _c.label = 2;
+                        tags = _e.sent();
+                        _e.label = 2;
                     case 2:
-                        if (!(_i < tags_3.length)) return [3 /*break*/, 7];
-                        tag = tags_3[_i];
-                        _a = 0, _b = tag.getAttributesWithState(Attribute_1.AttributeState.Compiled);
-                        _c.label = 3;
+                        _e.trys.push([2, 13, 14, 15]);
+                        tags_3 = __values(tags), tags_3_1 = tags_3.next();
+                        _e.label = 3;
                     case 3:
-                        if (!(_a < _b.length)) return [3 /*break*/, 6];
-                        attr = _b[_a];
-                        return [4 /*yield*/, attr.setup()];
+                        if (!!tags_3_1.done) return [3 /*break*/, 12];
+                        tag = tags_3_1.value;
+                        _e.label = 4;
                     case 4:
-                        _c.sent();
-                        _c.label = 5;
+                        _e.trys.push([4, 9, 10, 11]);
+                        _a = (e_10 = void 0, __values(tag.getAttributesWithState(Attribute_1.AttributeState.Compiled))), _b = _a.next();
+                        _e.label = 5;
                     case 5:
-                        _a++;
-                        return [3 /*break*/, 3];
+                        if (!!_b.done) return [3 /*break*/, 8];
+                        attr = _b.value;
+                        return [4 /*yield*/, attr.setup()];
                     case 6:
-                        _i++;
-                        return [3 /*break*/, 2];
+                        _e.sent();
+                        _e.label = 7;
                     case 7:
+                        _b = _a.next();
+                        return [3 /*break*/, 5];
+                    case 8: return [3 /*break*/, 11];
+                    case 9:
+                        e_10_1 = _e.sent();
+                        e_10 = { error: e_10_1 };
+                        return [3 /*break*/, 11];
+                    case 10:
+                        try {
+                            if (_b && !_b.done && (_d = _a.return)) _d.call(_a);
+                        }
+                        finally { if (e_10) throw e_10.error; }
+                        return [7 /*endfinally*/];
+                    case 11:
+                        tags_3_1 = tags_3.next();
+                        return [3 /*break*/, 3];
+                    case 12: return [3 /*break*/, 15];
+                    case 13:
+                        e_11_1 = _e.sent();
+                        e_11 = { error: e_11_1 };
+                        return [3 /*break*/, 15];
+                    case 14:
+                        try {
+                            if (tags_3_1 && !tags_3_1.done && (_c = tags_3.return)) _c.call(tags_3);
+                        }
+                        finally { if (e_11) throw e_11.error; }
+                        return [7 /*endfinally*/];
+                    case 15:
                         if (!this.isSlot)
                             this.dom.registerElementInRoot(this);
                         this._state = TagState.AttributesSetup;
@@ -704,33 +874,62 @@ var Tag = /** @class */ (function (_super) {
     };
     Tag.prototype.extractAttributes = function () {
         return __awaiter(this, void 0, void 0, function () {
-            var tags, _i, tags_4, tag, _a, _b, attr;
-            return __generator(this, function (_c) {
-                switch (_c.label) {
+            var tags, tags_4, tags_4_1, tag, _a, _b, attr, e_12_1, e_13_1;
+            var e_13, _c, e_12, _d;
+            return __generator(this, function (_e) {
+                switch (_e.label) {
                     case 0: return [4 /*yield*/, this.getTagsToBuild()];
                     case 1:
-                        tags = _c.sent();
-                        _i = 0, tags_4 = tags;
-                        _c.label = 2;
+                        tags = _e.sent();
+                        _e.label = 2;
                     case 2:
-                        if (!(_i < tags_4.length)) return [3 /*break*/, 7];
-                        tag = tags_4[_i];
-                        _a = 0, _b = tag.getAttributesWithState(Attribute_1.AttributeState.Setup);
-                        _c.label = 3;
+                        _e.trys.push([2, 13, 14, 15]);
+                        tags_4 = __values(tags), tags_4_1 = tags_4.next();
+                        _e.label = 3;
                     case 3:
-                        if (!(_a < _b.length)) return [3 /*break*/, 6];
-                        attr = _b[_a];
-                        return [4 /*yield*/, attr.extract()];
+                        if (!!tags_4_1.done) return [3 /*break*/, 12];
+                        tag = tags_4_1.value;
+                        _e.label = 4;
                     case 4:
-                        _c.sent();
-                        _c.label = 5;
+                        _e.trys.push([4, 9, 10, 11]);
+                        _a = (e_12 = void 0, __values(tag.getAttributesWithState(Attribute_1.AttributeState.Setup))), _b = _a.next();
+                        _e.label = 5;
                     case 5:
-                        _a++;
-                        return [3 /*break*/, 3];
+                        if (!!_b.done) return [3 /*break*/, 8];
+                        attr = _b.value;
+                        return [4 /*yield*/, attr.extract()];
                     case 6:
-                        _i++;
-                        return [3 /*break*/, 2];
+                        _e.sent();
+                        _e.label = 7;
                     case 7:
+                        _b = _a.next();
+                        return [3 /*break*/, 5];
+                    case 8: return [3 /*break*/, 11];
+                    case 9:
+                        e_12_1 = _e.sent();
+                        e_12 = { error: e_12_1 };
+                        return [3 /*break*/, 11];
+                    case 10:
+                        try {
+                            if (_b && !_b.done && (_d = _a.return)) _d.call(_a);
+                        }
+                        finally { if (e_12) throw e_12.error; }
+                        return [7 /*endfinally*/];
+                    case 11:
+                        tags_4_1 = tags_4.next();
+                        return [3 /*break*/, 3];
+                    case 12: return [3 /*break*/, 15];
+                    case 13:
+                        e_13_1 = _e.sent();
+                        e_13 = { error: e_13_1 };
+                        return [3 /*break*/, 15];
+                    case 14:
+                        try {
+                            if (tags_4_1 && !tags_4_1.done && (_c = tags_4.return)) _c.call(tags_4);
+                        }
+                        finally { if (e_13) throw e_13.error; }
+                        return [7 /*endfinally*/];
+                    case 15:
                         this._state = TagState.AttributesExtracted;
                         this.callOnWrapped('$extracted');
                         return [2 /*return*/];
@@ -740,36 +939,65 @@ var Tag = /** @class */ (function (_super) {
     };
     Tag.prototype.connectAttributes = function () {
         return __awaiter(this, void 0, void 0, function () {
-            var tags, _i, tags_5, tag, _a, _b, attr;
-            return __generator(this, function (_c) {
-                switch (_c.label) {
+            var tags, tags_5, tags_5_1, tag, _a, _b, attr, e_14_1, e_15_1;
+            var e_15, _c, e_14, _d;
+            return __generator(this, function (_e) {
+                switch (_e.label) {
                     case 0: return [4 /*yield*/, this.getTagsToBuild()];
                     case 1:
-                        tags = _c.sent();
-                        _i = 0, tags_5 = tags;
-                        _c.label = 2;
+                        tags = _e.sent();
+                        _e.label = 2;
                     case 2:
-                        if (!(_i < tags_5.length)) return [3 /*break*/, 7];
-                        tag = tags_5[_i];
-                        if (tag.isInput) {
-                            tag.addEventHandler('input', [], tag.inputMutation, tag);
-                        }
-                        _a = 0, _b = tag.getAttributesWithState(Attribute_1.AttributeState.Extracted);
-                        _c.label = 3;
+                        _e.trys.push([2, 13, 14, 15]);
+                        tags_5 = __values(tags), tags_5_1 = tags_5.next();
+                        _e.label = 3;
                     case 3:
-                        if (!(_a < _b.length)) return [3 /*break*/, 6];
-                        attr = _b[_a];
-                        return [4 /*yield*/, attr.connect()];
+                        if (!!tags_5_1.done) return [3 /*break*/, 12];
+                        tag = tags_5_1.value;
+                        if (tag.isInput) {
+                            tag.addEventHandler('input', null, tag.inputMutation, tag);
+                        }
+                        _e.label = 4;
                     case 4:
-                        _c.sent();
-                        _c.label = 5;
+                        _e.trys.push([4, 9, 10, 11]);
+                        _a = (e_14 = void 0, __values(tag.getAttributesWithState(Attribute_1.AttributeState.Extracted))), _b = _a.next();
+                        _e.label = 5;
                     case 5:
-                        _a++;
-                        return [3 /*break*/, 3];
+                        if (!!_b.done) return [3 /*break*/, 8];
+                        attr = _b.value;
+                        return [4 /*yield*/, attr.connect()];
                     case 6:
-                        _i++;
-                        return [3 /*break*/, 2];
+                        _e.sent();
+                        _e.label = 7;
                     case 7:
+                        _b = _a.next();
+                        return [3 /*break*/, 5];
+                    case 8: return [3 /*break*/, 11];
+                    case 9:
+                        e_14_1 = _e.sent();
+                        e_14 = { error: e_14_1 };
+                        return [3 /*break*/, 11];
+                    case 10:
+                        try {
+                            if (_b && !_b.done && (_d = _a.return)) _d.call(_a);
+                        }
+                        finally { if (e_14) throw e_14.error; }
+                        return [7 /*endfinally*/];
+                    case 11:
+                        tags_5_1 = tags_5.next();
+                        return [3 /*break*/, 3];
+                    case 12: return [3 /*break*/, 15];
+                    case 13:
+                        e_15_1 = _e.sent();
+                        e_15 = { error: e_15_1 };
+                        return [3 /*break*/, 15];
+                    case 14:
+                        try {
+                            if (tags_5_1 && !tags_5_1.done && (_c = tags_5.return)) _c.call(tags_5);
+                        }
+                        finally { if (e_15) throw e_15.error; }
+                        return [7 /*endfinally*/];
+                    case 15:
                         this._state = TagState.AttributesConnected;
                         this.callOnWrapped('$bound');
                         return [2 /*return*/];
@@ -778,20 +1006,30 @@ var Tag = /** @class */ (function (_super) {
         });
     };
     Tag.prototype.inputMutation = function (e) {
+        var e_16, _a;
         if (this.isSelect) {
             var selected = this.element.selectedOptions;
             var values = [];
             for (var i = 0; i < selected.length; i++) {
                 values.push(selected[i].value);
             }
-            for (var _i = 0, _a = Array.from(this.element.options); _i < _a.length; _i++) {
-                var option = _a[_i];
-                if (values.indexOf(option.value) > -1) {
-                    option.setAttribute('selected', '');
+            try {
+                for (var _b = __values(Array.from(this.element.options)), _c = _b.next(); !_c.done; _c = _b.next()) {
+                    var option = _c.value;
+                    if (values.indexOf(option.value) > -1) {
+                        option.setAttribute('selected', '');
+                    }
+                    else {
+                        option.removeAttribute('selected');
+                    }
                 }
-                else {
-                    option.removeAttribute('selected');
+            }
+            catch (e_16_1) { e_16 = { error: e_16_1 }; }
+            finally {
+                try {
+                    if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                 }
+                finally { if (e_16) throw e_16.error; }
             }
             this.value = values.join(',');
         }
@@ -817,24 +1055,75 @@ var Tag = /** @class */ (function (_super) {
             args[_i - 1] = arguments[_i];
         }
         if (this._uniqueScope && this.scope && this.scope.wrapped && this.scope.wrapped[method]) {
-            (_a = this.scope.wrapped)[method].apply(_a, args);
+            (_a = this.scope.wrapped)[method].apply(_a, __spreadArray([], __read(args)));
             return true;
         }
         return false;
     };
     Tag.prototype.handleEvent = function (eventType, e) {
+        var e_17, _a;
+        var _this = this;
         if (e)
             e.stopPropagation();
         if (!this.onEventHandlers[eventType])
             return;
         this.scope.set('$event', e);
         this.scope.set('$value', this.value);
-        for (var _i = 0, _a = this.onEventHandlers[eventType]; _i < _a.length; _i++) {
-            var handler = _a[_i];
-            handler.handler.call(handler.context, e);
+        var preventedDefault = false;
+        var _loop_1 = function (handler) {
+            if (!preventedDefault && handler.modifiers.has('preventdefault') && e.cancelable) {
+                e.preventDefault();
+                preventedDefault = true;
+            }
+            if (handler.modifiers.has('once'))
+                this_1.removeEventHandler(handler.event, handler.handler, handler.context);
+            if (handler.modifiers.has('throttle')) {
+                var modifierArguments = handler.modifiers.get('throttle').getArguments(['1000']);
+                var throttleTime = parseInt(modifierArguments[0]);
+                var now = Math.floor(Date.now());
+                if (!handler.state.lastCalled || handler.state.lastCalled + throttleTime < now) {
+                    handler.state.lastCalled = now;
+                }
+                else {
+                    return "continue";
+                }
+            }
+            if (handler.modifiers.has('debounce')) {
+                clearTimeout(handler.state.debounceTimeout);
+                var modifierArguments = handler.modifiers.get('debounce').getArguments(['1000']);
+                var debounceTime = parseInt(modifierArguments[0]);
+                handler.state.debounceTimeout = setTimeout(function () { return __awaiter(_this, void 0, void 0, function () {
+                    return __generator(this, function (_a) {
+                        switch (_a.label) {
+                            case 0: return [4 /*yield*/, handler.handler.call(handler.context, e)];
+                            case 1:
+                                _a.sent();
+                                return [2 /*return*/];
+                        }
+                    });
+                }); }, debounceTime);
+            }
+            else {
+                handler.handler.call(handler.context, e);
+            }
+        };
+        var this_1 = this;
+        try {
+            for (var _b = __values(this.onEventHandlers[eventType]), _c = _b.next(); !_c.done; _c = _b.next()) {
+                var handler = _c.value;
+                _loop_1(handler);
+            }
+        }
+        catch (e_17_1) { e_17 = { error: e_17_1 }; }
+        finally {
+            try {
+                if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
+            }
+            finally { if (e_17) throw e_17.error; }
         }
     };
     Tag.prototype.hasModifier = function (attribute, modifier) {
+        this.attributes;
         return attribute.indexOf("|" + modifier) > -1;
     };
     Tag.prototype.stripModifier = function (attribute, modifier) {
@@ -843,24 +1132,27 @@ var Tag = /** @class */ (function (_super) {
     Tag.prototype.addEventHandler = function (eventType, modifiers, handler, context) {
         if (context === void 0) { context = null; }
         var passiveValue = null;
-        if (modifiers.indexOf('active') > -1) {
+        modifiers = modifiers || new Modifiers_1.Modifiers();
+        if (modifiers.has('active')) {
             passiveValue = false;
         }
-        else if (modifiers.indexOf('passive') > -1) {
+        else if (modifiers.has('passive')) {
             passiveValue = true;
         }
         if (!this.onEventHandlers[eventType]) {
             this.onEventHandlers[eventType] = [];
             var element = On_1.On.WindowEvents.indexOf(eventType) > -1 && window ? window : this.element;
-            var opts = {};
+            var eventListenerOpts = {};
             if (eventType.indexOf('touch') > -1 || passiveValue !== null)
-                opts['passive'] = passiveValue === null && true || passiveValue;
-            element.addEventListener(eventType, this.handleEvent.bind(this, eventType), opts);
+                eventListenerOpts['passive'] = passiveValue === null && true || passiveValue;
+            element.addEventListener(eventType, this.handleEvent.bind(this, eventType), eventListenerOpts);
         }
         this.onEventHandlers[eventType].push({
             handler: handler,
             event: eventType,
             context: context,
+            modifiers: modifiers,
+            state: {}
         });
     };
     Tag.prototype.removeEventHandler = function (eventType, handler, context) {
@@ -876,14 +1168,33 @@ var Tag = /** @class */ (function (_super) {
         }
     };
     Tag.prototype.removeContextEventHandlers = function (context) {
-        for (var _i = 0, _a = Object.keys(this.onEventHandlers); _i < _a.length; _i++) {
-            var eventType = _a[_i];
-            for (var _b = 0, _c = this.onEventHandlers[eventType]; _b < _c.length; _b++) {
-                var handler = _c[_b];
-                if (handler.context === context) {
-                    this.removeEventHandler(eventType, handler.handler, context);
+        var e_18, _a, e_19, _b;
+        try {
+            for (var _c = __values(Object.keys(this.onEventHandlers)), _d = _c.next(); !_d.done; _d = _c.next()) {
+                var eventType = _d.value;
+                try {
+                    for (var _e = (e_19 = void 0, __values(this.onEventHandlers[eventType])), _f = _e.next(); !_f.done; _f = _e.next()) {
+                        var handler = _f.value;
+                        if (handler.context === context) {
+                            this.removeEventHandler(eventType, handler.handler, context);
+                        }
+                    }
+                }
+                catch (e_19_1) { e_19 = { error: e_19_1 }; }
+                finally {
+                    try {
+                        if (_f && !_f.done && (_b = _e.return)) _b.call(_e);
+                    }
+                    finally { if (e_19) throw e_19.error; }
                 }
             }
+        }
+        catch (e_18_1) { e_18 = { error: e_18_1 }; }
+        finally {
+            try {
+                if (_d && !_d.done && (_a = _c.return)) _a.call(_c);
+            }
+            finally { if (e_18) throw e_18.error; }
         }
     };
     Tag.prototype.createScope = function (force) {
@@ -901,22 +1212,19 @@ var Tag = /** @class */ (function (_super) {
     };
     Tag.prototype.watchAttribute = function (attributeName) {
         return __awaiter(this, void 0, void 0, function () {
-            var _i, _a, attribute, standardAttribute;
-            return __generator(this, function (_b) {
-                switch (_b.label) {
+            var standardAttribute;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
                     case 0:
-                        for (_i = 0, _a = this.attributes; _i < _a.length; _i++) {
-                            attribute = _a[_i];
-                            if (attribute instanceof StandardAttribute_1.StandardAttribute && attribute.attributeName == attributeName) {
-                                return [2 /*return*/, attribute];
-                            }
+                        if (this.attributes.has(attributeName) && this.attributes.get(attributeName) instanceof StandardAttribute_1.StandardAttribute) {
+                            return [2 /*return*/, this.attributes.get(attributeName)];
                         }
                         this.createScope(true);
                         standardAttribute = new StandardAttribute_1.StandardAttribute(this, attributeName);
-                        this.attributes.push(standardAttribute);
+                        this.attributes.set(attributeName, standardAttribute);
                         return [4 /*yield*/, this.setupAttribute(standardAttribute)];
                     case 1:
-                        _b.sent();
+                        _a.sent();
                         return [2 /*return*/, standardAttribute];
                 }
             });
@@ -924,22 +1232,18 @@ var Tag = /** @class */ (function (_super) {
     };
     Tag.prototype.watchStyle = function (styleName) {
         return __awaiter(this, void 0, void 0, function () {
-            var _i, _a, attribute, styleAttribute;
-            return __generator(this, function (_b) {
-                switch (_b.label) {
+            var styleAttribute;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
                     case 0:
-                        for (_i = 0, _a = this.attributes; _i < _a.length; _i++) {
-                            attribute = _a[_i];
-                            if (attribute instanceof StyleAttribute_1.StyleAttribute) {
-                                return [2 /*return*/, attribute];
-                            }
-                        }
+                        if (this.attributes.has('style'))
+                            return [2 /*return*/, this.attributes.get('style')];
                         this.createScope(true);
                         styleAttribute = new StyleAttribute_1.StyleAttribute(this, 'style');
-                        this.attributes.push(styleAttribute);
+                        this.attributes.set('style', styleAttribute);
                         return [4 /*yield*/, this.setupAttribute(styleAttribute)];
                     case 1:
-                        _b.sent();
+                        _a.sent();
                         return [2 /*return*/, styleAttribute];
                 }
             });
@@ -968,23 +1272,36 @@ var Tag = /** @class */ (function (_super) {
     };
     Tag.prototype.setupDeferredAttributes = function () {
         return __awaiter(this, void 0, void 0, function () {
-            var _i, _a, attr;
-            return __generator(this, function (_b) {
-                switch (_b.label) {
+            var _a, _b, attr, e_20_1;
+            var e_20, _c;
+            return __generator(this, function (_d) {
+                switch (_d.label) {
                     case 0:
-                        _i = 0, _a = this.deferredAttributes;
-                        _b.label = 1;
+                        _d.trys.push([0, 5, 6, 7]);
+                        _a = __values(this.deferredAttributes), _b = _a.next();
+                        _d.label = 1;
                     case 1:
-                        if (!(_i < _a.length)) return [3 /*break*/, 4];
-                        attr = _a[_i];
+                        if (!!_b.done) return [3 /*break*/, 4];
+                        attr = _b.value;
                         return [4 /*yield*/, this.setupAttribute(attr)];
                     case 2:
-                        _b.sent();
-                        _b.label = 3;
+                        _d.sent();
+                        _d.label = 3;
                     case 3:
-                        _i++;
+                        _b = _a.next();
                         return [3 /*break*/, 1];
-                    case 4:
+                    case 4: return [3 /*break*/, 7];
+                    case 5:
+                        e_20_1 = _d.sent();
+                        e_20 = { error: e_20_1 };
+                        return [3 /*break*/, 7];
+                    case 6:
+                        try {
+                            if (_b && !_b.done && (_c = _a.return)) _c.call(_a);
+                        }
+                        finally { if (e_20) throw e_20.error; }
+                        return [7 /*endfinally*/];
+                    case 7:
                         this.deferredAttributes.length = 0;
                         return [2 /*return*/];
                 }
@@ -993,7 +1310,7 @@ var Tag = /** @class */ (function (_super) {
     };
     Tag.prototype.deconstruct = function () {
         this.attributes.forEach(function (attr) { return attr.deconstruct(); });
-        this.attributes.length = 0;
+        this.attributes.clear();
         this._children.forEach(function (child) { return child.deconstruct(); });
         this._children.length = 0;
         _super.prototype.deconstruct.call(this);

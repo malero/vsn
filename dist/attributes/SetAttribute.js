@@ -56,6 +56,17 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
+var __values = (this && this.__values) || function(o) {
+    var s = typeof Symbol === "function" && Symbol.iterator, m = s && o[s], i = 0;
+    if (m) return m.call(o);
+    if (o && typeof o.length === "number") return {
+        next: function () {
+            if (o && i >= o.length) o = void 0;
+            return { value: o && o[i++], done: !o };
+        }
+    };
+    throw new TypeError(s ? "Object is not iterable." : "Symbol.iterator is not defined.");
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SetAttribute = void 0;
 var Attribute_1 = require("../Attribute");
@@ -81,9 +92,10 @@ var SetAttribute = /** @class */ (function (_super) {
     });
     SetAttribute.prototype.extract = function () {
         return __awaiter(this, void 0, void 0, function () {
-            var ref, _a, _b, value, _i, _c, m, t;
-            return __generator(this, function (_d) {
-                switch (_d.label) {
+            var ref, _a, _b, value, _c, _d, m, t;
+            var e_1, _e;
+            return __generator(this, function (_f) {
+                switch (_f.label) {
                     case 0:
                         this.property = this.getAttributeBinding();
                         try {
@@ -95,19 +107,28 @@ var SetAttribute = /** @class */ (function (_super) {
                         _a = this;
                         return [4 /*yield*/, ref.getKey()];
                     case 1:
-                        _a.key = _d.sent();
+                        _a.key = _f.sent();
                         _b = this;
                         return [4 /*yield*/, ref.getScope()];
                     case 2:
-                        _b.boundScope = _d.sent();
+                        _b.boundScope = _f.sent();
                         value = this.getAttributeValue(null);
-                        for (_i = 0, _c = this.getAttributeModifiers(); _i < _c.length; _i++) {
-                            m = _c[_i];
-                            t = Registry_1.Registry.instance.types.getSynchronous(m);
-                            if (t) {
-                                this.boundScope.setType(this.key, m);
-                                break;
+                        try {
+                            for (_c = __values(this.getAttributeModifiers()), _d = _c.next(); !_d.done; _d = _c.next()) {
+                                m = _d.value;
+                                t = Registry_1.Registry.instance.types.getSynchronous(m);
+                                if (t) {
+                                    this.boundScope.setType(this.key, m);
+                                    break;
+                                }
                             }
+                        }
+                        catch (e_1_1) { e_1 = { error: e_1_1 }; }
+                        finally {
+                            try {
+                                if (_d && !_d.done && (_e = _c.return)) _e.call(_c);
+                            }
+                            finally { if (e_1) throw e_1.error; }
                         }
                         this.boundScope.set(this.key, value);
                         return [2 /*return*/];

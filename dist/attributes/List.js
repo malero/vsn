@@ -56,6 +56,17 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
+var __values = (this && this.__values) || function(o) {
+    var s = typeof Symbol === "function" && Symbol.iterator, m = s && o[s], i = 0;
+    if (m) return m.call(o);
+    if (o && typeof o.length === "number") return {
+        next: function () {
+            if (o && i >= o.length) o = void 0;
+            return { value: o && o[i++], done: !o };
+        }
+    };
+    throw new TypeError(s ? "Object is not iterable." : "Symbol.iterator is not defined.");
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.List = void 0;
 var Attribute_1 = require("../Attribute");
@@ -167,54 +178,90 @@ var List = /** @class */ (function (_super) {
     List.prototype.addExistingItems = function (defaultList) {
         var _a;
         return __awaiter(this, void 0, void 0, function () {
-            var _i, _b, tag, _c, defaultList_1, existingItem, _d, _e, element, tag, listModel;
-            return __generator(this, function (_f) {
-                switch (_f.label) {
+            var _b, _c, tag, defaultList_1, defaultList_1_1, existingItem, e_1_1, _d, _e, element, tag, listModel, e_2_1;
+            var e_3, _f, e_1, _g, e_2, _h;
+            return __generator(this, function (_j) {
+                switch (_j.label) {
                     case 0:
                         this.items = defaultList || new WrappedArray_1.WrappedArray();
                         if (((_a = this.tags) === null || _a === void 0 ? void 0 : _a.length) > 0) {
-                            for (_i = 0, _b = this.tags; _i < _b.length; _i++) {
-                                tag = _b[_i];
-                                tag.deconstruct();
-                                tag.removeFromDOM();
+                            try {
+                                for (_b = __values(this.tags), _c = _b.next(); !_c.done; _c = _b.next()) {
+                                    tag = _c.value;
+                                    tag.deconstruct();
+                                    tag.removeFromDOM();
+                                }
+                            }
+                            catch (e_3_1) { e_3 = { error: e_3_1 }; }
+                            finally {
+                                try {
+                                    if (_c && !_c.done && (_f = _b.return)) _f.call(_b);
+                                }
+                                finally { if (e_3) throw e_3.error; }
                             }
                         }
                         this.tags = this.tags || [];
                         this.tags.length = 0;
-                        if (!defaultList) return [3 /*break*/, 4];
-                        _c = 0, defaultList_1 = defaultList;
-                        _f.label = 1;
+                        if (!defaultList) return [3 /*break*/, 8];
+                        _j.label = 1;
                     case 1:
-                        if (!(_c < defaultList_1.length)) return [3 /*break*/, 4];
-                        existingItem = defaultList_1[_c];
-                        return [4 /*yield*/, this.add(existingItem)];
+                        _j.trys.push([1, 6, 7, 8]);
+                        defaultList_1 = __values(defaultList), defaultList_1_1 = defaultList_1.next();
+                        _j.label = 2;
                     case 2:
-                        _f.sent();
-                        _f.label = 3;
+                        if (!!defaultList_1_1.done) return [3 /*break*/, 5];
+                        existingItem = defaultList_1_1.value;
+                        return [4 /*yield*/, this.add(existingItem)];
                     case 3:
-                        _c++;
-                        return [3 /*break*/, 1];
+                        _j.sent();
+                        _j.label = 4;
                     case 4:
-                        _d = 0, _e = Array.from(this.tag.element.querySelectorAll('*'));
-                        _f.label = 5;
-                    case 5:
-                        if (!(_d < _e.length)) return [3 /*break*/, 8];
-                        element = _e[_d];
-                        if (!ElementHelper_1.ElementHelper.hasVisionAttribute(element, 'vsn-list-item'))
-                            return [3 /*break*/, 7];
-                        return [4 /*yield*/, this.tag.dom.getTagForElement(element)];
+                        defaultList_1_1 = defaultList_1.next();
+                        return [3 /*break*/, 2];
+                    case 5: return [3 /*break*/, 8];
                     case 6:
-                        tag = _f.sent();
+                        e_1_1 = _j.sent();
+                        e_1 = { error: e_1_1 };
+                        return [3 /*break*/, 8];
+                    case 7:
+                        try {
+                            if (defaultList_1_1 && !defaultList_1_1.done && (_g = defaultList_1.return)) _g.call(defaultList_1);
+                        }
+                        finally { if (e_1) throw e_1.error; }
+                        return [7 /*endfinally*/];
+                    case 8:
+                        _j.trys.push([8, 13, 14, 15]);
+                        _d = __values(Array.from(this.tag.element.querySelectorAll('*'))), _e = _d.next();
+                        _j.label = 9;
+                    case 9:
+                        if (!!_e.done) return [3 /*break*/, 12];
+                        element = _e.value;
+                        if (!ElementHelper_1.ElementHelper.hasVisionAttribute(element, 'vsn-list-item'))
+                            return [3 /*break*/, 11];
+                        return [4 /*yield*/, this.tag.dom.getTagForElement(element)];
+                    case 10:
+                        tag = _j.sent();
                         if (tag) {
                             this.tags.push(tag);
                             listModel = tag.scope.get(this.listItemName);
                             this.items.push((listModel === null || listModel === void 0 ? void 0 : listModel.wrapped) || listModel || tag.scope.wrapped || tag.scope);
                         }
-                        _f.label = 7;
-                    case 7:
-                        _d++;
-                        return [3 /*break*/, 5];
-                    case 8:
+                        _j.label = 11;
+                    case 11:
+                        _e = _d.next();
+                        return [3 /*break*/, 9];
+                    case 12: return [3 /*break*/, 15];
+                    case 13:
+                        e_2_1 = _j.sent();
+                        e_2 = { error: e_2_1 };
+                        return [3 /*break*/, 15];
+                    case 14:
+                        try {
+                            if (_e && !_e.done && (_h = _d.return)) _h.call(_d);
+                        }
+                        finally { if (e_2) throw e_2.error; }
+                        return [7 /*endfinally*/];
+                    case 15:
                         if (!(this.items instanceof WrappedArray_1.WrappedArray)) {
                             this.items = new WrappedArray_1.WrappedArray(this.items);
                         }

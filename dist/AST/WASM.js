@@ -35,6 +35,22 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
+var __read = (this && this.__read) || function (o, n) {
+    var m = typeof Symbol === "function" && o[Symbol.iterator];
+    if (!m) return o;
+    var i = m.call(o), r, ar = [], e;
+    try {
+        while ((n === void 0 || n-- > 0) && !(r = i.next()).done) ar.push(r.value);
+    }
+    catch (error) { e = { error: error }; }
+    finally {
+        try {
+            if (r && !r.done && (m = i["return"])) m.call(i);
+        }
+        finally { if (e) throw e.error; }
+    }
+    return ar;
+};
 var __spreadArray = (this && this.__spreadArray) || function (to, from) {
     for (var i = 0, il = from.length, j = to.length; i < il; i++, j++)
         to[j] = from[i];
@@ -63,7 +79,7 @@ _ieee754 = function (n) {
 };
 _encodeString = function (str) { return __spreadArray([
     str.length
-], str.split("").map(function (s) { return s.charCodeAt(0); })); };
+], __read(str.split("").map(function (s) { return s.charCodeAt(0); }))); };
 _signedLEB128 = function (n) {
     var buffer = [];
     var more = true;
@@ -192,10 +208,10 @@ var magicModuleHeader = [0x00, 0x61, 0x73, 0x6d];
 var moduleVersion = [0x01, 0x00, 0x00, 0x00];
 // https://webassembly.github.io/spec/core/binary/conventions.html#binary-vec
 // Vectors are encoded with their length followed by their element sequence
-var encodeVector = function (data) { return __spreadArray(__spreadArray([], exports.unsignedLEB128(data.length)), exports.flatten(data)); };
+var encodeVector = function (data) { return __spreadArray(__spreadArray([], __read(exports.unsignedLEB128(data.length))), __read(exports.flatten(data))); };
 exports.encodeVector = encodeVector;
 // https://webassembly.github.io/spec/core/binary/modules.html#code-section
-var encodeLocal = function (count, type) { return __spreadArray(__spreadArray([], exports.unsignedLEB128(count)), [
+var encodeLocal = function (count, type) { return __spreadArray(__spreadArray([], __read(exports.unsignedLEB128(count))), [
     type
 ]); };
 exports.encodeLocal = encodeLocal;
@@ -203,7 +219,7 @@ exports.encodeLocal = encodeLocal;
 // sections are encoded by their type followed by their vector contents
 var createSection = function (sectionType, data) { return __spreadArray([
     sectionType
-], exports.encodeVector(data)); };
+], __read(exports.encodeVector(data))); };
 /*
     Building a WASM program...
     Based off of Chasm:
@@ -214,17 +230,17 @@ var emitter = function (functions) {
     // Types section
     var typesSection = createSection(ESectionType.type, __spreadArray([
         functions.length
-    ], exports.flatten(functions.map(function (func) { return func.sectionTypes; }))));
+    ], __read(exports.flatten(functions.map(function (func) { return func.sectionTypes; })))));
     // Functions section
     var functionsSection = createSection(ESectionType.func, __spreadArray([
         functions.length
-    ], functions.map(function (func, i) { return i; })));
+    ], __read(functions.map(function (func, i) { return i; }))));
     // Export section
-    var exportSection = createSection(ESectionType.export, exports.encodeVector(functions.map(function (func, i) { return __spreadArray(__spreadArray([], func.sectionExport), [i]); })));
+    var exportSection = createSection(ESectionType.export, exports.encodeVector(functions.map(function (func, i) { return __spreadArray(__spreadArray([], __read(func.sectionExport)), [i]); })));
     var codeSection = createSection(ESectionType.code, __spreadArray([
         functions.length
-    ], exports.flatten(functions.map(function (func) { return func.sectionCode; }))));
-    return Uint8Array.from(__spreadArray(__spreadArray(__spreadArray(__spreadArray(__spreadArray(__spreadArray([], magicModuleHeader), moduleVersion), typesSection), functionsSection), exportSection), codeSection));
+    ], __read(exports.flatten(functions.map(function (func) { return func.sectionCode; })))));
+    return Uint8Array.from(__spreadArray(__spreadArray(__spreadArray(__spreadArray(__spreadArray(__spreadArray([], __read(magicModuleHeader)), __read(moduleVersion)), __read(typesSection)), __read(functionsSection)), __read(exportSection)), __read(codeSection)));
 };
 exports.emitter = emitter;
 var defaultMemory = new WebAssembly.Memory({ initial: 10, maximum: 100, shared: true });
@@ -264,7 +280,7 @@ function run(functions) {
                     return [4 /*yield*/, compile(functions, memory)];
                 case 1:
                     wasm = _b.sent();
-                    return [2 /*return*/, 'main' in wasm.instance.exports ? (_a = wasm.instance.exports).main.apply(_a, args) : wasm];
+                    return [2 /*return*/, 'main' in wasm.instance.exports ? (_a = wasm.instance.exports).main.apply(_a, __spreadArray([], __read(args))) : wasm];
             }
         });
     });

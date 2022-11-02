@@ -50,6 +50,33 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
+var __values = (this && this.__values) || function(o) {
+    var s = typeof Symbol === "function" && Symbol.iterator, m = s && o[s], i = 0;
+    if (m) return m.call(o);
+    if (o && typeof o.length === "number") return {
+        next: function () {
+            if (o && i >= o.length) o = void 0;
+            return { value: o && o[i++], done: !o };
+        }
+    };
+    throw new TypeError(s ? "Object is not iterable." : "Symbol.iterator is not defined.");
+};
+var __read = (this && this.__read) || function (o, n) {
+    var m = typeof Symbol === "function" && o[Symbol.iterator];
+    if (!m) return o;
+    var i = m.call(o), r, ar = [], e;
+    try {
+        while ((n === void 0 || n-- > 0) && !(r = i.next()).done) ar.push(r.value);
+    }
+    catch (error) { e = { error: error }; }
+    finally {
+        try {
+            if (r && !r.done && (m = i["return"])) m.call(i);
+        }
+        finally { if (e) throw e.error; }
+    }
+    return ar;
+};
 var __spreadArray = (this && this.__spreadArray) || function (to, from) {
     for (var i = 0, il = from.length, j = to.length; i < il; i++, j++)
         to[j] = from[i];
@@ -144,49 +171,90 @@ var ClassNode = /** @class */ (function (_super) {
     ClassNode.prototype.findClassElements = function (dom, tag) {
         if (tag === void 0) { tag = null; }
         return __awaiter(this, void 0, void 0, function () {
-            var tags, _i, _a, element, _b, _c, _d, _e, childSelector, node, _f, tags_1, _tag;
-            return __generator(this, function (_g) {
-                switch (_g.label) {
+            var tags, _a, _b, element, _c, _d, e_1_1, _e, _f, childSelector, node, tags_1, tags_1_1, _tag, e_2_1, e_3_1;
+            var e_1, _g, e_3, _h, e_2, _j;
+            return __generator(this, function (_k) {
+                switch (_k.label) {
                     case 0:
                         tags = [];
-                        _i = 0, _a = Array.from(dom.querySelectorAll(this.selector, tag));
-                        _g.label = 1;
+                        _k.label = 1;
                     case 1:
-                        if (!(_i < _a.length)) return [3 /*break*/, 4];
-                        element = _a[_i];
-                        _c = (_b = tags).push;
-                        return [4 /*yield*/, ClassNode.addElementClass(this._fullSelector, element, dom, element[Tag_1.Tag.TaggedVariable] || null)];
+                        _k.trys.push([1, 6, 7, 8]);
+                        _a = __values(Array.from(dom.querySelectorAll(this.selector, tag))), _b = _a.next();
+                        _k.label = 2;
                     case 2:
-                        _c.apply(_b, [_g.sent()]);
-                        _g.label = 3;
+                        if (!!_b.done) return [3 /*break*/, 5];
+                        element = _b.value;
+                        _d = (_c = tags).push;
+                        return [4 /*yield*/, ClassNode.addElementClass(this._fullSelector, element, dom, element[Tag_1.Tag.TaggedVariable] || null)];
                     case 3:
-                        _i++;
-                        return [3 /*break*/, 1];
+                        _d.apply(_c, [_k.sent()]);
+                        _k.label = 4;
                     case 4:
-                        _d = 0, _e = ClassNode.classChildren[this._fullSelector];
-                        _g.label = 5;
-                    case 5:
-                        if (!(_d < _e.length)) return [3 /*break*/, 10];
-                        childSelector = _e[_d];
+                        _b = _a.next();
+                        return [3 /*break*/, 2];
+                    case 5: return [3 /*break*/, 8];
+                    case 6:
+                        e_1_1 = _k.sent();
+                        e_1 = { error: e_1_1 };
+                        return [3 /*break*/, 8];
+                    case 7:
+                        try {
+                            if (_b && !_b.done && (_g = _a.return)) _g.call(_a);
+                        }
+                        finally { if (e_1) throw e_1.error; }
+                        return [7 /*endfinally*/];
+                    case 8:
+                        _k.trys.push([8, 19, 20, 21]);
+                        _e = __values(ClassNode.classChildren[this._fullSelector]), _f = _e.next();
+                        _k.label = 9;
+                    case 9:
+                        if (!!_f.done) return [3 /*break*/, 18];
+                        childSelector = _f.value;
                         node = ClassNode.classes[this._fullSelector + " " + childSelector];
                         if (!node)
-                            return [3 /*break*/, 9];
-                        _f = 0, tags_1 = tags;
-                        _g.label = 6;
-                    case 6:
-                        if (!(_f < tags_1.length)) return [3 /*break*/, 9];
-                        _tag = tags_1[_f];
+                            return [3 /*break*/, 17];
+                        _k.label = 10;
+                    case 10:
+                        _k.trys.push([10, 15, 16, 17]);
+                        tags_1 = (e_2 = void 0, __values(tags)), tags_1_1 = tags_1.next();
+                        _k.label = 11;
+                    case 11:
+                        if (!!tags_1_1.done) return [3 /*break*/, 14];
+                        _tag = tags_1_1.value;
                         return [4 /*yield*/, node.findClassElements(dom, _tag)];
-                    case 7:
-                        _g.sent();
-                        _g.label = 8;
-                    case 8:
-                        _f++;
-                        return [3 /*break*/, 6];
-                    case 9:
-                        _d++;
-                        return [3 /*break*/, 5];
-                    case 10: return [2 /*return*/];
+                    case 12:
+                        _k.sent();
+                        _k.label = 13;
+                    case 13:
+                        tags_1_1 = tags_1.next();
+                        return [3 /*break*/, 11];
+                    case 14: return [3 /*break*/, 17];
+                    case 15:
+                        e_2_1 = _k.sent();
+                        e_2 = { error: e_2_1 };
+                        return [3 /*break*/, 17];
+                    case 16:
+                        try {
+                            if (tags_1_1 && !tags_1_1.done && (_j = tags_1.return)) _j.call(tags_1);
+                        }
+                        finally { if (e_2) throw e_2.error; }
+                        return [7 /*endfinally*/];
+                    case 17:
+                        _f = _e.next();
+                        return [3 /*break*/, 9];
+                    case 18: return [3 /*break*/, 21];
+                    case 19:
+                        e_3_1 = _k.sent();
+                        e_3 = { error: e_3_1 };
+                        return [3 /*break*/, 21];
+                    case 20:
+                        try {
+                            if (_f && !_f.done && (_h = _e.return)) _h.call(_e);
+                        }
+                        finally { if (e_3) throw e_3.error; }
+                        return [7 /*endfinally*/];
+                    case 21: return [2 /*return*/];
                 }
             });
         });
@@ -227,9 +295,10 @@ var ClassNode = /** @class */ (function (_super) {
     ClassNode.prototype.deconstructTag = function (tag, dom, hasDeconstruct) {
         if (hasDeconstruct === void 0) { hasDeconstruct = null; }
         return __awaiter(this, void 0, void 0, function () {
-            var fncCls, fnc, _i, _a, key, on;
-            return __generator(this, function (_b) {
-                switch (_b.label) {
+            var fncCls, fnc, _a, _b, key, on;
+            var e_4, _c;
+            return __generator(this, function (_d) {
+                switch (_d.label) {
                     case 0:
                         if (hasDeconstruct === null)
                             hasDeconstruct = this.classScope.has('deconstruct');
@@ -237,24 +306,33 @@ var ClassNode = /** @class */ (function (_super) {
                         fncCls = this.classScope.get('deconstruct');
                         return [4 /*yield*/, fncCls.getFunction(tag.scope, dom, tag, false)];
                     case 1:
-                        fnc = _b.sent();
+                        fnc = _d.sent();
                         return [4 /*yield*/, fnc()];
                     case 2:
-                        _b.sent();
-                        _b.label = 3;
+                        _d.sent();
+                        _d.label = 3;
                     case 3:
-                        for (_i = 0, _a = this.classScope.keys; _i < _a.length; _i++) {
-                            key = _a[_i];
-                            if (this.classScope.get(key) instanceof OnNode_1.OnNode) {
-                                on = this.classScope.get(key);
-                                tag.removeContextEventHandlers(on);
+                        try {
+                            for (_a = __values(this.classScope.keys), _b = _a.next(); !_b.done; _b = _a.next()) {
+                                key = _b.value;
+                                if (this.classScope.get(key) instanceof OnNode_1.OnNode) {
+                                    on = this.classScope.get(key);
+                                    tag.removeContextEventHandlers(on);
+                                }
                             }
+                        }
+                        catch (e_4_1) { e_4 = { error: e_4_1 }; }
+                        finally {
+                            try {
+                                if (_b && !_b.done && (_c = _a.return)) _c.call(_a);
+                            }
+                            finally { if (e_4) throw e_4.error; }
                         }
                         tag.dispatch(this.fullSelector + ".deconstruct");
                         ClassNode.preppedTags[this.fullSelector].splice(ClassNode.preppedTags[this.fullSelector].indexOf(tag), 1);
                         return [4 /*yield*/, ClassNode.removePreparedClassFromElement(tag.element, this.fullSelector)];
                     case 4:
-                        _b.sent();
+                        _d.sent();
                         return [2 /*return*/];
                 }
             });
@@ -269,13 +347,23 @@ var ClassNode = /** @class */ (function (_super) {
         });
     };
     ClassNode.parse = function (lastNode, token, tokens) {
+        var e_5, _a;
         tokens.shift(); // skip 'class'
         var nameParts = [];
-        for (var _i = 0, tokens_1 = tokens; _i < tokens_1.length; _i++) {
-            var t = tokens_1[_i];
-            if (t.type === AST_1.TokenType.L_BRACE)
-                break;
-            nameParts.push(t.value);
+        try {
+            for (var tokens_1 = __values(tokens), tokens_1_1 = tokens_1.next(); !tokens_1_1.done; tokens_1_1 = tokens_1.next()) {
+                var t = tokens_1_1.value;
+                if (t.type === AST_1.TokenType.L_BRACE)
+                    break;
+                nameParts.push(t.value);
+            }
+        }
+        catch (e_5_1) { e_5 = { error: e_5_1 }; }
+        finally {
+            try {
+                if (tokens_1_1 && !tokens_1_1.done && (_a = tokens_1.return)) _a.call(tokens_1);
+            }
+            finally { if (e_5) throw e_5.error; }
         }
         var selector = nameParts.join('').trim();
         if (selector.startsWith('>'))
@@ -297,32 +385,43 @@ var ClassNode = /** @class */ (function (_super) {
         var _a;
         if (tag === void 0) { tag = null; }
         return __awaiter(this, void 0, void 0, function () {
-            var localSelectors, fullSelectors, _i, localSelectors_1, selector, parentSelectors, _b, fullSelectors_1, selector, isPrepped, path, elements, inElements, changed, _c, _d, childSelector, _e, _f, childElement;
-            return __generator(this, function (_g) {
-                switch (_g.label) {
+            var localSelectors, fullSelectors, localSelectors_1, localSelectors_1_1, selector, parentSelectors, fullSelectors_1, fullSelectors_1_1, selector, isPrepped, path, elements, inElements, changed, _b, _c, childSelector, _d, _e, childElement, e_6_1, e_7_1, e_8_1;
+            var e_9, _f, e_8, _g, e_7, _h, e_6, _j;
+            return __generator(this, function (_k) {
+                switch (_k.label) {
                     case 0:
-                        localSelectors = __spreadArray([element.tagName.toLowerCase()], Array.from(element.classList).map(function (c) { return "." + c; }));
-                        fullSelectors = __spreadArray([], ClassNode.getClassesForElement(element));
+                        localSelectors = __spreadArray([element.tagName.toLowerCase()], __read(Array.from(element.classList).map(function (c) { return "." + c; })));
+                        fullSelectors = __spreadArray([], __read(ClassNode.getClassesForElement(element)));
                         if (element.id)
                             localSelectors.push("#" + element.id);
-                        for (_i = 0, localSelectors_1 = localSelectors; _i < localSelectors_1.length; _i++) {
-                            selector = localSelectors_1[_i];
-                            parentSelectors = ClassNode.classParents[selector];
-                            if (parentSelectors) {
-                                fullSelectors.push.apply(fullSelectors, parentSelectors.filter(function (s) { return !fullSelectors.includes(s); }));
+                        try {
+                            for (localSelectors_1 = __values(localSelectors), localSelectors_1_1 = localSelectors_1.next(); !localSelectors_1_1.done; localSelectors_1_1 = localSelectors_1.next()) {
+                                selector = localSelectors_1_1.value;
+                                parentSelectors = ClassNode.classParents[selector];
+                                if (parentSelectors) {
+                                    fullSelectors.push.apply(fullSelectors, __spreadArray([], __read(parentSelectors.filter(function (s) { return !fullSelectors.includes(s); }))));
+                                }
                             }
+                        }
+                        catch (e_9_1) { e_9 = { error: e_9_1 }; }
+                        finally {
+                            try {
+                                if (localSelectors_1_1 && !localSelectors_1_1.done && (_f = localSelectors_1.return)) _f.call(localSelectors_1);
+                            }
+                            finally { if (e_9) throw e_9.error; }
                         }
                         if (!!tag) return [3 /*break*/, 2];
                         return [4 /*yield*/, dom.getTagForElement(element, true)];
                     case 1:
-                        tag = _g.sent();
-                        _g.label = 2;
+                        tag = _k.sent();
+                        _k.label = 2;
                     case 2:
-                        _b = 0, fullSelectors_1 = fullSelectors;
-                        _g.label = 3;
+                        _k.trys.push([2, 23, 24, 25]);
+                        fullSelectors_1 = __values(fullSelectors), fullSelectors_1_1 = fullSelectors_1.next();
+                        _k.label = 3;
                     case 3:
-                        if (!(_b < fullSelectors_1.length)) return [3 /*break*/, 14];
-                        selector = fullSelectors_1[_b];
+                        if (!!fullSelectors_1_1.done) return [3 /*break*/, 22];
+                        selector = fullSelectors_1_1.value;
                         isPrepped = ClassNode.getClassesForElement(element).includes(selector);
                         path = (_a = ClassNode.classes[selector]) === null || _a === void 0 ? void 0 : _a.getSelectorPath();
                         elements = dom.querySelectPath(path);
@@ -331,42 +430,81 @@ var ClassNode = /** @class */ (function (_super) {
                         if (!(inElements && !isPrepped)) return [3 /*break*/, 5];
                         return [4 /*yield*/, ClassNode.addElementClass(selector, element, dom, tag)];
                     case 4:
-                        _g.sent();
+                        _k.sent();
                         changed = true;
                         return [3 /*break*/, 7];
                     case 5:
                         if (!(!inElements && isPrepped)) return [3 /*break*/, 7];
                         return [4 /*yield*/, ClassNode.removeElementClass(selector, element, dom, tag)];
                     case 6:
-                        _g.sent();
+                        _k.sent();
                         changed = true;
-                        _g.label = 7;
+                        _k.label = 7;
                     case 7:
-                        if (!(changed && ClassNode.classChildren[selector].length > 0)) return [3 /*break*/, 13];
-                        _c = 0, _d = ClassNode.classChildren[selector];
-                        _g.label = 8;
+                        if (!(changed && ClassNode.classChildren[selector].length > 0)) return [3 /*break*/, 21];
+                        _k.label = 8;
                     case 8:
-                        if (!(_c < _d.length)) return [3 /*break*/, 13];
-                        childSelector = _d[_c];
-                        _e = 0, _f = Array.from(dom.querySelectorAll(childSelector, tag));
-                        _g.label = 9;
+                        _k.trys.push([8, 19, 20, 21]);
+                        _b = (e_7 = void 0, __values(ClassNode.classChildren[selector])), _c = _b.next();
+                        _k.label = 9;
                     case 9:
-                        if (!(_e < _f.length)) return [3 /*break*/, 12];
-                        childElement = _f[_e];
-                        return [4 /*yield*/, ClassNode.checkForClassChanges(childElement, dom, childElement[Tag_1.Tag.TaggedVariable] || null)];
+                        if (!!_c.done) return [3 /*break*/, 18];
+                        childSelector = _c.value;
+                        _k.label = 10;
                     case 10:
-                        _g.sent();
-                        _g.label = 11;
+                        _k.trys.push([10, 15, 16, 17]);
+                        _d = (e_6 = void 0, __values(Array.from(dom.querySelectorAll(childSelector, tag)))), _e = _d.next();
+                        _k.label = 11;
                     case 11:
-                        _e++;
-                        return [3 /*break*/, 9];
+                        if (!!_e.done) return [3 /*break*/, 14];
+                        childElement = _e.value;
+                        return [4 /*yield*/, ClassNode.checkForClassChanges(childElement, dom, childElement[Tag_1.Tag.TaggedVariable] || null)];
                     case 12:
-                        _c++;
-                        return [3 /*break*/, 8];
+                        _k.sent();
+                        _k.label = 13;
                     case 13:
-                        _b++;
+                        _e = _d.next();
+                        return [3 /*break*/, 11];
+                    case 14: return [3 /*break*/, 17];
+                    case 15:
+                        e_6_1 = _k.sent();
+                        e_6 = { error: e_6_1 };
+                        return [3 /*break*/, 17];
+                    case 16:
+                        try {
+                            if (_e && !_e.done && (_j = _d.return)) _j.call(_d);
+                        }
+                        finally { if (e_6) throw e_6.error; }
+                        return [7 /*endfinally*/];
+                    case 17:
+                        _c = _b.next();
+                        return [3 /*break*/, 9];
+                    case 18: return [3 /*break*/, 21];
+                    case 19:
+                        e_7_1 = _k.sent();
+                        e_7 = { error: e_7_1 };
+                        return [3 /*break*/, 21];
+                    case 20:
+                        try {
+                            if (_c && !_c.done && (_h = _b.return)) _h.call(_b);
+                        }
+                        finally { if (e_7) throw e_7.error; }
+                        return [7 /*endfinally*/];
+                    case 21:
+                        fullSelectors_1_1 = fullSelectors_1.next();
                         return [3 /*break*/, 3];
-                    case 14: return [2 /*return*/];
+                    case 22: return [3 /*break*/, 25];
+                    case 23:
+                        e_8_1 = _k.sent();
+                        e_8 = { error: e_8_1 };
+                        return [3 /*break*/, 25];
+                    case 24:
+                        try {
+                            if (fullSelectors_1_1 && !fullSelectors_1_1.done && (_g = fullSelectors_1.return)) _g.call(fullSelectors_1);
+                        }
+                        finally { if (e_8) throw e_8.error; }
+                        return [7 /*endfinally*/];
+                    case 25: return [2 /*return*/];
                 }
             });
         });

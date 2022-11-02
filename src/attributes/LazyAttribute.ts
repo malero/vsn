@@ -1,5 +1,6 @@
 import {Registry} from "../Registry";
 import {On} from "./On";
+import {Modifiers} from "../Modifiers";
 
 @Registry.attribute('vsn-lazy')
 export class LazyAttribute extends On {
@@ -12,14 +13,17 @@ export class LazyAttribute extends On {
     }
 
     public async connect() {
-        this.tag.addEventHandler('scroll', ['passive'], this.handleEvent, this);
+        if (!this.modifiers.has('active'))
+            this.modifiers.add('passive');
+
+        this.tag.addEventHandler('scroll', this.modifiers, this.handleEvent, this);
         await this.handleEvent();
     }
 
     async handleEvent(e?: Event) {
         if (!this.loaded && window.scrollY + window.outerHeight >= this.eleTop) {
             this.loaded = true;
-            await this.handler.evaluate(this.tag.scope, this.tag.dom, this.tag);
+            await super.handleEvent(e);
             this.tag.removeEventHandler('scroll', this.handleEvent, this);
         }
     }

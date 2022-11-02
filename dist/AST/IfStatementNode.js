@@ -50,10 +50,37 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
+var __read = (this && this.__read) || function (o, n) {
+    var m = typeof Symbol === "function" && o[Symbol.iterator];
+    if (!m) return o;
+    var i = m.call(o), r, ar = [], e;
+    try {
+        while ((n === void 0 || n-- > 0) && !(r = i.next()).done) ar.push(r.value);
+    }
+    catch (error) { e = { error: error }; }
+    finally {
+        try {
+            if (r && !r.done && (m = i["return"])) m.call(i);
+        }
+        finally { if (e) throw e.error; }
+    }
+    return ar;
+};
 var __spreadArray = (this && this.__spreadArray) || function (to, from) {
     for (var i = 0, il = from.length, j = to.length; i < il; i++, j++)
         to[j] = from[i];
     return to;
+};
+var __values = (this && this.__values) || function(o) {
+    var s = typeof Symbol === "function" && Symbol.iterator, m = s && o[s], i = 0;
+    if (m) return m.call(o);
+    if (o && typeof o.length === "number") return {
+        next: function () {
+            if (o && i >= o.length) o = void 0;
+            return { value: o && o[i++], done: !o };
+        }
+    };
+    throw new TypeError(s ? "Object is not iterable." : "Symbol.iterator is not defined.");
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.IfStatementNode = void 0;
@@ -69,30 +96,43 @@ var IfStatementNode = /** @class */ (function (_super) {
         return _this;
     }
     IfStatementNode.prototype._getChildNodes = function () {
-        return __spreadArray([], this.nodes);
+        return __spreadArray([], __read(this.nodes));
     };
     IfStatementNode.prototype.evaluate = function (scope, dom, tag) {
         if (tag === void 0) { tag = null; }
         return __awaiter(this, void 0, void 0, function () {
-            var _i, _a, condition, uno;
-            return __generator(this, function (_b) {
-                switch (_b.label) {
+            var _a, _b, condition, uno, e_1_1;
+            var e_1, _c;
+            return __generator(this, function (_d) {
+                switch (_d.label) {
                     case 0:
-                        _i = 0, _a = this.nodes;
-                        _b.label = 1;
+                        _d.trys.push([0, 6, 7, 8]);
+                        _a = __values(this.nodes), _b = _a.next();
+                        _d.label = 1;
                     case 1:
-                        if (!(_i < _a.length)) return [3 /*break*/, 5];
-                        condition = _a[_i];
+                        if (!!_b.done) return [3 /*break*/, 5];
+                        condition = _b.value;
                         return [4 /*yield*/, condition.evaluate(scope, dom, tag)];
                     case 2:
-                        uno = _b.sent();
+                        uno = _d.sent();
                         if (!uno) return [3 /*break*/, 4];
                         return [4 /*yield*/, condition.block.evaluate(scope, dom, tag)];
-                    case 3: return [2 /*return*/, _b.sent()];
+                    case 3: return [2 /*return*/, _d.sent()];
                     case 4:
-                        _i++;
+                        _b = _a.next();
                         return [3 /*break*/, 1];
-                    case 5: return [2 /*return*/];
+                    case 5: return [3 /*break*/, 8];
+                    case 6:
+                        e_1_1 = _d.sent();
+                        e_1 = { error: e_1_1 };
+                        return [3 /*break*/, 8];
+                    case 7:
+                        try {
+                            if (_b && !_b.done && (_c = _a.return)) _c.call(_a);
+                        }
+                        finally { if (e_1) throw e_1.error; }
+                        return [7 /*endfinally*/];
+                    case 8: return [2 /*return*/];
                 }
             });
         });

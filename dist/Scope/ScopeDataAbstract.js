@@ -14,10 +14,37 @@ var __extends = (this && this.__extends) || (function () {
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
     };
 })();
+var __read = (this && this.__read) || function (o, n) {
+    var m = typeof Symbol === "function" && o[Symbol.iterator];
+    if (!m) return o;
+    var i = m.call(o), r, ar = [], e;
+    try {
+        while ((n === void 0 || n-- > 0) && !(r = i.next()).done) ar.push(r.value);
+    }
+    catch (error) { e = { error: error }; }
+    finally {
+        try {
+            if (r && !r.done && (m = i["return"])) m.call(i);
+        }
+        finally { if (e) throw e.error; }
+    }
+    return ar;
+};
 var __spreadArray = (this && this.__spreadArray) || function (to, from) {
     for (var i = 0, il = from.length, j = to.length; i < il; i++, j++)
         to[j] = from[i];
     return to;
+};
+var __values = (this && this.__values) || function(o) {
+    var s = typeof Symbol === "function" && Symbol.iterator, m = s && o[s], i = 0;
+    if (m) return m.call(o);
+    if (o && typeof o.length === "number") return {
+        next: function () {
+            if (o && i >= o.length) o = void 0;
+            return { value: o && o[i++], done: !o };
+        }
+    };
+    throw new TypeError(s ? "Object is not iterable." : "Symbol.iterator is not defined.");
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ScopeDataAbstract = void 0;
@@ -68,8 +95,8 @@ var ScopeDataAbstract = /** @class */ (function (_super) {
             for (var _i = 0; _i < arguments.length; _i++) {
                 args[_i] = arguments[_i];
             }
-            _this.dispatch.apply(_this, __spreadArray(['change', name], args));
-            _this.dispatch.apply(_this, __spreadArray(['change:' + name], args));
+            _this.dispatch.apply(_this, __spreadArray(['change', name], __read(args)));
+            _this.dispatch.apply(_this, __spreadArray(['change:' + name], __read(args)));
         });
         return instance;
     };
@@ -78,23 +105,33 @@ var ScopeDataAbstract = /** @class */ (function (_super) {
     };
     Object.defineProperty(ScopeDataAbstract.prototype, "keys", {
         get: function () {
-            return __spreadArray([], this.__properties__);
+            return __spreadArray([], __read(this.__properties__));
         },
         enumerable: false,
         configurable: true
     });
     ScopeDataAbstract.prototype.getKeys = function () {
+        var e_1, _a;
         var tags = [];
         for (var _i = 0; _i < arguments.length; _i++) {
             tags[_i] = arguments[_i];
         }
         var keys = [];
-        for (var _a = 0, _b = this.keys; _a < _b.length; _a++) {
-            var key = _b[_a];
-            var property = this.getProperty(key);
-            if (property.hasLabels(tags)) {
-                keys.push(key);
+        try {
+            for (var _b = __values(this.keys), _c = _b.next(); !_c.done; _c = _b.next()) {
+                var key = _c.value;
+                var property = this.getProperty(key);
+                if (property.hasLabels(tags)) {
+                    keys.push(key);
+                }
             }
+        }
+        catch (e_1_1) { e_1 = { error: e_1_1 }; }
+        finally {
+            try {
+                if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
+            }
+            finally { if (e_1) throw e_1.error; }
         }
         return keys;
     };
@@ -107,22 +144,41 @@ var ScopeDataAbstract = /** @class */ (function (_super) {
         }
     };
     ScopeDataAbstract.prototype.getData = function () {
+        var e_2, _a, e_3, _b;
         var tags = [];
         for (var _i = 0; _i < arguments.length; _i++) {
             tags[_i] = arguments[_i];
         }
         var data = {};
-        propLoop: for (var _a = 0, _b = this.getProperties(); _a < _b.length; _a++) {
-            var key = _b[_a];
-            var property = this['__' + key];
-            for (var _c = 0, tags_1 = tags; _c < tags_1.length; _c++) {
-                var tag = tags_1[_c];
-                if (!property.hasLabel(tag))
-                    continue propLoop;
+        try {
+            propLoop: for (var _c = __values(this.getProperties()), _d = _c.next(); !_d.done; _d = _c.next()) {
+                var key = _d.value;
+                var property = this['__' + key];
+                try {
+                    for (var tags_1 = (e_3 = void 0, __values(tags)), tags_1_1 = tags_1.next(); !tags_1_1.done; tags_1_1 = tags_1.next()) {
+                        var tag = tags_1_1.value;
+                        if (!property.hasLabel(tag))
+                            continue propLoop;
+                    }
+                }
+                catch (e_3_1) { e_3 = { error: e_3_1 }; }
+                finally {
+                    try {
+                        if (tags_1_1 && !tags_1_1.done && (_b = tags_1.return)) _b.call(tags_1);
+                    }
+                    finally { if (e_3) throw e_3.error; }
+                }
+                if (this[key] == null || !property)
+                    continue;
+                data[key] = property.clean();
             }
-            if (this[key] == null || !property)
-                continue;
-            data[key] = property.clean();
+        }
+        catch (e_2_1) { e_2 = { error: e_2_1 }; }
+        finally {
+            try {
+                if (_d && !_d.done && (_a = _c.return)) _a.call(_c);
+            }
+            finally { if (e_2) throw e_2.error; }
         }
         return data;
     };
@@ -144,11 +200,21 @@ var ScopeDataAbstract = /** @class */ (function (_super) {
         return property;
     };
     ScopeDataAbstract.prototype.bindToProperties = function (event, properties, callback) {
-        for (var _i = 0, properties_1 = properties; _i < properties_1.length; _i++) {
-            var name_1 = properties_1[_i];
-            var _property = this['__' + name_1];
-            if (_property)
-                _property.on(event, callback);
+        var e_4, _a;
+        try {
+            for (var properties_1 = __values(properties), properties_1_1 = properties_1.next(); !properties_1_1.done; properties_1_1 = properties_1.next()) {
+                var name_1 = properties_1_1.value;
+                var _property = this['__' + name_1];
+                if (_property)
+                    _property.on(event, callback);
+            }
+        }
+        catch (e_4_1) { e_4 = { error: e_4_1 }; }
+        finally {
+            try {
+                if (properties_1_1 && !properties_1_1.done && (_a = properties_1.return)) _a.call(properties_1);
+            }
+            finally { if (e_4) throw e_4.error; }
         }
     };
     ScopeDataAbstract.prototype.setLastData = function () {
@@ -162,11 +228,21 @@ var ScopeDataAbstract = /** @class */ (function (_super) {
         this.setData(this._lastData);
     };
     ScopeDataAbstract.prototype.isModified = function () {
+        var e_5, _a;
         var oData = this._lastData, nData = this.getData();
-        for (var _i = 0, _a = this.getProperties(); _i < _a.length; _i++) {
-            var key = _a[_i];
-            if (nData[key] != oData[key])
-                return true;
+        try {
+            for (var _b = __values(this.getProperties()), _c = _b.next(); !_c.done; _c = _b.next()) {
+                var key = _c.value;
+                if (nData[key] != oData[key])
+                    return true;
+            }
+        }
+        catch (e_5_1) { e_5 = { error: e_5_1 }; }
+        finally {
+            try {
+                if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
+            }
+            finally { if (e_5) throw e_5.error; }
         }
         return false;
     };

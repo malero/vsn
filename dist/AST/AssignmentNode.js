@@ -50,6 +50,38 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
+var __read = (this && this.__read) || function (o, n) {
+    var m = typeof Symbol === "function" && o[Symbol.iterator];
+    if (!m) return o;
+    var i = m.call(o), r, ar = [], e;
+    try {
+        while ((n === void 0 || n-- > 0) && !(r = i.next()).done) ar.push(r.value);
+    }
+    catch (error) { e = { error: error }; }
+    finally {
+        try {
+            if (r && !r.done && (m = i["return"])) m.call(i);
+        }
+        finally { if (e) throw e.error; }
+    }
+    return ar;
+};
+var __spreadArray = (this && this.__spreadArray) || function (to, from) {
+    for (var i = 0, il = from.length, j = to.length; i < il; i++, j++)
+        to[j] = from[i];
+    return to;
+};
+var __values = (this && this.__values) || function(o) {
+    var s = typeof Symbol === "function" && Symbol.iterator, m = s && o[s], i = 0;
+    if (m) return m.call(o);
+    if (o && typeof o.length === "number") return {
+        next: function () {
+            if (o && i >= o.length) o = void 0;
+            return { value: o && o[i++], done: !o };
+        }
+    };
+    throw new TypeError(s ? "Object is not iterable." : "Symbol.iterator is not defined.");
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AssignmentNode = void 0;
 var Scope_1 = require("../Scope");
@@ -81,24 +113,25 @@ var AssignmentNode = /** @class */ (function (_super) {
     AssignmentNode.prototype.evaluate = function (scope, dom, tag) {
         if (tag === void 0) { tag = null; }
         return __awaiter(this, void 0, void 0, function () {
-            var scopes, name, inner, elements, values, _i, scopes_1, localScope, left, right;
-            return __generator(this, function (_a) {
-                switch (_a.label) {
+            var scopes, name, inner, elements, values, scopes_1, scopes_1_1, localScope, left, right, e_1_1;
+            var e_1, _a;
+            return __generator(this, function (_b) {
+                switch (_b.label) {
                     case 0:
                         scopes = [];
                         return [4 /*yield*/, this.left.name.evaluate(scope, dom, tag)];
                     case 1:
-                        name = _a.sent();
+                        name = _b.sent();
                         if (!(this.left instanceof ScopeMemberNode_1.ScopeMemberNode)) return [3 /*break*/, 3];
                         return [4 /*yield*/, this.left.scope.evaluate(scope, dom, tag)];
                     case 2:
-                        inner = _a.sent();
+                        inner = _b.sent();
                         if (this.left.scope instanceof ElementQueryNode_1.ElementQueryNode) {
                             if (this.left.scope.first) {
                                 scopes.push(inner);
                             }
                             else {
-                                scopes.push.apply(scopes, inner);
+                                scopes.push.apply(scopes, __spreadArray([], __read(inner)));
                             }
                         }
                         else if (inner instanceof Scope_1.Scope) {
@@ -115,7 +148,7 @@ var AssignmentNode = /** @class */ (function (_super) {
                         if (!((this.left instanceof ElementAttributeNode_1.ElementAttributeNode || this.left instanceof ElementStyleNode_1.ElementStyleNode) && this.left.elementRef)) return [3 /*break*/, 5];
                         return [4 /*yield*/, this.left.elementRef.evaluate(scope, dom, tag)];
                     case 4:
-                        elements = _a.sent();
+                        elements = _b.sent();
                         if (this.left.elementRef.first || elements instanceof DOMObject_1.DOMObject) {
                             scopes.push(elements);
                         }
@@ -125,38 +158,52 @@ var AssignmentNode = /** @class */ (function (_super) {
                         return [3 /*break*/, 6];
                     case 5:
                         scopes.push(scope);
-                        _a.label = 6;
+                        _b.label = 6;
                     case 6:
                         values = [];
-                        _i = 0, scopes_1 = scopes;
-                        _a.label = 7;
+                        _b.label = 7;
                     case 7:
-                        if (!(_i < scopes_1.length)) return [3 /*break*/, 13];
-                        localScope = scopes_1[_i];
-                        if (!localScope)
-                            return [3 /*break*/, 12];
-                        if (!(localScope instanceof DOMObject_1.DOMObject)) return [3 /*break*/, 9];
-                        return [4 /*yield*/, this.handleDOMObject(name, dom, scope, localScope, tag)];
+                        _b.trys.push([7, 15, 16, 17]);
+                        scopes_1 = __values(scopes), scopes_1_1 = scopes_1.next();
+                        _b.label = 8;
                     case 8:
-                        _a.sent();
-                        return [3 /*break*/, 12];
+                        if (!!scopes_1_1.done) return [3 /*break*/, 14];
+                        localScope = scopes_1_1.value;
+                        if (!localScope)
+                            return [3 /*break*/, 13];
+                        if (!(localScope instanceof DOMObject_1.DOMObject)) return [3 /*break*/, 10];
+                        return [4 /*yield*/, this.handleDOMObject(name, dom, scope, localScope, tag)];
                     case 9:
+                        _b.sent();
+                        return [3 /*break*/, 13];
+                    case 10:
                         if (localScope['$wrapped'] && localScope['$scope']) {
                             localScope = localScope['$scope'];
                         }
                         return [4 /*yield*/, this.left.evaluate(scope, dom, tag)];
-                    case 10:
-                        left = _a.sent();
-                        return [4 /*yield*/, this.right.evaluate(scope, dom, tag)];
                     case 11:
-                        right = _a.sent();
+                        left = _b.sent();
+                        return [4 /*yield*/, this.right.evaluate(scope, dom, tag)];
+                    case 12:
+                        right = _b.sent();
                         left = this.handle(name, left, right, localScope);
                         values.push(left);
-                        _a.label = 12;
-                    case 12:
-                        _i++;
-                        return [3 /*break*/, 7];
-                    case 13: return [2 /*return*/, values.length > 1 ? values : values[0]];
+                        _b.label = 13;
+                    case 13:
+                        scopes_1_1 = scopes_1.next();
+                        return [3 /*break*/, 8];
+                    case 14: return [3 /*break*/, 17];
+                    case 15:
+                        e_1_1 = _b.sent();
+                        e_1 = { error: e_1_1 };
+                        return [3 /*break*/, 17];
+                    case 16:
+                        try {
+                            if (scopes_1_1 && !scopes_1_1.done && (_a = scopes_1.return)) _a.call(scopes_1);
+                        }
+                        finally { if (e_1) throw e_1.error; }
+                        return [7 /*endfinally*/];
+                    case 17: return [2 /*return*/, values.length > 1 ? values : values[0]];
                 }
             });
         });
@@ -266,15 +313,16 @@ var AssignmentNode = /** @class */ (function (_super) {
         });
     };
     AssignmentNode.prototype.handleArray = function (key, left, right, scope) {
+        var e_2, _a;
         if (!(right instanceof Array))
             right = [right];
         switch (this.type) {
             case AST_1.TokenType.ASSIGN:
                 left.splice(0, left.length);
-                left.push.apply(left, right);
+                left.push.apply(left, __spreadArray([], __read(right)));
                 break;
             case AST_1.TokenType.ADD_ASSIGN:
-                left.push.apply(left, right);
+                left.push.apply(left, __spreadArray([], __read(right)));
                 break;
             case AST_1.TokenType.SUBTRACT_ASSIGN:
                 for (var i = left.length - 1; i >= 0; i--) {
@@ -285,15 +333,24 @@ var AssignmentNode = /** @class */ (function (_super) {
                 }
                 break;
             case AST_1.TokenType.TILDE:
-                for (var _i = 0, right_1 = right; _i < right_1.length; _i++) {
-                    var toggle = right_1[_i];
-                    var index = left.indexOf(toggle);
-                    if (index > -1) {
-                        left.splice(index, 1);
+                try {
+                    for (var right_1 = __values(right), right_1_1 = right_1.next(); !right_1_1.done; right_1_1 = right_1.next()) {
+                        var toggle = right_1_1.value;
+                        var index = left.indexOf(toggle);
+                        if (index > -1) {
+                            left.splice(index, 1);
+                        }
+                        else {
+                            left.push(toggle);
+                        }
                     }
-                    else {
-                        left.push(toggle);
+                }
+                catch (e_2_1) { e_2 = { error: e_2_1 }; }
+                finally {
+                    try {
+                        if (right_1_1 && !right_1_1.done && (_a = right_1.return)) _a.call(right_1);
                     }
+                    finally { if (e_2) throw e_2.error; }
                 }
                 break;
         }

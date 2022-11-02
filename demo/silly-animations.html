@@ -10,30 +10,18 @@
     </style>
 </head>
 <body>
-<ul>
-    <li class="test test-1" id="test-1">Test 1</li>
-    <li class="test test-2">Test 2</li>
-    <li class="test test-1">Test 3</li>
-</ul>
+<div id="include"></div>
+<div class="animations-container">
+    <ul class="animations">
+        <li class="test test-1" id="test-1">Test 1</li>
+        <li class="test test-2">Test 2</li>
+        <li class="test test-1">Test 3</li>
+    </ul>
+    <ul class="testing-stuff">
+        <li>Testing</li>
+    </ul>
+</div>
+<a href="./resources/xhr-animations.html" vsn-xhr="#include.@html = response">GO</a>
 <script type="text/javascript" src="vsn.js"></script>
-<script type="text/vsn" vsn-script|defer>
-    with ?(.test) {
-        $opacity = 0;
-        wait(1);
-        $opacity = 1;
-        wait(1);
-        $opacity = 0.5;
-    }
-    wait(1);
-    with|sequential ?(.test) {
-        $opacity = 0;
-        wait(0.25);
-        $opacity = 1;
-    }
-    a = {'b':1};
-    with a {
-        log(b);
-    }
-</script>
 </body>
 </html>

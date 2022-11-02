@@ -1,8 +1,35 @@
 "use strict";
+var __read = (this && this.__read) || function (o, n) {
+    var m = typeof Symbol === "function" && o[Symbol.iterator];
+    if (!m) return o;
+    var i = m.call(o), r, ar = [], e;
+    try {
+        while ((n === void 0 || n-- > 0) && !(r = i.next()).done) ar.push(r.value);
+    }
+    catch (error) { e = { error: error }; }
+    finally {
+        try {
+            if (r && !r.done && (m = i["return"])) m.call(i);
+        }
+        finally { if (e) throw e.error; }
+    }
+    return ar;
+};
 var __spreadArray = (this && this.__spreadArray) || function (to, from) {
     for (var i = 0, il = from.length, j = to.length; i < il; i++, j++)
         to[j] = from[i];
     return to;
+};
+var __values = (this && this.__values) || function(o) {
+    var s = typeof Symbol === "function" && Symbol.iterator, m = s && o[s], i = 0;
+    if (m) return m.call(o);
+    if (o && typeof o.length === "number") return {
+        next: function () {
+            if (o && i >= o.length) o = void 0;
+            return { value: o && o[i++], done: !o };
+        }
+    };
+    throw new TypeError(s ? "Object is not iterable." : "Symbol.iterator is not defined.");
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.benchmarkResultsAll = exports.benchmarkResultsMatch = exports.benchmarkResults = exports.benchmarkEnd = exports.benchmarkStart = exports.benchmark = exports.BENCHMARKS = void 0;
@@ -14,7 +41,7 @@ function totags(tags) {
     return tags.map(function (tag) { return tag.toLowerCase(); });
 }
 function topath(name, tags) {
-    tags = __spreadArray([], totags(tags));
+    tags = __spreadArray([], __read(totags(tags)));
     tags.sort();
     return tags.length && (name + "." + tags.join('.')).toLowerCase() || name && name.toLowerCase() || 'nopath';
 }
@@ -58,7 +85,7 @@ function benchmark(name, tags, print) {
                 tags = totags(tags);
                 if (target.__BENCHMARK_NAME__ || target.__BENCHMARK_TAGS__) {
                     tags.push(name || key);
-                    tags.push.apply(tags, target.__BENCHMARK_TAGS__);
+                    tags.push.apply(tags, __spreadArray([], __read(target.__BENCHMARK_TAGS__)));
                 }
                 var start = new Date();
                 var result = method_1.apply(this, args);
@@ -99,17 +126,27 @@ function benchmarkEnd(name, tags, print) {
 }
 exports.benchmarkEnd = benchmarkEnd;
 function benchmarkResults(name, tags) {
+    var e_1, _a;
     if (tags === void 0) { tags = null; }
     if (VisionHelper_1.VisionHelper.doBenchmark) {
         var path = topath(name, tags);
         var calls = 0;
         var time = 0;
-        for (var _i = 0, BENCHMARKS_1 = exports.BENCHMARKS; _i < BENCHMARKS_1.length; _i++) {
-            var bm = BENCHMARKS_1[_i];
-            if ((!tags && bm.name === name) || bm.path === path || !name && hasTags(bm.tags, tags)) {
-                calls++;
-                time += bm.time;
+        try {
+            for (var BENCHMARKS_1 = __values(exports.BENCHMARKS), BENCHMARKS_1_1 = BENCHMARKS_1.next(); !BENCHMARKS_1_1.done; BENCHMARKS_1_1 = BENCHMARKS_1.next()) {
+                var bm = BENCHMARKS_1_1.value;
+                if ((!tags && bm.name === name) || bm.path === path || !name && hasTags(bm.tags, tags)) {
+                    calls++;
+                    time += bm.time;
+                }
             }
+        }
+        catch (e_1_1) { e_1 = { error: e_1_1 }; }
+        finally {
+            try {
+                if (BENCHMARKS_1_1 && !BENCHMARKS_1_1.done && (_a = BENCHMARKS_1.return)) _a.call(BENCHMARKS_1);
+            }
+            finally { if (e_1) throw e_1.error; }
         }
         return {
             name: name,
@@ -121,17 +158,27 @@ function benchmarkResults(name, tags) {
 }
 exports.benchmarkResults = benchmarkResults;
 function benchmarkResultsMatch(regexp) {
+    var e_2, _a;
     if (VisionHelper_1.VisionHelper.doBenchmark) {
         var data = {};
         var calls = 0;
         var time = 0;
-        for (var _i = 0, BENCHMARKS_2 = exports.BENCHMARKS; _i < BENCHMARKS_2.length; _i++) {
-            var bm = BENCHMARKS_2[_i];
-            if (regexp.test(bm.name) && !data[bm.name]) {
-                data[bm.name] = benchmarkResults(bm.name);
-                calls += data[bm.name].calls;
-                time += data[bm.name].time;
+        try {
+            for (var BENCHMARKS_2 = __values(exports.BENCHMARKS), BENCHMARKS_2_1 = BENCHMARKS_2.next(); !BENCHMARKS_2_1.done; BENCHMARKS_2_1 = BENCHMARKS_2.next()) {
+                var bm = BENCHMARKS_2_1.value;
+                if (regexp.test(bm.name) && !data[bm.name]) {
+                    data[bm.name] = benchmarkResults(bm.name);
+                    calls += data[bm.name].calls;
+                    time += data[bm.name].time;
+                }
             }
+        }
+        catch (e_2_1) { e_2 = { error: e_2_1 }; }
+        finally {
+            try {
+                if (BENCHMARKS_2_1 && !BENCHMARKS_2_1.done && (_a = BENCHMARKS_2.return)) _a.call(BENCHMARKS_2);
+            }
+            finally { if (e_2) throw e_2.error; }
         }
         data['ALL'] = {
             name: 'ALL',
@@ -144,18 +191,28 @@ function benchmarkResultsMatch(regexp) {
 }
 exports.benchmarkResultsMatch = benchmarkResultsMatch;
 function benchmarkResultsAll() {
+    var e_3, _a;
     if (VisionHelper_1.VisionHelper.doBenchmark) {
         var data = {};
         var calls = 0;
         var time = 0;
-        for (var _i = 0, BENCHMARKS_3 = exports.BENCHMARKS; _i < BENCHMARKS_3.length; _i++) {
-            var bm = BENCHMARKS_3[_i];
-            if (!data[bm.name]) {
-                var name_1 = bm.path ? bm.name + "." + bm.path : bm.name;
-                data[name_1] = benchmarkResults(bm.name, bm.tags);
-                calls += data[name_1].calls;
-                time += data[name_1].time;
+        try {
+            for (var BENCHMARKS_3 = __values(exports.BENCHMARKS), BENCHMARKS_3_1 = BENCHMARKS_3.next(); !BENCHMARKS_3_1.done; BENCHMARKS_3_1 = BENCHMARKS_3.next()) {
+                var bm = BENCHMARKS_3_1.value;
+                if (!data[bm.name]) {
+                    var name_1 = bm.path ? bm.name + "." + bm.path : bm.name;
+                    data[name_1] = benchmarkResults(bm.name, bm.tags);
+                    calls += data[name_1].calls;
+                    time += data[name_1].time;
+                }
             }
+        }
+        catch (e_3_1) { e_3 = { error: e_3_1 }; }
+        finally {
+            try {
+                if (BENCHMARKS_3_1 && !BENCHMARKS_3_1.done && (_a = BENCHMARKS_3.return)) _a.call(BENCHMARKS_3);
+            }
+            finally { if (e_3) throw e_3.error; }
         }
         data['ALL'] = {
             name: 'ALL',
