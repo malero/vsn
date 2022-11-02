@@ -415,7 +415,16 @@ export const AttributableNodes = [
     ElementAttributeNode
 ];
 
+export interface ExecutionContext {
+    scope: Scope;
+    dom: DOM;
+    tag: Tag;
+    tree: Tree;
+
+}
+
 export class Tree {
+    protected static executing: Set<ExecutionContext> = new Set<ExecutionContext>();
     protected static cache: { [key: string]: Node } = {};
     protected _root: Node;
 
@@ -438,7 +447,16 @@ export class Tree {
     }
 
     async evaluate(scope: Scope, dom: DOM, tag: Tag = null) {
-        return await this._root.evaluate(scope, dom, tag);
+        const context = {
+            scope: scope,
+            dom: dom,
+            tag: tag,
+            tree: this
+        };
+        Tree.executing.add(context);
+        const r = await this._root.evaluate(scope, dom, tag);
+        Tree.executing.delete(context);
+        return r;
     }
 
     async prepare(scope: Scope, dom: DOM, tag: Tag = null) {
@@ -461,6 +479,12 @@ export class Tree {
             const name = await node.name.evaluate(scope, dom, tag);
             _scope.on(`change:${name}`, fnc);
         }
+    }
+
+    public static reprepareExecutingTrees() {
+        Tree.executing.forEach(async context => {
+            await context.tree.prepare(context.scope, context.dom, context.tag);
+        });
     }
 
     public static tokenize(code: string): Token[] {

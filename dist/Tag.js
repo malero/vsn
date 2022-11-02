@@ -487,7 +487,9 @@ var Tag = /** @class */ (function (_super) {
                 this.element.innerText = value;
             else if (key === '@html') {
                 this.element.innerHTML = value;
-                DOM_1.DOM.instance.buildFrom(this.element);
+                DOM_1.DOM.instance.buildFrom(this.element).then(function (tag) {
+                    AST_1.Tree.reprepareExecutingTrees();
+                });
             }
             else if (key === '@value')
                 this.value = value;

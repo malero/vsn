@@ -405,7 +405,9 @@ export class Tag extends DOMObject {
                 this.element.innerText = value;
             else if (key === '@html') {
                 this.element.innerHTML = value;
-                DOM.instance.buildFrom(this.element);
+                DOM.instance.buildFrom(this.element).then((tag) => {
+                    Tree.reprepareExecutingTrees();
+                });
             } else if (key === '@value')
                 this.value = value;
             else if (key === '@class' && value) {

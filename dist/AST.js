@@ -444,10 +444,22 @@ var Tree = /** @class */ (function () {
     Tree.prototype.evaluate = function (scope, dom, tag) {
         if (tag === void 0) { tag = null; }
         return __awaiter(this, void 0, void 0, function () {
+            var context, r;
             return __generator(this, function (_a) {
                 switch (_a.label) {
-                    case 0: return [4 /*yield*/, this._root.evaluate(scope, dom, tag)];
-                    case 1: return [2 /*return*/, _a.sent()];
+                    case 0:
+                        context = {
+                            scope: scope,
+                            dom: dom,
+                            tag: tag,
+                            tree: this
+                        };
+                        Tree.executing.add(context);
+                        return [4 /*yield*/, this._root.evaluate(scope, dom, tag)];
+                    case 1:
+                        r = _a.sent();
+                        Tree.executing.delete(context);
+                        return [2 /*return*/, r];
                 }
             });
         });
@@ -504,6 +516,19 @@ var Tree = /** @class */ (function () {
                 }
             });
         });
+    };
+    Tree.reprepareExecutingTrees = function () {
+        var _this = this;
+        Tree.executing.forEach(function (context) { return __awaiter(_this, void 0, void 0, function () {
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0: return [4 /*yield*/, context.tree.prepare(context.scope, context.dom, context.tag)];
+                    case 1:
+                        _a.sent();
+                        return [2 /*return*/];
+                }
+            });
+        }); });
     };
     Tree.tokenize = function (code) {
         var tokens = [];
@@ -906,6 +931,7 @@ var Tree = /** @class */ (function () {
             });
         });
     };
+    Tree.executing = new Set();
     Tree.cache = {};
     return Tree;
 }());

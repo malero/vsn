@@ -93,23 +93,21 @@ var ElementStyleNode = /** @class */ (function (_super) {
             var _this = this;
             return __generator(this, function (_a) {
                 switch (_a.label) {
-                    case 0: return [4 /*yield*/, this.prepare(scope, dom, tag)];
-                    case 1:
-                        _a.sent();
-                        if (!this.elementRef) return [3 /*break*/, 3];
+                    case 0:
+                        if (!this.elementRef) return [3 /*break*/, 2];
                         return [4 /*yield*/, this.elementRef.evaluate(scope, dom, tag, true)];
-                    case 2:
+                    case 1:
                         tags = _a.sent();
-                        return [3 /*break*/, 4];
-                    case 3:
+                        return [3 /*break*/, 3];
+                    case 2:
                         if (tag) {
                             tags = new TagList_1.TagList(tag);
                         }
                         else {
                             return [2 /*return*/];
                         }
-                        _a.label = 4;
-                    case 4:
+                        _a.label = 3;
+                    case 3:
                         if (tags.length === 1)
                             return [2 /*return*/, tags[0].scope.get("$" + this.attributeName)];
                         return [2 /*return*/, tags.map(function (tag) { return tag.scope.get("$" + _this.attributeName); })];

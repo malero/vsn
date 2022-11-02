@@ -23,6 +23,10 @@
 
 <a href="./xhr-response.html" vsn-xhr:put="@text = response" vsn-on:xhr-error="@text='error';wait(3);@text='Try Again'" id="link-put">Link</a>
 
+<div id="html-container"></div>
+<a href="./resources/xhr-html.html" vsn-xhr="#html-container.@html = response;?(#html-header).$color='yellow';" id="link-post">Link</a>
+
+
 <script type="text/javascript" src="vsn.js"></script>
 </body>
 </html>

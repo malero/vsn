@@ -30,11 +30,8 @@ export class AssignmentNode extends Node implements TreeNode {
 
     async evaluate(scope: Scope, dom: DOM, tag: Tag = null) {
         let scopes = [];
-        if (scope.isGarbage && tag) { // Current garbage collection implementation is naive
-            scope = tag.scope;
-        }
-
         const name: string = await this.left.name.evaluate(scope, dom, tag);
+
         if (this.left instanceof ScopeMemberNode) {
             const inner = await this.left.scope.evaluate(scope, dom, tag);
             if (this.left.scope instanceof ElementQueryNode) {
@@ -63,6 +60,7 @@ export class AssignmentNode extends Node implements TreeNode {
 
         const values = [];
         for (let localScope of scopes) {
+            if (!localScope) continue;
             if (localScope instanceof DOMObject) {
                 await this.handleDOMObject(name, dom, scope, localScope, tag);
             } else {

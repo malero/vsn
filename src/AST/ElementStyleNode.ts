@@ -36,7 +36,6 @@ export class ElementStyleNode extends Node implements TreeNode {
 
     async evaluate(scope: Scope, dom: DOM, tag: Tag = null) {
         let tags: TagList;
-        await this.prepare(scope, dom, tag);
         if (this.elementRef) {
             tags = await this.elementRef.evaluate(scope, dom, tag, true);
         } else if (tag) {

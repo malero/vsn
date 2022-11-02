@@ -1,4 +1,4 @@
-import {Scope} from "../Scope";
+import {FunctionScope, Scope} from "../Scope";
 import {DOM} from "../DOM";
 import {Tag} from "../Tag";
 import {Token, Tree, TreeNode} from "../AST";
@@ -33,6 +33,9 @@ export class NamedStackNode extends Node implements TreeNode {
     }
 
     public async evaluate(scope: Scope, dom: DOM, tag: Tag = null) {
+        if (scope instanceof FunctionScope) { // NamedStackNode doesn't work with FunctionScope
+            scope = scope.parentScope;
+        }
         const stackName = await this.stackName.evaluate(scope, dom, tag);
         let execute = false;
         if (!NamedStackNode.stacks[stackName]) {

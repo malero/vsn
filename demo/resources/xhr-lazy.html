@@ -13,6 +13,7 @@
                 func construct() {
                     log('.simple input construct');
                     a|float = 0.0;
+                    @value = 'wut';
                 }
 
                 func deconstruct() {
@@ -24,10 +25,26 @@
                     a += 0.1;
                     log(a);
                 }
+
+                on mouseenter() {
+                    with ?>(:parent label) {
+                        @originaltext = @text;
+                        @text = 'hovered';
+                    }
+                }
+
+                on mouseleave() {
+                    with ?>(:parent label) {
+                        @text = @originaltext;
+                    }
+                }
             }
         }
     </script>
-    <div class="simple"><input type="text" /></div>
+    <div class="simple">
+        <label>Simple Input</label>
+        <input type="text" />
+    </div>
     <div class="simple"><input type="button" /></div>
     <button vsn-on:click="?(.simple)[0].@class -= 'simple'">Remove</button>
 </div>

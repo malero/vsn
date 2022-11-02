@@ -100,8 +100,15 @@ export interface IBlockInfo {
     closeCharacter: string;
 }
 export declare const AttributableNodes: (typeof RootScopeMemberNode | typeof ScopeMemberNode | typeof ElementAttributeNode)[];
+export interface ExecutionContext {
+    scope: Scope;
+    dom: DOM;
+    tag: Tag;
+    tree: Tree;
+}
 export declare class Tree {
     readonly code: string;
+    protected static executing: Set<ExecutionContext>;
     protected static cache: {
         [key: string]: Node;
     };
@@ -112,6 +119,7 @@ export declare class Tree {
     evaluate(scope: Scope, dom: DOM, tag?: Tag): Promise<any>;
     prepare(scope: Scope, dom: DOM, tag?: Tag): Promise<void>;
     bindToScopeChanges(scope: any, fnc: any, dom: DOM, tag?: Tag): Promise<void>;
+    static reprepareExecutingTrees(): void;
     static tokenize(code: string): Token[];
     static stripWhiteSpace(tokens: Token[]): Token[];
     static processTokens(tokens: Token[], _node?: Node, _lastBlock?: Node): BlockNode;

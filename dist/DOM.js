@@ -564,7 +564,7 @@ var DOM = /** @class */ (function (_super) {
                         found = [];
                         for (_i = 0, elements_2 = elements; _i < elements_2.length; _i++) {
                             element = elements_2[_i];
-                            if (element[Tag_1.Tag.TaggedVariable]) {
+                            if (element && element[Tag_1.Tag.TaggedVariable]) {
                                 tags.push(element[Tag_1.Tag.TaggedVariable]);
                                 found.push(element);
                             }
@@ -602,7 +602,7 @@ var DOM = /** @class */ (function (_super) {
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
-                        if (element[Tag_1.Tag.TaggedVariable])
+                        if (element && element[Tag_1.Tag.TaggedVariable])
                             return [2 /*return*/, element[Tag_1.Tag.TaggedVariable]];
                         if (!(element && create)) return [3 /*break*/, 3];
                         if (element instanceof HTMLElement)

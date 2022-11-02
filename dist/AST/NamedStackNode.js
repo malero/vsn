@@ -52,6 +52,7 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.NamedStackNode = void 0;
+var Scope_1 = require("../Scope");
 var AST_1 = require("../AST");
 var Node_1 = require("./Node");
 var LiteralNode_1 = require("./LiteralNode");
@@ -76,7 +77,11 @@ var NamedStackNode = /** @class */ (function (_super) {
             var stackName, execute;
             return __generator(this, function (_a) {
                 switch (_a.label) {
-                    case 0: return [4 /*yield*/, this.stackName.evaluate(scope, dom, tag)];
+                    case 0:
+                        if (scope instanceof Scope_1.FunctionScope) { // NamedStackNode doesn't work with FunctionScope
+                            scope = scope.parentScope;
+                        }
+                        return [4 /*yield*/, this.stackName.evaluate(scope, dom, tag)];
                     case 1:
                         stackName = _a.sent();
                         execute = false;

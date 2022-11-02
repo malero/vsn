@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Events</title>
+
+    <style></style>
+</head>
+<body>
+
+<div id="container">
+    <div class="test-container">
+        <div class="test"></div>
+    </div>
+    <button vsn-on:click="with ?(.test) {log('wut');wait(1);@html += 'Hello World!';}">Click Me</button>
+</div>
+<script type="text/javascript" src="../vsn.js"></script>
+</body>
+</html>

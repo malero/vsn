@@ -86,9 +86,6 @@ var AssignmentNode = /** @class */ (function (_super) {
                 switch (_a.label) {
                     case 0:
                         scopes = [];
-                        if (scope.isGarbage && tag) { // Current garbage collection implementation is naive
-                            scope = tag.scope;
-                        }
                         return [4 /*yield*/, this.left.name.evaluate(scope, dom, tag)];
                     case 1:
                         name = _a.sent();
@@ -136,6 +133,8 @@ var AssignmentNode = /** @class */ (function (_super) {
                     case 7:
                         if (!(_i < scopes_1.length)) return [3 /*break*/, 13];
                         localScope = scopes_1[_i];
+                        if (!localScope)
+                            return [3 /*break*/, 12];
                         if (!(localScope instanceof DOMObject_1.DOMObject)) return [3 /*break*/, 9];
                         return [4 /*yield*/, this.handleDOMObject(name, dom, scope, localScope, tag)];
                     case 8:

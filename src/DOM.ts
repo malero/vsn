@@ -313,7 +313,7 @@ export class DOM extends EventDispatcher {
         const found: Element[] = [];
 
         for (const element of elements) {
-            if (element[Tag.TaggedVariable]) {
+            if (element && element[Tag.TaggedVariable]) {
                 tags.push(element[Tag.TaggedVariable]);
                 found.push(element);
             }
@@ -337,7 +337,7 @@ export class DOM extends EventDispatcher {
     }
 
     async getTagForElement(element: Element, create: boolean = false, forComponent: boolean = false) {
-        if (element[Tag.TaggedVariable])
+        if (element && element[Tag.TaggedVariable])
             return element[Tag.TaggedVariable];
 
         if (element && create) {
