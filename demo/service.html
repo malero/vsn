@@ -6,10 +6,10 @@
 </head>
 <body>
 
-<div id="testing" vsn-service:demo="ServiceDemo">
-    <button vsn-on:click="demo.add(1)">Add</button>
+<div id="testing" vsn-service:demo="ServiceDemo" vsn-on:set-value="log('value', $event.detail.value);demo.count = $event.detail.value">
+    <button vsn-on:click="demo.add(1)" id="add-button">Add</button>
     <span vsn-bind="demo.count"></span>
-    <span vsn-exec="#testing.demo.count = 15">Reset</span>
+    <span vsn-on:click="#testing.demo.count = 0">Reset</span>
 </div>
 
 <div vsn-service:demo2="ServiceDemo">

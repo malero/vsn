@@ -68,6 +68,8 @@ var TagList_1 = require("../Tag/TagList");
 var DOMObject_1 = require("../DOM/DOMObject");
 var ElementQueryNode_1 = require("./ElementQueryNode");
 var ScopeNodeAbstract_1 = require("./ScopeNodeAbstract");
+var ObjectAccessor_1 = require("../Scope/ObjectAccessor");
+var ScopeAbstract_1 = require("../Scope/ScopeAbstract");
 var ScopeMemberNode = /** @class */ (function (_super) {
     __extends(ScopeMemberNode, _super);
     function ScopeMemberNode(scope, name) {
@@ -122,6 +124,8 @@ var ScopeMemberNode = /** @class */ (function (_super) {
                         parent_1 = scopes_1_1.value;
                         if (parent_1 instanceof DOMObject_1.DOMObject)
                             parent_1 = parent_1.scope;
+                        else if (parent_1 && !(parent_1 instanceof ScopeAbstract_1.ScopeAbstract))
+                            parent_1 = new ObjectAccessor_1.ObjectAccessor(parent_1);
                         if (!!parent_1) return [3 /*break*/, 7];
                         _a = Error;
                         _b = "Cannot access \"";

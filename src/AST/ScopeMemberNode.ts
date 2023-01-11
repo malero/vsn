@@ -7,6 +7,8 @@ import {TreeNode} from "../AST";
 import {Node} from "./Node";
 import {ElementQueryNode} from "./ElementQueryNode";
 import {ScopeNodeAbstract} from "./ScopeNodeAbstract";
+import {ObjectAccessor} from "../Scope/ObjectAccessor";
+import {ScopeAbstract} from "../Scope/ScopeAbstract";
 
 export class ScopeMemberNode extends ScopeNodeAbstract implements TreeNode {
     constructor(
@@ -45,6 +47,8 @@ export class ScopeMemberNode extends ScopeNodeAbstract implements TreeNode {
         for (let parent of scopes) {
             if (parent instanceof DOMObject)
                 parent = parent.scope;
+            else if (parent && !(parent instanceof ScopeAbstract))
+                parent = new ObjectAccessor(parent);
 
             if (!parent) {
                 throw Error(`Cannot access "${await this.name.evaluate(scope, dom, tag)}" of undefined.`);

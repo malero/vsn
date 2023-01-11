@@ -152,9 +152,9 @@ var ClassNode = /** @class */ (function (_super) {
                         return [4 /*yield*/, this.findClassElements(dom)];
                     case 2:
                         _a.sent();
-                        return [3 /*break*/, 4];
+                        _a.label = 3;
                     case 3:
-                        dom.once('builtRoot', function () { return _this.findClassElements(dom); });
+                        dom.on('built', function () { return _this.findClassElements(dom); });
                         _a.label = 4;
                     case 4: return [3 /*break*/, 7];
                     case 5:
@@ -266,6 +266,10 @@ var ClassNode = /** @class */ (function (_super) {
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
+                        if (ClassNode.preppedTags[this.fullSelector].indexOf(tag) !== -1) {
+                            return [2 /*return*/];
+                        }
+                        ClassNode.preppedTags[this.fullSelector].push(tag);
                         if (hasConstruct === null)
                             hasConstruct = this.classScope.has('construct');
                         tag.createScope(true);
@@ -285,7 +289,6 @@ var ClassNode = /** @class */ (function (_super) {
                         _a.label = 4;
                     case 4:
                         tag.dispatch(this.fullSelector + ".construct", tag.element.id);
-                        ClassNode.preppedTags[this.fullSelector].push(tag);
                         ClassNode.addPreparedClassToElement(tag.element, this.fullSelector);
                         return [2 /*return*/];
                 }

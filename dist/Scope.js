@@ -55,6 +55,7 @@ var WrappedArray_1 = require("./Scope/WrappedArray");
 var ScopeData_1 = require("./Scope/ScopeData");
 var DynamicScopeData_1 = require("./Scope/DynamicScopeData");
 var DOM_1 = require("./DOM");
+var ScopeAbstract_1 = require("./Scope/ScopeAbstract");
 var Scope = /** @class */ (function (_super) {
     __extends(Scope, _super);
     function Scope(parent) {
@@ -70,6 +71,32 @@ var Scope = /** @class */ (function (_super) {
     Object.defineProperty(Scope.prototype, "data", {
         get: function () {
             return this._data;
+        },
+        enumerable: false,
+        configurable: true
+    });
+    Object.defineProperty(Scope.prototype, "objectify", {
+        get: function () {
+            var e_1, _a;
+            var obj = {};
+            try {
+                for (var _b = __values(this.keys), _c = _b.next(); !_c.done; _c = _b.next()) {
+                    var key = _c.value;
+                    var value = this.get(key);
+                    if (value instanceof Scope)
+                        obj[key] = value.objectify;
+                    else
+                        obj[key] = value;
+                }
+            }
+            catch (e_1_1) { e_1 = { error: e_1_1 }; }
+            finally {
+                try {
+                    if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
+                }
+                finally { if (e_1) throw e_1.error; }
+            }
+            return obj;
         },
         enumerable: false,
         configurable: true
@@ -183,23 +210,23 @@ var Scope = /** @class */ (function (_super) {
         return property === null || property === void 0 ? void 0 : property.type;
     };
     Scope.prototype.extend = function (data) {
-        var e_1, _a;
+        var e_2, _a;
         try {
             for (var data_1 = __values(data), data_1_1 = data_1.next(); !data_1_1.done; data_1_1 = data_1.next()) {
                 var key = data_1_1.value;
                 this.set(key, data[key]);
             }
         }
-        catch (e_1_1) { e_1 = { error: e_1_1 }; }
+        catch (e_2_1) { e_2 = { error: e_2_1 }; }
         finally {
             try {
                 if (data_1_1 && !data_1_1.done && (_a = data_1.return)) _a.call(data_1);
             }
-            finally { if (e_1) throw e_1.error; }
+            finally { if (e_2) throw e_2.error; }
         }
     };
     Scope.prototype.clear = function () {
-        var e_2, _a;
+        var e_3, _a;
         try {
             for (var _b = __values(this._data.keys), _c = _b.next(); !_c.done; _c = _b.next()) {
                 var key = _c.value;
@@ -208,12 +235,12 @@ var Scope = /** @class */ (function (_super) {
                 this.set(key, null);
             }
         }
-        catch (e_2_1) { e_2 = { error: e_2_1 }; }
+        catch (e_3_1) { e_3 = { error: e_3_1 }; }
         finally {
             try {
                 if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
             }
-            finally { if (e_2) throw e_2.error; }
+            finally { if (e_3) throw e_3.error; }
         }
     };
     Scope.prototype.cleanup = function () {
@@ -228,7 +255,7 @@ var Scope = /** @class */ (function (_super) {
         configurable: true
     });
     Scope.prototype.collectGarbage = function (force) {
-        var e_3, _a;
+        var e_4, _a;
         if (force === void 0) { force = false; }
         this._isGarbage = true;
         try {
@@ -237,12 +264,12 @@ var Scope = /** @class */ (function (_super) {
                 child.collectGarbage(force);
             }
         }
-        catch (e_3_1) { e_3 = { error: e_3_1 }; }
+        catch (e_4_1) { e_4 = { error: e_4_1 }; }
         finally {
             try {
                 if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
             }
-            finally { if (e_3) throw e_3.error; }
+            finally { if (e_4) throw e_4.error; }
         }
         if (force)
             this.cleanup();
@@ -346,7 +373,7 @@ var Scope = /** @class */ (function (_super) {
         return scope;
     };
     return Scope;
-}(EventDispatcher_1.EventDispatcher));
+}(ScopeAbstract_1.ScopeAbstract));
 exports.Scope = Scope;
 var FunctionScope = /** @class */ (function (_super) {
     __extends(FunctionScope, _super);

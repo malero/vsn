@@ -5,9 +5,10 @@ import {WrappedArray} from "./Scope/WrappedArray";
 import {ScopeData} from "./Scope/ScopeData";
 import {DynamicScopeData} from "./Scope/DynamicScopeData";
 import {DOM} from "./DOM";
+import {ScopeAbstract} from "./Scope/ScopeAbstract";
 
 
-export class Scope extends EventDispatcher {
+export class Scope extends ScopeAbstract {
     public wrapped: any;
     protected _data: ScopeData;
     protected children: Scope[];
@@ -27,6 +28,18 @@ export class Scope extends EventDispatcher {
 
     public get data(): ScopeData {
         return this._data;
+    }
+
+    public get objectify(): any {
+        const obj = {};
+        for (const key of this.keys) {
+            const value = this.get(key);
+            if (value instanceof Scope)
+                obj[key] = value.objectify;
+            else
+                obj[key] = value;
+        }
+        return obj;
     }
 
     public get parentScope(): Scope {

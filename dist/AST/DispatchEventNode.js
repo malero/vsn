@@ -50,20 +50,33 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
+var __values = (this && this.__values) || function(o) {
+    var s = typeof Symbol === "function" && Symbol.iterator, m = s && o[s], i = 0;
+    if (m) return m.call(o);
+    if (o && typeof o.length === "number") return {
+        next: function () {
+            if (o && i >= o.length) o = void 0;
+            return { value: o && o[i++], done: !o };
+        }
+    };
+    throw new TypeError(s ? "Object is not iterable." : "Symbol.iterator is not defined.");
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.DispatchEventNode = void 0;
 var Scope_1 = require("../Scope");
 var AST_1 = require("../AST");
 var Node_1 = require("./Node");
 var ScopeData_1 = require("../Scope/ScopeData");
+var ElementQueryNode_1 = require("./ElementQueryNode");
 var DispatchEventNode = /** @class */ (function (_super) {
     __extends(DispatchEventNode, _super);
-    function DispatchEventNode(name, data, bubbles) {
+    function DispatchEventNode(name, data, bubbles, elementRef) {
         if (bubbles === void 0) { bubbles = false; }
         var _this = _super.call(this) || this;
         _this.name = name;
         _this.data = data;
         _this.bubbles = bubbles;
+        _this.elementRef = elementRef;
         return _this;
     }
     DispatchEventNode.prototype._getChildNodes = function () {
@@ -75,29 +88,49 @@ var DispatchEventNode = /** @class */ (function (_super) {
     DispatchEventNode.prototype.evaluate = function (scope, dom, tag) {
         if (tag === void 0) { tag = null; }
         return __awaiter(this, void 0, void 0, function () {
-            var detail, _a;
-            return __generator(this, function (_b) {
-                switch (_b.label) {
+            var detail, _a, targets, targets_1, targets_1_1, target;
+            var e_1, _b;
+            return __generator(this, function (_c) {
+                switch (_c.label) {
                     case 0:
                         if (!this.data) return [3 /*break*/, 2];
                         return [4 /*yield*/, this.data.evaluate(scope, dom, tag)];
                     case 1:
-                        _a = _b.sent();
+                        _a = (_c.sent()).objectify;
                         return [3 /*break*/, 3];
                     case 2:
                         _a = {};
-                        _b.label = 3;
+                        _c.label = 3;
                     case 3:
                         detail = _a;
                         if (detail instanceof Scope_1.Scope)
                             detail = detail.data.getData();
                         else if (detail instanceof ScopeData_1.ScopeData)
                             detail = detail.getData();
-                        detail['source'] = tag.element;
-                        tag.element.dispatchEvent(new CustomEvent(this.name, {
-                            bubbles: this.bubbles,
-                            detail: detail
-                        }));
+                        targets = [tag];
+                        if (!this.elementRef) return [3 /*break*/, 5];
+                        return [4 /*yield*/, this.elementRef.evaluate(scope, dom, tag, true)];
+                    case 4:
+                        targets = _c.sent();
+                        _c.label = 5;
+                    case 5:
+                        try {
+                            for (targets_1 = __values(targets), targets_1_1 = targets_1.next(); !targets_1_1.done; targets_1_1 = targets_1.next()) {
+                                target = targets_1_1.value;
+                                detail['source'] = target.element;
+                                target.element.dispatchEvent(new CustomEvent(this.name, {
+                                    bubbles: this.bubbles,
+                                    detail: detail
+                                }));
+                            }
+                        }
+                        catch (e_1_1) { e_1 = { error: e_1_1 }; }
+                        finally {
+                            try {
+                                if (targets_1_1 && !targets_1_1.done && (_b = targets_1.return)) _b.call(targets_1);
+                            }
+                            finally { if (e_1) throw e_1.error; }
+                        }
                         return [2 /*return*/];
                 }
             });
@@ -106,11 +139,12 @@ var DispatchEventNode = /** @class */ (function (_super) {
     DispatchEventNode.parse = function (lastNode, token, tokens) {
         var name = tokens.shift();
         var data = null;
-        if (tokens.length && tokens[0].type === AST_1.TokenType.L_PAREN) {
-            var containedTokens = AST_1.Tree.getNextStatementTokens(tokens, true, true, false);
+        if (tokens.length && tokens[0].type === AST_1.TokenType.L_BRACE) {
+            var containedTokens = AST_1.Tree.getNextStatementTokens(tokens, false, false, true);
             data = AST_1.Tree.processTokens(containedTokens).statements[0];
         }
-        return new DispatchEventNode(name.value, data, name.full.startsWith('!!!'));
+        var elementRef = lastNode instanceof ElementQueryNode_1.ElementQueryNode ? lastNode : null;
+        return new DispatchEventNode(name.value, data, name.full.startsWith('!!!'), elementRef);
     };
     return DispatchEventNode;
 }(Node_1.Node));

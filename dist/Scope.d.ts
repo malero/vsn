@@ -1,7 +1,7 @@
-import { EventDispatcher } from "./EventDispatcher";
 import { ScopeReference } from "./Scope/ScopeReference";
 import { ScopeData } from "./Scope/ScopeData";
-export declare class Scope extends EventDispatcher {
+import { ScopeAbstract } from "./Scope/ScopeAbstract";
+export declare class Scope extends ScopeAbstract {
     wrapped: any;
     protected _data: ScopeData;
     protected children: Scope[];
@@ -9,6 +9,7 @@ export declare class Scope extends EventDispatcher {
     protected _isGarbage: boolean;
     constructor(parent?: Scope);
     get data(): ScopeData;
+    get objectify(): any;
     get parentScope(): Scope;
     set parentScope(scope: Scope);
     addChild(scope: Scope): void;

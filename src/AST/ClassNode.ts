@@ -70,8 +70,7 @@ export class ClassNode extends Node implements TreeNode {
             if (root) {
                 if (dom.built)
                     await this.findClassElements(dom);
-                else
-                    dom.once('builtRoot', () => this.findClassElements(dom));
+                dom.on('built', () => this.findClassElements(dom));
             }
         } else if (meta['PrepForSelector'] === this.fullSelector) { // Only prepare top level class if we're prepping for tag
             await this.block.prepare(tag.scope, dom, tag, meta);
@@ -94,6 +93,11 @@ export class ClassNode extends Node implements TreeNode {
     }
 
     public async constructTag(tag: Tag, dom: DOM, hasConstruct: boolean | null = null) {
+        if (ClassNode.preppedTags[this.fullSelector].indexOf(tag) !== -1) {
+            return;
+        }
+        ClassNode.preppedTags[this.fullSelector].push(tag);
+
         if (hasConstruct === null)
             hasConstruct = this.classScope.has('construct');
 
@@ -107,7 +111,6 @@ export class ClassNode extends Node implements TreeNode {
             await fnc();
         }
         tag.dispatch(`${this.fullSelector}.construct`, tag.element.id);
-        ClassNode.preppedTags[this.fullSelector].push(tag);
         ClassNode.addPreparedClassToElement(tag.element, this.fullSelector);
     }
 

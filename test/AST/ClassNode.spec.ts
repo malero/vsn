@@ -2,6 +2,7 @@ import {DOM} from "../../src/DOM";
 import {ClassNode} from "../../src/AST/ClassNode";
 import {Registry} from "../../src/Registry";
 import {TagList} from "../../src/Tag/TagList";
+import {Tag} from "../../src/vsn";
 
 
 describe('ClassNode', () => {
@@ -16,6 +17,7 @@ describe('ClassNode', () => {
             }
             </script>
             <div class="simple"><input /></div>
+            <input id="not-nested" />
         `;
         const dom = new DOM(document);
         await dom.ready;
@@ -23,6 +25,26 @@ describe('ClassNode', () => {
         expect(ClassNode.classParents['input']).toBeInstanceOf(Array);
         expect(ClassNode.classParents['input'].includes('.simple input')).toBe(true);
         expect(ClassNode.classes['.simple input']).toBeInstanceOf(ClassNode);
+    });
+
+    it("properly build classes on newly added elements in the dom", async () => {
+        document.body.innerHTML = `
+            <script type="text/vsn" vsn-script>
+            class .added-html { 
+                func construct() {}
+            }
+            </script>
+            <div id="container"></div>
+        `;
+        const dom = new DOM(document);
+        await dom.ready;
+        await Registry.instance.classes.get('.added-html');
+        const newHtml: string = `<div class="added-html" id="added"></div>`;
+        dom.root.scope.set('newHtml', newHtml);
+        await dom.exec('#container.@html = newHtml');
+        const addedTag = await dom.exec('#added');
+        expect(addedTag).toBeInstanceOf(Tag);
+        expect(ClassNode.preppedTags['.added-html'].indexOf(addedTag)).toBeGreaterThan(-1);
     });
 
     it("properly define a simple class", async () => {

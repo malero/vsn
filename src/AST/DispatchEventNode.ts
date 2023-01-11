@@ -5,12 +5,14 @@ import {Token, TokenType, Tree, TreeNode} from "../AST";
 import {Node} from "./Node";
 import {ObjectNode} from "./ObjectNode";
 import {ScopeData} from "../Scope/ScopeData";
+import {ElementQueryNode} from "./ElementQueryNode";
 
 export class DispatchEventNode extends Node implements TreeNode {
     constructor(
         public readonly name: string,
         public readonly data: ObjectNode | null,
-        public readonly bubbles: boolean = false
+        public readonly bubbles: boolean = false,
+        public readonly elementRef: ElementQueryNode | null,
     ) {
         super();
     }
@@ -23,28 +25,34 @@ export class DispatchEventNode extends Node implements TreeNode {
     }
 
     public async evaluate(scope: Scope, dom: DOM, tag: Tag = null) {
-        let detail = this.data ? await this.data.evaluate(scope, dom, tag) : {};
+        let detail = this.data ? (await this.data.evaluate(scope, dom, tag)).objectify : {};
         if (detail instanceof Scope)
             detail = detail.data.getData();
         else if (detail instanceof ScopeData)
             detail = detail.getData();
 
-        detail['source'] = tag.element;
+        let targets: Tag[] = [tag];
+        if (this.elementRef) {
+            targets = await this.elementRef.evaluate(scope, dom, tag, true);
+        }
 
-        tag.element.dispatchEvent(new CustomEvent(this.name, {
-            bubbles: this.bubbles,
-            detail: detail
-        }));
+        for (const target of targets) {
+            detail['source'] = target.element;
+            target.element.dispatchEvent(new CustomEvent(this.name, {
+                bubbles: this.bubbles,
+                detail: detail
+            }));
+        }
     }
 
     public static parse(lastNode, token, tokens: Token[]) {
         const name = tokens.shift();
         let data: ObjectNode = null;
-        if (tokens.length && tokens[0].type === TokenType.L_PAREN) {
-            const containedTokens = Tree.getNextStatementTokens(tokens, true, true, false);
+        if (tokens.length && tokens[0].type === TokenType.L_BRACE) {
+            const containedTokens = Tree.getNextStatementTokens(tokens, false, false, true);
             data = Tree.processTokens(containedTokens).statements[0] as ObjectNode;
         }
-
-        return new DispatchEventNode(name.value, data, name.full.startsWith('!!!'));
+        const elementRef = lastNode instanceof ElementQueryNode ? lastNode : null;
+        return new DispatchEventNode(name.value, data, name.full.startsWith('!!!'), elementRef);
     }
 }

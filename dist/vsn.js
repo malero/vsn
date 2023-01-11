@@ -68,7 +68,6 @@ var Registry_1 = require("./Registry");
 var Configuration_1 = require("./Configuration");
 var VisionHelper_1 = require("./helpers/VisionHelper");
 var AST_1 = require("./AST");
-var Query_1 = require("./Query");
 var EventDispatcher_1 = require("./EventDispatcher");
 var DynamicScopeData_1 = require("./Scope/DynamicScopeData");
 var version_1 = require("./version");
@@ -105,7 +104,7 @@ var Vision = /** @class */ (function (_super) {
             window['Registry'] = Registry_1.Registry;
             window['vision'] = window['vsn'] = _this;
             window['Tree'] = AST_1.Tree;
-            window['$'] = Query_1.Query;
+            window['$'] = _this.exec.bind(_this);
             VisionHelper_1.VisionHelper.window.dispatchEvent(new Event('vsn'));
         }
         return _this;

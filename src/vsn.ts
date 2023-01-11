@@ -4,7 +4,6 @@ import {Registry} from "./Registry";
 import {Configuration} from "./Configuration";
 import {VisionHelper} from "./helpers/VisionHelper";
 import {Tree} from "./AST";
-import {Query} from "./Query";
 import {EventDispatcher} from "./EventDispatcher";
 import {DynamicScopeData} from "./Scope/DynamicScopeData";
 import {Controller} from "./Controller";
@@ -46,7 +45,7 @@ export class Vision extends EventDispatcher {
             window['Registry'] = Registry;
             window['vision'] = window['vsn'] = this;
             window['Tree'] = Tree;
-            window['$'] = Query;
+            window['$'] = this.exec.bind(this);
             VisionHelper.window.dispatchEvent(new Event('vsn'));
         }
     }

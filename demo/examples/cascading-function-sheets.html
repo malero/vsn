@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Events</title>
+
+    <style></style>
+</head>
+<body>
+
+<script type="text/javascript" src="../vsn.js"></script>
+<script type="text/vsn" vsn-script>
+    class .btn {
+        func construct() {
+            log('btn construct');
+        }
+
+        on click() {
+            log('btn click');
+        }
+    }
+</script>
+
+<div id="html-container"></div>
+<a href="../resources/xhr-cfs.html" vsn-xhr="#html-container.@html = response;?(#html-header).$color='yellow';" class="btn">XHR</a>
+
+</body>
+</html>
