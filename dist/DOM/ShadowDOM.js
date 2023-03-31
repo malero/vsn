@@ -15,23 +15,18 @@ var __extends = (this && this.__extends) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.DOM = void 0;
-var AbstractDOM_1 = require("./DOM/AbstractDOM");
-var DOM = /** @class */ (function (_super) {
-    __extends(DOM, _super);
-    function DOM() {
-        return _super !== null && _super.apply(this, arguments) || this;
+exports.ShadowDOM = void 0;
+var AbstractDOM_1 = require("./AbstractDOM");
+var ShadowDOM = /** @class */ (function (_super) {
+    __extends(ShadowDOM, _super);
+    function ShadowDOM(parent, rootElement, build, debug) {
+        if (build === void 0) { build = true; }
+        if (debug === void 0) { debug = false; }
+        var _this = _super.call(this, rootElement, build, debug) || this;
+        _this._parent = parent;
+        return _this;
     }
-    Object.defineProperty(DOM, "instance", {
-        get: function () {
-            if (!DOM._instance)
-                DOM._instance = new DOM(document.body, false, false);
-            return DOM._instance;
-        },
-        enumerable: false,
-        configurable: true
-    });
-    return DOM;
+    return ShadowDOM;
 }(AbstractDOM_1.AbstractDOM));
-exports.DOM = DOM;
-//# sourceMappingURL=DOM.js.map
+exports.ShadowDOM = ShadowDOM;
+//# sourceMappingURL=ShadowDOM.js.map

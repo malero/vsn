@@ -1,8 +1,9 @@
 import {Scope} from "../Scope";
-import {DOM, EQuerySelectDirection} from "../DOM";
+import {DOM} from "../DOM";
 import {Tag} from "../Tag";
 import {Token, TreeNode} from "../AST";
 import {Node} from "./Node";
+import {EQuerySelectDirection} from "../DOM/AbstractDOM";
 
 export class ElementQueryNode extends Node implements TreeNode {
     protected requiresPrep: boolean = true;

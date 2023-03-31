@@ -8,7 +8,7 @@ describe('Bind', () => {
         document.body.innerHTML = `
             <span id="test" vsn-name="test" vsn-set:val="hello world">testing</span>
         `;
-        const dom = new DOM(document);
+        const dom = new DOM(document.body);
         dom.once('built', async () => {
             const tag = await dom.getTagForElement(document.getElementById('test'));
             expect(tag).toBeTruthy();
@@ -24,7 +24,7 @@ describe('Bind', () => {
                 <span id="test-inner-1" vsn-name="testInner1" vsn-set:val="hi mom"></span>
             </span>
         `;
-        const dom = new DOM(document);
+        const dom = new DOM(document.body);
         dom.once('built', async () => {
             const tag = await dom.getTagForElement(document.getElementById('test'));
             const inner1 = await dom.getTagForElement(document.getElementById('test-inner-1'));
@@ -41,7 +41,7 @@ describe('Bind', () => {
             <span id="test-float" vsn-set:float|float="142.3">testing</span>
             <span id="test-bool" vsn-set:bool|boolean="false">testing</span>
         `;
-        const dom = new DOM(document);
+        const dom = new DOM(document.body);
         dom.once('built', async () => {
             const intTag = await dom.getTagForElement(document.getElementById('test-int'));
             const floatTag = await dom.getTagForElement(document.getElementById('test-float'));

@@ -7,7 +7,7 @@ describe('JSONAttribute', () => {
                 [1,2,3,"four"]
             </script>
         `;
-        const dom = new DOM(document);
+        const dom = new DOM(document.body);
         dom.once('built', async () => {
             expect(dom.root.scope.get('t0')[0]).toBe(1);
             expect(dom.root.scope.get('t0')[1]).toBe(2);
@@ -27,7 +27,7 @@ describe('JSONAttribute', () => {
                 }
             </script>
         `;
-        const dom = new DOM(document);
+        const dom = new DOM(document.body);
         dom.once('built', async () => {
             expect(dom.root.scope.get('t1').get("testing")[0]).toBe(1);
             expect(dom.root.scope.get('t1').get("testing")[1]).toBe(2);
@@ -47,7 +47,7 @@ describe('JSONAttribute', () => {
             <div vsn-json:t2="[1,2,3,&quot;four&quot;]"></div>
         `;
 
-        const dom = new DOM(document);
+        const dom = new DOM(document.body);
         dom.once('built', async () => {
             console.log('scope keys', dom.root.scope.keys);
             expect(dom.root.scope.get('t2')[0]).toBe(1);
@@ -62,7 +62,7 @@ describe('JSONAttribute', () => {
         document.body.innerHTML = `
             <div vsn-json:t3="{&quot;testing&quot;: [1,2,3,&quot;four&quot;],&quot;test&quot;: [&quot;one&quot;,&quot;two&quot;,&quot;three&quot;,4]}"></div>
         `;
-        const dom = new DOM(document);
+        const dom = new DOM(document.body);
         dom.once('built', async () => {
             expect(dom.root.scope.get('t3').get("testing")[0]).toBe(1);
             expect(dom.root.scope.get('t3').get("testing")[1]).toBe(2);
@@ -82,7 +82,7 @@ describe('JSONAttribute', () => {
                 <div vsn-json:testing.test='{"testing": 123}'></div>
             </div>
         `;
-        const dom = new DOM(document);
+        const dom = new DOM(document.body);
         dom.once('built', async () => {
             expect(dom.root.scope.get('testing').get("test").get('testing')).toBe(123);
             done();

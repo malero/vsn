@@ -57,7 +57,7 @@ export class FunctionNode extends Node implements TreeNode {
         }
     }
 
-    public static parse<T = FunctionNode>(lastNode, token, tokens: Token[], cls: any = FunctionNode): FunctionNode {
+    public static parse<T = FunctionNode>(lastNode, token, tokens: Token[], cls: any = FunctionNode): T {
         tokens.shift(); // skip 'func'
         const name = tokens.shift();
         const modifiers = this.moveModifiers(tokens);

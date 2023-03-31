@@ -78,6 +78,7 @@ var Vision = /** @class */ (function (_super) {
         var _this = _super.call(this) || this;
         _this.registry = Registry_1.Registry.instance;
         _this.config = Configuration_1.Configuration.instance;
+        document.ondragover = function (e) { return e.cancelable && e.preventDefault(); }; // Allow dragging over document
         Registry_1.Registry.instance.tags.on('register', _this.defineComponent, _this);
         if (VisionHelper_1.VisionHelper.document) {
             document.addEventListener("DOMContentLoaded", _this.setup.bind(_this));
@@ -89,13 +90,7 @@ var Vision = /** @class */ (function (_super) {
         _this.registry.functions.register('warn', console.warn);
         _this.registry.functions.register('error', console.error);
         _this.registry.functions.register('info', console.info);
-        _this.registry.functions.register('wait', function (seconds) { return __awaiter(_this, void 0, void 0, function () {
-            return __generator(this, function (_a) {
-                return [2 /*return*/, new Promise(function (resolve) {
-                        setTimeout(resolve, seconds * 1000);
-                    })];
-            });
-        }); });
+        _this.registry.functions.register('wait', VisionHelper_1.VisionHelper.wait);
         _this.registry.models.register('Object', Object);
         _this.registry.controllers.register('WrappedArray', WrappedArray_1.WrappedArray);
         _this.registry.controllers.register('Data', DynamicScopeData_1.DynamicScopeData);

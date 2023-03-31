@@ -59,6 +59,12 @@ export class VisionHelper {
         return _url.toString();
     }
 
+    public static async wait (seconds) {
+        return new Promise((resolve) => {
+            setTimeout(resolve, seconds * 1000);
+        });
+    }
+
     public static nice(callback, timeout: number = 100) {
         if (VisionHelper.window && window['requestIdleCallback']) {
             window['requestIdleCallback'](callback);

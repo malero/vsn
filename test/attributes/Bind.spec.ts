@@ -8,7 +8,7 @@ describe('Bind', () => {
         document.body.innerHTML = `
             <span id="test" vsn-name="test" vsn-bind="test.value">testing</span>
         `;
-        const dom = new DOM(document);
+        const dom = new DOM(document.body);
         dom.once('built', async () => {
             const tag = await dom.getTagForElement(document.getElementById('test'));
             expect(tag).toBeTruthy();
@@ -22,7 +22,7 @@ describe('Bind', () => {
         document.body.innerHTML = `
             <span id="test" test="testing" vsn-bind="@test"></span>
         `;
-        const dom = new DOM(document);
+        const dom = new DOM(document.body);
         dom.once('built', async () => {
             const tag = await dom.getTagForElement(document.getElementById('test'));
             expect(tag).toBeTruthy();
@@ -37,7 +37,7 @@ describe('Bind', () => {
             <span id="test2" vsn-bind="test.id">arg</span>
         `;
 
-        const dom = new DOM(document);
+        const dom = new DOM(document.body);
         dom.once('built', async () => {
             const test = document.getElementById('arg');
             const tag = await dom.getTagForElement(test);
@@ -55,7 +55,7 @@ describe('Bind', () => {
             <span id="test" vsn-name="test" vsn-bind:id="test.id"></span>
         `;
 
-        const dom = new DOM(document);
+        const dom = new DOM(document.body);
         dom.once('built', async () => {
             const test = document.getElementById('test');
             const tag = await dom.getTagForElement(test);
@@ -75,7 +75,7 @@ describe('Bind', () => {
             <span id="test" vsn-name="test" vsn-bind="test.val">testing</span>
         `;
 
-        const dom = new DOM(document, false);
+        const dom = new DOM(document.body, false);
         dom.once('built', async () => {
             const test = document.getElementById('test');
             const tag = await dom.getTagForElement(test);
@@ -88,7 +88,7 @@ describe('Bind', () => {
 
             test.innerHTML = 'new-val';
         });
-        dom.buildFrom(document, true);
+        dom.buildFrom(document.body, true);
     });
 
     it("vsn-bind input value changes trigger updating scope with new value", (done) => {
@@ -96,7 +96,7 @@ describe('Bind', () => {
             <input id="test" value="testing" vsn-name="test" vsn-bind="test.val"/>
         `;
 
-        const dom = new DOM(document, false);
+        const dom = new DOM(document.body, false);
         dom.once('built', async () => {
             const test = document.getElementById('test');
             const tag = await dom.getTagForElement(test);
@@ -113,7 +113,7 @@ describe('Bind', () => {
             test.dispatchEvent(new KeyboardEvent('keyup', {key: 'w'}));
         });
 
-        dom.buildFrom(document, true);
+        dom.buildFrom(document.body, true);
     });
 
     it("vsn-bind element innerHTML should change when scope value is changed", (done) => {
@@ -121,7 +121,7 @@ describe('Bind', () => {
             <span id="test" vsn-name="test" vsn-bind="test.val">testing</span>
         `;
 
-        const dom = new DOM(document, false);
+        const dom = new DOM(document.body, false);
         dom.once('built', async () => {
             const test = document.getElementById('test');
             const tag = await dom.getTagForElement(test);
@@ -134,7 +134,7 @@ describe('Bind', () => {
 
             tag.scope.get('test').set('val', 'new-val');
         });
-        dom.buildFrom(document, true);
+        dom.buildFrom(document.body, true);
     });
 
     it("vsn-bind input value should change when scope value is changed", (done) => {
@@ -142,7 +142,7 @@ describe('Bind', () => {
             <input id="test" value="testing" vsn-name="test" vsn-bind="test.val" />
         `;
 
-        const dom = new DOM(document);
+        const dom = new DOM(document.body);
         dom.once('built', async () => {
             const test = document.getElementById('test');
             const tag = await dom.getTagForElement(test);
@@ -161,7 +161,7 @@ describe('Bind', () => {
         document.body.innerHTML = `
             <span id="test" vsn-name="test" vsn-bind="test.value" vsn-format="currency" vsn-type:test.value="float">1.5</span>
         `;
-        const dom = new DOM(document);
+        const dom = new DOM(document.body);
         dom.once('built', async () => {
             const tag = await dom.getTagForElement(document.getElementById('test'));
             expect(tag).toBeTruthy();

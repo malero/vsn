@@ -28,7 +28,7 @@ describe('Tree', () => {
     it("should parse number literals correctly", async () => {
         scope = new Scope();
         let tree: Tree = new Tree('foo = 5;baz=-15;');
-        const dom: DOM = new DOM(document, false);
+        const dom: DOM = new DOM(document.body, false);
         await tree.evaluate(scope, dom)
         expect(scope.get('baz')).toBe(-15);
         expect(scope.get('foo')).toBe(5);
@@ -41,7 +41,7 @@ describe('Tree', () => {
 
     it("should evaluate scope variables correctly", async () => {
         let tree: Tree = new Tree('foo');
-        const dom: DOM = new DOM(document, false);
+        const dom: DOM = new DOM(document.body, false);
         expect(await tree.evaluate(scope, dom)).toBe(2);
 
         tree = new Tree('bar');
@@ -50,7 +50,7 @@ describe('Tree', () => {
 
     it("should be able to call functions within the scope", async () => {
         const tree: Tree = new Tree('baz.add(foo, bar)');
-        const dom: DOM = new DOM(document, false);
+        const dom: DOM = new DOM(document.body, false);
         expect(await tree.evaluate(scope, dom)).toBe(5);
 
         scope.set('foo', 15);
@@ -60,7 +60,7 @@ describe('Tree', () => {
 
     it("should be able to call functions with literals", async () => {
         let tree: Tree = new Tree('baz.add(foo, 5)');
-        const dom: DOM = new DOM(document, false);
+        const dom: DOM = new DOM(document.body, false);
         expect(await tree.evaluate(scope, dom)).toBe(7);
 
         scope.set('foo', 15);
@@ -72,7 +72,7 @@ describe('Tree', () => {
 
     it("should be able to call member variable of value returned from function call", async () => {
         const tree: Tree = new Tree('baz.generate("test", foo).test');
-        const dom: DOM = new DOM(document, false);
+        const dom: DOM = new DOM(document.body, false);
         expect(await tree.evaluate(scope, dom)).toBe(2);
 
         scope.set('foo', 15);
@@ -81,7 +81,7 @@ describe('Tree', () => {
 
     it("should be able to call nested functions within the scope", async () => {
         const tree: Tree = new Tree('baz.add(baz.add(foo, foo), baz.add(bar, bar))');
-        const dom: DOM = new DOM(document, false);
+        const dom: DOM = new DOM(document.body, false);
         expect(await tree.evaluate(scope, dom)).toBe(10);
 
         scope.set('foo', 15);
@@ -96,13 +96,13 @@ describe('Tree', () => {
             baz.add(100, 5);
             5;
         `);
-        const dom: DOM = new DOM(document, false);
+        const dom: DOM = new DOM(document.body, false);
         expect(await tree.evaluate(scope, dom)).toBe(5);
     });
 
     it("should be able to compare properly", async () => {
         let tree: Tree = new Tree(`1!='1'`);
-        const dom: DOM = new DOM(document, false);
+        const dom: DOM = new DOM(document.body, false);
         expect(await tree.evaluate(scope, dom)).toBe(true);
         tree = new Tree(`1==1`);
         expect(await tree.evaluate(scope, dom)).toBe(true);
@@ -114,7 +114,7 @@ describe('Tree', () => {
 
     it("should be able to execute if statements properly",async () => {
         let tree: Tree = new Tree('if (true) { return true; } else { return false; }');
-        const dom: DOM = new DOM(document, false);
+        const dom: DOM = new DOM(document.body, false);
         expect(await tree.evaluate(scope, dom)).toBe(true);
         tree = new Tree('if (false) { return true; } else { return false; }');
         expect(await tree.evaluate(scope, dom)).toBe(false);
@@ -187,7 +187,7 @@ describe('Tree', () => {
 
     it("should be able to assign variables properly", async () => {
         let tree: Tree = new Tree(`something = 5;somethingElse=6;return something;`);
-        const dom: DOM = new DOM(document, false);
+        const dom: DOM = new DOM(document.body, false);
         expect(await tree.evaluate(scope, dom)).toBe(5);
         expect(scope.get('something')).toBe(5);
         tree = new Tree(`something = somethingElse = 5;return something;`);
@@ -201,7 +201,7 @@ describe('Tree', () => {
 
     it("should be able to execute basic arithmetic", async () => {
         let tree: Tree = new Tree('5 + 3');
-        const dom: DOM = new DOM(document, false);
+        const dom: DOM = new DOM(document.body, false);
         expect(await tree.evaluate(scope, dom)).toBe(8);
         tree = new Tree('8 - 3');
         expect(await tree.evaluate(scope, dom)).toBe(5);
@@ -209,7 +209,7 @@ describe('Tree', () => {
 
     it("should be able to assign with incrementing/decrementing variables properly", async () => {
         let tree: Tree = new Tree(`something = 5;something += 10;`);
-        const dom: DOM = new DOM(document, false);
+        const dom: DOM = new DOM(document.body, false);
         expect(await tree.evaluate(scope, dom)).toBe(15);
         expect(scope.get('something')).toBe(15);
         tree = new Tree(`something = 5;something -= 10;`);
@@ -225,7 +225,7 @@ describe('Tree', () => {
 
     it("should be able to assign arrays with incrementing/decrementing variables properly", async () => {
         let tree: Tree = new Tree(`something = [5,6];something += 10;`);
-        const dom: DOM = new DOM(document, false);
+        const dom: DOM = new DOM(document.body, false);
         await tree.evaluate(scope, dom);
         const something = scope.get('something');
         expect(something.length).toEqual(3);
@@ -260,7 +260,7 @@ describe('Tree', () => {
                 test = blockingFunction(test, 1, true);
             }
         `);
-        const dom: DOM = new DOM(document, false);
+        const dom: DOM = new DOM(document.body, false);
         await tree.evaluate(scope, dom);
     });
 
@@ -272,14 +272,14 @@ describe('Tree', () => {
                 test += var;
             }
         `);
-        const dom: DOM = new DOM(document, false);
+        const dom: DOM = new DOM(document.body, false);
         await tree.evaluate(scope, dom);
         expect(scope.get('test')).toBe(46);
     });
 
     it("should be able parse an array of numbers", async () => {
         let tree: Tree = new Tree(`test = [0,1,2,3,4,5];`);
-        const dom: DOM = new DOM(document, false);
+        const dom: DOM = new DOM(document.body, false);
         await tree.evaluate(scope, dom);
 
         expect(scope.get('test').length).toBe(6);
@@ -290,7 +290,7 @@ describe('Tree', () => {
 
     it("should be able parse an array of strings", async () => {
         let tree: Tree = new Tree(`test = ["one","two","three"];`);
-        const dom: DOM = new DOM(document, false);
+        const dom: DOM = new DOM(document.body, false);
         await tree.evaluate(scope, dom);
 
         expect(scope.get('test').length).toBe(3);
@@ -302,7 +302,7 @@ describe('Tree', () => {
 
     it("should be able parse an object literal", async () => {
         let tree: Tree = new Tree(`test = {"x":0,"y":1,"z":2};`);
-        const dom: DOM = new DOM(document, false);
+        const dom: DOM = new DOM(document.body, false);
         await tree.evaluate(scope, dom);
         expect(scope.get('test').get('x')).toBe(0);
         expect(scope.get('test').get('y')).toBe(1);
@@ -311,7 +311,7 @@ describe('Tree', () => {
 
     it("should be able parse an object literal with a key from the scope", async () => {
         let tree: Tree = new Tree(`xKey = 'x'; test = {xKey:120,"y":1,"z":2};`);
-        const dom: DOM = new DOM(document, false);
+        const dom: DOM = new DOM(document.body, false);
         await tree.evaluate(scope, dom);
         expect(scope.get('test').get('y')).toBe(1);
         expect(scope.get('test').get('z')).toBe(2);
@@ -320,7 +320,7 @@ describe('Tree', () => {
 
     it("should be able parse an object literal containing arrays", async () => {
         let tree: Tree = new Tree(`test = {"test_1": ["test", "testing"], "test_2": ["foo", "bar"]}`);
-        const dom: DOM = new DOM(document, false);
+        const dom: DOM = new DOM(document.body, false);
         await tree.evaluate(scope, dom);
         expect(scope.get('test').get('test_1')[0]).toBe("test");
         expect(scope.get('test').get('test_1')[1]).toBe("testing");
@@ -330,7 +330,7 @@ describe('Tree', () => {
     
     it("should be able to check if item is in an array", async () => {
         let tree: Tree = new Tree(`a in [1,2,3]`);
-        const dom: DOM = new DOM(document, false);
+        const dom: DOM = new DOM(document.body, false);
         scope.set('a', 1);
         expect(await tree.evaluate(scope, dom)).toBe(true);
         scope.set('a', 4);

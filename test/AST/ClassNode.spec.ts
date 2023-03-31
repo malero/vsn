@@ -19,7 +19,7 @@ describe('ClassNode', () => {
             <div class="simple"><input /></div>
             <input id="not-nested" />
         `;
-        const dom = new DOM(document);
+        const dom = new DOM(document.body);
         await dom.ready;
         await Registry.instance.classes.get('.simple input');
         expect(ClassNode.classParents['input']).toBeInstanceOf(Array);
@@ -36,7 +36,7 @@ describe('ClassNode', () => {
             </script>
             <div id="container"></div>
         `;
-        const dom = new DOM(document);
+        const dom = new DOM(document.body);
         await dom.ready;
         await Registry.instance.classes.get('.added-html');
         const newHtml: string = `<div class="added-html" id="added"></div>`;
@@ -65,7 +65,7 @@ describe('ClassNode', () => {
             <div class="simple-construct" id="ele-1"></div>
             <div class="simple-construct" id="ele-2"></div>
         `;
-        const dom = new DOM(document);
+        const dom = new DOM(document.body);
         await dom.ready;
         await Registry.instance.classes.get('.simple-construct');
         const t: TagList = await dom.exec('?(.simple-construct)');
@@ -94,7 +94,7 @@ describe('ClassNode', () => {
             </script>
             <div class="testing"><span class="test"></span></div>
         `;
-        const dom = new DOM(document);
+        const dom = new DOM(document.body);
         await dom.ready;
         await Registry.instance.classes.get('.testing .test');
         const t = await dom.exec('?(.testing .test)[0]');
@@ -169,7 +169,7 @@ class .option {
     </ul>
 </div>
 `;
-        const dom = new DOM(document);
+        const dom = new DOM(document.body);
         await dom.ready;
     });
 });

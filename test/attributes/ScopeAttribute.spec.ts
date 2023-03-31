@@ -10,7 +10,7 @@ describe('ScopeAttribute', () => {
                 <span vsn-bind="asd"></span>
             </div>
         `;
-        const dom = new DOM(document);
+        const dom = new DOM(document.body);
         dom.once('built', async () => {
             const element = (await dom.exec('?(div)'))[0];
             expect(element.scope.get('asd')).toBe(123);
@@ -25,7 +25,7 @@ describe('ScopeAttribute', () => {
         document.body.innerHTML = `
             <div vsn-scope></div>
         `;
-        const dom = new DOM(document);
+        const dom = new DOM(document.body);
         dom.once('built', async () => {
             const element = (await dom.exec('?(div)'))[0];
             expect(element.uniqueScope).toBe(true);

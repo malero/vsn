@@ -34,6 +34,7 @@ import {DispatchEventNode} from "./AST/DispatchEventNode";
 import {WithNode} from "./AST/WithNode";
 import {AsNode} from "./AST/AsNode";
 import {NamedStackNode} from "./AST/NamedStackNode";
+import {LoopNode} from "./AST/LoopNode";
 
 function lower(str: string): string {
     return str ? str.toLowerCase() : null;
@@ -65,6 +66,7 @@ export enum TokenType {
     TYPE_UINT,
     TYPE_FLOAT,
     TYPE_STRING,
+    TYPE_BOOL,
     RETURN,
     NOT,
     OF,
@@ -77,6 +79,7 @@ export enum TokenType {
     ELSE_IF,
     ELSE,
     FUNC,
+    LOOP,
     ON,
     CLASS,
     NAME,
@@ -156,23 +159,23 @@ const TOKEN_PATTERNS: TokenPattern[] = [
     },
     {
         type: TokenType.TYPE_INT,
-        pattern: /^int+/
+        pattern: /^int\s/
     },
     {
         type: TokenType.TYPE_UINT,
-        pattern: /^uint+/
+        pattern: /^uint\s/
     },
     {
         type: TokenType.TYPE_FLOAT,
-        pattern: /^float+/
+        pattern: /^float\s/
+    },
+{
+        type: TokenType.TYPE_BOOL,
+        pattern: /^bool\s/
     },
     {
         type: TokenType.UNIT,
         pattern: /^\d+\.?\d?(?:cm|mm|in|px|pt|pc|em|ex|ch|rem|vw|vh|vmin|vmax|%)/
-    },
-    {
-        type: TokenType.TYPE_STRING,
-        pattern: /^string+/
     },
     {
         type: TokenType.BOOLEAN_LITERAL,
@@ -229,6 +232,10 @@ const TOKEN_PATTERNS: TokenPattern[] = [
     {
         type: TokenType.FUNC,
         pattern: /^func\s/
+    },
+    {
+        type: TokenType.LOOP,
+        pattern: /^loop\s/
     },
     {
         type: TokenType.ON,
@@ -574,6 +581,11 @@ export class Tree {
                 node = null;
             } else if (token.type === TokenType.FUNC) {
                 node = FunctionNode.parse(node, token, tokens);
+                lastBlock = node;
+                blockNodes.push(node);
+                node = null;
+            } else if (token.type === TokenType.LOOP) {
+                node = LoopNode.parse(node, token, tokens);
                 lastBlock = node;
                 blockNodes.push(node);
                 node = null;

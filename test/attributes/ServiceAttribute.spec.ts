@@ -24,7 +24,7 @@ describe('ServiceAttribute', () => {
             <div vsn-service:test1="TestService" id="test"></div>
             <div vsn-service:test2="TestService" vsn-set:test2.test="testing" id="test2"></div>
         `;
-        const dom = new DOM(document);
+        const dom = new DOM(document.body);
         dom.once('built', async () => {
             const service1 = await dom.exec('test1');
             const service2 = await dom.exec('test2');

@@ -80,6 +80,7 @@ var DispatchEventNode_1 = require("./AST/DispatchEventNode");
 var WithNode_1 = require("./AST/WithNode");
 var AsNode_1 = require("./AST/AsNode");
 var NamedStackNode_1 = require("./AST/NamedStackNode");
+var LoopNode_1 = require("./AST/LoopNode");
 function lower(str) {
     return str ? str.toLowerCase() : null;
 }
@@ -98,68 +99,70 @@ var TokenType;
     TokenType[TokenType["TYPE_UINT"] = 3] = "TYPE_UINT";
     TokenType[TokenType["TYPE_FLOAT"] = 4] = "TYPE_FLOAT";
     TokenType[TokenType["TYPE_STRING"] = 5] = "TYPE_STRING";
-    TokenType[TokenType["RETURN"] = 6] = "RETURN";
-    TokenType[TokenType["NOT"] = 7] = "NOT";
-    TokenType[TokenType["OF"] = 8] = "OF";
-    TokenType[TokenType["AS"] = 9] = "AS";
-    TokenType[TokenType["IN"] = 10] = "IN";
-    TokenType[TokenType["WITH"] = 11] = "WITH";
-    TokenType[TokenType["NAMED_STACK"] = 12] = "NAMED_STACK";
-    TokenType[TokenType["FOR"] = 13] = "FOR";
-    TokenType[TokenType["IF"] = 14] = "IF";
-    TokenType[TokenType["ELSE_IF"] = 15] = "ELSE_IF";
-    TokenType[TokenType["ELSE"] = 16] = "ELSE";
-    TokenType[TokenType["FUNC"] = 17] = "FUNC";
-    TokenType[TokenType["ON"] = 18] = "ON";
-    TokenType[TokenType["CLASS"] = 19] = "CLASS";
-    TokenType[TokenType["NAME"] = 20] = "NAME";
-    TokenType[TokenType["L_BRACE"] = 21] = "L_BRACE";
-    TokenType[TokenType["R_BRACE"] = 22] = "R_BRACE";
-    TokenType[TokenType["L_BRACKET"] = 23] = "L_BRACKET";
-    TokenType[TokenType["R_BRACKET"] = 24] = "R_BRACKET";
-    TokenType[TokenType["L_PAREN"] = 25] = "L_PAREN";
-    TokenType[TokenType["R_PAREN"] = 26] = "R_PAREN";
-    TokenType[TokenType["TILDE"] = 27] = "TILDE";
-    TokenType[TokenType["PERIOD"] = 28] = "PERIOD";
-    TokenType[TokenType["COMMA"] = 29] = "COMMA";
-    TokenType[TokenType["COLON"] = 30] = "COLON";
-    TokenType[TokenType["SEMICOLON"] = 31] = "SEMICOLON";
-    TokenType[TokenType["STRING_FORMAT"] = 32] = "STRING_FORMAT";
-    TokenType[TokenType["STRING_LITERAL"] = 33] = "STRING_LITERAL";
-    TokenType[TokenType["NUMBER_LITERAL"] = 34] = "NUMBER_LITERAL";
-    TokenType[TokenType["BOOLEAN_LITERAL"] = 35] = "BOOLEAN_LITERAL";
-    TokenType[TokenType["NULL_LITERAL"] = 36] = "NULL_LITERAL";
-    TokenType[TokenType["STRICT_EQUALS"] = 37] = "STRICT_EQUALS";
-    TokenType[TokenType["STRICT_NOT_EQUALS"] = 38] = "STRICT_NOT_EQUALS";
-    TokenType[TokenType["EQUALS"] = 39] = "EQUALS";
-    TokenType[TokenType["NOT_EQUALS"] = 40] = "NOT_EQUALS";
-    TokenType[TokenType["GREATER_THAN_EQUAL"] = 41] = "GREATER_THAN_EQUAL";
-    TokenType[TokenType["LESS_THAN_EQUAL"] = 42] = "LESS_THAN_EQUAL";
-    TokenType[TokenType["GREATER_THAN"] = 43] = "GREATER_THAN";
-    TokenType[TokenType["LESS_THAN"] = 44] = "LESS_THAN";
-    TokenType[TokenType["ASSIGN"] = 45] = "ASSIGN";
-    TokenType[TokenType["AND"] = 46] = "AND";
-    TokenType[TokenType["OR"] = 47] = "OR";
-    TokenType[TokenType["ADD"] = 48] = "ADD";
-    TokenType[TokenType["SUBTRACT"] = 49] = "SUBTRACT";
-    TokenType[TokenType["MULTIPLY"] = 50] = "MULTIPLY";
-    TokenType[TokenType["DIVIDE"] = 51] = "DIVIDE";
-    TokenType[TokenType["ADD_ASSIGN"] = 52] = "ADD_ASSIGN";
-    TokenType[TokenType["SUBTRACT_ASSIGN"] = 53] = "SUBTRACT_ASSIGN";
-    TokenType[TokenType["MULTIPLY_ASSIGN"] = 54] = "MULTIPLY_ASSIGN";
-    TokenType[TokenType["DIVIDE_ASSIGN"] = 55] = "DIVIDE_ASSIGN";
-    TokenType[TokenType["EXCLAMATION_POINT"] = 56] = "EXCLAMATION_POINT";
-    TokenType[TokenType["ELEMENT_REFERENCE"] = 57] = "ELEMENT_REFERENCE";
-    TokenType[TokenType["ELEMENT_ATTRIBUTE"] = 58] = "ELEMENT_ATTRIBUTE";
-    TokenType[TokenType["ELEMENT_STYLE"] = 59] = "ELEMENT_STYLE";
-    TokenType[TokenType["ELEMENT_QUERY"] = 60] = "ELEMENT_QUERY";
-    TokenType[TokenType["UNIT"] = 61] = "UNIT";
-    TokenType[TokenType["XHR_GET"] = 62] = "XHR_GET";
-    TokenType[TokenType["XHR_POST"] = 63] = "XHR_POST";
-    TokenType[TokenType["XHR_PUT"] = 64] = "XHR_PUT";
-    TokenType[TokenType["XHR_DELETE"] = 65] = "XHR_DELETE";
-    TokenType[TokenType["MODIFIER"] = 66] = "MODIFIER";
-    TokenType[TokenType["DISPATCH_EVENT"] = 67] = "DISPATCH_EVENT";
+    TokenType[TokenType["TYPE_BOOL"] = 6] = "TYPE_BOOL";
+    TokenType[TokenType["RETURN"] = 7] = "RETURN";
+    TokenType[TokenType["NOT"] = 8] = "NOT";
+    TokenType[TokenType["OF"] = 9] = "OF";
+    TokenType[TokenType["AS"] = 10] = "AS";
+    TokenType[TokenType["IN"] = 11] = "IN";
+    TokenType[TokenType["WITH"] = 12] = "WITH";
+    TokenType[TokenType["NAMED_STACK"] = 13] = "NAMED_STACK";
+    TokenType[TokenType["FOR"] = 14] = "FOR";
+    TokenType[TokenType["IF"] = 15] = "IF";
+    TokenType[TokenType["ELSE_IF"] = 16] = "ELSE_IF";
+    TokenType[TokenType["ELSE"] = 17] = "ELSE";
+    TokenType[TokenType["FUNC"] = 18] = "FUNC";
+    TokenType[TokenType["LOOP"] = 19] = "LOOP";
+    TokenType[TokenType["ON"] = 20] = "ON";
+    TokenType[TokenType["CLASS"] = 21] = "CLASS";
+    TokenType[TokenType["NAME"] = 22] = "NAME";
+    TokenType[TokenType["L_BRACE"] = 23] = "L_BRACE";
+    TokenType[TokenType["R_BRACE"] = 24] = "R_BRACE";
+    TokenType[TokenType["L_BRACKET"] = 25] = "L_BRACKET";
+    TokenType[TokenType["R_BRACKET"] = 26] = "R_BRACKET";
+    TokenType[TokenType["L_PAREN"] = 27] = "L_PAREN";
+    TokenType[TokenType["R_PAREN"] = 28] = "R_PAREN";
+    TokenType[TokenType["TILDE"] = 29] = "TILDE";
+    TokenType[TokenType["PERIOD"] = 30] = "PERIOD";
+    TokenType[TokenType["COMMA"] = 31] = "COMMA";
+    TokenType[TokenType["COLON"] = 32] = "COLON";
+    TokenType[TokenType["SEMICOLON"] = 33] = "SEMICOLON";
+    TokenType[TokenType["STRING_FORMAT"] = 34] = "STRING_FORMAT";
+    TokenType[TokenType["STRING_LITERAL"] = 35] = "STRING_LITERAL";
+    TokenType[TokenType["NUMBER_LITERAL"] = 36] = "NUMBER_LITERAL";
+    TokenType[TokenType["BOOLEAN_LITERAL"] = 37] = "BOOLEAN_LITERAL";
+    TokenType[TokenType["NULL_LITERAL"] = 38] = "NULL_LITERAL";
+    TokenType[TokenType["STRICT_EQUALS"] = 39] = "STRICT_EQUALS";
+    TokenType[TokenType["STRICT_NOT_EQUALS"] = 40] = "STRICT_NOT_EQUALS";
+    TokenType[TokenType["EQUALS"] = 41] = "EQUALS";
+    TokenType[TokenType["NOT_EQUALS"] = 42] = "NOT_EQUALS";
+    TokenType[TokenType["GREATER_THAN_EQUAL"] = 43] = "GREATER_THAN_EQUAL";
+    TokenType[TokenType["LESS_THAN_EQUAL"] = 44] = "LESS_THAN_EQUAL";
+    TokenType[TokenType["GREATER_THAN"] = 45] = "GREATER_THAN";
+    TokenType[TokenType["LESS_THAN"] = 46] = "LESS_THAN";
+    TokenType[TokenType["ASSIGN"] = 47] = "ASSIGN";
+    TokenType[TokenType["AND"] = 48] = "AND";
+    TokenType[TokenType["OR"] = 49] = "OR";
+    TokenType[TokenType["ADD"] = 50] = "ADD";
+    TokenType[TokenType["SUBTRACT"] = 51] = "SUBTRACT";
+    TokenType[TokenType["MULTIPLY"] = 52] = "MULTIPLY";
+    TokenType[TokenType["DIVIDE"] = 53] = "DIVIDE";
+    TokenType[TokenType["ADD_ASSIGN"] = 54] = "ADD_ASSIGN";
+    TokenType[TokenType["SUBTRACT_ASSIGN"] = 55] = "SUBTRACT_ASSIGN";
+    TokenType[TokenType["MULTIPLY_ASSIGN"] = 56] = "MULTIPLY_ASSIGN";
+    TokenType[TokenType["DIVIDE_ASSIGN"] = 57] = "DIVIDE_ASSIGN";
+    TokenType[TokenType["EXCLAMATION_POINT"] = 58] = "EXCLAMATION_POINT";
+    TokenType[TokenType["ELEMENT_REFERENCE"] = 59] = "ELEMENT_REFERENCE";
+    TokenType[TokenType["ELEMENT_ATTRIBUTE"] = 60] = "ELEMENT_ATTRIBUTE";
+    TokenType[TokenType["ELEMENT_STYLE"] = 61] = "ELEMENT_STYLE";
+    TokenType[TokenType["ELEMENT_QUERY"] = 62] = "ELEMENT_QUERY";
+    TokenType[TokenType["UNIT"] = 63] = "UNIT";
+    TokenType[TokenType["XHR_GET"] = 64] = "XHR_GET";
+    TokenType[TokenType["XHR_POST"] = 65] = "XHR_POST";
+    TokenType[TokenType["XHR_PUT"] = 66] = "XHR_PUT";
+    TokenType[TokenType["XHR_DELETE"] = 67] = "XHR_DELETE";
+    TokenType[TokenType["MODIFIER"] = 68] = "MODIFIER";
+    TokenType[TokenType["DISPATCH_EVENT"] = 69] = "DISPATCH_EVENT";
 })(TokenType = exports.TokenType || (exports.TokenType = {}));
 var TOKEN_PATTERNS = [
     {
@@ -188,23 +191,23 @@ var TOKEN_PATTERNS = [
     },
     {
         type: TokenType.TYPE_INT,
-        pattern: /^int+/
+        pattern: /^int\s/
     },
     {
         type: TokenType.TYPE_UINT,
-        pattern: /^uint+/
+        pattern: /^uint\s/
     },
     {
         type: TokenType.TYPE_FLOAT,
-        pattern: /^float+/
+        pattern: /^float\s/
+    },
+    {
+        type: TokenType.TYPE_BOOL,
+        pattern: /^bool\s/
     },
     {
         type: TokenType.UNIT,
         pattern: /^\d+\.?\d?(?:cm|mm|in|px|pt|pc|em|ex|ch|rem|vw|vh|vmin|vmax|%)/
-    },
-    {
-        type: TokenType.TYPE_STRING,
-        pattern: /^string+/
     },
     {
         type: TokenType.BOOLEAN_LITERAL,
@@ -261,6 +264,10 @@ var TOKEN_PATTERNS = [
     {
         type: TokenType.FUNC,
         pattern: /^func\s/
+    },
+    {
+        type: TokenType.LOOP,
+        pattern: /^loop\s/
     },
     {
         type: TokenType.ON,
@@ -653,6 +660,12 @@ var Tree = /** @class */ (function () {
             }
             else if (token.type === TokenType.FUNC) {
                 node = FunctionNode_1.FunctionNode.parse(node, token, tokens);
+                lastBlock = node;
+                blockNodes.push(node);
+                node = null;
+            }
+            else if (token.type === TokenType.LOOP) {
+                node = LoopNode_1.LoopNode.parse(node, token, tokens);
                 lastBlock = node;
                 blockNodes.push(node);
                 node = null;

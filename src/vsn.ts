@@ -18,6 +18,7 @@ export class Vision extends EventDispatcher {
 
     constructor() {
         super();
+        document.ondragover = (e) => e.cancelable && e.preventDefault();  // Allow dragging over document
         Registry.instance.tags.on('register', this.defineComponent, this);
         if (VisionHelper.document) {
             document.addEventListener(
@@ -31,11 +32,7 @@ export class Vision extends EventDispatcher {
         this.registry.functions.register('warn', console.warn);
         this.registry.functions.register('error', console.error);
         this.registry.functions.register('info', console.info);
-        this.registry.functions.register('wait', async (seconds) => {
-            return new Promise((resolve) => {
-                setTimeout(resolve, seconds * 1000);
-            });
-        });
+        this.registry.functions.register('wait', VisionHelper.wait);
         this.registry.models.register('Object', Object);
         this.registry.controllers.register('WrappedArray', WrappedArray);
         this.registry.controllers.register('Data', DynamicScopeData);

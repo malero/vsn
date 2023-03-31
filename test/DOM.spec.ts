@@ -10,7 +10,7 @@ describe('DOM', () => {
         document.body.innerHTML = `
             <div vsn-controller:test="TestController"></div>
         `;
-        const dom = new DOM(document);
+        const dom = new DOM(document.body);
         dom.once('built', async () => {
             const bodyTag = await dom.getTagForElement(document.body);
             expect(bodyTag.hasAttribute('vsn-root')).toBe(true)
@@ -26,7 +26,7 @@ describe('DOM', () => {
                 </div>
             </div>
         `;
-        const dom = new DOM(document);
+        const dom = new DOM(document.body);
         dom.once('built', async () => {
             expect(await dom.exec('?(#parent).asd')).toBe(123);
             expect(await dom.exec('?(#testing).asd')).toBe(345);
@@ -49,7 +49,7 @@ describe('DOM', () => {
                 </main>
             </div>
         `;
-        const dom = new DOM(document);
+        const dom = new DOM(document.body);
         dom.once('built', async () => {
             const root = await dom.exec('#root');
             const child = await dom.exec('#child');

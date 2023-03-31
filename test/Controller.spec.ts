@@ -30,7 +30,7 @@ describe('Controller', () => {
         document.body.innerHTML = `
             <div id="controller" vsn-controller:test="ControllerTestController" vsn-set:test.test="notTest" vsn-bind="test.test"></div>
         `;
-        const dom = new DOM(document);
+        const dom = new DOM(document.body);
         const deferred = SimplePromise.defer();
         dom.once('built', async () => {
             const tag = await dom.exec('#controller');

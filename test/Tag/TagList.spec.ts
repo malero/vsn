@@ -11,7 +11,7 @@ describe('TagList', () => {
             <p class="test">Test 3</p>
             <p class="testing">Test 4</p>
         `;
-        const dom = new DOM(document);
+        const dom = new DOM(document.body);
         dom.once('built', async () => {
             let tags: TagList | DOMObject = await Query('p.test', dom) as TagList;
             expect(tags.length).toBe(2);

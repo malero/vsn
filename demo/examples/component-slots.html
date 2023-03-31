@@ -7,29 +7,23 @@
     <style></style>
 </head>
 <body>
-    <div vsn-scope:options="{'testing': true}">
-        <test-component>
-            <button slot="cta" type="button">Component One <strong vsn-bind="data.count"></strong></button>
-            <h1 slot="display">Hihi <span vsn-if="options.testing">worky</span></h1>
-        </test-component>
+    <div vsn-scope:options="{'testing': false}"></div>
+    <script type="text/javascript" src="../vsn.js"></script>
 
-        <test-component>
-            <button slot="cta" type="button">Component Two <strong vsn-bind="data.count"></strong></button>
-            <h1 slot="display">Hihi <span vsn-if="options.testing">comp 2</span></h1>
-        </test-component>
-    </div>
-<script type="text/javascript" src="../vsn.js"></script>
+    <test-component id="test">
+        <button slot="cta" type="button">Component <strong></strong></button>
+        <h1 slot="display">Hello? <span>worky</span></h1>
+    </test-component>
 
-<template vsn-component:test-component>
-
-    <div vsn-scope:data="{'count': -1}">
-        <slot name="cta" vsn-on:click="data.count += 1; log(data.count);"></slot>
-        <slot name="display" vsn-if="data.count > 5"></slot>
-        <button vsn-on:click="options.testing = !options.testing; log(options.testing);" type="button">Toggle</button>
-    </div>
-    <script type="text/vsn" vsn-script>
-        log(this);
-    </script>
-</template>
+    <template vsn-component:test-component>
+        <div vsn-scope:data="{'count': -1}">
+            <slot name="cta" vsn-on:click="data.count += 1; log(data.count);"></slot>
+            <slot name="display" vsn-if="data.count > 5"></slot>
+            <button class="toggle-button" vsn-on:click="options.testing = !options.testing; log(options.testing);" type="button">Toggle</button>
+        </div>
+        <script type="text/vsn" vsn-script>
+            log(this);
+        </script>
+    </template>
 </body>
 </html>

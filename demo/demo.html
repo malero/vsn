@@ -175,30 +175,26 @@
     <button vsn-on:click="test.add();">Add New List Item</button>
     <ul vsn-list:test.items list-item-model="TestItem" vsn-name="list">
         <li vsn-list-item>
-            <span vsn-bind="item.name">Tom</span>, <span vsn-bind="item.age">22</span> Years Old <input type="text"
-                                                                                                        vsn-bind="item.name"/>
+            <span vsn-bind="item.name">Tom</span>, <span vsn-bind="item.age">22</span> Years Old <input type="text" vsn-bind="item.name"/>
             <input type="text" vsn-bind="item.age"/>
             <button vsn-on:click="item.reset()">R</button>
             <button vsn-on:click="list.remove(item)">X</button>
         </li>
         <li vsn-list-item>
-            <span vsn-bind="item.name">Steve</span>, <span vsn-bind="item.age">46</span> Years Old <input type="text"
-                                                                                                          vsn-bind="item.name"/>
+            <span vsn-bind="item.name">Steve</span>, <span vsn-bind="item.age">46</span> Years Old <input type="text" vsn-bind="item.name"/>
             <input type="text" vsn-bind="item.age"/>
             <button vsn-on:click="item.reset()">R</button>
             <button vsn-on:click="list.remove(item)">X</button>
         </li>
         <li vsn-list-item>
-            <span vsn-bind="item.name">Frank</span>, <span vsn-bind="item.age">31</span> Years Old <input type="text"
-                                                                                                          vsn-bind="item.name"/>
+            <span vsn-bind="item.name">Frank</span>, <span vsn-bind="item.age">31</span> Years Old <input type="text" vsn-bind="item.name"/>
             <input type="text" vsn-bind="item.age"/>
             <button vsn-on:click="item.reset()">R</button>
             <button vsn-on:click="list.remove(item)">X</button>
         </li>
         <li vsn-list-item>
             <span vsn-name="wut" vsn-set:wut.test="1">Wut</span>
-            <span vsn-bind="item.name">Joe</span>, <span vsn-bind="item.age">91</span> Years Old <input type="text"
-                                                                                                        vsn-bind="item.name"/>
+            <span vsn-bind="item.name">Joe</span>, <span vsn-bind="item.age">91</span> Years Old <input type="text" vsn-bind="item.name"/>
             <input type="text" vsn-bind="item.age"/>
             <button vsn-on:click="item.reset()">R</button>
             <button vsn-on:click="list.remove(item)">X</button>

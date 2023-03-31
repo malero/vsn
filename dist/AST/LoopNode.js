@@ -51,83 +51,71 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
     }
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.ElementQueryNode = void 0;
-var Node_1 = require("./Node");
-var AbstractDOM_1 = require("../DOM/AbstractDOM");
-var ElementQueryNode = /** @class */ (function (_super) {
-    __extends(ElementQueryNode, _super);
-    function ElementQueryNode(query, first, direction) {
-        if (first === void 0) { first = false; }
-        if (direction === void 0) { direction = AbstractDOM_1.EQuerySelectDirection.ALL; }
-        var _this = _super.call(this) || this;
-        _this.query = query;
-        _this.first = first;
-        _this.direction = direction;
-        _this.requiresPrep = true;
+exports.LoopNode = void 0;
+var FunctionNode_1 = require("./FunctionNode");
+var LoopNode = /** @class */ (function (_super) {
+    __extends(LoopNode, _super);
+    function LoopNode() {
+        var _this = _super !== null && _super.apply(this, arguments) || this;
+        _this.looping = true;
         return _this;
     }
-    ElementQueryNode.prototype.evaluate = function (scope, dom, tag, forceList) {
+    LoopNode.prototype.prepare = function (scope, dom, tag, meta) {
         if (tag === void 0) { tag = null; }
-        if (forceList === void 0) { forceList = false; }
         return __awaiter(this, void 0, void 0, function () {
-            var _a, elements;
-            return __generator(this, function (_b) {
-                switch (_b.label) {
+            var classPrep, func;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
                     case 0:
-                        _a = tag;
-                        if (_a) return [3 /*break*/, 2];
-                        return [4 /*yield*/, dom.getTagForScope(scope)];
+                        classPrep = meta === null || meta === void 0 ? void 0 : meta.ClassNodePrepare;
+                        if (!(tag && !classPrep)) return [3 /*break*/, 2];
+                        return [4 /*yield*/, this.getFunction(tag.scope || scope, dom, tag)];
                     case 1:
-                        _a = (_b.sent());
-                        _b.label = 2;
-                    case 2:
-                        tag = _a;
-                        return [4 /*yield*/, dom.get(this.query, true, tag, this.direction)];
+                        func = _a.sent();
+                        this.setTimeout(func);
+                        _a.label = 2;
+                    case 2: return [4 /*yield*/, _super.prototype.prepare.call(this, scope, dom, tag, meta)];
                     case 3:
-                        elements = _b.sent();
-                        return [2 /*return*/, this.first && !forceList ? elements[0] : elements];
-                }
-            });
-        });
-    };
-    ElementQueryNode.prototype.prepare = function (scope, dom, tag, meta) {
-        if (tag === void 0) { tag = null; }
-        if (meta === void 0) { meta = null; }
-        return __awaiter(this, void 0, void 0, function () {
-            var _a;
-            return __generator(this, function (_b) {
-                switch (_b.label) {
-                    case 0:
-                        _a = tag;
-                        if (_a) return [3 /*break*/, 2];
-                        return [4 /*yield*/, dom.getTagForScope(scope)];
-                    case 1:
-                        _a = (_b.sent());
-                        _b.label = 2;
-                    case 2:
-                        tag = _a;
-                        return [4 /*yield*/, dom.get(this.query, true, tag)];
-                    case 3:
-                        _b.sent();
+                        _a.sent();
                         return [2 /*return*/];
                 }
             });
         });
     };
-    ElementQueryNode.parse = function (lastNode, token, tokens) {
-        tokens.shift();
-        var first = false;
-        var direction = AbstractDOM_1.EQuerySelectDirection.ALL;
-        if (token.full.startsWith('?>')) {
-            direction = AbstractDOM_1.EQuerySelectDirection.DOWN;
-        }
-        else if (token.full.startsWith('?<')) {
-            direction = AbstractDOM_1.EQuerySelectDirection.UP;
-            first = true;
-        }
-        return new ElementQueryNode(token.value, first, direction);
+    LoopNode.prototype.loop = function (func) {
+        return __awaiter(this, void 0, void 0, function () {
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0:
+                        if (!this.looping) return [3 /*break*/, 2];
+                        return [4 /*yield*/, func()];
+                    case 1:
+                        _a.sent();
+                        this.setTimeout(func);
+                        _a.label = 2;
+                    case 2: return [2 /*return*/];
+                }
+            });
+        });
     };
-    return ElementQueryNode;
-}(Node_1.Node));
-exports.ElementQueryNode = ElementQueryNode;
-//# sourceMappingURL=ElementQueryNode.js.map
+    LoopNode.prototype.setTimeout = function (func, time) {
+        var _this = this;
+        if (time === void 0) { time = 33; }
+        setTimeout(function () { return __awaiter(_this, void 0, void 0, function () {
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0: return [4 /*yield*/, this.loop(func)];
+                    case 1:
+                        _a.sent();
+                        return [2 /*return*/];
+                }
+            });
+        }); }, time);
+    };
+    LoopNode.parse = function (lastNode, token, tokens) {
+        return _super.parse.call(this, lastNode, token, tokens, LoopNode);
+    };
+    return LoopNode;
+}(FunctionNode_1.FunctionNode));
+exports.LoopNode = LoopNode;
+//# sourceMappingURL=LoopNode.js.map

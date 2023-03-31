@@ -30,8 +30,8 @@ describe('ListItem', () => {
         `;
         let errorThrown: boolean = false;
         try {
-            const dom = new DOM(document, false);
-            await dom.buildFrom(document);
+            const dom = new DOM(document.body, false);
+            await dom.buildFrom(document.body);
         } catch (e) {
             expect(e.message).toBe(ListItem.ERROR_NO_PARENT);
             errorThrown = true;
@@ -44,7 +44,7 @@ describe('ListItem', () => {
             <ul vsn-list:list list-item-model="ListItemSpecTestItem" id="test"><li vsn-list-item id="test-item"></li></ul>
         `;
 
-        const dom = new DOM(document);
+        const dom = new DOM(document.body);
         dom.once('built', async () => {
             const list = await dom.getTagForElement(document.getElementById('test'));
             const listItem = await dom.getTagForElement(document.getElementById('test-item'));
@@ -63,7 +63,7 @@ describe('ListItem', () => {
                 </ul>
             </div>
         `;
-        const dom = new DOM(document);
+        const dom = new DOM(document.body);
         dom.once('built', async () => {
             const list = await dom.getTagForElement(document.getElementById('test'));
             const controller: ListItemController = list.scope.get('controller').wrapped;
@@ -92,7 +92,7 @@ describe('ListItem', () => {
             <ul vsn-list:list list-item-model="ListItemSpecTestItem" id="test"><li vsn-list-item id="test-item" vsn-set:item.testing|integer="1"></li></ul>
         `;
 
-        const dom = new DOM(document);
+        const dom = new DOM(document.body);
         dom.once('built', async () => {
             const listItem = await dom.getTagForElement(document.getElementById('test-item'));
             expect(listItem.scope.get('item').get('testing')).toBe(1);
@@ -107,7 +107,7 @@ describe('ListItem', () => {
             </ul>
         `;
 
-        const dom = new DOM(document);
+        const dom = new DOM(document.body);
         dom.once('built', async () => {
             const listItem = await dom.getTagForElement(document.getElementById('test-item'));
             console.log('test keys', listItem.scope.keys);

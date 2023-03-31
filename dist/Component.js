@@ -64,15 +64,17 @@ var __values = (this && this.__values) || function(o) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Component = void 0;
 var Registry_1 = require("./Registry");
-var DOM_1 = require("./DOM");
 var SlotTag_1 = require("./Tag/SlotTag");
 var SlottedTag_1 = require("./Tag/SlottedTag");
+var ShadowDOM_1 = require("./DOM/ShadowDOM");
+var DOM_1 = require("./DOM");
 var Component = /** @class */ (function (_super) {
     __extends(Component, _super);
     function Component() {
         var e_1, _a;
         var _this = _super.call(this) || this;
         Object.setPrototypeOf(_this, Component.prototype);
+        _this.shadowDOM = new ShadowDOM_1.ShadowDOM(DOM_1.DOM.instance, _this, false);
         _this.shadow = _this.attachShadow({ mode: 'open' });
         var templateId = _this.getAttribute('template');
         var template;
@@ -100,7 +102,7 @@ var Component = /** @class */ (function (_super) {
         var slotPromises = [];
         var tagsToSetup = [];
         _this.shadow.querySelectorAll('slot').forEach(function (slot) {
-            var slotTagPromise = DOM_1.DOM.instance.buildTag(slot, false, SlotTag_1.SlotTag);
+            var slotTagPromise = _this.shadowDOM.buildTag(slot, false, SlotTag_1.SlotTag);
             var promise = new Promise(function (resolve, reject) {
                 slot.addEventListener('slotchange', function (e) {
                     slotTagPromise.then(function (slotTag) { return __awaiter(_this, void 0, void 0, function () {
@@ -115,7 +117,7 @@ var Component = /** @class */ (function (_super) {
                                 case 1:
                                     if (!!_b.done) return [3 /*break*/, 5];
                                     child = _b.value;
-                                    return [4 /*yield*/, DOM_1.DOM.instance.buildTag(child, false, SlottedTag_1.SlottedTag)];
+                                    return [4 /*yield*/, this.shadowDOM.buildTag(child, false, SlottedTag_1.SlottedTag)];
                                 case 2:
                                     t = _d.sent();
                                     return [4 /*yield*/, (t === null || t === void 0 ? void 0 : t.slotted(slotTag))];
@@ -149,39 +151,22 @@ var Component = /** @class */ (function (_super) {
         });
         Promise.all(slotPromises).then(function (slotTags) { return __awaiter(_this, void 0, void 0, function () {
             return __generator(this, function (_a) {
-                switch (_a.label) {
-                    case 0: return [4 /*yield*/, DOM_1.DOM.instance.buildFrom(this, false, true)];
-                    case 1:
-                        _a.sent();
-                        return [4 /*yield*/, DOM_1.DOM.instance.setupTags(slotTags)];
-                    case 2:
-                        _a.sent();
-                        return [4 /*yield*/, DOM_1.DOM.instance.setupTags(tagsToSetup)];
-                    case 3:
-                        _a.sent();
-                        return [2 /*return*/];
-                }
+                console.log('Building after slot setup', this);
+                return [2 /*return*/];
             });
         }); });
         return _this;
     }
     Component.prototype.connectedCallback = function () {
         return __awaiter(this, void 0, void 0, function () {
-            var tag;
             return __generator(this, function (_a) {
                 switch (_a.label) {
-                    case 0: return [4 /*yield*/, DOM_1.DOM.instance.buildTag(this, true)];
+                    case 0:
+                        //const tag = await this.shadowDOM.buildTag(this, true);
+                        //tag.createScope(true);
+                        console.log('Building from shadow', this.shadow);
+                        return [4 /*yield*/, this.shadowDOM.buildFrom(this.shadow, true, true)];
                     case 1:
-                        tag = _a.sent();
-                        tag.createScope(true);
-                        return [4 /*yield*/, DOM_1.DOM.instance.buildFrom(this.shadow)];
-                    case 2:
-                        _a.sent();
-                        return [4 /*yield*/, tag.dom.resetBranch(tag)];
-                    case 3:
-                        _a.sent();
-                        return [4 /*yield*/, tag.dom.setupTags([tag])];
-                    case 4:
                         _a.sent();
                         return [2 /*return*/];
                 }

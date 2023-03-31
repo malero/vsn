@@ -7,6 +7,7 @@ export declare class VisionHelper {
     static get doBenchmark(): boolean;
     static get inLegacy(): boolean;
     static getUriWithParams(url: string, params: Record<string, any>): string;
+    static wait(seconds: any): Promise<unknown>;
     static nice(callback: any, timeout?: number): void;
     static get wasmSupport(): boolean;
 }

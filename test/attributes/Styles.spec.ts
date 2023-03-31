@@ -11,7 +11,7 @@ describe('Styles', () => {
                 <span id="styling-dupe" vsn-styles="testing.styles" style="margin-top: 50px;">testing 2</span>
             </div>
         `;
-        const dom = new DOM(document);
+        const dom = new DOM(document.body);
         dom.once('built', async () => {
             const ele1 = (await dom.get('#styling'))[0];
             const ele2 = (await dom.get('#styling-dupe'))[0];
@@ -33,7 +33,7 @@ describe('Styles', () => {
         document.body.innerHTML = `
             <span id="styling">testing</span>
         `;
-        const dom = new DOM(document);
+        const dom = new DOM(document.body);
         dom.once('built', async () => {
             await dom.exec('?(#styling).$marginTop = "50px"');
             expect((await dom.get('#styling'))[0].element.style.marginTop).toBe('50px');

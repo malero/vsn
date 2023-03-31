@@ -17,7 +17,7 @@ export class OnNode extends FunctionNode implements TreeNode {
         await super.prepare(scope, dom, tag, meta);
     }
 
-    public static parse(lastNode, token, tokens: Token[]): OnNode {
-        return super.parse<OnNode>(lastNode, token, tokens, OnNode);
+    public static parse<T = OnNode>(lastNode, token, tokens: Token[]): T {
+        return super.parse<T>(lastNode, token, tokens, OnNode);
     }
 }

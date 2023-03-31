@@ -656,6 +656,22 @@ export class Tag extends DOMObject {
         return attribute.replace(`|${modifier}`, '');
     }
 
+    public getElementPath(element: HTMLElement): string {
+        const path = [];
+        let currentElement = element;
+        while (currentElement) {
+            let tag = currentElement.tagName
+            if (currentElement.hasAttribute('id'))
+                tag += `#${currentElement.getAttribute('id')}`;
+            else if (currentElement.hasAttribute('class'))
+                tag += `.${currentElement.getAttribute('class').split(' ').join('.')}`;
+
+            path.push(tag);
+            currentElement = currentElement.parentElement;
+        }
+        return path.reverse().join('>');
+    }
+
     public addEventHandler(eventType: string, modifiers: Modifiers, handler, context: any = null) {
         let passiveValue: boolean = null;
         modifiers = modifiers || new Modifiers();
@@ -694,6 +710,14 @@ export class Tag extends DOMObject {
             this.onEventHandlers[eventType].splice(this.onEventHandlers[eventType].indexOf(_handler), 1);
             if (this.onEventHandlers[eventType].length === 0) {
                 this.element.removeEventListener(eventType, this.handleEvent.bind(this, eventType));
+            }
+        }
+    }
+
+    public removeAllEventHandlers() {
+        for (const eventType of Object.keys(this.onEventHandlers)) {
+            for (const handler of this.onEventHandlers[eventType]) {
+                this.removeEventHandler(eventType, handler.handler, handler.context);
             }
         }
     }
@@ -763,6 +787,7 @@ export class Tag extends DOMObject {
     }
 
     deconstruct() {
+        this.removeAllEventHandlers();
         this.attributes.forEach(attr => attr.deconstruct());
         this.attributes.clear();
         this._children.forEach(child => child.deconstruct());
