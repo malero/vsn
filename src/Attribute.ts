@@ -61,9 +61,11 @@ export abstract class Attribute extends EventDispatcher {
         this.setState(AttributeState.Connected);
     }
 
-    public async evaluate() {
+    public async finalize() {
         this.setState(AttributeState.Built);
     }
+
+    public async evaluate() {}
 
     public getAttributeValue(fallback: any = null) {
         return this.origin.getRawAttributeValue(this.attributeName, fallback);

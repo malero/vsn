@@ -27,6 +27,7 @@ export declare abstract class Attribute extends EventDispatcher {
     setup(): Promise<void>;
     extract(): Promise<void>;
     connect(): Promise<void>;
+    finalize(): Promise<void>;
     evaluate(): Promise<void>;
     getAttributeValue(fallback?: any): any;
     getAttributeBinding(fallback?: any): string;

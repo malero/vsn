@@ -590,6 +590,12 @@ export class Tag extends DOMObject {
     }
 
     public async finalize() {
+        const tags: Tag[] = await this.getTagsToBuild() as Tag[];
+        for (const tag of tags) {
+            for (const attr of tag.getAttributesWithState(AttributeState.Connected)) {
+                await attr.finalize();
+            }
+        }
         this._state = TagState.Built;
         this.callOnWrapped('$built', this, this.scope, this.element);
         this.dispatch('$built', this);

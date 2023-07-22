@@ -148,13 +148,18 @@ var Attribute = /** @class */ (function (_super) {
             });
         });
     };
-    Attribute.prototype.evaluate = function () {
+    Attribute.prototype.finalize = function () {
         return __awaiter(this, void 0, void 0, function () {
             return __generator(this, function (_a) {
                 this.setState(AttributeState.Built);
                 return [2 /*return*/];
             });
         });
+    };
+    Attribute.prototype.evaluate = function () {
+        return __awaiter(this, void 0, void 0, function () { return __generator(this, function (_a) {
+            return [2 /*return*/];
+        }); });
     };
     Attribute.prototype.getAttributeValue = function (fallback) {
         if (fallback === void 0) { fallback = null; }

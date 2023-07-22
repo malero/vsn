@@ -1039,12 +1039,68 @@ var Tag = /** @class */ (function (_super) {
     };
     Tag.prototype.finalize = function () {
         return __awaiter(this, void 0, void 0, function () {
-            return __generator(this, function (_a) {
-                this._state = TagState.Built;
-                this.callOnWrapped('$built', this, this.scope, this.element);
-                this.dispatch('$built', this);
-                VisionHelper_1.VisionHelper.nice(this.setupDeferredAttributes.bind(this));
-                return [2 /*return*/];
+            var tags, tags_6, tags_6_1, tag, _a, _b, attr, e_17_1, e_18_1;
+            var e_18, _c, e_17, _d;
+            return __generator(this, function (_e) {
+                switch (_e.label) {
+                    case 0: return [4 /*yield*/, this.getTagsToBuild()];
+                    case 1:
+                        tags = _e.sent();
+                        _e.label = 2;
+                    case 2:
+                        _e.trys.push([2, 13, 14, 15]);
+                        tags_6 = __values(tags), tags_6_1 = tags_6.next();
+                        _e.label = 3;
+                    case 3:
+                        if (!!tags_6_1.done) return [3 /*break*/, 12];
+                        tag = tags_6_1.value;
+                        _e.label = 4;
+                    case 4:
+                        _e.trys.push([4, 9, 10, 11]);
+                        _a = (e_17 = void 0, __values(tag.getAttributesWithState(Attribute_1.AttributeState.Connected))), _b = _a.next();
+                        _e.label = 5;
+                    case 5:
+                        if (!!_b.done) return [3 /*break*/, 8];
+                        attr = _b.value;
+                        return [4 /*yield*/, attr.finalize()];
+                    case 6:
+                        _e.sent();
+                        _e.label = 7;
+                    case 7:
+                        _b = _a.next();
+                        return [3 /*break*/, 5];
+                    case 8: return [3 /*break*/, 11];
+                    case 9:
+                        e_17_1 = _e.sent();
+                        e_17 = { error: e_17_1 };
+                        return [3 /*break*/, 11];
+                    case 10:
+                        try {
+                            if (_b && !_b.done && (_d = _a.return)) _d.call(_a);
+                        }
+                        finally { if (e_17) throw e_17.error; }
+                        return [7 /*endfinally*/];
+                    case 11:
+                        tags_6_1 = tags_6.next();
+                        return [3 /*break*/, 3];
+                    case 12: return [3 /*break*/, 15];
+                    case 13:
+                        e_18_1 = _e.sent();
+                        e_18 = { error: e_18_1 };
+                        return [3 /*break*/, 15];
+                    case 14:
+                        try {
+                            if (tags_6_1 && !tags_6_1.done && (_c = tags_6.return)) _c.call(tags_6);
+                        }
+                        finally { if (e_18) throw e_18.error; }
+                        return [7 /*endfinally*/];
+                    case 15:
+                        this._state = TagState.Built;
+                        this.callOnWrapped('$built', this, this.scope, this.element);
+                        this.dispatch('$built', this);
+                        VisionHelper_1.VisionHelper.nice(this.setupDeferredAttributes.bind(this));
+                        return [2 /*return*/];
+                }
             });
         });
     };
@@ -1061,7 +1117,7 @@ var Tag = /** @class */ (function (_super) {
         return false;
     };
     Tag.prototype.handleEvent = function (eventType, e) {
-        var e_17, _a;
+        var e_19, _a;
         var _this = this;
         if (e)
             e.stopPropagation();
@@ -1114,12 +1170,12 @@ var Tag = /** @class */ (function (_super) {
                 _loop_1(handler);
             }
         }
-        catch (e_17_1) { e_17 = { error: e_17_1 }; }
+        catch (e_19_1) { e_19 = { error: e_19_1 }; }
         finally {
             try {
                 if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
             }
-            finally { if (e_17) throw e_17.error; }
+            finally { if (e_19) throw e_19.error; }
         }
     };
     Tag.prototype.hasModifier = function (attribute, modifier) {
@@ -1182,34 +1238,6 @@ var Tag = /** @class */ (function (_super) {
         }
     };
     Tag.prototype.removeAllEventHandlers = function () {
-        var e_18, _a, e_19, _b;
-        try {
-            for (var _c = __values(Object.keys(this.onEventHandlers)), _d = _c.next(); !_d.done; _d = _c.next()) {
-                var eventType = _d.value;
-                try {
-                    for (var _e = (e_19 = void 0, __values(this.onEventHandlers[eventType])), _f = _e.next(); !_f.done; _f = _e.next()) {
-                        var handler = _f.value;
-                        this.removeEventHandler(eventType, handler.handler, handler.context);
-                    }
-                }
-                catch (e_19_1) { e_19 = { error: e_19_1 }; }
-                finally {
-                    try {
-                        if (_f && !_f.done && (_b = _e.return)) _b.call(_e);
-                    }
-                    finally { if (e_19) throw e_19.error; }
-                }
-            }
-        }
-        catch (e_18_1) { e_18 = { error: e_18_1 }; }
-        finally {
-            try {
-                if (_d && !_d.done && (_a = _c.return)) _a.call(_c);
-            }
-            finally { if (e_18) throw e_18.error; }
-        }
-    };
-    Tag.prototype.removeContextEventHandlers = function (context) {
         var e_20, _a, e_21, _b;
         try {
             for (var _c = __values(Object.keys(this.onEventHandlers)), _d = _c.next(); !_d.done; _d = _c.next()) {
@@ -1217,9 +1245,7 @@ var Tag = /** @class */ (function (_super) {
                 try {
                     for (var _e = (e_21 = void 0, __values(this.onEventHandlers[eventType])), _f = _e.next(); !_f.done; _f = _e.next()) {
                         var handler = _f.value;
-                        if (handler.context === context) {
-                            this.removeEventHandler(eventType, handler.handler, context);
-                        }
+                        this.removeEventHandler(eventType, handler.handler, handler.context);
                     }
                 }
                 catch (e_21_1) { e_21 = { error: e_21_1 }; }
@@ -1237,6 +1263,36 @@ var Tag = /** @class */ (function (_super) {
                 if (_d && !_d.done && (_a = _c.return)) _a.call(_c);
             }
             finally { if (e_20) throw e_20.error; }
+        }
+    };
+    Tag.prototype.removeContextEventHandlers = function (context) {
+        var e_22, _a, e_23, _b;
+        try {
+            for (var _c = __values(Object.keys(this.onEventHandlers)), _d = _c.next(); !_d.done; _d = _c.next()) {
+                var eventType = _d.value;
+                try {
+                    for (var _e = (e_23 = void 0, __values(this.onEventHandlers[eventType])), _f = _e.next(); !_f.done; _f = _e.next()) {
+                        var handler = _f.value;
+                        if (handler.context === context) {
+                            this.removeEventHandler(eventType, handler.handler, context);
+                        }
+                    }
+                }
+                catch (e_23_1) { e_23 = { error: e_23_1 }; }
+                finally {
+                    try {
+                        if (_f && !_f.done && (_b = _e.return)) _b.call(_e);
+                    }
+                    finally { if (e_23) throw e_23.error; }
+                }
+            }
+        }
+        catch (e_22_1) { e_22 = { error: e_22_1 }; }
+        finally {
+            try {
+                if (_d && !_d.done && (_a = _c.return)) _a.call(_c);
+            }
+            finally { if (e_22) throw e_22.error; }
         }
     };
     Tag.prototype.createScope = function (force) {
@@ -1314,8 +1370,8 @@ var Tag = /** @class */ (function (_super) {
     };
     Tag.prototype.setupDeferredAttributes = function () {
         return __awaiter(this, void 0, void 0, function () {
-            var _a, _b, attr, e_22_1;
-            var e_22, _c;
+            var _a, _b, attr, e_24_1;
+            var e_24, _c;
             return __generator(this, function (_d) {
                 switch (_d.label) {
                     case 0:
@@ -1334,14 +1390,14 @@ var Tag = /** @class */ (function (_super) {
                         return [3 /*break*/, 1];
                     case 4: return [3 /*break*/, 7];
                     case 5:
-                        e_22_1 = _d.sent();
-                        e_22 = { error: e_22_1 };
+                        e_24_1 = _d.sent();
+                        e_24 = { error: e_24_1 };
                         return [3 /*break*/, 7];
                     case 6:
                         try {
                             if (_b && !_b.done && (_c = _a.return)) _c.call(_a);
                         }
-                        finally { if (e_22) throw e_22.error; }
+                        finally { if (e_24) throw e_24.error; }
                         return [7 /*endfinally*/];
                     case 7:
                         this.deferredAttributes.length = 0;
