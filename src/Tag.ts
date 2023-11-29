@@ -753,7 +753,7 @@ export class Tag extends DOMObject {
         return this._scope;
     }
 
-    async watchAttribute(attributeName: string) {
+    async watchAttribute(attributeName: string): Promise<Attribute | StandardAttribute> {
         if (this.attributes.has(attributeName) && this.attributes.get(attributeName) instanceof StandardAttribute) {
             return this.attributes.get(attributeName);
         }
@@ -798,6 +798,10 @@ export class Tag extends DOMObject {
         this.attributes.clear();
         this._children.forEach(child => child.deconstruct());
         this._children.length = 0;
+        if (this._controller) {
+            this._controller.deconstruct();
+            this._controller = null;
+        }
         super.deconstruct();
     }
 }

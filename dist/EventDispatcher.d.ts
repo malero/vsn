@@ -13,6 +13,7 @@ export declare class EventCallback {
 export declare type EventDispatcherCallback = (...args: any[]) => any;
 export declare class EventDispatcher {
     private static sources;
+    static readonly stream: EventDispatcher;
     private readonly _listeners;
     private readonly _allListeners;
     private readonly _relays;

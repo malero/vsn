@@ -30,6 +30,7 @@ export type EventDispatcherCallback = (...args: any[]) => any;
 
 export class EventDispatcher  {
     private static sources: EventDispatcher[] = [];
+    public static readonly stream: EventDispatcher = new EventDispatcher();
     private readonly _listeners: EventCallbackList;
     private readonly _allListeners: EventCallback[] = [];
     private readonly _relays: EventDispatcher[] = [];
@@ -137,19 +138,35 @@ export class EventDispatcher  {
     }
 
     noneWithContext(context: any): number {
-        let toRemove: EventCallback[] = [],
-            cnt = 0;
+        const toRemoveAll: EventCallback[] = [];
+        let cnt = 0;
 
-        for(const cb of this._allListeners) {
+        for (const cb of this._allListeners) {
             if(context == cb.context) {
-                toRemove.push(cb);
+                toRemoveAll.push(cb);
             }
         }
 
-        for(const cb of toRemove) {
+        for (const k in this._listeners) {
+            const toRemove: EventCallback[] = [];
+
+            for (const cb of this._listeners[k]) {
+                if(context == cb.context) {
+                    toRemove.push(cb);
+                }
+            }
+
+            for (const cb of toRemove) {
+                this._listeners[k].splice(this._listeners[k].indexOf(cb), 1);
+                cnt++;
+            }
+        }
+
+        for (const cb of toRemoveAll) {
             this._allListeners.splice(this._allListeners.indexOf(cb), 1);
             cnt++;
         }
+
         return cnt;
     }
 
@@ -180,5 +197,13 @@ export class EventDispatcher  {
         for (const relay of this._relays) {
             relay.dispatch(event, ...args);
         }
+
+        if (this === EventDispatcher.stream)
+            return;
+
+        let streamArgs = args;
+        if (args.length > 0 && args[0] !== this)
+            streamArgs = [this, ...args];
+        EventDispatcher.stream.dispatch(event, ...streamArgs);
     }
 }

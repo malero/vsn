@@ -14,6 +14,12 @@ var __extends = (this && this.__extends) || (function () {
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
     };
 })();
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -50,93 +56,55 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
-var __read = (this && this.__read) || function (o, n) {
-    var m = typeof Symbol === "function" && o[Symbol.iterator];
-    if (!m) return o;
-    var i = m.call(o), r, ar = [], e;
-    try {
-        while ((n === void 0 || n-- > 0) && !(r = i.next()).done) ar.push(r.value);
-    }
-    catch (error) { e = { error: error }; }
-    finally {
-        try {
-            if (r && !r.done && (m = i["return"])) m.call(i);
-        }
-        finally { if (e) throw e.error; }
-    }
-    return ar;
-};
-var __spreadArray = (this && this.__spreadArray) || function (to, from) {
-    for (var i = 0, il = from.length, j = to.length; i < il; i++, j++)
-        to[j] = from[i];
-    return to;
-};
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.DOMObject = void 0;
-var EventDispatcher_1 = require("../EventDispatcher");
-var DOMObject = /** @class */ (function (_super) {
-    __extends(DOMObject, _super);
-    function DOMObject(element, props) {
-        var _a;
-        var _this = _super.call(this) || this;
-        _this.element = element;
-        _this._uniqueScope = false;
-        _this.delegates = [];
-        if (_this.isSlot) {
-            (_a = _this.delegates).push.apply(_a, __spreadArray([], __read(element.assignedNodes())));
-        }
-        if (element.assignedSlot) {
-            _this.slot = element.assignedSlot;
-        }
-        return _this;
+exports.StyleVarAttribute = void 0;
+var Registry_1 = require("../Registry");
+var Attribute_1 = require("../Attribute");
+var StyleVarAttribute = /** @class */ (function (_super) {
+    __extends(StyleVarAttribute, _super);
+    function StyleVarAttribute() {
+        return _super !== null && _super.apply(this, arguments) || this;
     }
-    Object.defineProperty(DOMObject.prototype, "isSlot", {
-        get: function () {
-            return this.element instanceof HTMLSlotElement;
-        },
-        enumerable: false,
-        configurable: true
-    });
-    Object.defineProperty(DOMObject.prototype, "isSlotted", {
-        get: function () {
-            return this.element.hasAttribute('slot');
-        },
-        enumerable: false,
-        configurable: true
-    });
-    Object.defineProperty(DOMObject.prototype, "scope", {
-        get: function () {
-            if (!!this._scope)
-                return this._scope;
-            return null;
-        },
-        set: function (scope) {
-            this._scope = scope;
-        },
-        enumerable: false,
-        configurable: true
-    });
-    DOMObject.prototype.watchAttribute = function (attr) {
+    StyleVarAttribute.prototype.connect = function () {
         return __awaiter(this, void 0, void 0, function () {
-            return __generator(this, function (_a) {
-                return [2 /*return*/];
+            var scopeKey, ref, _a, _b;
+            return __generator(this, function (_c) {
+                switch (_c.label) {
+                    case 0:
+                        scopeKey = this.getAttributeValue();
+                        try {
+                            ref = this.tag.scope.getReference(scopeKey);
+                        }
+                        catch (e) {
+                            console.error('error', e);
+                            return [2 /*return*/];
+                        }
+                        _a = this;
+                        return [4 /*yield*/, ref.getKey()];
+                    case 1:
+                        _a.key = _c.sent();
+                        this.styleVar = this.getAttributeBinding();
+                        _b = this;
+                        return [4 /*yield*/, ref.getScope()];
+                    case 2:
+                        _b.boundScope = _c.sent();
+                        this.boundScope.on("change:" + this.key, this.update, this);
+                        return [4 /*yield*/, _super.prototype.connect.call(this)];
+                    case 3:
+                        _c.sent();
+                        return [2 /*return*/];
+                }
             });
         });
     };
-    DOMObject.prototype.watchStyle = function (style) {
-        return __awaiter(this, void 0, void 0, function () {
-            return __generator(this, function (_a) {
-                return [2 /*return*/];
-            });
-        });
+    StyleVarAttribute.prototype.update = function (e) {
+        this.tag.element.style.setProperty("--" + this.styleVar, e.value);
     };
-    DOMObject.prototype.deconstruct = function () {
-        var _a;
-        if (this._uniqueScope)
-            (_a = this.scope) === null || _a === void 0 ? void 0 : _a.deconstruct();
-        _super.prototype.deconstruct.call(this);
-    };
-    return DOMObject;
-}(EventDispatcher_1.EventDispatcher));
-exports.DOMObject = DOMObject;
-//# sourceMappingURL=DOMObject.js.map
+    StyleVarAttribute.canDefer = false;
+    StyleVarAttribute = __decorate([
+        Registry_1.Registry.attribute('vsn-style-var')
+    ], StyleVarAttribute);
+    return StyleVarAttribute;
+}(Attribute_1.Attribute));
+exports.StyleVarAttribute = StyleVarAttribute;
+//# sourceMappingURL=StyleVarAttribute.js.map

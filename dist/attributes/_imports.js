@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.XHRAttribute = exports.TypeAttribute = exports.TemplateAttribute = exports.StyleAttribute = exports.StandardAttribute = exports.SetAttribute = exports.ServiceAttribute = exports.ScriptAttribute = exports.ScopeChange = exports.ScopeAttribute = exports.RootAttribute = exports.Referenced = exports.On = exports.Name = exports.ModelAttribute = exports.ListItemModel = exports.ListItem = exports.List = exports.LazyAttribute = exports.KeyUp = exports.KeyDown = exports.JSONAttribute = exports.If = exports.Format = exports.Exec = exports.DisableIf = exports.ControllerAttribute = exports.ComponentAttribute = exports.Bind = exports.AddClassIf = void 0;
+exports.XHRAttribute = exports.TypeAttribute = exports.TemplateAttribute = exports.StyleVarAttribute = exports.StyleAttribute = exports.StandardAttribute = exports.SetAttribute = exports.ServiceAttribute = exports.ScriptAttribute = exports.ScopeChange = exports.ScopeAttribute = exports.RootAttribute = exports.Referenced = exports.On = exports.Name = exports.ModelAttribute = exports.ListItemModel = exports.ListItem = exports.List = exports.LazyAttribute = exports.KeyUp = exports.KeyDown = exports.JSONAttribute = exports.If = exports.Format = exports.Exec = exports.DisableIf = exports.ControllerAttribute = exports.ComponentAttribute = exports.Bind = exports.AddClassIf = void 0;
 var AddClassIf_1 = require("./AddClassIf");
 Object.defineProperty(exports, "AddClassIf", { enumerable: true, get: function () { return AddClassIf_1.AddClassIf; } });
 var Bind_1 = require("./Bind");
@@ -55,6 +55,8 @@ var StandardAttribute_1 = require("./StandardAttribute");
 Object.defineProperty(exports, "StandardAttribute", { enumerable: true, get: function () { return StandardAttribute_1.StandardAttribute; } });
 var StyleAttribute_1 = require("./StyleAttribute");
 Object.defineProperty(exports, "StyleAttribute", { enumerable: true, get: function () { return StyleAttribute_1.StyleAttribute; } });
+var StyleVarAttribute_1 = require("./StyleVarAttribute");
+Object.defineProperty(exports, "StyleVarAttribute", { enumerable: true, get: function () { return StyleVarAttribute_1.StyleVarAttribute; } });
 var TemplateAttribute_1 = require("./TemplateAttribute");
 Object.defineProperty(exports, "TemplateAttribute", { enumerable: true, get: function () { return TemplateAttribute_1.TemplateAttribute; } });
 var TypeAttribute_1 = require("./TypeAttribute");

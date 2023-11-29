@@ -69,6 +69,8 @@ var ElementQueryNode_1 = require("./ElementQueryNode");
 var LiteralNode_1 = require("./LiteralNode");
 var DOMObject_1 = require("../DOM/DOMObject");
 var IndexNode_1 = require("./IndexNode");
+var ScopeMemberNode_1 = require("./ScopeMemberNode");
+var RootScopeMemberNode_1 = require("./RootScopeMemberNode");
 var ElementAttributeNode = /** @class */ (function (_super) {
     __extends(ElementAttributeNode, _super);
     function ElementAttributeNode(elementRef, attr) {
@@ -103,7 +105,7 @@ var ElementAttributeNode = /** @class */ (function (_super) {
     ElementAttributeNode.prototype.evaluate = function (scope, dom, tag) {
         if (tag === void 0) { tag = null; }
         return __awaiter(this, void 0, void 0, function () {
-            var tags, indexResult;
+            var tags, indexResult, scopeEval;
             var _this = this;
             return __generator(this, function (_a) {
                 switch (_a.label) {
@@ -112,7 +114,7 @@ var ElementAttributeNode = /** @class */ (function (_super) {
                         return [4 /*yield*/, this.elementRef.evaluate(scope, dom, tag, true)];
                     case 1:
                         tags = _a.sent();
-                        return [3 /*break*/, 5];
+                        return [3 /*break*/, 7];
                     case 2:
                         if (!(this.elementRef instanceof IndexNode_1.IndexNode)) return [3 /*break*/, 4];
                         return [4 /*yield*/, this.elementRef.evaluate(scope, dom, tag, true)];
@@ -124,19 +126,50 @@ var ElementAttributeNode = /** @class */ (function (_super) {
                         else {
                             tags = new TagList_1.TagList(indexResult);
                         }
-                        return [3 /*break*/, 5];
+                        return [3 /*break*/, 7];
                     case 4:
+                        if (!(this.elementRef instanceof ScopeMemberNode_1.ScopeMemberNode || this.elementRef instanceof RootScopeMemberNode_1.RootScopeMemberNode)) return [3 /*break*/, 6];
+                        return [4 /*yield*/, this.elementRef.evaluate(scope, dom, tag, true)];
+                    case 5:
+                        scopeEval = _a.sent();
+                        if (Array.isArray(scopeEval)) {
+                            tags = scopeEval;
+                        }
+                        else {
+                            tags = new TagList_1.TagList(scopeEval);
+                        }
+                        return [3 /*break*/, 7];
+                    case 6:
                         if (tag) {
                             tags = new TagList_1.TagList(tag);
                         }
                         else {
                             return [2 /*return*/];
                         }
-                        _a.label = 5;
-                    case 5:
-                        if (tags.length === 1)
-                            return [2 /*return*/, tags[0].scope.get("@" + this.attributeName)];
-                        return [2 /*return*/, tags.map(function (tag) { return tag.scope.get("@" + _this.attributeName); })];
+                        _a.label = 7;
+                    case 7:
+                        if (tags.length === 1) {
+                            return [2 /*return*/, this.getAttributeScopeValue(tags[0])];
+                        }
+                        return [2 /*return*/, tags.map(function (tag) { return _this.getAttributeScopeValue(tag); })];
+                }
+            });
+        });
+    };
+    ElementAttributeNode.prototype.getAttributeScopeValue = function (tag) {
+        return __awaiter(this, void 0, void 0, function () {
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0:
+                        if (!(tag instanceof DOMObject_1.DOMObject)) {
+                            return [2 /*return*/, ''];
+                        }
+                        // Make sure the attribute is being watched
+                        return [4 /*yield*/, tag.watchAttribute(this.attributeName)];
+                    case 1:
+                        // Make sure the attribute is being watched
+                        _a.sent();
+                        return [2 /*return*/, tag.scope.get("@" + this.attributeName)];
                 }
             });
         });

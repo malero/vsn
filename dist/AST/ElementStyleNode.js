@@ -66,6 +66,7 @@ exports.ElementStyleNode = void 0;
 var TagList_1 = require("../Tag/TagList");
 var Node_1 = require("./Node");
 var LiteralNode_1 = require("./LiteralNode");
+var DOMObject_1 = require("../DOM/DOMObject");
 var ElementStyleNode = /** @class */ (function (_super) {
     __extends(ElementStyleNode, _super);
     function ElementStyleNode(elementRef, attr) {
@@ -119,9 +120,27 @@ var ElementStyleNode = /** @class */ (function (_super) {
                         }
                         _a.label = 3;
                     case 3:
-                        if (tags.length === 1)
-                            return [2 /*return*/, tags[0].scope.get("$" + this.attributeName)];
-                        return [2 /*return*/, tags.map(function (tag) { return tag.scope.get("$" + _this.attributeName); })];
+                        if (tags instanceof DOMObject_1.DOMObject)
+                            tags = new TagList_1.TagList(tags);
+                        if (tags.length === 1) {
+                            return [2 /*return*/, this.getAttributeStyleValue(tags[0])];
+                        }
+                        return [2 /*return*/, tags.map(function (tag) { return _this.getAttributeStyleValue(tag); })];
+                }
+            });
+        });
+    };
+    ElementStyleNode.prototype.getAttributeStyleValue = function (tag) {
+        return __awaiter(this, void 0, void 0, function () {
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0: 
+                    // Make sure we're watching the style
+                    return [4 /*yield*/, tag.watchStyle(this.attributeName)];
+                    case 1:
+                        // Make sure we're watching the style
+                        _a.sent();
+                        return [2 /*return*/, tag.scope.get("$" + this.attributeName)];
                 }
             });
         });

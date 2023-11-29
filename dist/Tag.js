@@ -1412,6 +1412,10 @@ var Tag = /** @class */ (function (_super) {
         this.attributes.clear();
         this._children.forEach(function (child) { return child.deconstruct(); });
         this._children.length = 0;
+        if (this._controller) {
+            this._controller.deconstruct();
+            this._controller = null;
+        }
         _super.prototype.deconstruct.call(this);
     };
     Tag.TaggedVariable = '_vsn_tag';

@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Item Filtering</title>
+
+    <style>
+
+    </style>
+</head>
+<body>
+
+<input type="text" id="item-filter" />
+
+<ul id="items">
+    <li class="item" itemname="test">Test</li>
+    <li class="item" itemname="foo">Foo</li>
+    <li class="item" itemname="bar">Bar</li>
+    <li class="item" itemname="baz">Baz</li>
+    <li class="item" itemname="testing">Testing</li>
+</ul>
+
+<script type="text/vsn" vsn-script>
+    class #item-filter {
+        on keyup() {
+            val = @value;
+            if (val) {
+                val = val.toLowerCase();
+                for (ele of ?(#items .item)) {
+                    if (ele.@itemname.indexOf(val) > -1) {
+                        ele.$display = 'list-item';
+                    } else {
+                        ele.$display = 'none';
+                    }
+                }
+            } else {
+                ?(#items .item).$display = 'block';
+            }
+        }
+    }
+</script>
+
+<script type="text/javascript" src="../vsn.js"></script>
+</body>
+</html>

@@ -25,6 +25,7 @@ export {ServiceAttribute} from "./ServiceAttribute";
 export {SetAttribute} from "./SetAttribute";
 export {StandardAttribute} from "./StandardAttribute";
 export {StyleAttribute} from "./StyleAttribute";
+export {StyleVarAttribute} from "./StyleVarAttribute";
 export {TemplateAttribute} from "./TemplateAttribute";
 export {TypeAttribute} from "./TypeAttribute";
 export {XHRAttribute} from "./XHRAttribute";

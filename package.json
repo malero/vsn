@@ -1,6 +1,6 @@
 {
   "name": "vsn",
-  "version": "0.1.127",
+  "version": "0.1.128",
   "description": "SEO Friendly Javascript/Typescript Framework",
   "keywords": [
     "framework",
@@ -32,14 +32,14 @@
     "@types/jasmine": "^3.6.10",
     "codecov": "^3.8.1",
     "jasmine": "^3.7.0",
-    "karma": "^6.3.2",
+    "karma": "6.3.16",
     "karma-chrome-launcher": "^3.1.0",
     "karma-coverage": "^2.0.3",
     "karma-jasmine": "^4.0.1",
     "karma-typescript": "^5.5.1",
     "ts-loader": "^9.1.1",
     "typescript": "^4.2.4",
-    "webpack": "^5.36.1",
+    "webpack": "5.76.0",
     "webpack-cli": "^4.6.0"
   },
   "homepage": "https://www.vsnjs.com",

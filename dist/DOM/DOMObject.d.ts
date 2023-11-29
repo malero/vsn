@@ -24,7 +24,7 @@ export declare abstract class DOMObject extends EventDispatcher {
     get isSlotted(): boolean;
     get scope(): Scope;
     set scope(scope: Scope);
-    watchAttribute(attr: string): void;
-    watchStyle(style: string): void;
+    watchAttribute(attr: string): Promise<any>;
+    watchStyle(style: string): Promise<any>;
     deconstruct(): void;
 }

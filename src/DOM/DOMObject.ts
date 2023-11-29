@@ -49,11 +49,11 @@ export abstract class DOMObject extends EventDispatcher {
         this._scope = scope;
     }
 
-    public watchAttribute(attr: string) {
+    public async watchAttribute(attr: string): Promise<any> {
 
     }
 
-    public watchStyle(style: string) {
+    public async watchStyle(style: string): Promise<any> {
 
     }
 

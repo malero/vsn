@@ -212,41 +212,74 @@ var EventDispatcher = /** @class */ (function () {
         return false;
     };
     EventDispatcher.prototype.noneWithContext = function (context) {
-        var e_6, _a, e_7, _b;
-        var toRemove = [], cnt = 0;
+        var e_6, _a, e_7, _b, e_8, _c, e_9, _d;
+        var toRemoveAll = [];
+        var cnt = 0;
         try {
-            for (var _c = __values(this._allListeners), _d = _c.next(); !_d.done; _d = _c.next()) {
-                var cb = _d.value;
+            for (var _e = __values(this._allListeners), _f = _e.next(); !_f.done; _f = _e.next()) {
+                var cb = _f.value;
                 if (context == cb.context) {
-                    toRemove.push(cb);
+                    toRemoveAll.push(cb);
                 }
             }
         }
         catch (e_6_1) { e_6 = { error: e_6_1 }; }
         finally {
             try {
-                if (_d && !_d.done && (_a = _c.return)) _a.call(_c);
+                if (_f && !_f.done && (_a = _e.return)) _a.call(_e);
             }
             finally { if (e_6) throw e_6.error; }
         }
+        for (var k in this._listeners) {
+            var toRemove = [];
+            try {
+                for (var _g = (e_7 = void 0, __values(this._listeners[k])), _h = _g.next(); !_h.done; _h = _g.next()) {
+                    var cb = _h.value;
+                    if (context == cb.context) {
+                        toRemove.push(cb);
+                    }
+                }
+            }
+            catch (e_7_1) { e_7 = { error: e_7_1 }; }
+            finally {
+                try {
+                    if (_h && !_h.done && (_b = _g.return)) _b.call(_g);
+                }
+                finally { if (e_7) throw e_7.error; }
+            }
+            try {
+                for (var toRemove_2 = (e_8 = void 0, __values(toRemove)), toRemove_2_1 = toRemove_2.next(); !toRemove_2_1.done; toRemove_2_1 = toRemove_2.next()) {
+                    var cb = toRemove_2_1.value;
+                    this._listeners[k].splice(this._listeners[k].indexOf(cb), 1);
+                    cnt++;
+                }
+            }
+            catch (e_8_1) { e_8 = { error: e_8_1 }; }
+            finally {
+                try {
+                    if (toRemove_2_1 && !toRemove_2_1.done && (_c = toRemove_2.return)) _c.call(toRemove_2);
+                }
+                finally { if (e_8) throw e_8.error; }
+            }
+        }
         try {
-            for (var toRemove_2 = __values(toRemove), toRemove_2_1 = toRemove_2.next(); !toRemove_2_1.done; toRemove_2_1 = toRemove_2.next()) {
-                var cb = toRemove_2_1.value;
+            for (var toRemoveAll_1 = __values(toRemoveAll), toRemoveAll_1_1 = toRemoveAll_1.next(); !toRemoveAll_1_1.done; toRemoveAll_1_1 = toRemoveAll_1.next()) {
+                var cb = toRemoveAll_1_1.value;
                 this._allListeners.splice(this._allListeners.indexOf(cb), 1);
                 cnt++;
             }
         }
-        catch (e_7_1) { e_7 = { error: e_7_1 }; }
+        catch (e_9_1) { e_9 = { error: e_9_1 }; }
         finally {
             try {
-                if (toRemove_2_1 && !toRemove_2_1.done && (_b = toRemove_2.return)) _b.call(toRemove_2);
+                if (toRemoveAll_1_1 && !toRemoveAll_1_1.done && (_d = toRemoveAll_1.return)) _d.call(toRemoveAll_1);
             }
-            finally { if (e_7) throw e_7.error; }
+            finally { if (e_9) throw e_9.error; }
         }
         return cnt;
     };
     EventDispatcher.prototype.dispatch = function (event) {
-        var e_8, _a, e_9, _b;
+        var e_10, _a, e_11, _b, _c;
         var args = [];
         for (var _i = 1; _i < arguments.length; _i++) {
             args[_i - 1] = arguments[_i];
@@ -265,36 +298,43 @@ var EventDispatcher = /** @class */ (function () {
             }
         }
         try {
-            for (var _c = __values(this._allListeners), _d = _c.next(); !_d.done; _d = _c.next()) {
-                var cb = _d.value;
+            for (var _d = __values(this._allListeners), _e = _d.next(); !_e.done; _e = _d.next()) {
+                var cb = _e.value;
                 if (cb.once) {
                     this.none(cb.key);
                 }
                 cb.call(args);
             }
         }
-        catch (e_8_1) { e_8 = { error: e_8_1 }; }
+        catch (e_10_1) { e_10 = { error: e_10_1 }; }
         finally {
             try {
-                if (_d && !_d.done && (_a = _c.return)) _a.call(_c);
+                if (_e && !_e.done && (_a = _d.return)) _a.call(_d);
             }
-            finally { if (e_8) throw e_8.error; }
+            finally { if (e_10) throw e_10.error; }
         }
         try {
-            for (var _e = __values(this._relays), _f = _e.next(); !_f.done; _f = _e.next()) {
-                var relay = _f.value;
+            for (var _f = __values(this._relays), _g = _f.next(); !_g.done; _g = _f.next()) {
+                var relay = _g.value;
                 relay.dispatch.apply(relay, __spreadArray([event], __read(args)));
             }
         }
-        catch (e_9_1) { e_9 = { error: e_9_1 }; }
+        catch (e_11_1) { e_11 = { error: e_11_1 }; }
         finally {
             try {
-                if (_f && !_f.done && (_b = _e.return)) _b.call(_e);
+                if (_g && !_g.done && (_b = _f.return)) _b.call(_f);
             }
-            finally { if (e_9) throw e_9.error; }
+            finally { if (e_11) throw e_11.error; }
         }
+        if (this === EventDispatcher.stream)
+            return;
+        var streamArgs = args;
+        if (args.length > 0 && args[0] !== this)
+            streamArgs = __spreadArray([this], __read(args));
+        (_c = EventDispatcher.stream).dispatch.apply(_c, __spreadArray([event], __read(streamArgs)));
     };
     EventDispatcher.sources = [];
+    EventDispatcher.stream = new EventDispatcher();
     return EventDispatcher;
 }());
 exports.EventDispatcher = EventDispatcher;

@@ -6,6 +6,7 @@ import {TreeNode} from "../AST";
 import {Node} from "./Node";
 import {ElementQueryNode} from "./ElementQueryNode";
 import {LiteralNode} from "./LiteralNode";
+import {DOMObject} from "../DOM/DOMObject";
 
 export class ElementStyleNode extends Node implements TreeNode {
     protected requiresPrep: boolean = true;
@@ -44,10 +45,20 @@ export class ElementStyleNode extends Node implements TreeNode {
             return;
         }
 
-        if (tags.length === 1)
-            return tags[0].scope.get(`$${this.attributeName}`);
+        if (tags instanceof DOMObject)
+            tags = new TagList(tags);
 
-        return tags.map((tag) => tag.scope.get(`$${this.attributeName}`));
+        if (tags.length === 1) {
+            return this.getAttributeStyleValue(tags[0]);
+        }
+
+        return tags.map((tag) => this.getAttributeStyleValue(tag));
+    }
+
+    async getAttributeStyleValue(tag: Tag | DOMObject): Promise<string> {
+        // Make sure we're watching the style
+        await tag.watchStyle(this.attributeName);
+        return tag.scope.get(`$${this.attributeName}`);
     }
 
     async prepare(scope: Scope, dom: DOM, tag: Tag = null, meta: any = null) {

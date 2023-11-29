@@ -8,6 +8,8 @@ import {ElementQueryNode} from "./ElementQueryNode";
 import {LiteralNode} from "./LiteralNode";
 import {DOMObject} from "../DOM/DOMObject";
 import {IndexNode} from "./IndexNode";
+import {ScopeMemberNode} from "./ScopeMemberNode";
+import {RootScopeMemberNode} from "./RootScopeMemberNode";
 
 export class ElementAttributeNode extends Node implements TreeNode {
     protected requiresPrep: boolean = true;
@@ -38,6 +40,7 @@ export class ElementAttributeNode extends Node implements TreeNode {
 
     async evaluate(scope: Scope, dom: DOM, tag: Tag = null) {
         let tags: TagList;
+
         if (this.elementRef instanceof ElementQueryNode) {
             tags = await this.elementRef.evaluate(scope, dom, tag, true);
         } else if (this.elementRef as any instanceof IndexNode) {
@@ -47,16 +50,34 @@ export class ElementAttributeNode extends Node implements TreeNode {
             } else {
                 tags = new TagList(indexResult);
             }
+        } else if (this.elementRef as any instanceof ScopeMemberNode || this.elementRef as any instanceof RootScopeMemberNode) {
+            const scopeEval = await (this.elementRef as any).evaluate(scope, dom, tag, true);
+            if (Array.isArray(scopeEval)) {
+                tags = scopeEval as any;
+            } else {
+                tags = new TagList(scopeEval);
+            }
         } else if (tag) {
             tags = new TagList(tag)
         } else {
             return;
         }
 
-        if (tags.length === 1)
-            return tags[0].scope.get(`@${this.attributeName}`);
+        if (tags.length === 1) {
+            return this.getAttributeScopeValue(tags[0]);
+        }
 
-        return tags.map((tag) => tag.scope.get(`@${this.attributeName}`));
+        return tags.map((tag) => this.getAttributeScopeValue(tag));
+    }
+
+    async getAttributeScopeValue(tag: Tag | DOMObject): Promise<string> {
+        if (!(tag instanceof DOMObject)) {
+            return '';
+        }
+
+        // Make sure the attribute is being watched
+        await tag.watchAttribute(this.attributeName);
+        return tag.scope.get(`@${this.attributeName}`) as string;
     }
 
     async prepare(scope: Scope, dom: DOM, tag: Tag = null, meta: any = null) {
