@@ -155,10 +155,19 @@ export abstract class AbstractDOM extends EventDispatcher {
         return this.rootElement.querySelector(q);
     }
 
-    public async exec(code: string) {
+    public async exec(code: string, data?: object) {
+        let scope = this.root.scope;
+        if (data) {
+            if (data instanceof Scope) {
+                scope = data
+            } else {
+                scope = new Scope();
+                scope.wrap(data);
+            }
+        }
         const tree = new Tree(code);
-        await tree.prepare(this.root.scope, this);
-        return await tree.evaluate(this.root.scope, this);
+        await tree.prepare(scope, this);
+        return await tree.evaluate(scope, this);
     }
 
     public async evaluate() {

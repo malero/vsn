@@ -33,7 +33,7 @@ export declare abstract class AbstractDOM extends EventDispatcher {
     querySelectorAll(q: string, tag?: Tag): NodeList | HTMLElement[];
     querySelectorElement(element: HTMLElement | Document, q: string): NodeList | HTMLElement[];
     querySelector(q: string): Element;
-    exec(code: string): any;
+    exec(code: string, data?: object): any;
     evaluate(): Promise<void>;
     mutation(mutations: MutationRecord[]): Promise<void>;
     discover(ele: HTMLElement, forComponent?: boolean): Promise<HTMLElement[]>;

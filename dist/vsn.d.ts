@@ -11,7 +11,7 @@ export declare class Vision extends EventDispatcher {
     constructor();
     protected defineComponent(name: any, cls: any): void;
     get dom(): DOM;
-    exec(code: string): Promise<any>;
+    exec(code: string, data?: any): Promise<any>;
     setup(): Promise<void>;
     static get instance(): Vision;
 }

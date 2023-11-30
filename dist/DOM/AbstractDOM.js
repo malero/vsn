@@ -95,6 +95,7 @@ var Registry_1 = require("../Registry");
 var ElementHelper_1 = require("../helpers/ElementHelper");
 var SlotTag_1 = require("../Tag/SlotTag");
 var SlottedTag_1 = require("../Tag/SlottedTag");
+var Scope_1 = require("../Scope");
 var EventDispatcher_1 = require("../EventDispatcher");
 var EQuerySelectDirection;
 (function (EQuerySelectDirection) {
@@ -283,17 +284,27 @@ var AbstractDOM = /** @class */ (function (_super) {
     AbstractDOM.prototype.querySelector = function (q) {
         return this.rootElement.querySelector(q);
     };
-    AbstractDOM.prototype.exec = function (code) {
+    AbstractDOM.prototype.exec = function (code, data) {
         return __awaiter(this, void 0, void 0, function () {
-            var tree;
+            var scope, tree;
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
+                        scope = this.root.scope;
+                        if (data) {
+                            if (data instanceof Scope_1.Scope) {
+                                scope = data;
+                            }
+                            else {
+                                scope = new Scope_1.Scope();
+                                scope.wrap(data);
+                            }
+                        }
                         tree = new AST_1.Tree(code);
-                        return [4 /*yield*/, tree.prepare(this.root.scope, this)];
+                        return [4 /*yield*/, tree.prepare(scope, this)];
                     case 1:
                         _a.sent();
-                        return [4 /*yield*/, tree.evaluate(this.root.scope, this)];
+                        return [4 /*yield*/, tree.evaluate(scope, this)];
                     case 2: return [2 /*return*/, _a.sent()];
                 }
             });

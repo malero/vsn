@@ -61,8 +61,8 @@ export class Vision extends EventDispatcher {
         return this._dom;
     }
 
-    public async exec(code: string) {
-        return await this._dom.exec(code);
+    public async exec(code: string, data?: any) {
+        return await this._dom.exec(code, data);
     }
 
     public async setup() {
