@@ -1,5 +1,4 @@
 import { EventDispatcher } from "./EventDispatcher";
-import { IPromise } from "./SimplePromise";
 import { ClassNode } from "./AST/ClassNode";
 export declare function register(store: string, key?: string, setup?: () => void): (target: any, _key?: string) => void;
 export declare class RegistryStore<T = any> extends EventDispatcher {
@@ -7,7 +6,7 @@ export declare class RegistryStore<T = any> extends EventDispatcher {
     private readonly store;
     constructor(defaults?: any);
     register(key: string, item: any): void;
-    get(key: string): IPromise<any>;
+    get(key: string): Promise<any>;
     getSynchronous(key: string): T;
     has(key: string): boolean;
     get keys(): string[];

@@ -132,6 +132,50 @@ export enum TokenType {
     DISPATCH_EVENT,
 }
 
+export interface BlockTypeConfiguration {
+    open: number,
+    close: number,
+}
+
+export const BlockTypeConfigurations: {[key: number]: BlockTypeConfiguration} = {
+    [BlockType.BRACE]: {
+        open: TokenType.L_BRACE,
+        close: TokenType.R_BRACE,
+    },
+    [BlockType.BRACKET]: {
+        open: TokenType.L_BRACKET,
+        close: TokenType.R_BRACKET,
+    },
+    [BlockType.PAREN]: {
+        open: TokenType.L_PAREN,
+        close: TokenType.R_PAREN,
+    },
+};
+
+export const BlockOpenToTypeMap = {
+    [TokenType.L_BRACE]: BlockType.BRACE,
+    [TokenType.L_BRACKET]: BlockType.BRACKET,
+    [TokenType.L_PAREN]: BlockType.PAREN,
+};
+
+export const BlockCloseToTypeMap = {
+    [TokenType.R_BRACE]: BlockType.BRACE,
+    [TokenType.R_BRACKET]: BlockType.BRACKET,
+    [TokenType.R_PAREN]: BlockType.PAREN,
+};
+
+export function getTokenBlockOpenerConfig(opener: TokenType) {
+    return BlockTypeConfigurations[BlockOpenToTypeMap[opener]];
+}
+
+export function tokenIsBlockOpener(token: TokenType): boolean {
+    return BlockOpenToTypeMap[token] !== undefined;
+}
+
+export function tokenIsBlockCloser(token: TokenType): boolean {
+    return BlockCloseToTypeMap[token] !== undefined;
+}
+
 const TOKEN_PATTERNS: TokenPattern[] = [
     {
         type: TokenType.WHITESPACE,
@@ -766,37 +810,41 @@ export class Tree {
 
     public static getBlockTokens(tokens: Token[], groupBy: TokenType | null = TokenType.COMMA): Token[][] {
         const blockInfo: IBlockInfo = Tree.getBlockInfo(tokens);
-        let openBlocks: number = 0;
         const args: Token[][] = [];
         let arg: Token[] = [];
-        for (let i: number = 0; i < tokens.length; i++) {
-            const token: Token = tokens[i];
-            if (token.type === blockInfo.open) {
-                openBlocks += 1;
-                if (openBlocks > 1)
-                    arg.push(token);
-            } else if (token.type === blockInfo.close) {
-                openBlocks -= 1;
-                if (openBlocks > 0)
-                    arg.push(token);
-            } else if (groupBy !== null && token.type === groupBy && openBlocks == 1) {
+        let isOpen = true;
+
+        // consume opener
+        tokens.shift();
+
+        while (isOpen) {
+            const token: Token = tokens[0];
+
+            if (token === undefined)
+                throw Error(`Invalid Syntax, missing ${blockInfo.closeCharacter}`);
+
+            if (token.type === blockInfo.close) {
+                isOpen = false;
+                tokens.shift();
+                //arg.push(token);
+            } else if (tokenIsBlockOpener(token.type)) {
+                const opener = tokens.shift();
+                const innerBlock = Tree.getTokensUntil(tokens, getTokenBlockOpenerConfig(token.type).close, true, true);
+                innerBlock.unshift(opener);
+                arg.push(...innerBlock);
+                //args.push(innerBlock);
+            } else if (groupBy !== null && token.type === groupBy) {
                 args.push(arg);
                 arg = [];
+                tokens.shift();
             } else if (token.type !== TokenType.WHITESPACE) {
-                arg.push(token);
-            }
-
-            // Consume token
-            tokens.shift()
-            i--;
-            if (openBlocks === 0) {
-                if (arg.length > 0)
-                    args.push(arg);
-
-                return args;
+                arg.push(tokens.shift());
             }
         }
-        throw Error(`Invalid Syntax, missing ${blockInfo.closeCharacter}`);
+        if (arg.length > 0)
+            args.push(arg);
+
+        return args;
     }
 
     public static getTokensUntil(tokens: Token[], terminator: TokenType = TokenType.SEMICOLON, consumeTerminator: boolean = true, includeTerminator: boolean = false, validIfTerminatorNotFound: boolean = false, blockInfo: IBlockInfo = null): Token[] {

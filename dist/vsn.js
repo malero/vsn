@@ -61,7 +61,7 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
     }
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.vision = exports.Tag = exports.SimplePromise = exports.MessageList = exports.EventDispatcher = exports.Service = exports.Model = exports.Controller = exports.WrappedArray = exports.ScopeReference = exports.Scope = exports.DOM = exports.Validators = exports.Types = exports.Formats = exports.Vision = void 0;
+exports.vision = exports.Tag = exports.MessageList = exports.EventDispatcher = exports.Service = exports.Model = exports.Controller = exports.WrappedArray = exports.ScopeReference = exports.Scope = exports.DOM = exports.Validators = exports.Types = exports.Formats = exports.Vision = void 0;
 var DOM_1 = require("./DOM");
 var WrappedArray_1 = require("./Scope/WrappedArray");
 var Registry_1 = require("./Registry");
@@ -193,8 +193,6 @@ var EventDispatcher_2 = require("./EventDispatcher");
 Object.defineProperty(exports, "EventDispatcher", { enumerable: true, get: function () { return EventDispatcher_2.EventDispatcher; } });
 var MessageList_1 = require("./MessageList");
 Object.defineProperty(exports, "MessageList", { enumerable: true, get: function () { return MessageList_1.MessageList; } });
-var SimplePromise_1 = require("./SimplePromise");
-Object.defineProperty(exports, "SimplePromise", { enumerable: true, get: function () { return SimplePromise_1.SimplePromise; } });
 var Tag_1 = require("./Tag");
 Object.defineProperty(exports, "Tag", { enumerable: true, get: function () { return Tag_1.Tag; } });
 exports.vision = Vision.instance;

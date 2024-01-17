@@ -14,7 +14,7 @@
 
 <template vsn-component:test-component>
     <div vsn-exec="host = ?>(:parent)">
-        <button vsn-on:click="with host {!!custom-event}" type="button">Click Me</button>
+        <button vsn-on:click="with host {!!custom-event{'a':1} }" type="button">Click Me</button>
     </div>
 </template>
 </body>

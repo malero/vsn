@@ -2,7 +2,6 @@ import {WrappedArray} from '../src/Scope/WrappedArray';
 import {Scope} from "../src/Scope";
 import {Tree} from "../src/AST";
 import {DOM} from "../src/DOM";
-import {IDeferred, SimplePromise} from "../src/SimplePromise";
 
 describe('Tree', () => {
     let scope: Scope = null,
@@ -242,14 +241,13 @@ describe('Tree', () => {
 
     it("should be able to block properly with promises", async () => {
         scope.set('blockingFunction', async (num, toAdd, fin: boolean = false) => {
-            const deferred: IDeferred<number> = SimplePromise.defer();
-            expect(scope.get('test')).toBe(num);
+            return new Promise((resolve, reject) => {
+                expect(scope.get('test')).toBe(num);
 
-            setTimeout(() => {
-                deferred.resolve(num + toAdd);
-            }, 1);
-
-            return deferred.promise;
+                setTimeout(() => {
+                    resolve(num + toAdd);
+                }, 1);
+            });
         });
 
         let tree: Tree = new Tree(`

@@ -1,6 +1,5 @@
 import {Controller} from '../src/Controller';
 import {DOM} from "../src/DOM";
-import {SimplePromise} from "../src/SimplePromise";
 import {Registry} from "../src/Registry";
 import {property} from "../src/Scope/properties/Property";
 import {Property, Scope, Tag} from "../src/vsn";
@@ -31,21 +30,21 @@ describe('Controller', () => {
             <div id="controller" vsn-controller:test="ControllerTestController" vsn-set:test.test="notTest" vsn-bind="test.test"></div>
         `;
         const dom = new DOM(document.body);
-        const deferred = SimplePromise.defer();
-        dom.once('built', async () => {
-            const tag = await dom.exec('#controller');
-            expect(tag).toBeInstanceOf(Tag);
-            expect(tag.scope).toBeInstanceOf(Scope);
-            /*
-            expect(tag.scope.keys).toEqual(['test']);
-            expect(tag.scope.get('test').wrapped).toBeInstanceOf(TestController);
-            expect(await tag.exec('test.isValid()')).toBe(false);
-            expect(await tag.exec('test.test')).toBe('notTest');
-            await tag.exec('test.test = "test"');
-            expect(await tag.exec('test.isValid()')).toBe(true);
-             */
-            deferred.resolve();
+        await new Promise((resolve, reject) => {
+            dom.once('built', async () => {
+                const tag = await dom.exec('#controller');
+                expect(tag).toBeInstanceOf(Tag);
+                expect(tag.scope).toBeInstanceOf(Scope);
+                /*
+                expect(tag.scope.keys).toEqual(['test']);
+                expect(tag.scope.get('test').wrapped).toBeInstanceOf(TestController);
+                expect(await tag.exec('test.isValid()')).toBe(false);
+                expect(await tag.exec('test.test')).toBe('notTest');
+                await tag.exec('test.test = "test"');
+                expect(await tag.exec('test.isValid()')).toBe(true);
+                 */
+                resolve(null);
+            });
         });
-        await deferred.promise;
     });
 });

@@ -50,6 +50,7 @@ export class FunctionNode extends Node implements TreeNode {
             } else {
                 functionScope = scope;
             }
+
             for (const arg of this.args) {
                 functionScope.set(arg, args.shift());
             }

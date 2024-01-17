@@ -11,6 +11,7 @@ export class IndexNode extends Node implements TreeNode {
         public readonly indexTwo: Node = null
     ) {
         super();
+        console.log('index node', object, index, indexTwo);
     }
 
     protected _getChildNodes(): Node[] {
@@ -42,6 +43,9 @@ export class IndexNode extends Node implements TreeNode {
             }
             return values;
         } else {
+            if (obj instanceof Scope) {
+                return obj.get(index as string);
+            }
             return (obj)[index];
         }
     }

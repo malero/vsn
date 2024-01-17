@@ -63,6 +63,7 @@ var __values = (this && this.__values) || function(o) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.IndexNode = void 0;
+var Scope_1 = require("../Scope");
 var AST_1 = require("../AST");
 var Node_1 = require("./Node");
 var IndexNode = /** @class */ (function (_super) {
@@ -73,6 +74,7 @@ var IndexNode = /** @class */ (function (_super) {
         _this.object = object;
         _this.index = index;
         _this.indexTwo = indexTwo;
+        console.log('index node', object, index, indexTwo);
         return _this;
     }
     IndexNode.prototype._getChildNodes = function () {
@@ -114,7 +116,11 @@ var IndexNode = /** @class */ (function (_super) {
                             values.push(obj[i]);
                         }
                         return [2 /*return*/, values];
-                    case 4: return [2 /*return*/, (obj)[index]];
+                    case 4:
+                        if (obj instanceof Scope_1.Scope) {
+                            return [2 /*return*/, obj.get(index)];
+                        }
+                        return [2 /*return*/, (obj)[index]];
                 }
             });
         });

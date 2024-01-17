@@ -46,8 +46,30 @@ var __values = (this && this.__values) || function(o) {
     };
     throw new TypeError(s ? "Object is not iterable." : "Symbol.iterator is not defined.");
 };
+var __read = (this && this.__read) || function (o, n) {
+    var m = typeof Symbol === "function" && o[Symbol.iterator];
+    if (!m) return o;
+    var i = m.call(o), r, ar = [], e;
+    try {
+        while ((n === void 0 || n-- > 0) && !(r = i.next()).done) ar.push(r.value);
+    }
+    catch (error) { e = { error: error }; }
+    finally {
+        try {
+            if (r && !r.done && (m = i["return"])) m.call(i);
+        }
+        finally { if (e) throw e.error; }
+    }
+    return ar;
+};
+var __spreadArray = (this && this.__spreadArray) || function (to, from) {
+    for (var i = 0, il = from.length, j = to.length; i < il; i++, j++)
+        to[j] = from[i];
+    return to;
+};
+var _a, _b, _c;
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.Tree = exports.AttributableNodes = exports.TokenType = exports.BlockType = void 0;
+exports.Tree = exports.AttributableNodes = exports.tokenIsBlockCloser = exports.tokenIsBlockOpener = exports.getTokenBlockOpenerConfig = exports.BlockCloseToTypeMap = exports.BlockOpenToTypeMap = exports.BlockTypeConfigurations = exports.TokenType = exports.BlockType = void 0;
 var RootScopeMemberNode_1 = require("./AST/RootScopeMemberNode");
 var ScopeMemberNode_1 = require("./AST/ScopeMemberNode");
 var ElementAttributeNode_1 = require("./AST/ElementAttributeNode");
@@ -164,6 +186,42 @@ var TokenType;
     TokenType[TokenType["MODIFIER"] = 68] = "MODIFIER";
     TokenType[TokenType["DISPATCH_EVENT"] = 69] = "DISPATCH_EVENT";
 })(TokenType = exports.TokenType || (exports.TokenType = {}));
+exports.BlockTypeConfigurations = (_a = {},
+    _a[BlockType.BRACE] = {
+        open: TokenType.L_BRACE,
+        close: TokenType.R_BRACE,
+    },
+    _a[BlockType.BRACKET] = {
+        open: TokenType.L_BRACKET,
+        close: TokenType.R_BRACKET,
+    },
+    _a[BlockType.PAREN] = {
+        open: TokenType.L_PAREN,
+        close: TokenType.R_PAREN,
+    },
+    _a);
+exports.BlockOpenToTypeMap = (_b = {},
+    _b[TokenType.L_BRACE] = BlockType.BRACE,
+    _b[TokenType.L_BRACKET] = BlockType.BRACKET,
+    _b[TokenType.L_PAREN] = BlockType.PAREN,
+    _b);
+exports.BlockCloseToTypeMap = (_c = {},
+    _c[TokenType.R_BRACE] = BlockType.BRACE,
+    _c[TokenType.R_BRACKET] = BlockType.BRACKET,
+    _c[TokenType.R_PAREN] = BlockType.PAREN,
+    _c);
+function getTokenBlockOpenerConfig(opener) {
+    return exports.BlockTypeConfigurations[exports.BlockOpenToTypeMap[opener]];
+}
+exports.getTokenBlockOpenerConfig = getTokenBlockOpenerConfig;
+function tokenIsBlockOpener(token) {
+    return exports.BlockOpenToTypeMap[token] !== undefined;
+}
+exports.tokenIsBlockOpener = tokenIsBlockOpener;
+function tokenIsBlockCloser(token) {
+    return exports.BlockCloseToTypeMap[token] !== undefined;
+}
+exports.tokenIsBlockCloser = tokenIsBlockCloser;
 var TOKEN_PATTERNS = [
     {
         type: TokenType.WHITESPACE,
@@ -870,38 +928,39 @@ var Tree = /** @class */ (function () {
     Tree.getBlockTokens = function (tokens, groupBy) {
         if (groupBy === void 0) { groupBy = TokenType.COMMA; }
         var blockInfo = Tree.getBlockInfo(tokens);
-        var openBlocks = 0;
         var args = [];
         var arg = [];
-        for (var i = 0; i < tokens.length; i++) {
-            var token = tokens[i];
-            if (token.type === blockInfo.open) {
-                openBlocks += 1;
-                if (openBlocks > 1)
-                    arg.push(token);
+        var isOpen = true;
+        // consume opener
+        tokens.shift();
+        while (isOpen) {
+            var token = tokens[0];
+            if (token === undefined)
+                throw Error("Invalid Syntax, missing " + blockInfo.closeCharacter);
+            if (token.type === blockInfo.close) {
+                isOpen = false;
+                tokens.shift();
+                //arg.push(token);
             }
-            else if (token.type === blockInfo.close) {
-                openBlocks -= 1;
-                if (openBlocks > 0)
-                    arg.push(token);
+            else if (tokenIsBlockOpener(token.type)) {
+                var opener_1 = tokens.shift();
+                var innerBlock = Tree.getTokensUntil(tokens, getTokenBlockOpenerConfig(token.type).close, true, true);
+                innerBlock.unshift(opener_1);
+                arg.push.apply(arg, __spreadArray([], __read(innerBlock)));
+                //args.push(innerBlock);
             }
-            else if (groupBy !== null && token.type === groupBy && openBlocks == 1) {
+            else if (groupBy !== null && token.type === groupBy) {
                 args.push(arg);
                 arg = [];
+                tokens.shift();
             }
             else if (token.type !== TokenType.WHITESPACE) {
-                arg.push(token);
-            }
-            // Consume token
-            tokens.shift();
-            i--;
-            if (openBlocks === 0) {
-                if (arg.length > 0)
-                    args.push(arg);
-                return args;
+                arg.push(tokens.shift());
             }
         }
-        throw Error("Invalid Syntax, missing " + blockInfo.closeCharacter);
+        if (arg.length > 0)
+            args.push(arg);
+        return args;
     };
     Tree.getTokensUntil = function (tokens, terminator, consumeTerminator, includeTerminator, validIfTerminatorNotFound, blockInfo) {
         if (terminator === void 0) { terminator = TokenType.SEMICOLON; }

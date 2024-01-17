@@ -12,7 +12,7 @@
 <script type="text/vsn" vsn-script>
     class .btn {
         func construct() {
-            log('btn construct');
+            log('btn construct', this);
         }
 
         on click() {
@@ -20,7 +20,7 @@
         }
     }
 </script>
-
+<div id="test"></div>
 <div id="html-container"></div>
 <a href="../resources/xhr-cfs.html" vsn-xhr="#html-container.@html = response;?(#html-header).$color='yellow';" class="btn">XHR</a>
 

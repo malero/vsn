@@ -101,6 +101,5 @@ export {Model} from './Model';
 export {Service} from './Service';
 export {EventDispatcher} from './EventDispatcher';
 export {MessageList} from './MessageList';
-export {SimplePromise} from './SimplePromise';
 export {Tag} from './Tag';
 export const vision: Vision = Vision.instance;

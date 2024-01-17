@@ -1,5 +1,4 @@
 import {EventDispatcher} from "./EventDispatcher";
-import {IDeferred, IPromise, SimplePromise} from "./SimplePromise";
 import {ClassNode} from "./AST/ClassNode";
 
 export function register(store: string, key: string = null, setup: () => void = null) {
@@ -28,11 +27,10 @@ export class RegistryStore<T = any> extends EventDispatcher {
         this.dispatch(`registered:${key}`, item);
     }
 
-    get(key: string): IPromise<any> {
-        const deferred: IDeferred<any> = SimplePromise.defer();
-
-        if (!!this.store[key]) {
-            deferred.resolve(this.store[key]);
+    get(key: string): Promise<any> {
+        return new Promise((resolve, reject) => {
+            if (!!this.store[key]) {
+            resolve(this.store[key]);
         } else {
             console.warn(`Waiting for ${key} to be registered.`);
             this.timeouts[key] = setTimeout(() => {
@@ -40,11 +38,10 @@ export class RegistryStore<T = any> extends EventDispatcher {
             }, 5000);
             this.once(`registered:${key}`, (cls) => {
                 clearTimeout(this.timeouts[key]);
-                deferred.resolve(cls);
+                resolve(cls);
             })
         }
-
-        return deferred.promise;
+        });
     }
 
     getSynchronous(key: string) {

@@ -90,6 +90,26 @@ export declare enum TokenType {
     MODIFIER = 68,
     DISPATCH_EVENT = 69
 }
+export interface BlockTypeConfiguration {
+    open: number;
+    close: number;
+}
+export declare const BlockTypeConfigurations: {
+    [key: number]: BlockTypeConfiguration;
+};
+export declare const BlockOpenToTypeMap: {
+    23: BlockType;
+    25: BlockType;
+    27: BlockType;
+};
+export declare const BlockCloseToTypeMap: {
+    24: BlockType;
+    26: BlockType;
+    28: BlockType;
+};
+export declare function getTokenBlockOpenerConfig(opener: TokenType): BlockTypeConfiguration;
+export declare function tokenIsBlockOpener(token: TokenType): boolean;
+export declare function tokenIsBlockCloser(token: TokenType): boolean;
 export interface TreeNode<T = any> {
     evaluate(scope: Scope, dom: DOM, tag?: Tag): any;
     prepare(scope: Scope, dom: DOM, tag?: Tag, meta?: any): any;

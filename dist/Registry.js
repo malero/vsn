@@ -17,7 +17,6 @@ var __extends = (this && this.__extends) || (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Registry = exports.RegistryStore = exports.register = void 0;
 var EventDispatcher_1 = require("./EventDispatcher");
-var SimplePromise_1 = require("./SimplePromise");
 function register(store, key, setup) {
     if (key === void 0) { key = null; }
     if (setup === void 0) { setup = null; }
@@ -48,21 +47,21 @@ var RegistryStore = /** @class */ (function (_super) {
     };
     RegistryStore.prototype.get = function (key) {
         var _this = this;
-        var deferred = SimplePromise_1.SimplePromise.defer();
-        if (!!this.store[key]) {
-            deferred.resolve(this.store[key]);
-        }
-        else {
-            console.warn("Waiting for " + key + " to be registered.");
-            this.timeouts[key] = setTimeout(function () {
-                console.warn("RegistryStore.get timed out after 5 seconds trying to find " + key + ". Make sure the item is registered.");
-            }, 5000);
-            this.once("registered:" + key, function (cls) {
-                clearTimeout(_this.timeouts[key]);
-                deferred.resolve(cls);
-            });
-        }
-        return deferred.promise;
+        return new Promise(function (resolve, reject) {
+            if (!!_this.store[key]) {
+                resolve(_this.store[key]);
+            }
+            else {
+                console.warn("Waiting for " + key + " to be registered.");
+                _this.timeouts[key] = setTimeout(function () {
+                    console.warn("RegistryStore.get timed out after 5 seconds trying to find " + key + ". Make sure the item is registered.");
+                }, 5000);
+                _this.once("registered:" + key, function (cls) {
+                    clearTimeout(_this.timeouts[key]);
+                    resolve(cls);
+                });
+            }
+        });
     };
     RegistryStore.prototype.getSynchronous = function (key) {
         return this.store[key];
