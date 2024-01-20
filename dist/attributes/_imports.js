@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.XHRAttribute = exports.TypeAttribute = exports.TemplateAttribute = exports.StyleVarAttribute = exports.StyleAttribute = exports.StandardAttribute = exports.SetAttribute = exports.ServiceAttribute = exports.ScriptAttribute = exports.ScopeChange = exports.ScopeAttribute = exports.RootAttribute = exports.Referenced = exports.On = exports.Name = exports.ModelAttribute = exports.ListItemModel = exports.ListItem = exports.List = exports.LazyAttribute = exports.KeyUp = exports.KeyDown = exports.JSONAttribute = exports.If = exports.Format = exports.Exec = exports.DisableIf = exports.ControllerAttribute = exports.ComponentAttribute = exports.Bind = exports.AddClassIf = void 0;
+exports.XHRAttribute = exports.TypeAttribute = exports.TemplateAttribute = exports.StyleVarAttribute = exports.StyleAttribute = exports.StandardAttribute = exports.SetAttribute = exports.ServiceAttribute = exports.ScriptAttribute = exports.ScopeChange = exports.ScopeAttribute = exports.RootAttribute = exports.Referenced = exports.PersistAttribute = exports.On = exports.Name = exports.ModelAttribute = exports.ListItemModel = exports.ListItem = exports.List = exports.LazyAttribute = exports.KeyUp = exports.KeyDown = exports.JSONAttribute = exports.If = exports.Format = exports.Exec = exports.DisableIf = exports.ControllerAttribute = exports.ComponentAttribute = exports.Bind = exports.AddClassIf = void 0;
 var AddClassIf_1 = require("./AddClassIf");
 Object.defineProperty(exports, "AddClassIf", { enumerable: true, get: function () { return AddClassIf_1.AddClassIf; } });
 var Bind_1 = require("./Bind");
@@ -37,6 +37,8 @@ var Name_1 = require("./Name");
 Object.defineProperty(exports, "Name", { enumerable: true, get: function () { return Name_1.Name; } });
 var On_1 = require("./On");
 Object.defineProperty(exports, "On", { enumerable: true, get: function () { return On_1.On; } });
+var PersistAttribute_1 = require("./PersistAttribute");
+Object.defineProperty(exports, "PersistAttribute", { enumerable: true, get: function () { return PersistAttribute_1.PersistAttribute; } });
 var Referenced_1 = require("./Referenced");
 Object.defineProperty(exports, "Referenced", { enumerable: true, get: function () { return Referenced_1.Referenced; } });
 var RootAttribute_1 = require("./RootAttribute");

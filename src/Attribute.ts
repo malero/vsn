@@ -1,5 +1,4 @@
 import {Tag} from "./Tag";
-import {VisionHelper} from "./helpers/VisionHelper";
 import {EventDispatcher} from "./EventDispatcher";
 import {Modifiers} from "./Modifiers";
 

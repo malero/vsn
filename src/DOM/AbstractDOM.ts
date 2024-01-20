@@ -177,6 +177,21 @@ export abstract class AbstractDOM extends EventDispatcher {
         }
     }
 
+    public getTagsFromParent(parent: Node, includeParent: boolean = true) {
+        const tags: Tag[] = [];
+        if (includeParent) {
+            if (parent[Tag.TaggedVariable]) {
+                tags.push(parent[Tag.TaggedVariable]);
+            }
+        }
+
+        for (const ele of Array.from(parent.childNodes)) {
+            tags.push(...this.getTagsFromParent(ele, true));
+        }
+
+        return tags;
+    }
+
     public async mutation(mutations: MutationRecord[]) {
         for (const mutation of mutations) {
             let tag: Tag = await this.getTagForElement(mutation.target as HTMLElement);
@@ -190,9 +205,8 @@ export abstract class AbstractDOM extends EventDispatcher {
             }
 
             for (const ele of Array.from(mutation.removedNodes)) {
-                const toRemove: Tag = await this.getTagForElement(ele as HTMLElement);
-                if (toRemove) {
-                    toRemove.deconstruct();
+                for (const tag of this.getTagsFromParent(ele)) {
+                    tag.deconstruct();
                 }
             }
         }

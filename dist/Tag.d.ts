@@ -41,6 +41,7 @@ export declare class Tag extends DOMObject {
     get meta(): {
         [key: string]: any;
     };
+    get state(): TagState;
     protected onAttributeStateChange(event: any): void;
     getAttributesWithState(state: AttributeState): Attribute[];
     get nonDeferredAttributes(): Attribute[];

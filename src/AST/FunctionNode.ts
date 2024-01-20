@@ -24,8 +24,14 @@ export class FunctionNode extends Node implements TreeNode {
     }
 
     public async prepare(scope: Scope, dom: DOM, tag: Tag = null, meta?: any): Promise<void> {
-        if (!meta?.ClassNode) // Don't muddle up tag scope if we're in a class
+        if (meta?.ClassNode) {
+            // Set on object instance
+            if (tag && tag.scope.has('this')) {
+                tag.scope.get('this').set(this.name, this);
+            }
+        } else {
             scope.set(this.name, this);
+        }
         await super.prepare(scope, dom, tag, meta);
     }
 

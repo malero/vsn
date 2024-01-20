@@ -88,8 +88,15 @@ var FunctionNode = /** @class */ (function (_super) {
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
-                        if (!(meta === null || meta === void 0 ? void 0 : meta.ClassNode)) // Don't muddle up tag scope if we're in a class
+                        if (meta === null || meta === void 0 ? void 0 : meta.ClassNode) {
+                            // Set on object instance
+                            if (tag && tag.scope.has('this')) {
+                                tag.scope.get('this').set(this.name, this);
+                            }
+                        }
+                        else {
                             scope.set(this.name, this);
+                        }
                         return [4 /*yield*/, _super.prototype.prepare.call(this, scope, dom, tag, meta)];
                     case 1:
                         _a.sent();

@@ -349,73 +349,96 @@ var AbstractDOM = /** @class */ (function (_super) {
             });
         });
     };
+    AbstractDOM.prototype.getTagsFromParent = function (parent, includeParent) {
+        var e_4, _a;
+        if (includeParent === void 0) { includeParent = true; }
+        var tags = [];
+        if (includeParent) {
+            if (parent[Tag_1.Tag.TaggedVariable]) {
+                tags.push(parent[Tag_1.Tag.TaggedVariable]);
+            }
+        }
+        try {
+            for (var _b = __values(Array.from(parent.childNodes)), _c = _b.next(); !_c.done; _c = _b.next()) {
+                var ele = _c.value;
+                tags.push.apply(tags, __spreadArray([], __read(this.getTagsFromParent(ele, true))));
+            }
+        }
+        catch (e_4_1) { e_4 = { error: e_4_1 }; }
+        finally {
+            try {
+                if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
+            }
+            finally { if (e_4) throw e_4.error; }
+        }
+        return tags;
+    };
     AbstractDOM.prototype.mutation = function (mutations) {
         return __awaiter(this, void 0, void 0, function () {
-            var mutations_1, mutations_1_1, mutation, tag, _a, _b, ele, toRemove, e_4_1, e_5_1;
-            var e_5, _c, e_4, _d;
-            return __generator(this, function (_e) {
-                switch (_e.label) {
+            var mutations_1, mutations_1_1, mutation, tag, _a, _b, ele, _c, _d, tag_1, e_5_1;
+            var e_5, _e, e_6, _f, e_7, _g;
+            return __generator(this, function (_h) {
+                switch (_h.label) {
                     case 0:
-                        _e.trys.push([0, 13, 14, 15]);
+                        _h.trys.push([0, 7, 8, 9]);
                         mutations_1 = __values(mutations), mutations_1_1 = mutations_1.next();
-                        _e.label = 1;
+                        _h.label = 1;
                     case 1:
-                        if (!!mutations_1_1.done) return [3 /*break*/, 12];
+                        if (!!mutations_1_1.done) return [3 /*break*/, 6];
                         mutation = mutations_1_1.value;
                         return [4 /*yield*/, this.getTagForElement(mutation.target)];
                     case 2:
-                        tag = _e.sent();
+                        tag = _h.sent();
                         if (tag) {
                             tag.mutate(mutation);
                         }
                         if (!(mutation.type === 'attributes' && mutation.attributeName === 'class')) return [3 /*break*/, 4];
                         return [4 /*yield*/, ClassNode_1.ClassNode.checkForClassChanges(mutation.target, this, tag)];
                     case 3:
-                        _e.sent();
-                        _e.label = 4;
+                        _h.sent();
+                        _h.label = 4;
                     case 4:
-                        _e.trys.push([4, 9, 10, 11]);
-                        _a = (e_4 = void 0, __values(Array.from(mutation.removedNodes))), _b = _a.next();
-                        _e.label = 5;
-                    case 5:
-                        if (!!_b.done) return [3 /*break*/, 8];
-                        ele = _b.value;
-                        return [4 /*yield*/, this.getTagForElement(ele)];
-                    case 6:
-                        toRemove = _e.sent();
-                        if (toRemove) {
-                            toRemove.deconstruct();
-                        }
-                        _e.label = 7;
-                    case 7:
-                        _b = _a.next();
-                        return [3 /*break*/, 5];
-                    case 8: return [3 /*break*/, 11];
-                    case 9:
-                        e_4_1 = _e.sent();
-                        e_4 = { error: e_4_1 };
-                        return [3 /*break*/, 11];
-                    case 10:
                         try {
-                            if (_b && !_b.done && (_d = _a.return)) _d.call(_a);
+                            for (_a = (e_6 = void 0, __values(Array.from(mutation.removedNodes))), _b = _a.next(); !_b.done; _b = _a.next()) {
+                                ele = _b.value;
+                                try {
+                                    for (_c = (e_7 = void 0, __values(this.getTagsFromParent(ele))), _d = _c.next(); !_d.done; _d = _c.next()) {
+                                        tag_1 = _d.value;
+                                        tag_1.deconstruct();
+                                    }
+                                }
+                                catch (e_7_1) { e_7 = { error: e_7_1 }; }
+                                finally {
+                                    try {
+                                        if (_d && !_d.done && (_g = _c.return)) _g.call(_c);
+                                    }
+                                    finally { if (e_7) throw e_7.error; }
+                                }
+                            }
                         }
-                        finally { if (e_4) throw e_4.error; }
-                        return [7 /*endfinally*/];
-                    case 11:
+                        catch (e_6_1) { e_6 = { error: e_6_1 }; }
+                        finally {
+                            try {
+                                if (_b && !_b.done && (_f = _a.return)) _f.call(_a);
+                            }
+                            finally { if (e_6) throw e_6.error; }
+                        }
+                        _h.label = 5;
+                    case 5:
                         mutations_1_1 = mutations_1.next();
                         return [3 /*break*/, 1];
-                    case 12: return [3 /*break*/, 15];
-                    case 13:
-                        e_5_1 = _e.sent();
+                    case 6: return [3 /*break*/, 9];
+                    case 7:
+                        e_5_1 = _h.sent();
                         e_5 = { error: e_5_1 };
-                        return [3 /*break*/, 15];
-                    case 14:
+                        return [3 /*break*/, 9];
+                    case 8:
                         try {
-                            if (mutations_1_1 && !mutations_1_1.done && (_c = mutations_1.return)) _c.call(mutations_1);
+                            if (mutations_1_1 && !mutations_1_1.done && (_e = mutations_1.return)) _e.call(mutations_1);
                         }
                         finally { if (e_5) throw e_5.error; }
                         return [7 /*endfinally*/];
-                    case 15: return [2 /*return*/];
+                    case 9: return [2 /*return*/];
                 }
             });
         });
@@ -446,7 +469,7 @@ var AbstractDOM = /** @class */ (function (_super) {
                     return true;
                 };
                 scanChildren = function (e) {
-                    var e_6, _a;
+                    var e_8, _a;
                     try {
                         for (var _b = __values(Array.from(e.children)), _c = _b.next(); !_c.done; _c = _b.next()) {
                             var element = _c.value;
@@ -456,12 +479,12 @@ var AbstractDOM = /** @class */ (function (_super) {
                                 scanChildren(element);
                         }
                     }
-                    catch (e_6_1) { e_6 = { error: e_6_1 }; }
+                    catch (e_8_1) { e_8 = { error: e_8_1 }; }
                     finally {
                         try {
                             if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                         }
-                        finally { if (e_6) throw e_6.error; }
+                        finally { if (e_8) throw e_8.error; }
                     }
                 };
                 checkElement(ele);
@@ -490,8 +513,8 @@ var AbstractDOM = /** @class */ (function (_super) {
     };
     AbstractDOM.prototype.setupTags = function (tags) {
         return __awaiter(this, void 0, void 0, function () {
-            var tags_1, tags_1_1, tag, e_7_1, tags_2, tags_2_1, tag, e_8_1, tags_3, tags_3_1, tag, e_9_1, tags_4, tags_4_1, tag, e_10_1, tags_5, tags_5_1, tag, e_11_1, tags_6, tags_6_1, tag, e_12_1, tags_7, tags_7_1, tag;
-            var e_7, _a, e_8, _b, e_9, _c, e_10, _d, e_11, _e, e_12, _f, e_13, _g;
+            var tags_1, tags_1_1, tag, e_9_1, tags_2, tags_2_1, tag, e_10_1, tags_3, tags_3_1, tag, e_11_1, tags_4, tags_4_1, tag, e_12_1, tags_5, tags_5_1, tag, e_13_1, tags_6, tags_6_1, tag, e_14_1, tags_7, tags_7_1, tag;
+            var e_9, _a, e_10, _b, e_11, _c, e_12, _d, e_13, _e, e_14, _f, e_15, _g;
             return __generator(this, function (_h) {
                 switch (_h.label) {
                     case 0:
@@ -510,14 +533,14 @@ var AbstractDOM = /** @class */ (function (_super) {
                         return [3 /*break*/, 1];
                     case 4: return [3 /*break*/, 7];
                     case 5:
-                        e_7_1 = _h.sent();
-                        e_7 = { error: e_7_1 };
+                        e_9_1 = _h.sent();
+                        e_9 = { error: e_9_1 };
                         return [3 /*break*/, 7];
                     case 6:
                         try {
                             if (tags_1_1 && !tags_1_1.done && (_a = tags_1.return)) _a.call(tags_1);
                         }
-                        finally { if (e_7) throw e_7.error; }
+                        finally { if (e_9) throw e_9.error; }
                         return [7 /*endfinally*/];
                     case 7:
                         _h.trys.push([7, 12, 13, 14]);
@@ -535,14 +558,14 @@ var AbstractDOM = /** @class */ (function (_super) {
                         return [3 /*break*/, 8];
                     case 11: return [3 /*break*/, 14];
                     case 12:
-                        e_8_1 = _h.sent();
-                        e_8 = { error: e_8_1 };
+                        e_10_1 = _h.sent();
+                        e_10 = { error: e_10_1 };
                         return [3 /*break*/, 14];
                     case 13:
                         try {
                             if (tags_2_1 && !tags_2_1.done && (_b = tags_2.return)) _b.call(tags_2);
                         }
-                        finally { if (e_8) throw e_8.error; }
+                        finally { if (e_10) throw e_10.error; }
                         return [7 /*endfinally*/];
                     case 14:
                         _h.trys.push([14, 19, 20, 21]);
@@ -560,14 +583,14 @@ var AbstractDOM = /** @class */ (function (_super) {
                         return [3 /*break*/, 15];
                     case 18: return [3 /*break*/, 21];
                     case 19:
-                        e_9_1 = _h.sent();
-                        e_9 = { error: e_9_1 };
+                        e_11_1 = _h.sent();
+                        e_11 = { error: e_11_1 };
                         return [3 /*break*/, 21];
                     case 20:
                         try {
                             if (tags_3_1 && !tags_3_1.done && (_c = tags_3.return)) _c.call(tags_3);
                         }
-                        finally { if (e_9) throw e_9.error; }
+                        finally { if (e_11) throw e_11.error; }
                         return [7 /*endfinally*/];
                     case 21:
                         _h.trys.push([21, 26, 27, 28]);
@@ -585,14 +608,14 @@ var AbstractDOM = /** @class */ (function (_super) {
                         return [3 /*break*/, 22];
                     case 25: return [3 /*break*/, 28];
                     case 26:
-                        e_10_1 = _h.sent();
-                        e_10 = { error: e_10_1 };
+                        e_12_1 = _h.sent();
+                        e_12 = { error: e_12_1 };
                         return [3 /*break*/, 28];
                     case 27:
                         try {
                             if (tags_4_1 && !tags_4_1.done && (_d = tags_4.return)) _d.call(tags_4);
                         }
-                        finally { if (e_10) throw e_10.error; }
+                        finally { if (e_12) throw e_12.error; }
                         return [7 /*endfinally*/];
                     case 28:
                         _h.trys.push([28, 33, 34, 35]);
@@ -610,14 +633,14 @@ var AbstractDOM = /** @class */ (function (_super) {
                         return [3 /*break*/, 29];
                     case 32: return [3 /*break*/, 35];
                     case 33:
-                        e_11_1 = _h.sent();
-                        e_11 = { error: e_11_1 };
+                        e_13_1 = _h.sent();
+                        e_13 = { error: e_13_1 };
                         return [3 /*break*/, 35];
                     case 34:
                         try {
                             if (tags_5_1 && !tags_5_1.done && (_e = tags_5.return)) _e.call(tags_5);
                         }
-                        finally { if (e_11) throw e_11.error; }
+                        finally { if (e_13) throw e_13.error; }
                         return [7 /*endfinally*/];
                     case 35:
                         _h.trys.push([35, 40, 41, 42]);
@@ -636,14 +659,14 @@ var AbstractDOM = /** @class */ (function (_super) {
                         return [3 /*break*/, 36];
                     case 39: return [3 /*break*/, 42];
                     case 40:
-                        e_12_1 = _h.sent();
-                        e_12 = { error: e_12_1 };
+                        e_14_1 = _h.sent();
+                        e_14 = { error: e_14_1 };
                         return [3 /*break*/, 42];
                     case 41:
                         try {
                             if (tags_6_1 && !tags_6_1.done && (_f = tags_6.return)) _f.call(tags_6);
                         }
-                        finally { if (e_12) throw e_12.error; }
+                        finally { if (e_14) throw e_14.error; }
                         return [7 /*endfinally*/];
                     case 42:
                         try {
@@ -657,12 +680,12 @@ var AbstractDOM = /** @class */ (function (_super) {
                                 });
                             }
                         }
-                        catch (e_13_1) { e_13 = { error: e_13_1 }; }
+                        catch (e_15_1) { e_15 = { error: e_15_1 }; }
                         finally {
                             try {
                                 if (tags_7_1 && !tags_7_1.done && (_g = tags_7.return)) _g.call(tags_7);
                             }
-                            finally { if (e_13) throw e_13.error; }
+                            finally { if (e_15) throw e_15.error; }
                         }
                         return [2 /*return*/];
                 }
@@ -673,8 +696,8 @@ var AbstractDOM = /** @class */ (function (_super) {
         if (isRoot === void 0) { isRoot = false; }
         if (forComponent === void 0) { forComponent = false; }
         return __awaiter(this, void 0, void 0, function () {
-            var _a, templateNodes, components, _b, _c, n, tag, e_14_1, newTags, toBuild, toBuild_1, toBuild_1_1, element, tag, e_15_1;
-            var e_14, _d, e_15, _e;
+            var _a, templateNodes, components, _b, _c, n, tag, e_16_1, newTags, toBuild, toBuild_1, toBuild_1_1, element, tag, e_17_1;
+            var e_16, _d, e_17, _e;
             return __generator(this, function (_f) {
                 switch (_f.label) {
                     case 0:
@@ -713,14 +736,14 @@ var AbstractDOM = /** @class */ (function (_super) {
                         return [3 /*break*/, 5];
                     case 8: return [3 /*break*/, 11];
                     case 9:
-                        e_14_1 = _f.sent();
-                        e_14 = { error: e_14_1 };
+                        e_16_1 = _f.sent();
+                        e_16 = { error: e_16_1 };
                         return [3 /*break*/, 11];
                     case 10:
                         try {
                             if (_c && !_c.done && (_d = _b.return)) _d.call(_b);
                         }
-                        finally { if (e_14) throw e_14.error; }
+                        finally { if (e_16) throw e_16.error; }
                         return [7 /*endfinally*/];
                     case 11:
                         if (!components.length) return [3 /*break*/, 13];
@@ -752,14 +775,14 @@ var AbstractDOM = /** @class */ (function (_super) {
                         return [3 /*break*/, 16];
                     case 19: return [3 /*break*/, 22];
                     case 20:
-                        e_15_1 = _f.sent();
-                        e_15 = { error: e_15_1 };
+                        e_17_1 = _f.sent();
+                        e_17 = { error: e_17_1 };
                         return [3 /*break*/, 22];
                     case 21:
                         try {
                             if (toBuild_1_1 && !toBuild_1_1.done && (_e = toBuild_1.return)) _e.call(toBuild_1);
                         }
-                        finally { if (e_15) throw e_15.error; }
+                        finally { if (e_17) throw e_17.error; }
                         return [7 /*endfinally*/];
                     case 22: return [4 /*yield*/, this.setupTags(newTags)];
                     case 23:
@@ -777,8 +800,8 @@ var AbstractDOM = /** @class */ (function (_super) {
     AbstractDOM.prototype.getTagsForElements = function (elements, create) {
         if (create === void 0) { create = false; }
         return __awaiter(this, void 0, void 0, function () {
-            var tags, found, elements_2, elements_2_1, element, notFound, i, element, notFound_1, notFound_1_1, element, _a, _b, e_16_1;
-            var e_17, _c, e_16, _d;
+            var tags, found, elements_2, elements_2_1, element, notFound, i, element, notFound_1, notFound_1_1, element, _a, _b, e_18_1;
+            var e_19, _c, e_18, _d;
             return __generator(this, function (_e) {
                 switch (_e.label) {
                     case 0:
@@ -793,12 +816,12 @@ var AbstractDOM = /** @class */ (function (_super) {
                                 }
                             }
                         }
-                        catch (e_17_1) { e_17 = { error: e_17_1 }; }
+                        catch (e_19_1) { e_19 = { error: e_19_1 }; }
                         finally {
                             try {
                                 if (elements_2_1 && !elements_2_1.done && (_c = elements_2.return)) _c.call(elements_2);
                             }
-                            finally { if (e_17) throw e_17.error; }
+                            finally { if (e_19) throw e_19.error; }
                         }
                         if (!create) return [3 /*break*/, 8];
                         notFound = __spreadArray([], __read(elements));
@@ -826,14 +849,14 @@ var AbstractDOM = /** @class */ (function (_super) {
                         return [3 /*break*/, 2];
                     case 5: return [3 /*break*/, 8];
                     case 6:
-                        e_16_1 = _e.sent();
-                        e_16 = { error: e_16_1 };
+                        e_18_1 = _e.sent();
+                        e_18 = { error: e_18_1 };
                         return [3 /*break*/, 8];
                     case 7:
                         try {
                             if (notFound_1_1 && !notFound_1_1.done && (_d = notFound_1.return)) _d.call(notFound_1);
                         }
-                        finally { if (e_16) throw e_16.error; }
+                        finally { if (e_18) throw e_18.error; }
                         return [7 /*endfinally*/];
                     case 8: return [2 /*return*/, tags];
                 }
@@ -865,7 +888,7 @@ var AbstractDOM = /** @class */ (function (_super) {
     AbstractDOM.prototype.getTagForScope = function (scope) {
         return __awaiter(this, void 0, void 0, function () {
             var _a, _b, tag;
-            var e_18, _c;
+            var e_20, _c;
             return __generator(this, function (_d) {
                 try {
                     for (_a = __values(this.tags), _b = _a.next(); !_b.done; _b = _a.next()) {
@@ -874,12 +897,12 @@ var AbstractDOM = /** @class */ (function (_super) {
                             return [2 /*return*/, tag];
                     }
                 }
-                catch (e_18_1) { e_18 = { error: e_18_1 }; }
+                catch (e_20_1) { e_20 = { error: e_20_1 }; }
                 finally {
                     try {
                         if (_b && !_b.done && (_c = _a.return)) _c.call(_a);
                     }
-                    finally { if (e_18) throw e_18.error; }
+                    finally { if (e_20) throw e_20.error; }
                 }
                 return [2 /*return*/, null];
             });
@@ -887,8 +910,8 @@ var AbstractDOM = /** @class */ (function (_super) {
     };
     AbstractDOM.prototype.resetBranch = function (e) {
         return __awaiter(this, void 0, void 0, function () {
-            var tag, children, children_1, children_1_1, t, e_19_1;
-            var e_19, _a;
+            var tag, children, children_1, children_1_1, t, e_21_1;
+            var e_21, _a;
             return __generator(this, function (_b) {
                 switch (_b.label) {
                     case 0:
@@ -916,14 +939,14 @@ var AbstractDOM = /** @class */ (function (_super) {
                         return [3 /*break*/, 2];
                     case 5: return [3 /*break*/, 8];
                     case 6:
-                        e_19_1 = _b.sent();
-                        e_19 = { error: e_19_1 };
+                        e_21_1 = _b.sent();
+                        e_21 = { error: e_21_1 };
                         return [3 /*break*/, 8];
                     case 7:
                         try {
                             if (children_1_1 && !children_1_1.done && (_a = children_1.return)) _a.call(children_1);
                         }
-                        finally { if (e_19) throw e_19.error; }
+                        finally { if (e_21) throw e_21.error; }
                         return [7 /*endfinally*/];
                     case 8: return [2 /*return*/];
                 }

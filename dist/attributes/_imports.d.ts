@@ -16,6 +16,7 @@ export { ListItemModel } from "./ListItemModel";
 export { ModelAttribute } from "./ModelAttribute";
 export { Name } from "./Name";
 export { On } from "./On";
+export { PersistAttribute } from "./PersistAttribute";
 export { Referenced } from "./Referenced";
 export { RootAttribute } from "./RootAttribute";
 export { ScopeAttribute } from "./ScopeAttribute";

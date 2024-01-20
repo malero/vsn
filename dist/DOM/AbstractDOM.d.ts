@@ -35,6 +35,7 @@ export declare abstract class AbstractDOM extends EventDispatcher {
     querySelector(q: string): Element;
     exec(code: string, data?: object): any;
     evaluate(): Promise<void>;
+    getTagsFromParent(parent: Node, includeParent?: boolean): Tag[];
     mutation(mutations: MutationRecord[]): Promise<void>;
     discover(ele: HTMLElement, forComponent?: boolean): Promise<HTMLElement[]>;
     buildTag<T = Tag>(element: HTMLElement, returnExisting?: boolean, cls?: any): Promise<T>;

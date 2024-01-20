@@ -89,6 +89,10 @@ export class Tag extends DOMObject {
         return this._meta;
     }
 
+    public get state(): TagState {
+        return this._state;
+    }
+
     protected onAttributeStateChange(event) {
         if (event.previouseState === AttributeState.Deferred)  // @todo: what is this?
             this._nonDeferredAttributes.length = 0;

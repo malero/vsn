@@ -273,6 +273,8 @@ var ClassNode = /** @class */ (function (_super) {
                         if (hasConstruct === null)
                             hasConstruct = this.classScope.has('construct');
                         tag.createScope(true);
+                        // Create object scope
+                        tag.scope.set('this', new Scope_1.Scope(tag.scope));
                         meta = this.updateMeta();
                         meta['PrepForSelector'] = this.fullSelector;
                         return [4 /*yield*/, this.block.prepare(tag.scope, dom, tag, meta)];

@@ -149,6 +149,13 @@ var Tag = /** @class */ (function (_super) {
         enumerable: false,
         configurable: true
     });
+    Object.defineProperty(Tag.prototype, "state", {
+        get: function () {
+            return this._state;
+        },
+        enumerable: false,
+        configurable: true
+    });
     Tag.prototype.onAttributeStateChange = function (event) {
         if (event.previouseState === Attribute_1.AttributeState.Deferred) // @todo: what is this?
             this._nonDeferredAttributes.length = 0;

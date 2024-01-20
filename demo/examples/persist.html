@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Persist</title>
+
+    <style></style>
+</head>
+<body>
+
+    <script type="text/javascript" src="../vsn.js"></script>
+
+    <div id="container" vsn-lazy="@html = << '../resources/xhr-persist.html'"></div>
+    <button vsn-on:click="#container.@html = << '../resources/xhr-persist.html'">Load Persist</button>
+    <button vsn-on:click="#container.@html = << '../resources/xhr-html.html'">Load Test</button>
+</body>
+</html>

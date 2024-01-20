@@ -102,6 +102,8 @@ export class ClassNode extends Node implements TreeNode {
             hasConstruct = this.classScope.has('construct');
 
         tag.createScope(true);
+        // Create object scope
+        tag.scope.set('this', new Scope(tag.scope));
         const meta = this.updateMeta();
         meta['PrepForSelector'] = this.fullSelector;
         await this.block.prepare(tag.scope, dom, tag, meta);
