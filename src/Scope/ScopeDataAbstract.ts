@@ -26,9 +26,9 @@ export class ScopeDataAbstract extends EventDispatcher {
         super.deconstruct();
         this._lastData = null;
         for (const prop of this.__properties__) {
-            this['__'+prop].deconstruct();
-            delete this['__'+prop];
+            this.removeProperty(prop);
         }
+        this.__properties__.length = 0;
     }
 
     createMethod(name: string, method: (...args: any[]) => any) {
@@ -71,6 +71,18 @@ export class ScopeDataAbstract extends EventDispatcher {
             this.dispatch('change:' + name, ...args);
         });
         return instance;
+    }
+
+    removeProperty(key: string) {
+        const index = this.__properties__.indexOf(key);
+        if (index > -1)
+            this.__properties__.splice(index, 1);
+
+        const prop = this['__'+key];
+        if (prop) {
+            prop.deconstruct();
+            delete this['__' + key];
+        }
     }
 
     hasProperty(name: string): boolean {

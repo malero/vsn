@@ -68,8 +68,7 @@ var ScopeDataAbstract = /** @class */ (function (_super) {
         try {
             for (var _b = __values(this.__properties__), _c = _b.next(); !_c.done; _c = _b.next()) {
                 var prop = _c.value;
-                this['__' + prop].deconstruct();
-                delete this['__' + prop];
+                this.removeProperty(prop);
             }
         }
         catch (e_1_1) { e_1 = { error: e_1_1 }; }
@@ -79,6 +78,7 @@ var ScopeDataAbstract = /** @class */ (function (_super) {
             }
             finally { if (e_1) throw e_1.error; }
         }
+        this.__properties__.length = 0;
     };
     ScopeDataAbstract.prototype.createMethod = function (name, method) {
     };
@@ -118,6 +118,16 @@ var ScopeDataAbstract = /** @class */ (function (_super) {
             _this.dispatch.apply(_this, __spreadArray(['change:' + name], __read(args)));
         });
         return instance;
+    };
+    ScopeDataAbstract.prototype.removeProperty = function (key) {
+        var index = this.__properties__.indexOf(key);
+        if (index > -1)
+            this.__properties__.splice(index, 1);
+        var prop = this['__' + key];
+        if (prop) {
+            prop.deconstruct();
+            delete this['__' + key];
+        }
     };
     ScopeDataAbstract.prototype.hasProperty = function (name) {
         return this.__properties__.indexOf(name) !== -1;

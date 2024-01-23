@@ -205,6 +205,13 @@ var AbstractDOM = /** @class */ (function (_super) {
         if (!!id)
             this.root.scope.set("#" + id, tag.scope);
     };
+    AbstractDOM.prototype.deregisterElementInRoot = function (tag) {
+        if (!tag.element || !this.root)
+            return;
+        var id = tag.element.getAttribute('id');
+        if (!!id)
+            this.root.scope.remove("#" + id);
+    };
     AbstractDOM.prototype.querySelectorClosest = function (q, tag) {
         if (tag === void 0) { tag = null; }
         return tag.element.closest(q);

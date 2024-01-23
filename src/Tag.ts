@@ -809,6 +809,9 @@ export class Tag extends DOMObject {
     }
 
     deconstruct() {
+        const dom = this.dom || DOM.instance;
+        if (dom)
+            dom.deregisterElementInRoot(this);
         this.removeAllEventHandlers();
         this.attributes.forEach(attr => attr.deconstruct());
         this.attributes.clear();

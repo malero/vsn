@@ -98,6 +98,13 @@ export abstract class AbstractDOM extends EventDispatcher {
             this.root.scope.set(`#${id}`, tag.scope);
     }
 
+    public deregisterElementInRoot(tag: Tag) {
+        if (!tag.element || !this.root) return;
+        const id: string = tag.element.getAttribute('id');
+        if (!!id)
+            this.root.scope.remove(`#${id}`);
+    }
+
     public querySelectorClosest(q: string, tag: Tag = null): HTMLElement {
         return tag.element.closest(q);
     }

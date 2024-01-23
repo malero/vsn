@@ -28,6 +28,7 @@ export declare abstract class AbstractDOM extends EventDispatcher {
     get(selector: string, create?: boolean, tag?: Tag, direction?: EQuerySelectDirection): Promise<TagList>;
     getFromTag(tag: Tag, selector: string, create?: boolean): Promise<TagList>;
     registerElementInRoot(tag: Tag): void;
+    deregisterElementInRoot(tag: Tag): void;
     querySelectorClosest(q: string, tag?: Tag): HTMLElement;
     querySelectPath(path: string[], element?: HTMLElement): HTMLElement[];
     querySelectorAll(q: string, tag?: Tag): NodeList | HTMLElement[];

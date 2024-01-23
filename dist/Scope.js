@@ -170,6 +170,8 @@ var Scope = /** @class */ (function (_super) {
     };
     Scope.prototype.get = function (key, searchParents) {
         if (searchParents === void 0) { searchParents = true; }
+        if (this._data === null)
+            return null;
         var value = this._data[key];
         if (value === undefined) {
             if (searchParents && this.parentScope)
@@ -180,6 +182,8 @@ var Scope = /** @class */ (function (_super) {
     };
     Scope.prototype.set = function (key, value, detectType) {
         if (detectType === void 0) { detectType = false; }
+        if (this._data === null)
+            return;
         if (detectType) {
             var type = typeof value;
             if (type === 'number') {
@@ -199,14 +203,23 @@ var Scope = /** @class */ (function (_super) {
             this._data.createProperty(key);
         this._data[key] = value;
     };
+    Scope.prototype.remove = function (key) {
+        if (this._data === null)
+            return;
+        this._data.removeProperty(key);
+    };
     Object.defineProperty(Scope.prototype, "keys", {
         get: function () {
+            if (this._data === null)
+                return [];
             return this._data.keys;
         },
         enumerable: false,
         configurable: true
     });
     Scope.prototype.has = function (key) {
+        if (this._data === null)
+            return false;
         return this._data.hasProperty(key);
     };
     Scope.prototype.setType = function (key, type) {

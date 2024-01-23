@@ -116,6 +116,7 @@ export class Scope extends ScopeAbstract {
     }
 
     get(key: string, searchParents: boolean = true): any {
+        if (this._data === null) return null;
         const value: any = this._data[key];
         if (value === undefined) {
             if (searchParents && this.parentScope)
@@ -128,6 +129,7 @@ export class Scope extends ScopeAbstract {
     }
 
     set(key: string, value: any, detectType: boolean = false): void {
+        if (this._data === null) return;
         if (detectType) {
             const type = typeof value;
             if (type === 'number') {
@@ -146,11 +148,18 @@ export class Scope extends ScopeAbstract {
         this._data[key] = value;
     }
 
+    remove(key: string) {
+        if (this._data === null) return;
+        this._data.removeProperty(key);
+    }
+
     get keys(): string[] {
+        if (this._data === null) return [];
         return this._data.keys;
     }
 
     has(key: string): boolean {
+        if (this._data === null) return false;
         return this._data.hasProperty(key);
     }
 

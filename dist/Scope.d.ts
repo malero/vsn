@@ -18,6 +18,7 @@ export declare class Scope extends ScopeAbstract {
     getReference(path: string, createIfNotFound?: boolean): ScopeReference;
     get(key: string, searchParents?: boolean): any;
     set(key: string, value: any, detectType?: boolean): void;
+    remove(key: string): void;
     get keys(): string[];
     has(key: string): boolean;
     setType(key: string, type: string): void;
