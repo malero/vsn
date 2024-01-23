@@ -257,10 +257,13 @@ export class Tag extends DOMObject {
 
     public addChild(tag: Tag) {
         this._children.push(tag);
+        tag.once('deconstruct', this.removeChild, this);
     }
 
     public removeChild(tag: Tag) {
-        this._children.splice(this._children.indexOf(tag), 1);
+        const index = this._children.indexOf(tag);
+        if (index > -1)
+            this._children.splice(index, 1);
     }
 
     public get children(): Tag[] {
@@ -811,6 +814,7 @@ export class Tag extends DOMObject {
             this.element[Tag.TaggedVariable] = null;
             (this as any).element = null;
         }
+        this._parentTag = null;
         super.deconstruct();
     }
 }

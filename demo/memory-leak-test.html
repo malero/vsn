@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>VSN Post Replace Test</title>
+</head>
+<body vsn-service:xhr="XHR">
+
+<a href="./resources/xhr-memory-leak-test.html" vsn-xhr="#test.@html = '<button>wut?</button>' + response'">Wut?</a>
+<a href="./resources/xhr-memory-leak-test.html" vsn-xhr="#test.@html = '<button>huh?</button>' + response'">Huh?</a>
+<div id="test"></div>
+
+<script type="text/javascript" src="vsn.js"></script>
+</body>
+</html>

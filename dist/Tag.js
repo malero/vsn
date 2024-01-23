@@ -413,9 +413,12 @@ var Tag = /** @class */ (function (_super) {
     });
     Tag.prototype.addChild = function (tag) {
         this._children.push(tag);
+        tag.once('deconstruct', this.removeChild, this);
     };
     Tag.prototype.removeChild = function (tag) {
-        this._children.splice(this._children.indexOf(tag), 1);
+        var index = this._children.indexOf(tag);
+        if (index > -1)
+            this._children.splice(index, 1);
     };
     Object.defineProperty(Tag.prototype, "children", {
         get: function () {
@@ -1429,6 +1432,7 @@ var Tag = /** @class */ (function (_super) {
             this.element[Tag.TaggedVariable] = null;
             this.element = null;
         }
+        this._parentTag = null;
         _super.prototype.deconstruct.call(this);
     };
     Tag.TaggedVariable = '_vsn_tag';

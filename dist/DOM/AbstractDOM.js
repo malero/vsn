@@ -509,9 +509,15 @@ var AbstractDOM = /** @class */ (function (_super) {
                     cls = SlottedTag_1.SlottedTag;
                 tag = new cls(element, this);
                 this.tags.push(tag);
+                tag.once('deconstruct', this.removeTag, this);
                 return [2 /*return*/, tag];
             });
         });
+    };
+    AbstractDOM.prototype.removeTag = function (tag) {
+        var index = this.tags.indexOf(tag);
+        if (index > -1)
+            this.tags.splice(index, 1);
     };
     AbstractDOM.prototype.setupTags = function (tags) {
         return __awaiter(this, void 0, void 0, function () {

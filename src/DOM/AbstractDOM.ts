@@ -248,7 +248,7 @@ export abstract class AbstractDOM extends EventDispatcher {
         return discovered;
     }
 
-    async buildTag<T = Tag>(element: HTMLElement, returnExisting: boolean = false, cls: any = Tag): Promise<T> {
+    async buildTag<T extends Tag>(element: HTMLElement, returnExisting: boolean = false, cls: any = Tag): Promise<T> {
         if (element[Tag.TaggedVariable]) return returnExisting ? element[Tag.TaggedVariable] : null;
         if (element.tagName.toLowerCase() === 'slot')
             cls = SlotTag;
@@ -257,7 +257,14 @@ export abstract class AbstractDOM extends EventDispatcher {
 
         const tag: T = new cls(element, this);
         this.tags.push(tag as any);
+        tag.once('deconstruct', this.removeTag, this);
         return tag;
+    }
+
+    protected removeTag(tag: Tag) {
+        const index = this.tags.indexOf(tag);
+        if (index > -1)
+            this.tags.splice(index, 1);
     }
 
     async setupTags(tags: Tag[]) {
