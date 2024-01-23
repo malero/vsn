@@ -117,6 +117,7 @@ export class AssignmentNode extends Node implements TreeNode {
                 left /= right;
                 break;
         }
+
         scope.set(key, left);
         return left;
     }

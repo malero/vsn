@@ -12,7 +12,8 @@
             class input {
                 func construct() {
                     log('.simple input construct');
-                    a|float = 0.0;
+                    this.a|float = 0.0;
+                    log(this.a);
                     @value = 'wut';
                 }
 
@@ -22,8 +23,8 @@
 
                 on focus() {
                     log(@type);
-                    a += 0.1;
-                    log(a);
+                    this.a += 0.1;
+                    log(this.a);
                 }
 
                 on mouseenter() {

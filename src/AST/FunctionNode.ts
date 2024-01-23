@@ -24,14 +24,15 @@ export class FunctionNode extends Node implements TreeNode {
     }
 
     public async prepare(scope: Scope, dom: DOM, tag: Tag = null, meta?: any): Promise<void> {
-        if (meta?.ClassNode) {
-            // Set on object instance
-            if (tag && tag.scope.has('this')) {
-                tag.scope.get('this').set(this.name, this);
-            }
-        } else {
-            scope.set(this.name, this);
-        }
+        // if (meta?.ClassNode) {
+        //     // Set on object instance
+        //     if (tag && tag.scope.has('this')) {
+        //         tag.scope.get('this').set(this.name, this);
+        //     }
+        // } else {
+        //     scope.set(this.name, this);
+        // }
+        scope.set(this.name, this);
         await super.prepare(scope, dom, tag, meta);
     }
 
@@ -41,7 +42,7 @@ export class FunctionNode extends Node implements TreeNode {
 
     public async collectGarbage() {
         for (const f of this.garbage) {
-            f.collectGarbage();
+            f.deconstruct();
         }
         this.garbage = [];
     }
@@ -52,6 +53,7 @@ export class FunctionNode extends Node implements TreeNode {
             let functionScope;
             if (createFunctionScope && !(scope instanceof FunctionScope)) {
                 functionScope = new FunctionScope(scope);
+                functionScope.set('this', scope);
                 self.garbage.push(functionScope);
             } else {
                 functionScope = scope;

@@ -9,20 +9,40 @@
 <body>
 
 <script type="text/javascript" src="../vsn.js"></script>
+
 <script type="text/vsn" vsn-script>
-    class .btn {
+    class .testing {
         func construct() {
-            log('btn construct', this);
+            log('.testing construct');
+            this.a|integer = 0;
+            log('this.a', this.a);
         }
 
-        on click() {
-            log('btn click');
+        class .test {
+            func construct() {
+                log('.test construct');
+                ?<(.testing).a += 1;
+            }
+        }
+    }
+
+    class #testing {
+        func construct() {
+            log('#testing construct');
+            this.a|integer = 0;
+            log('this.a', this.a);
+        }
+
+        class .test {
+            func construct() {
+                log('.test construct');
+                ?<(.testing).a += 1;
+            }
         }
     }
 </script>
-<div id="test"></div>
-<div id="html-container"></div>
-<a href="../resources/xhr-cfs.html" vsn-xhr="#html-container.@html = response;?(#html-header).$color='yellow';" class="btn">XHR</a>
+<div id="testing" class="testing"><span class="test"></span><span class="test"></span><span class="test"></span></div>
+<button vsn-on:click="log(?(.testing).a)">wut</button>
 
 </body>
 </html>

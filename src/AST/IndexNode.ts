@@ -11,7 +11,6 @@ export class IndexNode extends Node implements TreeNode {
         public readonly indexTwo: Node = null
     ) {
         super();
-        console.log('index node', object, index, indexTwo);
     }
 
     protected _getChildNodes(): Node[] {

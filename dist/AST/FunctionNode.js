@@ -88,15 +88,15 @@ var FunctionNode = /** @class */ (function (_super) {
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
-                        if (meta === null || meta === void 0 ? void 0 : meta.ClassNode) {
-                            // Set on object instance
-                            if (tag && tag.scope.has('this')) {
-                                tag.scope.get('this').set(this.name, this);
-                            }
-                        }
-                        else {
-                            scope.set(this.name, this);
-                        }
+                        // if (meta?.ClassNode) {
+                        //     // Set on object instance
+                        //     if (tag && tag.scope.has('this')) {
+                        //         tag.scope.get('this').set(this.name, this);
+                        //     }
+                        // } else {
+                        //     scope.set(this.name, this);
+                        // }
+                        scope.set(this.name, this);
                         return [4 /*yield*/, _super.prototype.prepare.call(this, scope, dom, tag, meta)];
                     case 1:
                         _a.sent();
@@ -124,7 +124,7 @@ var FunctionNode = /** @class */ (function (_super) {
                 try {
                     for (_a = __values(this.garbage), _b = _a.next(); !_b.done; _b = _a.next()) {
                         f = _b.value;
-                        f.collectGarbage();
+                        f.deconstruct();
                     }
                 }
                 catch (e_1_1) { e_1 = { error: e_1_1 }; }
@@ -160,6 +160,7 @@ var FunctionNode = /** @class */ (function (_super) {
                                     case 0:
                                         if (createFunctionScope && !(scope instanceof Scope_1.FunctionScope)) {
                                             functionScope = new Scope_1.FunctionScope(scope);
+                                            functionScope.set('this', scope);
                                             self.garbage.push(functionScope);
                                         }
                                         else {

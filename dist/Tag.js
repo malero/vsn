@@ -425,15 +425,17 @@ var Tag = /** @class */ (function (_super) {
         configurable: true
     });
     Tag.prototype.findParentTag = function () {
-        var parentElement = DOM_1.DOM.getParentElement(this.element);
         var foundParent = false;
-        while (parentElement) {
-            if (parentElement[Tag.TaggedVariable]) {
-                foundParent = true;
-                this.parentTag = parentElement[Tag.TaggedVariable];
-                break;
+        if (this.element) {
+            var parentElement = DOM_1.DOM.getParentElement(this.element);
+            while (parentElement) {
+                if (parentElement[Tag.TaggedVariable]) {
+                    foundParent = true;
+                    this.parentTag = parentElement[Tag.TaggedVariable];
+                    break;
+                }
+                parentElement = DOM_1.DOM.getParentElement(parentElement);
             }
-            parentElement = DOM_1.DOM.getParentElement(parentElement);
         }
         if (!foundParent && DOM_1.DOM.instance.root !== this)
             return DOM_1.DOM.instance.root;
@@ -446,7 +448,7 @@ var Tag = /** @class */ (function (_super) {
             return this._parentTag;
         },
         set: function (tag) {
-            if (this.element === document.body)
+            if (this.element === document.body || tag.element === document.body)
                 return;
             if (this._parentTag && this._parentTag !== tag) {
                 this._parentTag.removeChild(this);
@@ -471,7 +473,7 @@ var Tag = /** @class */ (function (_super) {
                 return this.createScope(true);
             if (!!this.parentTag)
                 return this.parentTag.scope;
-            return null;
+            return DOM_1.DOM.instance.root.scope;
         },
         enumerable: false,
         configurable: true
@@ -1422,6 +1424,10 @@ var Tag = /** @class */ (function (_super) {
         if (this._controller) {
             this._controller.deconstruct();
             this._controller = null;
+        }
+        if (this.element) {
+            this.element[Tag.TaggedVariable] = null;
+            this.element = null;
         }
         _super.prototype.deconstruct.call(this);
     };

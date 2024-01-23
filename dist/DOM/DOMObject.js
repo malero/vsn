@@ -134,6 +134,9 @@ var DOMObject = /** @class */ (function (_super) {
         var _a;
         if (this._uniqueScope)
             (_a = this.scope) === null || _a === void 0 ? void 0 : _a.deconstruct();
+        this.onEventHandlers = {};
+        this.slot = null;
+        this.delegates.length = 0;
         _super.prototype.deconstruct.call(this);
     };
     return DOMObject;

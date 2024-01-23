@@ -268,17 +268,18 @@ export class Tag extends DOMObject {
     }
 
     public findParentTag() {
-        let parentElement: HTMLElement = DOM.getParentElement(this.element);
         let foundParent = false;
-        while (parentElement) {
-            if (parentElement[Tag.TaggedVariable]) {
-                foundParent = true;
-                this.parentTag = parentElement[Tag.TaggedVariable];
-                break;
+        if (this.element) {
+            let parentElement: HTMLElement = DOM.getParentElement(this.element);
+            while (parentElement) {
+                if (parentElement[Tag.TaggedVariable]) {
+                    foundParent = true;
+                    this.parentTag = parentElement[Tag.TaggedVariable];
+                    break;
+                }
+                parentElement = DOM.getParentElement(parentElement);
             }
-            parentElement = DOM.getParentElement(parentElement);
         }
-
         if (!foundParent && DOM.instance.root !== this)
             return DOM.instance.root;
     }
@@ -292,7 +293,7 @@ export class Tag extends DOMObject {
     }
 
     public set parentTag(tag: Tag) {
-        if (this.element === document.body)
+        if (this.element === document.body || tag.element === document.body)
             return;
 
         if (this._parentTag && this._parentTag !== tag) {
@@ -320,7 +321,7 @@ export class Tag extends DOMObject {
         if (!!this.parentTag)
             return this.parentTag.scope;
 
-        return null;
+        return DOM.instance.root.scope;
     }
 
     public get controller(): Controller {
@@ -805,6 +806,10 @@ export class Tag extends DOMObject {
         if (this._controller) {
             this._controller.deconstruct();
             this._controller = null;
+        }
+        if (this.element) {
+            this.element[Tag.TaggedVariable] = null;
+            (this as any).element = null;
         }
         super.deconstruct();
     }

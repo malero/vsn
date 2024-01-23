@@ -74,7 +74,6 @@ var IndexNode = /** @class */ (function (_super) {
         _this.object = object;
         _this.index = index;
         _this.indexTwo = indexTwo;
-        console.log('index node', object, index, indexTwo);
         return _this;
     }
     IndexNode.prototype._getChildNodes = function () {

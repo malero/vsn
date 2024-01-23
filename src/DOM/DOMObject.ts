@@ -60,6 +60,9 @@ export abstract class DOMObject extends EventDispatcher {
     public deconstruct() {
         if (this._uniqueScope)
             this.scope?.deconstruct();
+        this.onEventHandlers = {};
+        this.slot = null;
+        this.delegates.length = 0;
         super.deconstruct();
     }
 }

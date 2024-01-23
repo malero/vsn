@@ -25,7 +25,7 @@
         on keyup() {
             val = @value;
             if (val) {
-                val = val.toLowerCase();
+                val = val.toLowerCase().trim();
                 for (ele of ?(#items .item)) {
                     if (ele.@itemname.indexOf(val) > -1) {
                         ele.$display = 'list-item';

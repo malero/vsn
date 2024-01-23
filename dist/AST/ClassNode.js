@@ -140,6 +140,7 @@ var ClassNode = /** @class */ (function (_super) {
                         ClassNode.classes[this._fullSelector] = this;
                         ClassNode.classChildren[this._fullSelector] = [];
                         ClassNode.preppedTags[this._fullSelector] = [];
+                        ClassNode.preppingElements[this._fullSelector] = [];
                         if (ClassNode.classParents[this.selector] === undefined)
                             ClassNode.classParents[this.selector] = [];
                         ClassNode.classParents[this.selector].push(this._fullSelector);
@@ -180,15 +181,19 @@ var ClassNode = /** @class */ (function (_super) {
                         _k.label = 1;
                     case 1:
                         _k.trys.push([1, 6, 7, 8]);
-                        _a = __values(Array.from(dom.querySelectorAll(this.selector, tag))), _b = _a.next();
+                        _a = __values(Array.from(dom.querySelectorAll(this.fullSelector, tag))), _b = _a.next();
                         _k.label = 2;
                     case 2:
                         if (!!_b.done) return [3 /*break*/, 5];
                         element = _b.value;
+                        if (ClassNode.preppingElements[this._fullSelector].indexOf(element) > -1)
+                            return [3 /*break*/, 4];
+                        ClassNode.preppingElements[this._fullSelector].push(element);
                         _d = (_c = tags).push;
                         return [4 /*yield*/, ClassNode.addElementClass(this._fullSelector, element, dom, element[Tag_1.Tag.TaggedVariable] || null)];
                     case 3:
                         _d.apply(_c, [_k.sent()]);
+                        ClassNode.preppingElements[this._fullSelector].splice(ClassNode.preppingElements[this._fullSelector].indexOf(element), 1);
                         _k.label = 4;
                     case 4:
                         _b = _a.next();
@@ -273,8 +278,6 @@ var ClassNode = /** @class */ (function (_super) {
                         if (hasConstruct === null)
                             hasConstruct = this.classScope.has('construct');
                         tag.createScope(true);
-                        // Create object scope
-                        tag.scope.set('this', new Scope_1.Scope(tag.scope));
                         meta = this.updateMeta();
                         meta['PrepForSelector'] = this.fullSelector;
                         return [4 /*yield*/, this.block.prepare(tag.scope, dom, tag, meta)];
@@ -282,7 +285,7 @@ var ClassNode = /** @class */ (function (_super) {
                         _a.sent();
                         if (!hasConstruct) return [3 /*break*/, 4];
                         fncCls = this.classScope.get('construct');
-                        return [4 /*yield*/, fncCls.getFunction(tag.scope, dom, tag, false)];
+                        return [4 /*yield*/, fncCls.getFunction(tag.scope, dom, tag, true)];
                     case 2:
                         fnc = _a.sent();
                         return [4 /*yield*/, fnc()];
@@ -309,7 +312,7 @@ var ClassNode = /** @class */ (function (_super) {
                             hasDeconstruct = this.classScope.has('deconstruct');
                         if (!hasDeconstruct) return [3 /*break*/, 3];
                         fncCls = this.classScope.get('deconstruct');
-                        return [4 /*yield*/, fncCls.getFunction(tag.scope, dom, tag, false)];
+                        return [4 /*yield*/, fncCls.getFunction(tag.scope, dom, tag, true)];
                     case 1:
                         fnc = _d.sent();
                         return [4 /*yield*/, fnc()];
@@ -335,9 +338,7 @@ var ClassNode = /** @class */ (function (_super) {
                         }
                         tag.dispatch(this.fullSelector + ".deconstruct");
                         ClassNode.preppedTags[this.fullSelector].splice(ClassNode.preppedTags[this.fullSelector].indexOf(tag), 1);
-                        return [4 /*yield*/, ClassNode.removePreparedClassFromElement(tag.element, this.fullSelector)];
-                    case 4:
-                        _d.sent();
+                        ClassNode.removePreparedClassFromElement(tag.element, this.fullSelector);
                         return [2 /*return*/];
                 }
             });
@@ -592,6 +593,7 @@ var ClassNode = /** @class */ (function (_super) {
     ClassNode.classParents = {};
     ClassNode.classChildren = {}; // List of child class selectors for a given class selector
     ClassNode.preppedTags = {};
+    ClassNode.preppingElements = {};
     return ClassNode;
 }(Node_1.Node));
 exports.ClassNode = ClassNode;

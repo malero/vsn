@@ -20,6 +20,9 @@ export declare class ClassNode extends Node implements TreeNode {
     static readonly preppedTags: {
         [name: string]: Tag[];
     };
+    static readonly preppingElements: {
+        [name: string]: HTMLElement[];
+    };
     protected requiresPrep: boolean;
     readonly classScope: Scope;
     protected _fullSelector: string;

@@ -52,13 +52,13 @@ describe('ClassNode', () => {
             <script type="text/vsn" vsn-script>
             class .simple-construct { 
                 func construct() {
-                    a|integer = "15";
-                    log('####### construct', a);
+                    this.a|integer = "15";
+                    log('####### construct', this.a);
                 }
                 
                 func test() {
-                    a += 1;
-                    log('####### testing', a);
+                    this.a += 1;
+                    log('####### testing', this.a);
                 }
             }
             </script>
@@ -82,7 +82,7 @@ describe('ClassNode', () => {
             <script type="text/vsn" vsn-script>
             class .testing { 
                 func construct() {
-                    a|integer = 0;
+                    this.a|integer = 0;
                 }
                 
                 class .test {

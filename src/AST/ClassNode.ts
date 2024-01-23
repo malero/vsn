@@ -14,6 +14,7 @@ export class ClassNode extends Node implements TreeNode {
     public static readonly classParents: {[name: string]: string[]} = {};
     public static readonly classChildren: {[name: string]: string[]} = {}; // List of child class selectors for a given class selector
     public static readonly preppedTags: {[name: string]: Tag[]} = {};
+    public static readonly preppingElements: {[name: string]: HTMLElement[]} = {};
 
     protected requiresPrep: boolean = true;
     public readonly classScope: Scope = new Scope();
@@ -59,6 +60,7 @@ export class ClassNode extends Node implements TreeNode {
             ClassNode.classes[this._fullSelector] = this;
             ClassNode.classChildren[this._fullSelector] = [];
             ClassNode.preppedTags[this._fullSelector] = [];
+            ClassNode.preppingElements[this._fullSelector] = []
 
             if (ClassNode.classParents[this.selector] === undefined)
                 ClassNode.classParents[this.selector] = [];
@@ -79,8 +81,11 @@ export class ClassNode extends Node implements TreeNode {
 
     public async findClassElements(dom: DOM, tag: Tag = null) {
         const tags: Tag[] = [];
-        for (const element of Array.from(dom.querySelectorAll(this.selector, tag))) {
+        for (const element of Array.from(dom.querySelectorAll(this.fullSelector, tag))) {
+            if (ClassNode.preppingElements[this._fullSelector].indexOf(element as HTMLElement) > -1) continue;
+            ClassNode.preppingElements[this._fullSelector].push(element as HTMLElement);
             tags.push(await ClassNode.addElementClass(this._fullSelector, element as HTMLElement, dom, element[Tag.TaggedVariable] || null));
+            ClassNode.preppingElements[this._fullSelector].splice(ClassNode.preppingElements[this._fullSelector].indexOf(element as HTMLElement), 1);
         }
 
         for (const childSelector of ClassNode.classChildren[this._fullSelector]) {
@@ -102,14 +107,12 @@ export class ClassNode extends Node implements TreeNode {
             hasConstruct = this.classScope.has('construct');
 
         tag.createScope(true);
-        // Create object scope
-        tag.scope.set('this', new Scope(tag.scope));
         const meta = this.updateMeta();
         meta['PrepForSelector'] = this.fullSelector;
         await this.block.prepare(tag.scope, dom, tag, meta);
         if (hasConstruct) {
             const fncCls: FunctionNode = this.classScope.get('construct') as FunctionNode;
-            const fnc = await fncCls.getFunction(tag.scope, dom, tag, false);
+            const fnc = await fncCls.getFunction(tag.scope, dom, tag, true);
             await fnc();
         }
         tag.dispatch(`${this.fullSelector}.construct`, tag.element.id);
@@ -122,7 +125,7 @@ export class ClassNode extends Node implements TreeNode {
 
         if (hasDeconstruct) {
             const fncCls: FunctionNode = this.classScope.get('deconstruct') as FunctionNode;
-            const fnc = await fncCls.getFunction(tag.scope, dom, tag, false);
+            const fnc = await fncCls.getFunction(tag.scope, dom, tag, true);
             await fnc();
         }
         for (const key of this.classScope.keys) {
@@ -133,7 +136,7 @@ export class ClassNode extends Node implements TreeNode {
         }
         tag.dispatch(`${this.fullSelector}.deconstruct`);
         ClassNode.preppedTags[this.fullSelector].splice(ClassNode.preppedTags[this.fullSelector].indexOf(tag), 1);
-        await ClassNode.removePreparedClassFromElement(tag.element, this.fullSelector);
+        ClassNode.removePreparedClassFromElement(tag.element, this.fullSelector);
     }
 
     public async evaluate(scope: Scope, dom: DOM, tag: Tag = null) {

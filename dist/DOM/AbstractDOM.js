@@ -404,6 +404,8 @@ var AbstractDOM = /** @class */ (function (_super) {
                                 try {
                                     for (_c = (e_7 = void 0, __values(this.getTagsFromParent(ele))), _d = _c.next(); !_d.done; _d = _c.next()) {
                                         tag_1 = _d.value;
+                                        if (tag_1.hasAttribute('vsn-template'))
+                                            continue;
                                         tag_1.deconstruct();
                                     }
                                 }

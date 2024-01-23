@@ -206,6 +206,7 @@ export abstract class AbstractDOM extends EventDispatcher {
 
             for (const ele of Array.from(mutation.removedNodes)) {
                 for (const tag of this.getTagsFromParent(ele)) {
+                    if (tag.hasAttribute('vsn-template')) continue;
                     tag.deconstruct();
                 }
             }
