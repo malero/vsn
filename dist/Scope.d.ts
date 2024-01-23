@@ -8,6 +8,7 @@ export declare class Scope extends ScopeAbstract {
     protected _parentScope: Scope;
     protected _isGarbage: boolean;
     constructor(parent?: Scope);
+    deconstruct(): void;
     get data(): ScopeData;
     get objectify(): any;
     get parentScope(): Scope;
@@ -26,7 +27,6 @@ export declare class Scope extends ScopeAbstract {
     cleanup(): void;
     get isGarbage(): boolean;
     collectGarbage(force?: boolean): void;
-    deconstruct(): void;
     wrap(toWrap: any, triggerUpdates?: boolean, updateFromWrapped?: boolean): void;
     unwrap(): void;
     static fromObject(obj: any, parentScope?: Scope): Scope;

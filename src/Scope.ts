@@ -26,6 +26,17 @@ export class Scope extends ScopeAbstract {
         this._data.addRelay(this);
     }
 
+    deconstruct() {
+        super.deconstruct();
+        this.collectGarbage(true);
+        this.wrapped = null;
+        if (this._data)
+            this._data.deconstruct();
+        this._data = null;
+        this.children.length = 0;
+        this._parentScope = null;
+    }
+
     public get data(): ScopeData {
         return this._data;
     }
@@ -184,11 +195,6 @@ export class Scope extends ScopeAbstract {
         }
         if (force)
             this.cleanup();
-    }
-
-    deconstruct() {
-        super.deconstruct();
-        this.collectGarbage(true);
     }
 
     public wrap(toWrap: any, triggerUpdates: boolean = false, updateFromWrapped: boolean = true) {

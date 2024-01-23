@@ -9,6 +9,7 @@ export declare class EventCallback {
     calls: number;
     constructor(fnc: any, key: number, once: boolean, context?: any);
     call(...args: any[]): boolean;
+    deconstruct(): void;
 }
 export declare type EventDispatcherCallback = (...args: any[]) => any;
 export declare class EventDispatcher {

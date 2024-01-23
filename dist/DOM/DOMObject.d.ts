@@ -16,6 +16,9 @@ export declare abstract class DOMObject extends EventDispatcher {
     protected onEventHandlers: {
         [key: string]: IEventHandler[];
     };
+    protected onEventBindings: {
+        [key: string]: (...args: any[]) => any;
+    };
     protected _uniqueScope: boolean;
     protected slot: HTMLSlotElement;
     readonly delegates: HTMLElement[];

@@ -128,6 +128,7 @@ var Tag = /** @class */ (function (_super) {
         _this.rawAttributes = {};
         _this.parsedAttributes = {};
         _this.onEventHandlers = {};
+        _this.onEventBindings = {};
         _this.analyzeElementAttributes();
         _this._state = TagState.Instantiated;
         return _this;
@@ -1227,7 +1228,7 @@ var Tag = /** @class */ (function (_super) {
             var eventListenerOpts = {};
             if (eventType.indexOf('touch') > -1 || passiveValue !== null)
                 eventListenerOpts['passive'] = passiveValue === null && true || passiveValue;
-            element.addEventListener(eventType, this.handleEvent.bind(this, eventType), eventListenerOpts);
+            element.addEventListener(eventType, this.getEventBinding(eventType), eventListenerOpts);
         }
         this.onEventHandlers[eventType].push({
             handler: handler,
@@ -1237,6 +1238,11 @@ var Tag = /** @class */ (function (_super) {
             state: {}
         });
     };
+    Tag.prototype.getEventBinding = function (eventType) {
+        if (this.onEventBindings[eventType] === undefined)
+            this.onEventBindings[eventType] = this.handleEvent.bind(this, eventType);
+        return this.onEventBindings[eventType];
+    };
     Tag.prototype.removeEventHandler = function (eventType, handler, context) {
         if (context === void 0) { context = null; }
         if (!this.onEventHandlers[eventType])
@@ -1245,66 +1251,55 @@ var Tag = /** @class */ (function (_super) {
         if (_handler) {
             this.onEventHandlers[eventType].splice(this.onEventHandlers[eventType].indexOf(_handler), 1);
             if (this.onEventHandlers[eventType].length === 0) {
-                this.element.removeEventListener(eventType, this.handleEvent.bind(this, eventType));
+                this.element.removeEventListener(eventType, this.getEventBinding(eventType));
             }
         }
     };
     Tag.prototype.removeAllEventHandlers = function () {
-        var e_20, _a, e_21, _b;
+        var e_20, _a;
         try {
-            for (var _c = __values(Object.keys(this.onEventHandlers)), _d = _c.next(); !_d.done; _d = _c.next()) {
-                var eventType = _d.value;
-                try {
-                    for (var _e = (e_21 = void 0, __values(this.onEventHandlers[eventType])), _f = _e.next(); !_f.done; _f = _e.next()) {
-                        var handler = _f.value;
-                        this.removeEventHandler(eventType, handler.handler, handler.context);
-                    }
-                }
-                catch (e_21_1) { e_21 = { error: e_21_1 }; }
-                finally {
-                    try {
-                        if (_f && !_f.done && (_b = _e.return)) _b.call(_e);
-                    }
-                    finally { if (e_21) throw e_21.error; }
-                }
+            for (var _b = __values(Object.keys(this.onEventHandlers)), _c = _b.next(); !_c.done; _c = _b.next()) {
+                var eventType = _c.value;
+                this.element.removeEventListener(eventType, this.getEventBinding(eventType));
             }
         }
         catch (e_20_1) { e_20 = { error: e_20_1 }; }
         finally {
             try {
-                if (_d && !_d.done && (_a = _c.return)) _a.call(_c);
+                if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
             }
             finally { if (e_20) throw e_20.error; }
         }
+        this.onEventHandlers = {};
     };
     Tag.prototype.removeContextEventHandlers = function (context) {
-        var e_22, _a, e_23, _b;
+        var e_21, _a, e_22, _b;
         try {
             for (var _c = __values(Object.keys(this.onEventHandlers)), _d = _c.next(); !_d.done; _d = _c.next()) {
                 var eventType = _d.value;
                 try {
-                    for (var _e = (e_23 = void 0, __values(this.onEventHandlers[eventType])), _f = _e.next(); !_f.done; _f = _e.next()) {
+                    for (var _e = (e_22 = void 0, __values(this.onEventHandlers[eventType])), _f = _e.next(); !_f.done; _f = _e.next()) {
                         var handler = _f.value;
                         if (handler.context === context) {
                             this.removeEventHandler(eventType, handler.handler, context);
                         }
                     }
                 }
-                catch (e_23_1) { e_23 = { error: e_23_1 }; }
+                catch (e_22_1) { e_22 = { error: e_22_1 }; }
                 finally {
                     try {
                         if (_f && !_f.done && (_b = _e.return)) _b.call(_e);
                     }
-                    finally { if (e_23) throw e_23.error; }
+                    finally { if (e_22) throw e_22.error; }
                 }
             }
         }
-        catch (e_22_1) { e_22 = { error: e_22_1 }; }
+        catch (e_21_1) { e_21 = { error: e_21_1 }; }
         finally {
             try {
                 if (_d && !_d.done && (_a = _c.return)) _a.call(_c);
             }
-            finally { if (e_22) throw e_22.error; }
+            finally { if (e_21) throw e_21.error; }
         }
     };
     Tag.prototype.createScope = function (force) {
@@ -1382,8 +1377,8 @@ var Tag = /** @class */ (function (_super) {
     };
     Tag.prototype.setupDeferredAttributes = function () {
         return __awaiter(this, void 0, void 0, function () {
-            var _a, _b, attr, e_24_1;
-            var e_24, _c;
+            var _a, _b, attr, e_23_1;
+            var e_23, _c;
             return __generator(this, function (_d) {
                 switch (_d.label) {
                     case 0:
@@ -1402,14 +1397,14 @@ var Tag = /** @class */ (function (_super) {
                         return [3 /*break*/, 1];
                     case 4: return [3 /*break*/, 7];
                     case 5:
-                        e_24_1 = _d.sent();
-                        e_24 = { error: e_24_1 };
+                        e_23_1 = _d.sent();
+                        e_23 = { error: e_23_1 };
                         return [3 /*break*/, 7];
                     case 6:
                         try {
                             if (_b && !_b.done && (_c = _a.return)) _c.call(_a);
                         }
-                        finally { if (e_24) throw e_24.error; }
+                        finally { if (e_23) throw e_23.error; }
                         return [7 /*endfinally*/];
                     case 7:
                         this.deferredAttributes.length = 0;
@@ -1422,17 +1417,15 @@ var Tag = /** @class */ (function (_super) {
         this.removeAllEventHandlers();
         this.attributes.forEach(function (attr) { return attr.deconstruct(); });
         this.attributes.clear();
+        this.deferredAttributes.length = 0;
         this._children.forEach(function (child) { return child.deconstruct(); });
         this._children.length = 0;
         if (this._controller) {
             this._controller.deconstruct();
             this._controller = null;
         }
-        if (this.element) {
-            this.element[Tag.TaggedVariable] = null;
-            this.element = null;
-        }
         this._parentTag = null;
+        this.dom = null;
         _super.prototype.deconstruct.call(this);
     };
     Tag.TaggedVariable = '_vsn_tag';

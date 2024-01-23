@@ -103,6 +103,7 @@ export declare class Tag extends DOMObject {
     stripModifier(attribute: string, modifier: string): string;
     getElementPath(element: HTMLElement): string;
     addEventHandler(eventType: string, modifiers: Modifiers, handler: any, context?: any): void;
+    getEventBinding(eventType: string): (...args: any[]) => any;
     removeEventHandler(eventType: string, handler: any, context?: any): void;
     removeAllEventHandlers(): void;
     removeContextEventHandlers(context: any): void;

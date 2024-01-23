@@ -74,6 +74,8 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.DOMObject = void 0;
 var EventDispatcher_1 = require("../EventDispatcher");
+var ClassNode_1 = require("../AST/ClassNode");
+var Tag_1 = require("../Tag");
 var DOMObject = /** @class */ (function (_super) {
     __extends(DOMObject, _super);
     function DOMObject(element, props) {
@@ -135,8 +137,14 @@ var DOMObject = /** @class */ (function (_super) {
         if (this._uniqueScope)
             (_a = this.scope) === null || _a === void 0 ? void 0 : _a.deconstruct();
         this.onEventHandlers = {};
+        this.onEventBindings = {};
         this.slot = null;
         this.delegates.length = 0;
+        if (this.element) {
+            this.element[Tag_1.Tag.TaggedVariable] = null;
+            this.element[ClassNode_1.ClassNode.ClassesVariable] = null;
+            this.element = null;
+        }
         _super.prototype.deconstruct.call(this);
     };
     return DOMObject;

@@ -13,6 +13,7 @@ export declare class Property<T = any> extends EventDispatcher {
     _value: T;
     config: IPropertyConfig;
     constructor(value?: T, config?: IPropertyConfig);
+    deconstruct(): void;
     castType(value: any): any;
     set value(v: any);
     get value(): any;

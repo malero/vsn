@@ -26,18 +26,9 @@
         }
     }
 
-    class #testing {
+    class #testing .test {
         func construct() {
-            log('#testing construct');
-            this.a|integer = 0;
-            log('this.a', this.a);
-        }
-
-        class .test {
-            func construct() {
-                log('.test construct');
-                ?<(.testing).a += 1;
-            }
+            log('#testing .test');
         }
     }
 </script>

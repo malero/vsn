@@ -102,6 +102,11 @@ export class ClassNode extends Node implements TreeNode {
             return;
         }
         ClassNode.preppedTags[this.fullSelector].push(tag);
+        tag.once('deconstruct', (_tag) => {
+            const index = ClassNode.preppedTags[this.fullSelector].indexOf(_tag);
+            if (index > -1)
+                ClassNode.preppedTags[this.fullSelector].splice(index, 1);
+        });
 
         if (hasConstruct === null)
             hasConstruct = this.classScope.has('construct');
@@ -144,18 +149,11 @@ export class ClassNode extends Node implements TreeNode {
     }
 
     public static parse(lastNode, token, tokens: Token[]): ClassNode {
-        tokens.shift(); // skip 'class'
-        const nameParts: string[] = [];
-        for (const t of tokens) {
-            if (t.type === TokenType.L_BRACE) break;
-            nameParts.push(t.value);
-        }
-        let selector = nameParts.join('').trim();
+        let selector = tokens.shift().value;
         if (selector.startsWith('>'))
             selector = `:scope ${selector}`;
-        tokens.splice(0, nameParts.length);
         const block = Tree.processTokens(Tree.getNextStatementTokens(tokens, true, true));
-        return new ClassNode(selector, block);
+        return new ClassNode(selector.trim(), block);
     }
 
     public getSelectorPath(): string[] {

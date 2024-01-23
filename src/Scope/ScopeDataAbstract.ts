@@ -22,6 +22,15 @@ export class ScopeDataAbstract extends EventDispatcher {
             this.__methods__ = [];
     }
 
+    deconstruct() {
+        super.deconstruct();
+        this._lastData = null;
+        for (const prop of this.__properties__) {
+            this['__'+prop].deconstruct();
+            delete this['__'+prop];
+        }
+    }
+
     createMethod(name: string, method: (...args: any[]) => any) {
 
     }

@@ -79,6 +79,7 @@ export class Tag extends DOMObject {
         this.rawAttributes = {};
         this.parsedAttributes = {};
         this.onEventHandlers = {};
+        this.onEventBindings = {};
         this.analyzeElementAttributes();
         this._state = TagState.Instantiated;
     }
@@ -703,7 +704,8 @@ export class Tag extends DOMObject {
             if (eventType.indexOf('touch') > -1 || passiveValue !== null)
                 eventListenerOpts['passive'] = passiveValue === null && true || passiveValue;
 
-            element.addEventListener(eventType, this.handleEvent.bind(this, eventType), eventListenerOpts);
+
+            element.addEventListener(eventType, this.getEventBinding(eventType), eventListenerOpts);
         }
 
         this.onEventHandlers[eventType].push({
@@ -715,6 +717,13 @@ export class Tag extends DOMObject {
         });
     }
 
+    public getEventBinding(eventType: string) {
+        if (this.onEventBindings[eventType] === undefined)
+            this.onEventBindings[eventType] = this.handleEvent.bind(this, eventType);
+
+        return this.onEventBindings[eventType];
+    }
+
     public removeEventHandler(eventType: string, handler, context: any = null) {
         if (!this.onEventHandlers[eventType])
             return;
@@ -723,17 +732,16 @@ export class Tag extends DOMObject {
         if (_handler) {
             this.onEventHandlers[eventType].splice(this.onEventHandlers[eventType].indexOf(_handler), 1);
             if (this.onEventHandlers[eventType].length === 0) {
-                this.element.removeEventListener(eventType, this.handleEvent.bind(this, eventType));
+                this.element.removeEventListener(eventType, this.getEventBinding(eventType));
             }
         }
     }
 
     public removeAllEventHandlers() {
         for (const eventType of Object.keys(this.onEventHandlers)) {
-            for (const handler of this.onEventHandlers[eventType]) {
-                this.removeEventHandler(eventType, handler.handler, handler.context);
-            }
+            this.element.removeEventListener(eventType, this.getEventBinding(eventType));
         }
+        this.onEventHandlers = {};
     }
 
     public removeContextEventHandlers(context: any) {
@@ -804,17 +812,15 @@ export class Tag extends DOMObject {
         this.removeAllEventHandlers();
         this.attributes.forEach(attr => attr.deconstruct());
         this.attributes.clear();
+        this.deferredAttributes.length = 0;
         this._children.forEach(child => child.deconstruct());
         this._children.length = 0;
         if (this._controller) {
             this._controller.deconstruct();
             this._controller = null;
         }
-        if (this.element) {
-            this.element[Tag.TaggedVariable] = null;
-            (this as any).element = null;
-        }
         this._parentTag = null;
+        (this as any).dom = null;
         super.deconstruct();
     }
 }

@@ -1,6 +1,8 @@
 import {Scope} from "../Scope";
 import {EventDispatcher} from "../EventDispatcher";
 import {Modifiers} from "../Modifiers";
+import {ClassNode} from "../AST/ClassNode";
+import {Tag} from "../Tag";
 
 export interface IEventHandler {
     event: string;
@@ -8,11 +10,13 @@ export interface IEventHandler {
     context: any;
     state: { [key: string]: any };
     modifiers: Modifiers;
+    //binding: (...args: any[]) => any;
 }
 
 export abstract class DOMObject extends EventDispatcher {
     protected _scope: Scope;
     protected onEventHandlers: {[key:string]: IEventHandler[]};
+    protected onEventBindings: {[key: string]: (...args: any[]) => any};
     protected _uniqueScope: boolean = false;
     protected slot: HTMLSlotElement;
     public readonly delegates: HTMLElement[] = [];
@@ -61,8 +65,14 @@ export abstract class DOMObject extends EventDispatcher {
         if (this._uniqueScope)
             this.scope?.deconstruct();
         this.onEventHandlers = {};
+        this.onEventBindings = {};
         this.slot = null;
         this.delegates.length = 0;
+        if (this.element) {
+            this.element[Tag.TaggedVariable] = null;
+            this.element[ClassNode.ClassesVariable] = null;
+            (this as any).element = null;
+        }
         super.deconstruct();
     }
 }

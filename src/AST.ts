@@ -287,7 +287,7 @@ const TOKEN_PATTERNS: TokenPattern[] = [
     },
     {
         type: TokenType.CLASS,
-        pattern: /^class\s/
+        pattern: /^class\s([^{]+)/
     },
     {
         type: TokenType.ELEMENT_ATTRIBUTE,

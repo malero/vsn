@@ -236,6 +236,11 @@ var Attribute = /** @class */ (function (_super) {
             attribute: this
         });
     };
+    Attribute.prototype.deconstruct = function () {
+        _super.prototype.deconstruct.call(this);
+        this.tag = null;
+        this.slot = null;
+    };
     Attribute.create = function (tag, attributeName, cls, slot) {
         return new cls(tag, attributeName, slot);
     };

@@ -86,6 +86,12 @@ var Property = /** @class */ (function (_super) {
         _this.value = value;
         return _this;
     }
+    Property.prototype.deconstruct = function () {
+        _super.prototype.deconstruct.call(this);
+        delete this._type;
+        delete this._value;
+        this.config = {};
+    };
     Property.prototype.castType = function (value) {
         var caster = Registry_1.Registry.instance.types.getSynchronous(this.type);
         return caster ? caster(value) : value;

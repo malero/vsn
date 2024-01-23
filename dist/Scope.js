@@ -68,6 +68,16 @@ var Scope = /** @class */ (function (_super) {
         _this._data.addRelay(_this);
         return _this;
     }
+    Scope.prototype.deconstruct = function () {
+        _super.prototype.deconstruct.call(this);
+        this.collectGarbage(true);
+        this.wrapped = null;
+        if (this._data)
+            this._data.deconstruct();
+        this._data = null;
+        this.children.length = 0;
+        this._parentScope = null;
+    };
     Object.defineProperty(Scope.prototype, "data", {
         get: function () {
             return this._data;
@@ -273,10 +283,6 @@ var Scope = /** @class */ (function (_super) {
         }
         if (force)
             this.cleanup();
-    };
-    Scope.prototype.deconstruct = function () {
-        _super.prototype.deconstruct.call(this);
-        this.collectGarbage(true);
     };
     Scope.prototype.wrap = function (toWrap, triggerUpdates, updateFromWrapped) {
         var _this = this;

@@ -23,6 +23,12 @@ export class EventCallback {
         this.calls += 1;
         return true;
     }
+
+    deconstruct() {
+        const self = this as any;
+        self.fnc = null;
+        self.context = null;
+    }
 }
 
 export type EventDispatcherCallback = (...args: any[]) => any;
@@ -44,10 +50,26 @@ export class EventDispatcher  {
 
     deconstruct() {
         this.dispatch('deconstruct', this);
-        EventDispatcher.sources.splice(EventDispatcher.sources.indexOf(this), 1);
+        const sourceIndex = EventDispatcher.sources.indexOf(this);
+        if (sourceIndex > -1)
+            EventDispatcher.sources.splice(sourceIndex, 1);
+
         for (const k in this._listeners) {
+            for (const cb of this._listeners[k]) {
+                cb.deconstruct();
+            }
             delete this._listeners[k];
         }
+
+        for (const cb of this._allListeners) {
+            cb.deconstruct();
+        }
+        for (const cb of this._allListeners) {
+            cb.deconstruct();
+        }
+        (this as any)._listeners = {};
+        this._relays.length = 0;
+        this._allListeners.length = 0;
     }
 
     addRelay(relay: EventDispatcher) {

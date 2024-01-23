@@ -9,6 +9,7 @@ export declare class ScopeDataAbstract extends EventDispatcher {
     __methods__: string[];
     protected _lastData: any;
     constructor();
+    deconstruct(): void;
     createMethod(name: string, method: (...args: any[]) => any): void;
     createProperty(name: string, propertyType?: any, config?: IPropertyConfig): any;
     hasProperty(name: string): boolean;

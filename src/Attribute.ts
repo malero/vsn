@@ -112,6 +112,12 @@ export abstract class Attribute extends EventDispatcher {
         });
     }
 
+    public deconstruct() {
+        super.deconstruct();
+        (this as any).tag = null;
+        (this as any).slot = null;
+    }
+
     public static create(tag: Tag, attributeName: string, cls: any, slot?: Tag): Attribute {
         return new cls(tag, attributeName, slot);
     }

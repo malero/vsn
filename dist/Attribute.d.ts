@@ -39,5 +39,6 @@ export declare abstract class Attribute extends EventDispatcher {
     get value(): string;
     apply(fnc: Function): Promise<void>;
     protected setState(state: AttributeState): void;
+    deconstruct(): void;
     static create(tag: Tag, attributeName: string, cls: any, slot?: Tag): Attribute;
 }

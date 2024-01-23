@@ -268,6 +268,7 @@ var ClassNode = /** @class */ (function (_super) {
         if (hasConstruct === void 0) { hasConstruct = null; }
         return __awaiter(this, void 0, void 0, function () {
             var meta, fncCls, fnc;
+            var _this = this;
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
@@ -275,6 +276,11 @@ var ClassNode = /** @class */ (function (_super) {
                             return [2 /*return*/];
                         }
                         ClassNode.preppedTags[this.fullSelector].push(tag);
+                        tag.once('deconstruct', function (_tag) {
+                            var index = ClassNode.preppedTags[_this.fullSelector].indexOf(_tag);
+                            if (index > -1)
+                                ClassNode.preppedTags[_this.fullSelector].splice(index, 1);
+                        });
                         if (hasConstruct === null)
                             hasConstruct = this.classScope.has('construct');
                         tag.createScope(true);
@@ -353,30 +359,11 @@ var ClassNode = /** @class */ (function (_super) {
         });
     };
     ClassNode.parse = function (lastNode, token, tokens) {
-        var e_5, _a;
-        tokens.shift(); // skip 'class'
-        var nameParts = [];
-        try {
-            for (var tokens_1 = __values(tokens), tokens_1_1 = tokens_1.next(); !tokens_1_1.done; tokens_1_1 = tokens_1.next()) {
-                var t = tokens_1_1.value;
-                if (t.type === AST_1.TokenType.L_BRACE)
-                    break;
-                nameParts.push(t.value);
-            }
-        }
-        catch (e_5_1) { e_5 = { error: e_5_1 }; }
-        finally {
-            try {
-                if (tokens_1_1 && !tokens_1_1.done && (_a = tokens_1.return)) _a.call(tokens_1);
-            }
-            finally { if (e_5) throw e_5.error; }
-        }
-        var selector = nameParts.join('').trim();
+        var selector = tokens.shift().value;
         if (selector.startsWith('>'))
             selector = ":scope " + selector;
-        tokens.splice(0, nameParts.length);
         var block = AST_1.Tree.processTokens(AST_1.Tree.getNextStatementTokens(tokens, true, true));
-        return new ClassNode(selector, block);
+        return new ClassNode(selector.trim(), block);
     };
     ClassNode.prototype.getSelectorPath = function () {
         var path = [this.selector];
@@ -391,8 +378,8 @@ var ClassNode = /** @class */ (function (_super) {
         var _a;
         if (tag === void 0) { tag = null; }
         return __awaiter(this, void 0, void 0, function () {
-            var localSelectors, fullSelectors, localSelectors_1, localSelectors_1_1, selector, parentSelectors, fullSelectors_1, fullSelectors_1_1, selector, isPrepped, path, elements, inElements, changed, _b, _c, childSelector, _d, _e, childElement, e_6_1, e_7_1, e_8_1;
-            var e_9, _f, e_8, _g, e_7, _h, e_6, _j;
+            var localSelectors, fullSelectors, localSelectors_1, localSelectors_1_1, selector, parentSelectors, fullSelectors_1, fullSelectors_1_1, selector, isPrepped, path, elements, inElements, changed, _b, _c, childSelector, _d, _e, childElement, e_5_1, e_6_1, e_7_1;
+            var e_8, _f, e_7, _g, e_6, _h, e_5, _j;
             return __generator(this, function (_k) {
                 switch (_k.label) {
                     case 0:
@@ -409,12 +396,12 @@ var ClassNode = /** @class */ (function (_super) {
                                 }
                             }
                         }
-                        catch (e_9_1) { e_9 = { error: e_9_1 }; }
+                        catch (e_8_1) { e_8 = { error: e_8_1 }; }
                         finally {
                             try {
                                 if (localSelectors_1_1 && !localSelectors_1_1.done && (_f = localSelectors_1.return)) _f.call(localSelectors_1);
                             }
-                            finally { if (e_9) throw e_9.error; }
+                            finally { if (e_8) throw e_8.error; }
                         }
                         if (!!tag) return [3 /*break*/, 2];
                         return [4 /*yield*/, dom.getTagForElement(element, true)];
@@ -451,7 +438,7 @@ var ClassNode = /** @class */ (function (_super) {
                         _k.label = 8;
                     case 8:
                         _k.trys.push([8, 19, 20, 21]);
-                        _b = (e_7 = void 0, __values(ClassNode.classChildren[selector])), _c = _b.next();
+                        _b = (e_6 = void 0, __values(ClassNode.classChildren[selector])), _c = _b.next();
                         _k.label = 9;
                     case 9:
                         if (!!_c.done) return [3 /*break*/, 18];
@@ -459,7 +446,7 @@ var ClassNode = /** @class */ (function (_super) {
                         _k.label = 10;
                     case 10:
                         _k.trys.push([10, 15, 16, 17]);
-                        _d = (e_6 = void 0, __values(Array.from(dom.querySelectorAll(childSelector, tag)))), _e = _d.next();
+                        _d = (e_5 = void 0, __values(Array.from(dom.querySelectorAll(childSelector, tag)))), _e = _d.next();
                         _k.label = 11;
                     case 11:
                         if (!!_e.done) return [3 /*break*/, 14];
@@ -473,42 +460,42 @@ var ClassNode = /** @class */ (function (_super) {
                         return [3 /*break*/, 11];
                     case 14: return [3 /*break*/, 17];
                     case 15:
-                        e_6_1 = _k.sent();
-                        e_6 = { error: e_6_1 };
+                        e_5_1 = _k.sent();
+                        e_5 = { error: e_5_1 };
                         return [3 /*break*/, 17];
                     case 16:
                         try {
                             if (_e && !_e.done && (_j = _d.return)) _j.call(_d);
                         }
-                        finally { if (e_6) throw e_6.error; }
+                        finally { if (e_5) throw e_5.error; }
                         return [7 /*endfinally*/];
                     case 17:
                         _c = _b.next();
                         return [3 /*break*/, 9];
                     case 18: return [3 /*break*/, 21];
                     case 19:
-                        e_7_1 = _k.sent();
-                        e_7 = { error: e_7_1 };
+                        e_6_1 = _k.sent();
+                        e_6 = { error: e_6_1 };
                         return [3 /*break*/, 21];
                     case 20:
                         try {
                             if (_c && !_c.done && (_h = _b.return)) _h.call(_b);
                         }
-                        finally { if (e_7) throw e_7.error; }
+                        finally { if (e_6) throw e_6.error; }
                         return [7 /*endfinally*/];
                     case 21:
                         fullSelectors_1_1 = fullSelectors_1.next();
                         return [3 /*break*/, 3];
                     case 22: return [3 /*break*/, 25];
                     case 23:
-                        e_8_1 = _k.sent();
-                        e_8 = { error: e_8_1 };
+                        e_7_1 = _k.sent();
+                        e_7 = { error: e_7_1 };
                         return [3 /*break*/, 25];
                     case 24:
                         try {
                             if (fullSelectors_1_1 && !fullSelectors_1_1.done && (_g = fullSelectors_1.return)) _g.call(fullSelectors_1);
                         }
-                        finally { if (e_8) throw e_8.error; }
+                        finally { if (e_7) throw e_7.error; }
                         return [7 /*endfinally*/];
                     case 25: return [2 /*return*/];
                 }

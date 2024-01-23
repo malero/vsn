@@ -6,10 +6,18 @@
 </head>
 <body vsn-service:xhr="XHR">
 
-<a href="./resources/xhr-memory-leak-test.html" vsn-xhr="#test.@html = '<button>wut?</button>' + response'">Wut?</a>
-<a href="./resources/xhr-memory-leak-test.html" vsn-xhr="#test.@html = '<button>huh?</button>' + response'">Huh?</a>
+<a href="./resources/xhr-memory-leak-test.html" vsn-xhr="#test.@html = '<button>wut?</button>' + response">Wut?</a>
+<a href="./resources/xhr-memory-leak-test.html" vsn-xhr="#test.@html = '<button>huh?</button>' + response">Huh?</a>
+<button vsn-on:click="#test.@html = ''">Clear</button>
 <div id="test"></div>
 
 <script type="text/javascript" src="vsn.js"></script>
+<script type="text/vsn" vsn-script>
+    class #buttons li button {
+        on click() {
+            log('wut');
+        }
+    }
+</script>
 </body>
 </html>

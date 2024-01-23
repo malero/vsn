@@ -333,7 +333,7 @@ var TOKEN_PATTERNS = [
     },
     {
         type: TokenType.CLASS,
-        pattern: /^class\s/
+        pattern: /^class\s([^{]+)/
     },
     {
         type: TokenType.ELEMENT_ATTRIBUTE,
