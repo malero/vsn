@@ -593,6 +593,8 @@ var Tag = /** @class */ (function (_super) {
     };
     Tag.prototype.setElementAttribute = function (key, value) {
         var _a, _b;
+        if (!this.element)
+            return null;
         if (this.isMagicAttribute(key)) {
             if (key === '@text')
                 this.element.innerText = value;
@@ -625,6 +627,8 @@ var Tag = /** @class */ (function (_super) {
         }
     };
     Tag.prototype.getElementAttribute = function (key) {
+        if (!this.element)
+            return null;
         if (this.isMagicAttribute(key)) {
             if (key === '@text')
                 return this.element.innerText;
@@ -1190,6 +1194,8 @@ var Tag = /** @class */ (function (_super) {
             }
             finally { if (e_19) throw e_19.error; }
         }
+        this.scope.remove('$event');
+        this.scope.remove('$value');
     };
     Tag.prototype.hasModifier = function (attribute, modifier) {
         this.attributes;

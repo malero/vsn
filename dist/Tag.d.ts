@@ -84,7 +84,7 @@ export declare class Tag extends DOMObject {
     hasAttribute(attr: string): boolean;
     getAttribute<T = Attribute>(key: string): Promise<T>;
     isMagicAttribute(key: string): boolean;
-    setElementAttribute(key: string, value: any): void;
+    setElementAttribute(key: string, value: any): any;
     getElementAttribute(key: string): any;
     getRawAttributeValue(key: string, fallback?: any): any;
     hasRawAttribute(mod: string): boolean;

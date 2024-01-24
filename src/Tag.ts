@@ -412,6 +412,7 @@ export class Tag extends DOMObject {
     }
 
     public setElementAttribute(key: string, value: any) {
+        if (!this.element) return null;
         if (this.isMagicAttribute(key)) {
             if (key === '@text')
                 this.element.innerText = value;
@@ -441,6 +442,7 @@ export class Tag extends DOMObject {
     }
 
     public getElementAttribute(key: string): any {
+        if (!this.element) return null;
         if (this.isMagicAttribute(key)) {
             if (key === '@text')
                 return this.element.innerText;
@@ -660,6 +662,8 @@ export class Tag extends DOMObject {
                 handler.handler.call(handler.context, e);
             }
         }
+        this.scope.remove('$event');
+        this.scope.remove('$value');
     }
 
     public hasModifier(attribute: string, modifier: string): boolean {

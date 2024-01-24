@@ -33,8 +33,16 @@ export class Scope extends ScopeAbstract {
         if (this._data)
             this._data.deconstruct();
         this._data = null;
+
+        for (const child of this.children) {
+            child.deconstruct();
+        }
         this.children.length = 0;
-        this._parentScope = null;
+
+        if (this._parentScope) {
+            this._parentScope.removeChild(this);
+            this._parentScope = null;
+        }
     }
 
     public get data(): ScopeData {

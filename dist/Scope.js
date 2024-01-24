@@ -69,14 +69,31 @@ var Scope = /** @class */ (function (_super) {
         return _this;
     }
     Scope.prototype.deconstruct = function () {
+        var e_1, _a;
         _super.prototype.deconstruct.call(this);
         this.collectGarbage(true);
         this.wrapped = null;
         if (this._data)
             this._data.deconstruct();
         this._data = null;
+        try {
+            for (var _b = __values(this.children), _c = _b.next(); !_c.done; _c = _b.next()) {
+                var child = _c.value;
+                child.deconstruct();
+            }
+        }
+        catch (e_1_1) { e_1 = { error: e_1_1 }; }
+        finally {
+            try {
+                if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
+            }
+            finally { if (e_1) throw e_1.error; }
+        }
         this.children.length = 0;
-        this._parentScope = null;
+        if (this._parentScope) {
+            this._parentScope.removeChild(this);
+            this._parentScope = null;
+        }
     };
     Object.defineProperty(Scope.prototype, "data", {
         get: function () {
@@ -87,7 +104,7 @@ var Scope = /** @class */ (function (_super) {
     });
     Object.defineProperty(Scope.prototype, "objectify", {
         get: function () {
-            var e_1, _a;
+            var e_2, _a;
             var obj = {};
             try {
                 for (var _b = __values(this.keys), _c = _b.next(); !_c.done; _c = _b.next()) {
@@ -99,12 +116,12 @@ var Scope = /** @class */ (function (_super) {
                         obj[key] = value;
                 }
             }
-            catch (e_1_1) { e_1 = { error: e_1_1 }; }
+            catch (e_2_1) { e_2 = { error: e_2_1 }; }
             finally {
                 try {
                     if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                 }
-                finally { if (e_1) throw e_1.error; }
+                finally { if (e_2) throw e_2.error; }
             }
             return obj;
         },
@@ -233,23 +250,23 @@ var Scope = /** @class */ (function (_super) {
         return property === null || property === void 0 ? void 0 : property.type;
     };
     Scope.prototype.extend = function (data) {
-        var e_2, _a;
+        var e_3, _a;
         try {
             for (var data_1 = __values(data), data_1_1 = data_1.next(); !data_1_1.done; data_1_1 = data_1.next()) {
                 var key = data_1_1.value;
                 this.set(key, data[key]);
             }
         }
-        catch (e_2_1) { e_2 = { error: e_2_1 }; }
+        catch (e_3_1) { e_3 = { error: e_3_1 }; }
         finally {
             try {
                 if (data_1_1 && !data_1_1.done && (_a = data_1.return)) _a.call(data_1);
             }
-            finally { if (e_2) throw e_2.error; }
+            finally { if (e_3) throw e_3.error; }
         }
     };
     Scope.prototype.clear = function () {
-        var e_3, _a;
+        var e_4, _a;
         try {
             for (var _b = __values(this._data.keys), _c = _b.next(); !_c.done; _c = _b.next()) {
                 var key = _c.value;
@@ -258,12 +275,12 @@ var Scope = /** @class */ (function (_super) {
                 this.set(key, null);
             }
         }
-        catch (e_3_1) { e_3 = { error: e_3_1 }; }
+        catch (e_4_1) { e_4 = { error: e_4_1 }; }
         finally {
             try {
                 if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
             }
-            finally { if (e_3) throw e_3.error; }
+            finally { if (e_4) throw e_4.error; }
         }
     };
     Scope.prototype.cleanup = function () {
@@ -278,7 +295,7 @@ var Scope = /** @class */ (function (_super) {
         configurable: true
     });
     Scope.prototype.collectGarbage = function (force) {
-        var e_4, _a;
+        var e_5, _a;
         if (force === void 0) { force = false; }
         this._isGarbage = true;
         try {
@@ -287,12 +304,12 @@ var Scope = /** @class */ (function (_super) {
                 child.collectGarbage(force);
             }
         }
-        catch (e_4_1) { e_4 = { error: e_4_1 }; }
+        catch (e_5_1) { e_5 = { error: e_5_1 }; }
         finally {
             try {
                 if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
             }
-            finally { if (e_4) throw e_4.error; }
+            finally { if (e_5) throw e_5.error; }
         }
         if (force)
             this.cleanup();
