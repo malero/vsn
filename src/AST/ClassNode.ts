@@ -119,6 +119,7 @@ export class ClassNode extends Node implements TreeNode {
             const fncCls: FunctionNode = this.classScope.get('construct') as FunctionNode;
             const fnc = await fncCls.getFunction(tag.scope, dom, tag, true);
             await fnc();
+            await fncCls.collectGarbage();
         }
         tag.dispatch(`${this.fullSelector}.construct`, tag.element.id);
         ClassNode.addPreparedClassToElement(tag.element, this.fullSelector);
@@ -132,6 +133,7 @@ export class ClassNode extends Node implements TreeNode {
             const fncCls: FunctionNode = this.classScope.get('deconstruct') as FunctionNode;
             const fnc = await fncCls.getFunction(tag.scope, dom, tag, true);
             await fnc();
+            await fncCls.collectGarbage();
         }
         for (const key of this.classScope.keys) {
             if (this.classScope.get(key) instanceof OnNode) {

@@ -14,6 +14,10 @@
 <script type="text/javascript" src="vsn.js"></script>
 <script type="text/vsn" vsn-script>
     class #buttons li button {
+        func construct() {
+            log('this', this);
+        }
+
         on click() {
             log('wut');
         }

@@ -360,10 +360,8 @@ var AbstractDOM = /** @class */ (function (_super) {
         var e_4, _a;
         if (includeParent === void 0) { includeParent = true; }
         var tags = [];
-        if (includeParent) {
-            if (parent[Tag_1.Tag.TaggedVariable]) {
-                tags.push(parent[Tag_1.Tag.TaggedVariable]);
-            }
+        if (includeParent && parent[Tag_1.Tag.TaggedVariable]) {
+            tags.push(parent[Tag_1.Tag.TaggedVariable]);
         }
         try {
             for (var _b = __values(Array.from(parent.childNodes)), _c = _b.next(); !_c.done; _c = _b.next()) {

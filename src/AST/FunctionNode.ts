@@ -44,7 +44,7 @@ export class FunctionNode extends Node implements TreeNode {
         for (const f of this.garbage) {
             f.deconstruct();
         }
-        this.garbage = [];
+        this.garbage.length = 0;
     }
 
     public async getFunction(scope: Scope, dom: DOM, tag: Tag = null, createFunctionScope: boolean = true) {

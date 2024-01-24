@@ -186,10 +186,8 @@ export abstract class AbstractDOM extends EventDispatcher {
 
     public getTagsFromParent(parent: Node, includeParent: boolean = true) {
         const tags: Tag[] = [];
-        if (includeParent) {
-            if (parent[Tag.TaggedVariable]) {
-                tags.push(parent[Tag.TaggedVariable]);
-            }
+        if (includeParent && parent[Tag.TaggedVariable]) {
+            tags.push(parent[Tag.TaggedVariable]);
         }
 
         for (const ele of Array.from(parent.childNodes)) {

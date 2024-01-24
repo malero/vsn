@@ -29,6 +29,11 @@ export class ScopeDataAbstract extends EventDispatcher {
             this.removeProperty(prop);
         }
         this.__properties__.length = 0;
+
+        for (const prop of Array.from(this.__methods__)) {
+            this.removeMethod(prop);
+        }
+        this.__methods__.length = 0;
     }
 
     createMethod(name: string, method: (...args: any[]) => any) {
@@ -84,6 +89,17 @@ export class ScopeDataAbstract extends EventDispatcher {
             prop.deconstruct();
             delete this['__' + key];
         }
+
+        delete this[key];
+    }
+
+    removeMethod(key: string) {
+        const index = this.__methods__.indexOf(key);
+        if (index > -1)
+            this.__methods__.splice(index, 1);
+
+        delete this['__' + key];
+        delete this[key];
     }
 
     hasProperty(name: string): boolean {

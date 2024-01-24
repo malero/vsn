@@ -134,7 +134,7 @@ var FunctionNode = /** @class */ (function (_super) {
                     }
                     finally { if (e_1) throw e_1.error; }
                 }
-                this.garbage = [];
+                this.garbage.length = 0;
                 return [2 /*return*/];
             });
         });

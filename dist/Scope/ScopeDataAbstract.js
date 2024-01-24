@@ -62,23 +62,37 @@ var ScopeDataAbstract = /** @class */ (function (_super) {
         return _this;
     }
     ScopeDataAbstract.prototype.deconstruct = function () {
-        var e_1, _a;
+        var e_1, _a, e_2, _b;
         _super.prototype.deconstruct.call(this);
         this._lastData = null;
         try {
-            for (var _b = __values(Array.from(this.__properties__)), _c = _b.next(); !_c.done; _c = _b.next()) {
-                var prop = _c.value;
+            for (var _c = __values(Array.from(this.__properties__)), _d = _c.next(); !_d.done; _d = _c.next()) {
+                var prop = _d.value;
                 this.removeProperty(prop);
             }
         }
         catch (e_1_1) { e_1 = { error: e_1_1 }; }
         finally {
             try {
-                if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
+                if (_d && !_d.done && (_a = _c.return)) _a.call(_c);
             }
             finally { if (e_1) throw e_1.error; }
         }
         this.__properties__.length = 0;
+        try {
+            for (var _e = __values(Array.from(this.__methods__)), _f = _e.next(); !_f.done; _f = _e.next()) {
+                var prop = _f.value;
+                this.removeMethod(prop);
+            }
+        }
+        catch (e_2_1) { e_2 = { error: e_2_1 }; }
+        finally {
+            try {
+                if (_f && !_f.done && (_b = _e.return)) _b.call(_e);
+            }
+            finally { if (e_2) throw e_2.error; }
+        }
+        this.__methods__.length = 0;
     };
     ScopeDataAbstract.prototype.createMethod = function (name, method) {
     };
@@ -128,6 +142,14 @@ var ScopeDataAbstract = /** @class */ (function (_super) {
             prop.deconstruct();
             delete this['__' + key];
         }
+        delete this[key];
+    };
+    ScopeDataAbstract.prototype.removeMethod = function (key) {
+        var index = this.__methods__.indexOf(key);
+        if (index > -1)
+            this.__methods__.splice(index, 1);
+        delete this['__' + key];
+        delete this[key];
     };
     ScopeDataAbstract.prototype.hasProperty = function (name) {
         return this.__properties__.indexOf(name) !== -1;
@@ -140,7 +162,7 @@ var ScopeDataAbstract = /** @class */ (function (_super) {
         configurable: true
     });
     ScopeDataAbstract.prototype.getKeys = function () {
-        var e_2, _a;
+        var e_3, _a;
         var tags = [];
         for (var _i = 0; _i < arguments.length; _i++) {
             tags[_i] = arguments[_i];
@@ -155,12 +177,12 @@ var ScopeDataAbstract = /** @class */ (function (_super) {
                 }
             }
         }
-        catch (e_2_1) { e_2 = { error: e_2_1 }; }
+        catch (e_3_1) { e_3 = { error: e_3_1 }; }
         finally {
             try {
                 if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
             }
-            finally { if (e_2) throw e_2.error; }
+            finally { if (e_3) throw e_3.error; }
         }
         return keys;
     };
@@ -173,7 +195,7 @@ var ScopeDataAbstract = /** @class */ (function (_super) {
         }
     };
     ScopeDataAbstract.prototype.getData = function () {
-        var e_3, _a, e_4, _b;
+        var e_4, _a, e_5, _b;
         var tags = [];
         for (var _i = 0; _i < arguments.length; _i++) {
             tags[_i] = arguments[_i];
@@ -184,30 +206,30 @@ var ScopeDataAbstract = /** @class */ (function (_super) {
                 var key = _d.value;
                 var property = this['__' + key];
                 try {
-                    for (var tags_1 = (e_4 = void 0, __values(tags)), tags_1_1 = tags_1.next(); !tags_1_1.done; tags_1_1 = tags_1.next()) {
+                    for (var tags_1 = (e_5 = void 0, __values(tags)), tags_1_1 = tags_1.next(); !tags_1_1.done; tags_1_1 = tags_1.next()) {
                         var tag = tags_1_1.value;
                         if (!property.hasLabel(tag))
                             continue propLoop;
                     }
                 }
-                catch (e_4_1) { e_4 = { error: e_4_1 }; }
+                catch (e_5_1) { e_5 = { error: e_5_1 }; }
                 finally {
                     try {
                         if (tags_1_1 && !tags_1_1.done && (_b = tags_1.return)) _b.call(tags_1);
                     }
-                    finally { if (e_4) throw e_4.error; }
+                    finally { if (e_5) throw e_5.error; }
                 }
                 if (this[key] == null || !property)
                     continue;
                 data[key] = property.clean();
             }
         }
-        catch (e_3_1) { e_3 = { error: e_3_1 }; }
+        catch (e_4_1) { e_4 = { error: e_4_1 }; }
         finally {
             try {
                 if (_d && !_d.done && (_a = _c.return)) _a.call(_c);
             }
-            finally { if (e_3) throw e_3.error; }
+            finally { if (e_4) throw e_4.error; }
         }
         return data;
     };
@@ -229,7 +251,7 @@ var ScopeDataAbstract = /** @class */ (function (_super) {
         return property;
     };
     ScopeDataAbstract.prototype.bindToProperties = function (event, properties, callback) {
-        var e_5, _a;
+        var e_6, _a;
         try {
             for (var properties_1 = __values(properties), properties_1_1 = properties_1.next(); !properties_1_1.done; properties_1_1 = properties_1.next()) {
                 var name_1 = properties_1_1.value;
@@ -238,12 +260,12 @@ var ScopeDataAbstract = /** @class */ (function (_super) {
                     _property.on(event, callback);
             }
         }
-        catch (e_5_1) { e_5 = { error: e_5_1 }; }
+        catch (e_6_1) { e_6 = { error: e_6_1 }; }
         finally {
             try {
                 if (properties_1_1 && !properties_1_1.done && (_a = properties_1.return)) _a.call(properties_1);
             }
-            finally { if (e_5) throw e_5.error; }
+            finally { if (e_6) throw e_6.error; }
         }
     };
     ScopeDataAbstract.prototype.setLastData = function () {
@@ -257,7 +279,7 @@ var ScopeDataAbstract = /** @class */ (function (_super) {
         this.setData(this._lastData);
     };
     ScopeDataAbstract.prototype.isModified = function () {
-        var e_6, _a;
+        var e_7, _a;
         var oData = this._lastData, nData = this.getData();
         try {
             for (var _b = __values(this.getProperties()), _c = _b.next(); !_c.done; _c = _b.next()) {
@@ -266,12 +288,12 @@ var ScopeDataAbstract = /** @class */ (function (_super) {
                     return true;
             }
         }
-        catch (e_6_1) { e_6 = { error: e_6_1 }; }
+        catch (e_7_1) { e_7 = { error: e_7_1 }; }
         finally {
             try {
                 if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
             }
-            finally { if (e_6) throw e_6.error; }
+            finally { if (e_7) throw e_7.error; }
         }
         return false;
     };

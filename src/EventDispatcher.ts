@@ -65,9 +65,6 @@ export class EventDispatcher  {
         for (const cb of this._allListeners) {
             cb.deconstruct();
         }
-        for (const cb of this._allListeners) {
-            cb.deconstruct();
-        }
         (this as any)._listeners = {};
         this._relays.length = 0;
         this._allListeners.length = 0;

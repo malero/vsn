@@ -289,7 +289,7 @@ var ClassNode = /** @class */ (function (_super) {
                         return [4 /*yield*/, this.block.prepare(tag.scope, dom, tag, meta)];
                     case 1:
                         _a.sent();
-                        if (!hasConstruct) return [3 /*break*/, 4];
+                        if (!hasConstruct) return [3 /*break*/, 5];
                         fncCls = this.classScope.get('construct');
                         return [4 /*yield*/, fncCls.getFunction(tag.scope, dom, tag, true)];
                     case 2:
@@ -297,8 +297,11 @@ var ClassNode = /** @class */ (function (_super) {
                         return [4 /*yield*/, fnc()];
                     case 3:
                         _a.sent();
-                        _a.label = 4;
+                        return [4 /*yield*/, fncCls.collectGarbage()];
                     case 4:
+                        _a.sent();
+                        _a.label = 5;
+                    case 5:
                         tag.dispatch(this.fullSelector + ".construct", tag.element.id);
                         ClassNode.addPreparedClassToElement(tag.element, this.fullSelector);
                         return [2 /*return*/];
@@ -316,7 +319,7 @@ var ClassNode = /** @class */ (function (_super) {
                     case 0:
                         if (hasDeconstruct === null)
                             hasDeconstruct = this.classScope.has('deconstruct');
-                        if (!hasDeconstruct) return [3 /*break*/, 3];
+                        if (!hasDeconstruct) return [3 /*break*/, 4];
                         fncCls = this.classScope.get('deconstruct');
                         return [4 /*yield*/, fncCls.getFunction(tag.scope, dom, tag, true)];
                     case 1:
@@ -324,8 +327,11 @@ var ClassNode = /** @class */ (function (_super) {
                         return [4 /*yield*/, fnc()];
                     case 2:
                         _d.sent();
-                        _d.label = 3;
+                        return [4 /*yield*/, fncCls.collectGarbage()];
                     case 3:
+                        _d.sent();
+                        _d.label = 4;
+                    case 4:
                         try {
                             for (_a = __values(this.classScope.keys), _b = _a.next(); !_b.done; _b = _a.next()) {
                                 key = _b.value;

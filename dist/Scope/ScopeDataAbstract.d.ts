@@ -13,6 +13,7 @@ export declare class ScopeDataAbstract extends EventDispatcher {
     createMethod(name: string, method: (...args: any[]) => any): void;
     createProperty(name: string, propertyType?: any, config?: IPropertyConfig): any;
     removeProperty(key: string): void;
+    removeMethod(key: string): void;
     hasProperty(name: string): boolean;
     get keys(): string[];
     getKeys(...tags: string[]): string[];
