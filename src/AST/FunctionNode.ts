@@ -42,7 +42,7 @@ export class FunctionNode extends Node implements TreeNode {
 
     public async collectGarbage() {
         for (const f of this.garbage) {
-            f.deconstruct();
+            DOM.instance.addGarbage(f);
         }
         this.garbage.length = 0;
     }

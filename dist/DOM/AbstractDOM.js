@@ -121,6 +121,7 @@ var AbstractDOM = /** @class */ (function (_super) {
         _this.observer = new MutationObserver(_this.mutation.bind(_this));
         _this.tags = [];
         _this.tagsToDeconstruct = [];
+        _this.scopesToDeconstruct = [];
         _this.window = new WrappedWindow_1.WrappedWindow(window);
         _this.document = new WrappedDocument_1.WrappedDocument(window.document);
         if (build) {
@@ -818,11 +819,19 @@ var AbstractDOM = /** @class */ (function (_super) {
             });
         });
     };
+    AbstractDOM.prototype.addGarbage = function (garbage) {
+        if (garbage instanceof Scope_1.Scope) {
+            this.scopesToDeconstruct.push(garbage);
+        }
+        else if (garbage instanceof Tag_1.Tag) {
+            this.tagsToDeconstruct.push(garbage);
+        }
+    };
     AbstractDOM.prototype.cleanup = function () {
-        var e_18, _a;
+        var e_18, _a, e_19, _b;
         try {
-            for (var _b = __values(this.tagsToDeconstruct), _c = _b.next(); !_c.done; _c = _b.next()) {
-                var tag = _c.value;
+            for (var _c = __values(this.tagsToDeconstruct), _d = _c.next(); !_d.done; _d = _c.next()) {
+                var tag = _d.value;
                 if (tag.state !== Tag_1.TagState.Deconstructed)
                     tag.deconstruct();
             }
@@ -830,17 +839,31 @@ var AbstractDOM = /** @class */ (function (_super) {
         catch (e_18_1) { e_18 = { error: e_18_1 }; }
         finally {
             try {
-                if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
+                if (_d && !_d.done && (_a = _c.return)) _a.call(_c);
             }
             finally { if (e_18) throw e_18.error; }
+        }
+        this.tagsToDeconstruct.length = 0;
+        try {
+            for (var _e = __values(this.scopesToDeconstruct), _f = _e.next(); !_f.done; _f = _e.next()) {
+                var scope = _f.value;
+                scope.deconstruct();
+            }
+        }
+        catch (e_19_1) { e_19 = { error: e_19_1 }; }
+        finally {
+            try {
+                if (_f && !_f.done && (_b = _e.return)) _b.call(_e);
+            }
+            finally { if (e_19) throw e_19.error; }
         }
         this.tagsToDeconstruct.length = 0;
     };
     AbstractDOM.prototype.getTagsForElements = function (elements, create) {
         if (create === void 0) { create = false; }
         return __awaiter(this, void 0, void 0, function () {
-            var tags, found, elements_2, elements_2_1, element, notFound, i, element, notFound_1, notFound_1_1, element, _a, _b, e_19_1;
-            var e_20, _c, e_19, _d;
+            var tags, found, elements_2, elements_2_1, element, notFound, i, element, notFound_1, notFound_1_1, element, _a, _b, e_20_1;
+            var e_21, _c, e_20, _d;
             return __generator(this, function (_e) {
                 switch (_e.label) {
                     case 0:
@@ -855,12 +878,12 @@ var AbstractDOM = /** @class */ (function (_super) {
                                 }
                             }
                         }
-                        catch (e_20_1) { e_20 = { error: e_20_1 }; }
+                        catch (e_21_1) { e_21 = { error: e_21_1 }; }
                         finally {
                             try {
                                 if (elements_2_1 && !elements_2_1.done && (_c = elements_2.return)) _c.call(elements_2);
                             }
-                            finally { if (e_20) throw e_20.error; }
+                            finally { if (e_21) throw e_21.error; }
                         }
                         if (!create) return [3 /*break*/, 8];
                         notFound = __spreadArray([], __read(elements));
@@ -888,14 +911,14 @@ var AbstractDOM = /** @class */ (function (_super) {
                         return [3 /*break*/, 2];
                     case 5: return [3 /*break*/, 8];
                     case 6:
-                        e_19_1 = _e.sent();
-                        e_19 = { error: e_19_1 };
+                        e_20_1 = _e.sent();
+                        e_20 = { error: e_20_1 };
                         return [3 /*break*/, 8];
                     case 7:
                         try {
                             if (notFound_1_1 && !notFound_1_1.done && (_d = notFound_1.return)) _d.call(notFound_1);
                         }
-                        finally { if (e_19) throw e_19.error; }
+                        finally { if (e_20) throw e_20.error; }
                         return [7 /*endfinally*/];
                     case 8: return [2 /*return*/, tags];
                 }
@@ -927,7 +950,7 @@ var AbstractDOM = /** @class */ (function (_super) {
     AbstractDOM.prototype.getTagForScope = function (scope) {
         return __awaiter(this, void 0, void 0, function () {
             var _a, _b, tag;
-            var e_21, _c;
+            var e_22, _c;
             return __generator(this, function (_d) {
                 try {
                     for (_a = __values(this.tags), _b = _a.next(); !_b.done; _b = _a.next()) {
@@ -936,12 +959,12 @@ var AbstractDOM = /** @class */ (function (_super) {
                             return [2 /*return*/, tag];
                     }
                 }
-                catch (e_21_1) { e_21 = { error: e_21_1 }; }
+                catch (e_22_1) { e_22 = { error: e_22_1 }; }
                 finally {
                     try {
                         if (_b && !_b.done && (_c = _a.return)) _c.call(_a);
                     }
-                    finally { if (e_21) throw e_21.error; }
+                    finally { if (e_22) throw e_22.error; }
                 }
                 return [2 /*return*/, null];
             });
@@ -949,8 +972,8 @@ var AbstractDOM = /** @class */ (function (_super) {
     };
     AbstractDOM.prototype.resetBranch = function (e) {
         return __awaiter(this, void 0, void 0, function () {
-            var tag, children, children_1, children_1_1, t, e_22_1;
-            var e_22, _a;
+            var tag, children, children_1, children_1_1, t, e_23_1;
+            var e_23, _a;
             return __generator(this, function (_b) {
                 switch (_b.label) {
                     case 0:
@@ -978,14 +1001,14 @@ var AbstractDOM = /** @class */ (function (_super) {
                         return [3 /*break*/, 2];
                     case 5: return [3 /*break*/, 8];
                     case 6:
-                        e_22_1 = _b.sent();
-                        e_22 = { error: e_22_1 };
+                        e_23_1 = _b.sent();
+                        e_23 = { error: e_23_1 };
                         return [3 /*break*/, 8];
                     case 7:
                         try {
                             if (children_1_1 && !children_1_1.done && (_a = children_1.return)) _a.call(children_1);
                         }
-                        finally { if (e_22) throw e_22.error; }
+                        finally { if (e_23) throw e_23.error; }
                         return [7 /*endfinally*/];
                     case 8: return [2 /*return*/];
                 }

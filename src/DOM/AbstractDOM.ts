@@ -23,6 +23,7 @@ export abstract class AbstractDOM extends EventDispatcher {
     protected _ready: Promise<boolean>;
     protected tags: Tag[];
     protected tagsToDeconstruct: Tag[];
+    protected scopesToDeconstruct: Scope[];
     protected observer: MutationObserver;
     protected evaluateTimeout: any;
     protected queued: HTMLElement[] = [];
@@ -45,6 +46,7 @@ export abstract class AbstractDOM extends EventDispatcher {
         this.observer = new MutationObserver(this.mutation.bind(this));
         this.tags = [];
         this.tagsToDeconstruct = [];
+        this.scopesToDeconstruct = [];
 
         this.window = new WrappedWindow(window);
         this.document = new WrappedDocument(window.document);
@@ -357,10 +359,23 @@ export abstract class AbstractDOM extends EventDispatcher {
         return newTags;
     }
 
+    addGarbage(garbage: Scope | Tag) {
+        if (garbage instanceof Scope) {
+            this.scopesToDeconstruct.push(garbage);
+        } else if (garbage instanceof Tag) {
+            this.tagsToDeconstruct.push(garbage);
+        }
+    }
+
     cleanup() {
         for (const tag of this.tagsToDeconstruct) {
             if (tag.state !== TagState.Deconstructed)
                 tag.deconstruct();
+        }
+        this.tagsToDeconstruct.length = 0;
+
+        for (const scope of this.scopesToDeconstruct) {
+            scope.deconstruct();
         }
         this.tagsToDeconstruct.length = 0;
     }

@@ -64,6 +64,7 @@ var __values = (this && this.__values) || function(o) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.FunctionNode = void 0;
 var Scope_1 = require("../Scope");
+var DOM_1 = require("../DOM");
 var AST_1 = require("../AST");
 var Node_1 = require("./Node");
 var FunctionNode = /** @class */ (function (_super) {
@@ -124,7 +125,7 @@ var FunctionNode = /** @class */ (function (_super) {
                 try {
                     for (_a = __values(this.garbage), _b = _a.next(); !_b.done; _b = _a.next()) {
                         f = _b.value;
-                        f.deconstruct();
+                        DOM_1.DOM.instance.addGarbage(f);
                     }
                 }
                 catch (e_1_1) { e_1 = { error: e_1_1 }; }
