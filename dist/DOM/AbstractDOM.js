@@ -293,26 +293,31 @@ var AbstractDOM = /** @class */ (function (_super) {
     AbstractDOM.prototype.querySelector = function (q) {
         return this.rootElement.querySelector(q);
     };
-    AbstractDOM.prototype.exec = function (code, data) {
+    AbstractDOM.prototype.exec = function (code, data, cleanupScope) {
+        if (data === void 0) { data = null; }
+        if (cleanupScope === void 0) { cleanupScope = false; }
         return __awaiter(this, void 0, void 0, function () {
             var scope, tree;
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
                         scope = this.root.scope;
-                        if (data) {
+                        if (data !== null) {
                             if (data instanceof Scope_1.Scope) {
                                 scope = data;
                             }
                             else {
                                 scope = new Scope_1.Scope();
                                 scope.wrap(data);
+                                cleanupScope = true;
                             }
                         }
                         tree = new AST_1.Tree(code);
                         return [4 /*yield*/, tree.prepare(scope, this)];
                     case 1:
                         _a.sent();
+                        if (cleanupScope)
+                            this.scopesToDeconstruct.push(scope);
                         return [4 /*yield*/, tree.evaluate(scope, this)];
                     case 2: return [2 /*return*/, _a.sent()];
                 }

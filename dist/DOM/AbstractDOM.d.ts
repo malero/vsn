@@ -36,7 +36,7 @@ export declare abstract class AbstractDOM extends EventDispatcher {
     querySelectorAll(q: string, tag?: Tag): NodeList | HTMLElement[];
     querySelectorElement(element: HTMLElement | Document, q: string): NodeList | HTMLElement[];
     querySelector(q: string): Element;
-    exec(code: string, data?: object): any;
+    exec(code: string, data?: object, cleanupScope?: boolean): any;
     evaluate(): Promise<void>;
     getTagsFromParent(parent: Node, includeParent?: boolean): Tag[];
     mutation(mutations: MutationRecord[]): Promise<void>;
