@@ -51,8 +51,9 @@ export class EventDispatcher  {
     deconstruct() {
         this.dispatch('deconstruct', this);
         const sourceIndex = EventDispatcher.sources.indexOf(this);
-        if (sourceIndex > -1)
+        if (sourceIndex > -1) {
             EventDispatcher.sources.splice(sourceIndex, 1);
+        }
 
         for (const k in this._listeners) {
             for (const cb of this._listeners[k]) {

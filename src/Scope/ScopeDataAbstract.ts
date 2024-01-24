@@ -25,7 +25,7 @@ export class ScopeDataAbstract extends EventDispatcher {
     deconstruct() {
         super.deconstruct();
         this._lastData = null;
-        for (const prop of this.__properties__) {
+        for (const prop of Array.from(this.__properties__)) {
             this.removeProperty(prop);
         }
         this.__properties__.length = 0;
@@ -39,6 +39,7 @@ export class ScopeDataAbstract extends EventDispatcher {
         if (this.hasProperty(name)) {
             return this.getProperty(name);
         }
+
         config = config || {};
         const instance = new propertyType(config.default, config);
         const propDesc = Object.getOwnPropertyDescriptor(this, name);

@@ -71,7 +71,6 @@ export abstract class DOMObject extends EventDispatcher {
         if (this.element) {
             this.element[Tag.TaggedVariable] = null;
             this.element[ClassNode.ClassesVariable] = null;
-            (this as any).element = null;
         }
         super.deconstruct();
     }

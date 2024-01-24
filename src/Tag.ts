@@ -19,6 +19,7 @@ export enum TagState {
     AttributesExtracted,
     AttributesConnected,
     Built,
+    Deconstructed,
 }
 
 export class Tag extends DOMObject {
@@ -622,6 +623,9 @@ export class Tag extends DOMObject {
     }
 
     protected handleEvent(eventType: string, e) {
+        if (this.state === TagState.Deconstructed)
+            return
+
         if (e)
             e.stopPropagation();
 
@@ -662,8 +666,6 @@ export class Tag extends DOMObject {
                 handler.handler.call(handler.context, e);
             }
         }
-        this.scope.remove('$event');
-        this.scope.remove('$value');
     }
 
     public hasModifier(attribute: string, modifier: string): boolean {
@@ -813,6 +815,7 @@ export class Tag extends DOMObject {
     }
 
     deconstruct() {
+        this._state = TagState.Deconstructed
         const dom = this.dom || DOM.instance;
         if (dom) {
             dom.removedQueued(this.element);

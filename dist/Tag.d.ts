@@ -12,7 +12,8 @@ export declare enum TagState {
     AttributesSetup = 3,
     AttributesExtracted = 4,
     AttributesConnected = 5,
-    Built = 6
+    Built = 6,
+    Deconstructed = 7
 }
 export declare class Tag extends DOMObject {
     readonly dom: DOM;

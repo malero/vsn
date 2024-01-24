@@ -29,6 +29,7 @@ export class Scope extends ScopeAbstract {
     deconstruct() {
         super.deconstruct();
         this.collectGarbage(true);
+
         this.wrapped = null;
         if (this._data)
             this._data.deconstruct();
@@ -38,11 +39,7 @@ export class Scope extends ScopeAbstract {
             child.deconstruct();
         }
         this.children.length = 0;
-
-        if (this._parentScope) {
-            this._parentScope.removeChild(this);
-            this._parentScope = null;
-        }
+        this.parentScope = null;
     }
 
     public get data(): ScopeData {

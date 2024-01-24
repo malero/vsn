@@ -1,6 +1,6 @@
 import {Scope} from "../Scope";
 import {DOM} from "../DOM";
-import {Tag} from "../Tag";
+import {Tag, TagState} from "../Tag";
 import {Token, TokenType, TreeNode} from "../AST";
 import {Modifiers} from "../Modifiers";
 
@@ -14,7 +14,14 @@ export abstract class Node implements TreeNode {
     protected childNodes: Node[];
     protected nodeCache: {[key: string]: Node[]} = {};
     public readonly modifiers: Modifiers = new Modifiers();
-    abstract evaluate(scope: Scope, dom: DOM, tag?: Tag);
+
+    async evaluate(scope: Scope, dom: DOM, tag?: Tag) {
+        if (scope.isGarbage || (tag && tag.state === TagState.Deconstructed))
+            return;
+        return await this._evaluate(scope, dom, tag);
+    }
+
+    protected async _evaluate(scope: Scope, dom: DOM, tag?: Tag) {}
 
     isPreparationRequired(): boolean {
         if (this.requiresPrep)
