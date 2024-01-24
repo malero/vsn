@@ -256,7 +256,10 @@ export abstract class AbstractDOM extends EventDispatcher {
     }
 
     async buildTag<T extends Tag>(element: HTMLElement, returnExisting: boolean = false, cls: any = Tag): Promise<T> {
-        if (element[Tag.TaggedVariable]) return returnExisting ? element[Tag.TaggedVariable] : null;
+        if (element[Tag.TaggedVariable]) {
+            this.removedQueued(element);
+            return returnExisting ? element[Tag.TaggedVariable] : null;
+        }
         if (element.tagName.toLowerCase() === 'slot')
             cls = SlotTag;
         else if (element.hasAttribute('slot'))
@@ -293,7 +296,7 @@ export abstract class AbstractDOM extends EventDispatcher {
 
         for (const tag of tags) {
             await tag.finalize();
-            this.queued.splice(this.queued.indexOf(tag.element), 1);
+            this.removedQueued(tag.element)
         }
 
         for (const tag of tags) {
@@ -304,6 +307,12 @@ export abstract class AbstractDOM extends EventDispatcher {
                 subtree: true
             });
         }
+    }
+
+    removedQueued(element: HTMLElement) {
+        const index = this.queued.indexOf(element);
+        if (index > -1)
+            this.queued.splice(index, 1);
     }
 
     async buildFrom(ele: any, isRoot: boolean = false, forComponent: boolean = false): Promise<Tag[]> {

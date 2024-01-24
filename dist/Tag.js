@@ -1415,8 +1415,10 @@ var Tag = /** @class */ (function (_super) {
     };
     Tag.prototype.deconstruct = function () {
         var dom = this.dom || DOM_1.DOM.instance;
-        if (dom)
+        if (dom) {
+            dom.removedQueued(this.element);
             dom.deregisterElementInRoot(this);
+        }
         this.removeAllEventHandlers();
         this.attributes.forEach(function (attr) { return attr.deconstruct(); });
         this.attributes.clear();

@@ -474,19 +474,52 @@ export interface ExecutionContext {
 
 }
 
+export class TreeCache {
+    cache: Map<string, Node> = new Map<string, Node>();
+    lastUsed: Map<string, number> = new Map<string, number>();
+
+    get(code: string) {
+        if (!this.cache.has(code))
+            return null;
+
+        this.lastUsed.set(code, Date.now());
+        return this.cache.get(code);
+    }
+
+    set(code: string, node: Node) {
+        this.cache.set(code, node);
+        this.lastUsed.set(code, Date.now());
+
+        if (this.cache.size > 200) {
+            let toRemove = 20;
+            for (const [key, lastUsed] of Array.from(this.lastUsed.entries()).sort((a, b) => a[1] - b[1])) {
+                this.cache.delete(key);
+                this.lastUsed.delete(key);
+                toRemove--;
+                if (toRemove === 0)
+                    break;
+            }
+        }
+    }
+
+    has(code: string) {
+        return this.cache.has(code);
+    }
+}
+
 export class Tree {
     protected static executing: Set<ExecutionContext> = new Set<ExecutionContext>();
-    protected static cache: { [key: string]: Node } = {};
+    protected static cache: TreeCache = new TreeCache();
     protected _root: Node;
 
     constructor(
         public readonly code: string
     ) {
-        if (Tree.cache[code]) {
-            this._root = Tree.cache[code];
+        if (Tree.cache.has(code)) {
+            this._root = Tree.cache.get(code);
         } else {
             this.parse();
-            Tree.cache[code] = this._root;
+            Tree.cache.set(code, this._root);
         }
     }
 

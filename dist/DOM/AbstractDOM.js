@@ -508,8 +508,10 @@ var AbstractDOM = /** @class */ (function (_super) {
         return __awaiter(this, void 0, void 0, function () {
             var tag;
             return __generator(this, function (_a) {
-                if (element[Tag_1.Tag.TaggedVariable])
+                if (element[Tag_1.Tag.TaggedVariable]) {
+                    this.removedQueued(element);
                     return [2 /*return*/, returnExisting ? element[Tag_1.Tag.TaggedVariable] : null];
+                }
                 if (element.tagName.toLowerCase() === 'slot')
                     cls = SlotTag_1.SlotTag;
                 else if (element.hasAttribute('slot'))
@@ -667,7 +669,7 @@ var AbstractDOM = /** @class */ (function (_super) {
                         return [4 /*yield*/, tag.finalize()];
                     case 37:
                         _h.sent();
-                        this.queued.splice(this.queued.indexOf(tag.element), 1);
+                        this.removedQueued(tag.element);
                         _h.label = 38;
                     case 38:
                         tags_6_1 = tags_6.next();
@@ -706,6 +708,11 @@ var AbstractDOM = /** @class */ (function (_super) {
                 }
             });
         });
+    };
+    AbstractDOM.prototype.removedQueued = function (element) {
+        var index = this.queued.indexOf(element);
+        if (index > -1)
+            this.queued.splice(index, 1);
     };
     AbstractDOM.prototype.buildFrom = function (ele, isRoot, forComponent) {
         if (isRoot === void 0) { isRoot = false; }

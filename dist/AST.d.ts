@@ -128,12 +128,17 @@ export interface ExecutionContext {
     tag: Tag;
     tree: Tree;
 }
+export declare class TreeCache {
+    cache: Map<string, Node>;
+    lastUsed: Map<string, number>;
+    get(code: string): Node;
+    set(code: string, node: Node): void;
+    has(code: string): boolean;
+}
 export declare class Tree {
     readonly code: string;
     protected static executing: Set<ExecutionContext>;
-    protected static cache: {
-        [key: string]: Node;
-    };
+    protected static cache: TreeCache;
     protected _root: Node;
     constructor(code: string);
     get root(): Node;

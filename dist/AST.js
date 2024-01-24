@@ -69,7 +69,7 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from) {
 };
 var _a, _b, _c;
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.Tree = exports.AttributableNodes = exports.tokenIsBlockCloser = exports.tokenIsBlockOpener = exports.getTokenBlockOpenerConfig = exports.BlockCloseToTypeMap = exports.BlockOpenToTypeMap = exports.BlockTypeConfigurations = exports.TokenType = exports.BlockType = void 0;
+exports.Tree = exports.TreeCache = exports.AttributableNodes = exports.tokenIsBlockCloser = exports.tokenIsBlockOpener = exports.getTokenBlockOpenerConfig = exports.BlockCloseToTypeMap = exports.BlockOpenToTypeMap = exports.BlockTypeConfigurations = exports.TokenType = exports.BlockType = void 0;
 var RootScopeMemberNode_1 = require("./AST/RootScopeMemberNode");
 var ScopeMemberNode_1 = require("./AST/ScopeMemberNode");
 var ElementAttributeNode_1 = require("./AST/ElementAttributeNode");
@@ -497,15 +497,57 @@ exports.AttributableNodes = [
     ScopeMemberNode_1.ScopeMemberNode,
     ElementAttributeNode_1.ElementAttributeNode
 ];
+var TreeCache = /** @class */ (function () {
+    function TreeCache() {
+        this.cache = new Map();
+        this.lastUsed = new Map();
+    }
+    TreeCache.prototype.get = function (code) {
+        if (!this.cache.has(code))
+            return null;
+        this.lastUsed.set(code, Date.now());
+        return this.cache.get(code);
+    };
+    TreeCache.prototype.set = function (code, node) {
+        var e_1, _a;
+        this.cache.set(code, node);
+        this.lastUsed.set(code, Date.now());
+        if (this.cache.size > 200) {
+            var toRemove = 20;
+            try {
+                for (var _b = __values(Array.from(this.lastUsed.entries()).sort(function (a, b) { return a[1] - b[1]; })), _c = _b.next(); !_c.done; _c = _b.next()) {
+                    var _d = __read(_c.value, 2), key = _d[0], lastUsed = _d[1];
+                    this.cache.delete(key);
+                    this.lastUsed.delete(key);
+                    toRemove--;
+                    if (toRemove === 0)
+                        break;
+                }
+            }
+            catch (e_1_1) { e_1 = { error: e_1_1 }; }
+            finally {
+                try {
+                    if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
+                }
+                finally { if (e_1) throw e_1.error; }
+            }
+        }
+    };
+    TreeCache.prototype.has = function (code) {
+        return this.cache.has(code);
+    };
+    return TreeCache;
+}());
+exports.TreeCache = TreeCache;
 var Tree = /** @class */ (function () {
     function Tree(code) {
         this.code = code;
-        if (Tree.cache[code]) {
-            this._root = Tree.cache[code];
+        if (Tree.cache.has(code)) {
+            this._root = Tree.cache.get(code);
         }
         else {
             this.parse();
-            Tree.cache[code] = this._root;
+            Tree.cache.set(code, this._root);
         }
     }
     Object.defineProperty(Tree.prototype, "root", {
@@ -559,8 +601,8 @@ var Tree = /** @class */ (function () {
     Tree.prototype.bindToScopeChanges = function (scope, fnc, dom, tag) {
         if (tag === void 0) { tag = null; }
         return __awaiter(this, void 0, void 0, function () {
-            var _a, _b, node, _scope, name_1, e_1_1;
-            var e_1, _c;
+            var _a, _b, node, _scope, name_1, e_2_1;
+            var e_2, _c;
             return __generator(this, function (_d) {
                 switch (_d.label) {
                     case 0:
@@ -592,14 +634,14 @@ var Tree = /** @class */ (function () {
                         return [3 /*break*/, 1];
                     case 8: return [3 /*break*/, 11];
                     case 9:
-                        e_1_1 = _d.sent();
-                        e_1 = { error: e_1_1 };
+                        e_2_1 = _d.sent();
+                        e_2 = { error: e_2_1 };
                         return [3 /*break*/, 11];
                     case 10:
                         try {
                             if (_b && !_b.done && (_c = _a.return)) _c.call(_a);
                         }
-                        finally { if (e_1) throw e_1.error; }
+                        finally { if (e_2) throw e_2.error; }
                         return [7 /*endfinally*/];
                     case 11: return [2 /*return*/];
                 }
@@ -620,7 +662,7 @@ var Tree = /** @class */ (function () {
         }); });
     };
     Tree.tokenize = function (code) {
-        var e_2, _a;
+        var e_3, _a;
         var tokens = [];
         if (!code || code.length === 0)
             return tokens;
@@ -628,7 +670,7 @@ var Tree = /** @class */ (function () {
         do {
             foundToken = false;
             try {
-                for (var TOKEN_PATTERNS_1 = (e_2 = void 0, __values(TOKEN_PATTERNS)), TOKEN_PATTERNS_1_1 = TOKEN_PATTERNS_1.next(); !TOKEN_PATTERNS_1_1.done; TOKEN_PATTERNS_1_1 = TOKEN_PATTERNS_1.next()) {
+                for (var TOKEN_PATTERNS_1 = (e_3 = void 0, __values(TOKEN_PATTERNS)), TOKEN_PATTERNS_1_1 = TOKEN_PATTERNS_1.next(); !TOKEN_PATTERNS_1_1.done; TOKEN_PATTERNS_1_1 = TOKEN_PATTERNS_1.next()) {
                     var tp = TOKEN_PATTERNS_1_1.value;
                     var match = tp.pattern.exec(code);
                     if (match) {
@@ -644,12 +686,12 @@ var Tree = /** @class */ (function () {
                     }
                 }
             }
-            catch (e_2_1) { e_2 = { error: e_2_1 }; }
+            catch (e_3_1) { e_3 = { error: e_3_1 }; }
             finally {
                 try {
                     if (TOKEN_PATTERNS_1_1 && !TOKEN_PATTERNS_1_1.done && (_a = TOKEN_PATTERNS_1.return)) _a.call(TOKEN_PATTERNS_1);
                 }
-                finally { if (e_2) throw e_2.error; }
+                finally { if (e_3) throw e_3.error; }
             }
         } while (code.length > 0 && foundToken);
         return tokens;
@@ -664,7 +706,7 @@ var Tree = /** @class */ (function () {
         return tokens;
     };
     Tree.processTokens = function (tokens, _node, _lastBlock) {
-        var e_3, _a;
+        var e_4, _a;
         if (_node === void 0) { _node = null; }
         if (_lastBlock === void 0) { _lastBlock = null; }
         var blockNodes = [];
@@ -785,17 +827,17 @@ var Tree = /** @class */ (function () {
                 var funcArgs = Tree.getBlockTokens(tokens);
                 var nodes = [];
                 try {
-                    for (var funcArgs_1 = (e_3 = void 0, __values(funcArgs)), funcArgs_1_1 = funcArgs_1.next(); !funcArgs_1_1.done; funcArgs_1_1 = funcArgs_1.next()) {
+                    for (var funcArgs_1 = (e_4 = void 0, __values(funcArgs)), funcArgs_1_1 = funcArgs_1.next(); !funcArgs_1_1.done; funcArgs_1_1 = funcArgs_1.next()) {
                         var arg = funcArgs_1_1.value;
                         nodes.push(Tree.processTokens(arg));
                     }
                 }
-                catch (e_3_1) { e_3 = { error: e_3_1 }; }
+                catch (e_4_1) { e_4 = { error: e_4_1 }; }
                 finally {
                     try {
                         if (funcArgs_1_1 && !funcArgs_1_1.done && (_a = funcArgs_1.return)) _a.call(funcArgs_1);
                     }
-                    finally { if (e_3) throw e_3.error; }
+                    finally { if (e_4) throw e_4.error; }
                 }
                 if (node) {
                     node = new FunctionCallNode_1.FunctionCallNode(node, // Previous node should be a NAME
@@ -1021,7 +1063,7 @@ var Tree = /** @class */ (function () {
         return statementTokens;
     };
     Tree.consumeTypes = function (tokens, types) {
-        var e_4, _a;
+        var e_5, _a;
         var matching = [];
         try {
             for (var tokens_1 = __values(tokens), tokens_1_1 = tokens_1.next(); !tokens_1_1.done; tokens_1_1 = tokens_1.next()) {
@@ -1034,12 +1076,12 @@ var Tree = /** @class */ (function () {
                 }
             }
         }
-        catch (e_4_1) { e_4 = { error: e_4_1 }; }
+        catch (e_5_1) { e_5 = { error: e_5_1 }; }
         finally {
             try {
                 if (tokens_1_1 && !tokens_1_1.done && (_a = tokens_1.return)) _a.call(tokens_1);
             }
-            finally { if (e_4) throw e_4.error; }
+            finally { if (e_5) throw e_5.error; }
         }
         tokens.splice(0, matching.length);
         return matching;
@@ -1058,7 +1100,7 @@ var Tree = /** @class */ (function () {
         });
     };
     Tree.executing = new Set();
-    Tree.cache = {};
+    Tree.cache = new TreeCache();
     return Tree;
 }());
 exports.Tree = Tree;
