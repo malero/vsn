@@ -74,6 +74,7 @@ var AttributeState;
     AttributeState[AttributeState["Extracted"] = 4] = "Extracted";
     AttributeState[AttributeState["Connected"] = 5] = "Connected";
     AttributeState[AttributeState["Built"] = 6] = "Built";
+    AttributeState[AttributeState["Disconnected"] = 7] = "Disconnected";
 })(AttributeState = exports.AttributeState || (exports.AttributeState = {}));
 var Attribute = /** @class */ (function (_super) {
     __extends(Attribute, _super);
@@ -152,6 +153,14 @@ var Attribute = /** @class */ (function (_super) {
         return __awaiter(this, void 0, void 0, function () {
             return __generator(this, function (_a) {
                 this.setState(AttributeState.Built);
+                return [2 /*return*/];
+            });
+        });
+    };
+    Attribute.prototype.disconnect = function () {
+        return __awaiter(this, void 0, void 0, function () {
+            return __generator(this, function (_a) {
+                this.setState(AttributeState.Disconnected);
                 return [2 /*return*/];
             });
         });
@@ -237,6 +246,7 @@ var Attribute = /** @class */ (function (_super) {
         });
     };
     Attribute.prototype.deconstruct = function () {
+        this.disconnect();
         _super.prototype.deconstruct.call(this);
         this.tag = null;
         this.slot = null;

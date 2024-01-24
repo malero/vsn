@@ -5,6 +5,7 @@ export declare class StyleAttribute extends Attribute {
     private styleScope;
     setup(): Promise<void>;
     connect(): Promise<void>;
+    disconnect(): Promise<void>;
     extract(): Promise<void>;
     updateFrom(): void;
     updateTo(): void;

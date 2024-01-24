@@ -29,6 +29,11 @@ export class StyleVarAttribute extends Attribute {
         await super.connect();
     }
 
+    public async disconnect() {
+        this.boundScope.offWithContext(`change:${this.key}`, this);
+        await super.disconnect();
+    }
+
     update(e) {
         this.tag.element.style.setProperty(`--${this.styleVar}`, e.value);
     }

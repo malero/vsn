@@ -9,7 +9,8 @@ export enum AttributeState {
     Setup,
     Extracted,
     Connected,
-    Built
+    Built,
+    Disconnected
 }
 
 export abstract class Attribute extends EventDispatcher {
@@ -64,6 +65,10 @@ export abstract class Attribute extends EventDispatcher {
         this.setState(AttributeState.Built);
     }
 
+    public async disconnect() {
+        this.setState(AttributeState.Disconnected);
+    }
+
     public async evaluate() {}
 
     public getAttributeValue(fallback: any = null) {
@@ -113,6 +118,7 @@ export abstract class Attribute extends EventDispatcher {
     }
 
     public deconstruct() {
+        this.disconnect();
         super.deconstruct();
         (this as any).tag = null;
         (this as any).slot = null;

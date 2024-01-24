@@ -6,5 +6,6 @@ export declare class StyleVarAttribute extends Attribute {
     protected styleVar?: string;
     protected boundScope?: Scope;
     connect(): Promise<void>;
+    disconnect(): Promise<void>;
     update(e: any): void;
 }

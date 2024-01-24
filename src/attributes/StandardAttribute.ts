@@ -16,8 +16,13 @@ export class StandardAttribute extends Attribute {
     }
 
     public async connect() {
-        this.tag.scope.on(`change:${this.key}`, this.updateTo.bind(this));
+        this.tag.scope.on(`change:${this.key}`, this.updateTo, this);
         await super.connect();
+    }
+
+    public async disconnect() {
+        this.tag.scope.offWithContext(`change:${this.key}`, this);
+        await super.disconnect();
     }
 
     public mutate(mutation: MutationRecord) {

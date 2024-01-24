@@ -55,6 +55,11 @@ export class Bind extends Attribute {
         await super.connect();
     }
 
+    public async disconnect() {
+        this.boundScope.offWithContext(`change:${this.key}`, this);
+        await super.disconnect();
+    }
+
     public async evaluate() {
         const elementValue = this.valueFromElement;
         if (!!elementValue)

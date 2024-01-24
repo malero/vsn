@@ -33,6 +33,11 @@ export class StyleAttribute extends Attribute {
         await super.connect();
     }
 
+    public async disconnect() {
+        this.styleScope.offWithContext(`change`, this);
+        await super.disconnect();
+    }
+
     public async extract() {
         this.updateFrom();
         this.updateTo();

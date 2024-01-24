@@ -4,6 +4,7 @@ export declare class StandardAttribute extends Attribute {
     setup(): Promise<void>;
     extract(): Promise<void>;
     connect(): Promise<void>;
+    disconnect(): Promise<void>;
     mutate(mutation: MutationRecord): void;
     get needsToBeSynced(): boolean;
     updateTo(): void;

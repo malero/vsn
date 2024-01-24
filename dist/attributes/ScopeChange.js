@@ -108,6 +108,29 @@ var ScopeChange = /** @class */ (function (_super) {
             });
         });
     };
+    ScopeChange.prototype.disconnect = function () {
+        return __awaiter(this, void 0, void 0, function () {
+            var binding, ref, _a, _b, _c;
+            return __generator(this, function (_d) {
+                switch (_d.label) {
+                    case 0:
+                        binding = this.getAttributeBinding();
+                        ref = this.tag.scope.getReference(binding, false);
+                        return [4 /*yield*/, ref.getScope()];
+                    case 1:
+                        _b = (_a = (_d.sent())).offWithContext;
+                        _c = "change:";
+                        return [4 /*yield*/, ref.getKey()];
+                    case 2:
+                        _b.apply(_a, [_c + (_d.sent()), this]);
+                        return [4 /*yield*/, _super.prototype.disconnect.call(this)];
+                    case 3:
+                        _d.sent();
+                        return [2 /*return*/];
+                }
+            });
+        });
+    };
     ScopeChange.prototype.handleEvent = function (e) {
         return __awaiter(this, void 0, void 0, function () {
             return __generator(this, function (_a) {

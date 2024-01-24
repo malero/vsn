@@ -123,6 +123,20 @@ var StyleAttribute = /** @class */ (function (_super) {
             });
         });
     };
+    StyleAttribute.prototype.disconnect = function () {
+        return __awaiter(this, void 0, void 0, function () {
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0:
+                        this.styleScope.offWithContext("change", this);
+                        return [4 /*yield*/, _super.prototype.disconnect.call(this)];
+                    case 1:
+                        _a.sent();
+                        return [2 /*return*/];
+                }
+            });
+        });
+    };
     StyleAttribute.prototype.extract = function () {
         return __awaiter(this, void 0, void 0, function () {
             return __generator(this, function (_a) {

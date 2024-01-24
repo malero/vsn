@@ -8,7 +8,8 @@ export declare enum AttributeState {
     Setup = 3,
     Extracted = 4,
     Connected = 5,
-    Built = 6
+    Built = 6,
+    Disconnected = 7
 }
 export declare abstract class Attribute extends EventDispatcher {
     readonly tag: Tag;
@@ -28,6 +29,7 @@ export declare abstract class Attribute extends EventDispatcher {
     extract(): Promise<void>;
     connect(): Promise<void>;
     finalize(): Promise<void>;
+    disconnect(): Promise<void>;
     evaluate(): Promise<void>;
     getAttributeValue(fallback?: any): any;
     getAttributeBinding(fallback?: any): string;

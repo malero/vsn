@@ -22,6 +22,13 @@ export abstract class ScopeChange extends Attribute {
         await super.connect();
     }
 
+    public async disconnect() {
+        const binding = this.getAttributeBinding();
+        const ref: ScopeReference = this.tag.scope.getReference(binding, false);
+        (await ref.getScope()).offWithContext(`change:${await ref.getKey()}`, this);
+        await super.disconnect();
+    }
+
     async handleEvent(e) {
         await this.handler.evaluate(this.tag.scope, this.tag.dom, this.tag);
     }

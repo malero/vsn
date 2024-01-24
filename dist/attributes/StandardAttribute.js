@@ -93,8 +93,22 @@ var StandardAttribute = /** @class */ (function (_super) {
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
-                        this.tag.scope.on("change:" + this.key, this.updateTo.bind(this));
+                        this.tag.scope.on("change:" + this.key, this.updateTo, this);
                         return [4 /*yield*/, _super.prototype.connect.call(this)];
+                    case 1:
+                        _a.sent();
+                        return [2 /*return*/];
+                }
+            });
+        });
+    };
+    StandardAttribute.prototype.disconnect = function () {
+        return __awaiter(this, void 0, void 0, function () {
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0:
+                        this.tag.scope.offWithContext("change:" + this.key, this);
+                        return [4 /*yield*/, _super.prototype.disconnect.call(this)];
                     case 1:
                         _a.sent();
                         return [2 /*return*/];

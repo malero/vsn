@@ -147,6 +147,20 @@ var Bind = /** @class */ (function (_super) {
             });
         });
     };
+    Bind.prototype.disconnect = function () {
+        return __awaiter(this, void 0, void 0, function () {
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0:
+                        this.boundScope.offWithContext("change:" + this.key, this);
+                        return [4 /*yield*/, _super.prototype.disconnect.call(this)];
+                    case 1:
+                        _a.sent();
+                        return [2 /*return*/];
+                }
+            });
+        });
+    };
     Bind.prototype.evaluate = function () {
         return __awaiter(this, void 0, void 0, function () {
             var elementValue;

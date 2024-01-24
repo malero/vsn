@@ -10,6 +10,7 @@ export declare class Bind extends Attribute {
     compile(): Promise<void>;
     setup(): Promise<void>;
     connect(): Promise<void>;
+    disconnect(): Promise<void>;
     evaluate(): Promise<void>;
     set value(v: any);
     get value(): any;

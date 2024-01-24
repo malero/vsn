@@ -5,5 +5,6 @@ export declare abstract class ScopeChange extends Attribute {
     protected handler: Tree;
     compile(): Promise<void>;
     connect(): Promise<void>;
+    disconnect(): Promise<void>;
     handleEvent(e: any): Promise<void>;
 }
