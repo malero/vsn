@@ -98,7 +98,7 @@ var ElementStyleNode = /** @class */ (function (_super) {
         enumerable: false,
         configurable: true
     });
-    ElementStyleNode.prototype.evaluate = function (scope, dom, tag) {
+    ElementStyleNode.prototype._evaluate = function (scope, dom, tag) {
         if (tag === void 0) { tag = null; }
         return __awaiter(this, void 0, void 0, function () {
             var tags;

@@ -68,7 +68,7 @@ var ConditionalNode = /** @class */ (function (_super) {
             this.block
         ];
     };
-    ConditionalNode.prototype.evaluate = function (scope, dom, tag) {
+    ConditionalNode.prototype._evaluate = function (scope, dom, tag) {
         if (tag === void 0) { tag = null; }
         return __awaiter(this, void 0, void 0, function () {
             var condition, evaluation;

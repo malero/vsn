@@ -83,7 +83,7 @@ var WithNode = /** @class */ (function (_super) {
             this.statements
         ];
     };
-    WithNode.prototype.evaluate = function (scope, dom, tag) {
+    WithNode.prototype._evaluate = function (scope, dom, tag) {
         if (tag === void 0) { tag = null; }
         return __awaiter(this, void 0, void 0, function () {
             var context, tags, ret, tags_1, tags_1_1, _tag, _a, _b, e_1_1, promises, tags_2, tags_2_1, _tag, e_2_1, _scope, _c, _d;

@@ -13,7 +13,7 @@ export declare class FunctionNode extends Node implements TreeNode {
     constructor(name: string, args: string[], block: BlockNode);
     protected _getChildNodes(): Node[];
     prepare(scope: Scope, dom: DOM, tag?: Tag, meta?: any): Promise<void>;
-    evaluate(scope: Scope, dom: DOM, tag?: Tag): Promise<(...args: any[]) => Promise<any>>;
+    protected _evaluate(scope: Scope, dom: DOM, tag?: Tag): Promise<(...args: any[]) => Promise<any>>;
     collectGarbage(): Promise<void>;
     getFunction(scope: Scope, dom: DOM, tag?: Tag, createFunctionScope?: boolean): Promise<(...args: any[]) => Promise<any>>;
     static parse<T = FunctionNode>(lastNode: any, token: any, tokens: Token[], cls?: any): T;

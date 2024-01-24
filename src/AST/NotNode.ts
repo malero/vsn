@@ -11,7 +11,7 @@ export class NotNode extends Node implements TreeNode {
         super();
     }
 
-    public async evaluate(scope: Scope, dom: DOM, tag: Tag = null) {
+    protected async _evaluate(scope: Scope, dom: DOM, tag: Tag = null) {
         const flipping = await this.toFlip.evaluate(scope, dom, tag);
         return !flipping;
     }

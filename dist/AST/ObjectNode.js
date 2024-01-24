@@ -87,7 +87,7 @@ var ObjectNode = /** @class */ (function (_super) {
     ObjectNode.prototype._getChildNodes = function () {
         return new (Array.bind.apply(Array, __spreadArray([void 0], __read(this.values))))();
     };
-    ObjectNode.prototype.evaluate = function (scope, dom, tag) {
+    ObjectNode.prototype._evaluate = function (scope, dom, tag) {
         if (tag === void 0) { tag = null; }
         return __awaiter(this, void 0, void 0, function () {
             var obj, i, key, val, _a, _b, _c;

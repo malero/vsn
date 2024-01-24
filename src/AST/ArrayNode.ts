@@ -16,7 +16,7 @@ export class ArrayNode extends Node implements TreeNode {
         return new Array(...this.values);
     }
 
-    async evaluate(scope: Scope, dom: DOM, tag: Tag = null) {
+    async _evaluate(scope: Scope, dom: DOM, tag: Tag = null) {
         const arr: WrappedArray<any> = new WrappedArray();
         for (const val of this.values) {
             arr.push(await val.evaluate(scope, dom, tag));

@@ -36,7 +36,7 @@ export class FunctionNode extends Node implements TreeNode {
         await super.prepare(scope, dom, tag, meta);
     }
 
-    public async evaluate(scope: Scope, dom: DOM, tag: Tag = null) {
+    protected async _evaluate(scope: Scope, dom: DOM, tag: Tag = null) {
         return await this.getFunction(scope, dom, tag);
     }
 

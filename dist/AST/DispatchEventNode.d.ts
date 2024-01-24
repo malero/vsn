@@ -12,6 +12,6 @@ export declare class DispatchEventNode extends Node implements TreeNode {
     readonly elementRef: ElementQueryNode | null;
     constructor(name: string, data: ObjectNode | null, bubbles: boolean, elementRef: ElementQueryNode | null);
     protected _getChildNodes(): Node[];
-    evaluate(scope: Scope, dom: DOM, tag?: Tag): Promise<void>;
+    protected _evaluate(scope: Scope, dom: DOM, tag?: Tag): Promise<void>;
     static parse(lastNode: any, token: any, tokens: Token[]): DispatchEventNode;
 }

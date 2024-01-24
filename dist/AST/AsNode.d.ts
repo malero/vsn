@@ -8,6 +8,6 @@ export declare class AsNode extends Node implements TreeNode {
     readonly name: string;
     constructor(context: Node, name: string);
     protected _getChildNodes(): Node[];
-    evaluate(scope: Scope, dom: DOM, tag?: Tag): Promise<any>;
+    _evaluate(scope: Scope, dom: DOM, tag?: Tag): Promise<any>;
     static parse(lastNode: any, token: any, tokens: Token[]): AsNode;
 }

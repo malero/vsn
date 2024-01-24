@@ -7,5 +7,5 @@ export declare class BlockNode extends Node implements TreeNode {
     readonly statements: Node[];
     constructor(statements: Node[]);
     protected _getChildNodes(): Node[];
-    evaluate(scope: Scope, dom: DOM, tag?: Tag): Promise<any>;
+    protected _evaluate(scope: Scope, dom: DOM, tag?: Tag): Promise<any>;
 }

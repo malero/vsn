@@ -13,7 +13,7 @@ export class InNode extends Node implements TreeNode {
         super();
     }
 
-    public async evaluate(scope: Scope, dom: DOM, tag: Tag = null) {
+    protected async _evaluate(scope: Scope, dom: DOM, tag: Tag = null) {
         const toCheck = await this.left.evaluate(scope, dom, tag);
         const array = await this.right.evaluate(scope, dom, tag);
 

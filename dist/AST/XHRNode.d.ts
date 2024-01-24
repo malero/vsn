@@ -9,7 +9,7 @@ export declare class XHRNode extends Node implements TreeNode {
     readonly url: Node;
     constructor(left: Node | null, requestType: TokenType, url: Node);
     getChildNodes(): Node[];
-    evaluate(scope: Scope, dom: DOM, tag?: Tag): Promise<any>;
+    protected _evaluate(scope: Scope, dom: DOM, tag?: Tag): Promise<any>;
     static parse(node: Node, token: Token, tokens: Token[]): XHRNode;
     static match(tokens: Token[]): boolean;
 }

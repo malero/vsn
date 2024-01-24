@@ -143,7 +143,6 @@ var DOMObject = /** @class */ (function (_super) {
         if (this.element) {
             this.element[Tag_1.Tag.TaggedVariable] = null;
             this.element[ClassNode_1.ClassNode.ClassesVariable] = null;
-            this.element = null;
         }
         _super.prototype.deconstruct.call(this);
     };

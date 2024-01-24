@@ -66,7 +66,7 @@ var ScopeDataAbstract = /** @class */ (function (_super) {
         _super.prototype.deconstruct.call(this);
         this._lastData = null;
         try {
-            for (var _b = __values(this.__properties__), _c = _b.next(); !_c.done; _c = _b.next()) {
+            for (var _b = __values(Array.from(this.__properties__)), _c = _b.next(); !_c.done; _c = _b.next()) {
                 var prop = _c.value;
                 this.removeProperty(prop);
             }

@@ -25,7 +25,7 @@ export class ScopeMemberNode extends ScopeNodeAbstract implements TreeNode {
         ]
     }
 
-    async evaluate(scope: Scope, dom: DOM, tag: Tag = null) {
+    protected async _evaluate(scope: Scope, dom: DOM, tag: Tag = null) {
         let scopes = [];
         const values = [];
         if (this.scope instanceof ElementQueryNode) {

@@ -24,7 +24,7 @@ export class ForStatementNode extends Node implements TreeNode {
         ];
     }
 
-    public async evaluate(scope: Scope, dom: DOM, tag: Tag = null) {
+    protected async _evaluate(scope: Scope, dom: DOM, tag: Tag = null) {
         const variable: string = await this.variable.evaluate(scope, dom, tag);
         const list: any[] = await this.list.evaluate(scope, dom, tag);
         for (let i = 0;i < list.length; i++) {

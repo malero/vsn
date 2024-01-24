@@ -8,7 +8,7 @@ export declare class ObjectNode extends Node implements TreeNode {
     readonly values: Node[];
     constructor(keys: Node[], values: Node[]);
     protected _getChildNodes(): Node[];
-    evaluate(scope: Scope, dom: DOM, tag?: Tag): Promise<Scope>;
+    protected _evaluate(scope: Scope, dom: DOM, tag?: Tag): Promise<Scope>;
     static match(tokens: Token[]): boolean;
     static parse(lastNode: any, token: any, tokens: Token[]): ObjectNode;
 }

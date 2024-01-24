@@ -69,7 +69,7 @@ var ComparisonNode = /** @class */ (function (_super) {
             this.right
         ];
     };
-    ComparisonNode.prototype.evaluate = function (scope, dom, tag) {
+    ComparisonNode.prototype._evaluate = function (scope, dom, tag) {
         if (tag === void 0) { tag = null; }
         return __awaiter(this, void 0, void 0, function () {
             var left, right;

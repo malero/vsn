@@ -17,7 +17,7 @@ export class FunctionArgumentNode<T = any> extends Node implements TreeNode {
         ]
     }
 
-    async evaluate(scope: Scope, dom: DOM, tag: Tag = null) {
+    protected async _evaluate(scope: Scope, dom: DOM, tag: Tag = null) {
         const values: any[] = [];
         for (const arg of this.args) {
             values.push(await arg.evaluate(scope, dom, tag));

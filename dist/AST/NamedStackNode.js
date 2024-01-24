@@ -71,7 +71,7 @@ var NamedStackNode = /** @class */ (function (_super) {
             this.statements
         ];
     };
-    NamedStackNode.prototype.evaluate = function (scope, dom, tag) {
+    NamedStackNode.prototype._evaluate = function (scope, dom, tag) {
         if (tag === void 0) { tag = null; }
         return __awaiter(this, void 0, void 0, function () {
             var stackName, execute;

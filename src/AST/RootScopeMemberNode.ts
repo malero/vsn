@@ -18,7 +18,7 @@ export class RootScopeMemberNode<T = any> extends ScopeNodeAbstract implements T
         ]
     }
 
-    async evaluate(scope: Scope, dom: DOM, tag: Tag = null) {
+    protected async _evaluate(scope: Scope, dom: DOM, tag: Tag = null) {
         const name = await this.name.evaluate(scope, dom, tag);
         await this.applyModifiers(name, scope, dom, tag);
         const value = scope.get(name);

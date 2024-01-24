@@ -84,7 +84,7 @@ var BlockNode = /** @class */ (function (_super) {
     BlockNode.prototype._getChildNodes = function () {
         return __spreadArray([], __read(this.statements));
     };
-    BlockNode.prototype.evaluate = function (scope, dom, tag) {
+    BlockNode.prototype._evaluate = function (scope, dom, tag) {
         if (tag === void 0) { tag = null; }
         return __awaiter(this, void 0, void 0, function () {
             var returnValue, i;

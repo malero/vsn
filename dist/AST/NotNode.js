@@ -61,7 +61,7 @@ var NotNode = /** @class */ (function (_super) {
         _this.toFlip = toFlip;
         return _this;
     }
-    NotNode.prototype.evaluate = function (scope, dom, tag) {
+    NotNode.prototype._evaluate = function (scope, dom, tag) {
         if (tag === void 0) { tag = null; }
         return __awaiter(this, void 0, void 0, function () {
             var flipping;

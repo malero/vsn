@@ -10,6 +10,6 @@ export declare class WithNode extends Node implements TreeNode {
     protected requiresPrep: boolean;
     constructor(context: Node, statements: BlockNode);
     protected _getChildNodes(): Node[];
-    evaluate(scope: Scope, dom: DOM, tag?: Tag): Promise<any>;
+    protected _evaluate(scope: Scope, dom: DOM, tag?: Tag): Promise<any>;
     static parse(lastNode: any, token: any, tokens: Token[]): WithNode;
 }

@@ -73,8 +73,9 @@ var EventDispatcher = /** @class */ (function () {
         var e_1, _a, e_2, _b, e_3, _c;
         this.dispatch('deconstruct', this);
         var sourceIndex = EventDispatcher.sources.indexOf(this);
-        if (sourceIndex > -1)
+        if (sourceIndex > -1) {
             EventDispatcher.sources.splice(sourceIndex, 1);
+        }
         for (var k in this._listeners) {
             try {
                 for (var _d = (e_1 = void 0, __values(this._listeners[k])), _e = _d.next(); !_e.done; _e = _d.next()) {

@@ -16,7 +16,7 @@ export class ObjectNode extends Node implements TreeNode {
         return new Array(...this.values);
     }
 
-    async evaluate(scope: Scope, dom: DOM, tag: Tag = null) {
+    protected async _evaluate(scope: Scope, dom: DOM, tag: Tag = null) {
         const obj: Scope = new Scope();
         for (let i = 0; i < this.values.length; i++) {
             const key = this.keys[i];

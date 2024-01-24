@@ -28,7 +28,7 @@ export class AssignmentNode extends Node implements TreeNode {
         ]
     }
 
-    async evaluate(scope: Scope, dom: DOM, tag: Tag = null) {
+    async _evaluate(scope: Scope, dom: DOM, tag: Tag = null) {
         let scopes = [];
         const name: string = await this.left.name.evaluate(scope, dom, tag);
 

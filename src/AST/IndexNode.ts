@@ -30,7 +30,7 @@ export class IndexNode extends Node implements TreeNode {
         return index;
     }
 
-    async evaluate(scope: Scope, dom: DOM, tag: Tag = null) {
+    protected async _evaluate(scope: Scope, dom: DOM, tag: Tag = null) {
         const obj = await this.object.evaluate(scope, dom, tag);
         const index: string | number = this.negativeIndex(obj, await this.index.evaluate(scope, dom, tag));
 

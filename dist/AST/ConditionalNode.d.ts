@@ -9,5 +9,5 @@ export declare class ConditionalNode extends Node implements TreeNode {
     readonly block: BlockNode;
     constructor(condition: Node, block: BlockNode);
     protected _getChildNodes(): Node[];
-    evaluate(scope: Scope, dom: DOM, tag?: Tag): Promise<boolean>;
+    protected _evaluate(scope: Scope, dom: DOM, tag?: Tag): Promise<boolean>;
 }

@@ -110,7 +110,7 @@ var AssignmentNode = /** @class */ (function (_super) {
             this.right
         ];
     };
-    AssignmentNode.prototype.evaluate = function (scope, dom, tag) {
+    AssignmentNode.prototype._evaluate = function (scope, dom, tag) {
         if (tag === void 0) { tag = null; }
         return __awaiter(this, void 0, void 0, function () {
             var scopes, name, inner, elements, values, scopes_1, scopes_1_1, localScope, left, right, e_1_1;

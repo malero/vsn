@@ -105,6 +105,7 @@ var TagState;
     TagState[TagState["AttributesExtracted"] = 4] = "AttributesExtracted";
     TagState[TagState["AttributesConnected"] = 5] = "AttributesConnected";
     TagState[TagState["Built"] = 6] = "Built";
+    TagState[TagState["Deconstructed"] = 7] = "Deconstructed";
 })(TagState = exports.TagState || (exports.TagState = {}));
 var Tag = /** @class */ (function (_super) {
     __extends(Tag, _super);
@@ -1136,6 +1137,8 @@ var Tag = /** @class */ (function (_super) {
     Tag.prototype.handleEvent = function (eventType, e) {
         var e_19, _a;
         var _this = this;
+        if (this.state === TagState.Deconstructed)
+            return;
         if (e)
             e.stopPropagation();
         if (!this.onEventHandlers[eventType])
@@ -1194,8 +1197,6 @@ var Tag = /** @class */ (function (_super) {
             }
             finally { if (e_19) throw e_19.error; }
         }
-        this.scope.remove('$event');
-        this.scope.remove('$value');
     };
     Tag.prototype.hasModifier = function (attribute, modifier) {
         this.attributes;
@@ -1420,6 +1421,7 @@ var Tag = /** @class */ (function (_super) {
         });
     };
     Tag.prototype.deconstruct = function () {
+        this._state = TagState.Deconstructed;
         var dom = this.dom || DOM_1.DOM.instance;
         if (dom) {
             dom.removedQueued(this.element);

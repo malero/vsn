@@ -25,7 +25,7 @@ export class FunctionCallNode<T = any> extends Node implements TreeNode {
         ]
     }
 
-    public async evaluate(scope: Scope, dom: DOM, tag: Tag = null) {
+    protected async _evaluate(scope: Scope, dom: DOM, tag: Tag = null) {
         // @todo: Need to rewrite/refactor this. It's a bit of a mess with element queries.
         let tags: Tag[] = [];
         let functionScope: Scope = scope;

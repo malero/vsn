@@ -12,6 +12,6 @@ export declare class ForStatementNode extends Node implements TreeNode {
     readonly block: RootScopeMemberNode | ScopeMemberNode;
     constructor(variable: LiteralNode<string>, list: RootScopeMemberNode | ScopeMemberNode, block: RootScopeMemberNode | ScopeMemberNode);
     protected _getChildNodes(): Node[];
-    evaluate(scope: Scope, dom: DOM, tag?: Tag): Promise<any>;
+    protected _evaluate(scope: Scope, dom: DOM, tag?: Tag): Promise<any>;
     static parse(lastNode: any, token: any, tokens: Token[]): ForStatementNode;
 }

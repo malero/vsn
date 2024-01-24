@@ -9,7 +9,7 @@ export declare class ComparisonNode extends Node implements TreeNode {
     readonly type: TokenType;
     constructor(left: Node, right: Node, type: TokenType);
     protected _getChildNodes(): Node[];
-    evaluate(scope: Scope, dom: DOM, tag?: Tag): Promise<boolean>;
+    protected _evaluate(scope: Scope, dom: DOM, tag?: Tag): Promise<boolean>;
     static match(tokens: Token[]): boolean;
     static parse(lastNode: any, token: any, tokens: Token[]): ComparisonNode;
 }

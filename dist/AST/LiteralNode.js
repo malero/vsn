@@ -60,7 +60,7 @@ var LiteralNode = /** @class */ (function (_super) {
         _this.value = value;
         return _this;
     }
-    LiteralNode.prototype.evaluate = function (scope, dom, tag) {
+    LiteralNode.prototype._evaluate = function (scope, dom, tag) {
         if (tag === void 0) { tag = null; }
         return __awaiter(this, void 0, void 0, function () {
             return __generator(this, function (_a) {

@@ -8,7 +8,7 @@ export declare class IfStatementNode extends Node implements TreeNode {
     protected nodes: ConditionalNode[];
     constructor(nodes: ConditionalNode[]);
     protected _getChildNodes(): Node[];
-    evaluate(scope: Scope, dom: DOM, tag?: Tag): Promise<any>;
+    protected _evaluate(scope: Scope, dom: DOM, tag?: Tag): Promise<any>;
     static parseConditional(tokens: Token[]): ConditionalNode;
     static parse(lastNode: any, token: any, tokens: Token[]): IfStatementNode;
 }

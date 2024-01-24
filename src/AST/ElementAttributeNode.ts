@@ -38,7 +38,7 @@ export class ElementAttributeNode extends Node implements TreeNode {
         return this.attr.substring(1);
     }
 
-    async evaluate(scope: Scope, dom: DOM, tag: Tag = null) {
+    protected async _evaluate(scope: Scope, dom: DOM, tag: Tag = null) {
         let tags: TagList;
 
         if (this.elementRef instanceof ElementQueryNode) {

@@ -14,7 +14,8 @@ export declare abstract class Node implements TreeNode {
         [key: string]: Node[];
     };
     readonly modifiers: Modifiers;
-    abstract evaluate(scope: Scope, dom: DOM, tag?: Tag): any;
+    evaluate(scope: Scope, dom: DOM, tag?: Tag): Promise<any>;
+    protected _evaluate(scope: Scope, dom: DOM, tag?: Tag): Promise<any>;
     isPreparationRequired(): boolean;
     prepare(scope: Scope, dom: DOM, tag?: Tag, meta?: INodeMeta): Promise<void>;
     cleanup(scope: Scope, dom: DOM, tag: Tag): Promise<void>;

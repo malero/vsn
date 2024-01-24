@@ -95,7 +95,7 @@ var FunctionArgumentNode = /** @class */ (function (_super) {
     FunctionArgumentNode.prototype._getChildNodes = function () {
         return __spreadArray([], __read(this.args));
     };
-    FunctionArgumentNode.prototype.evaluate = function (scope, dom, tag) {
+    FunctionArgumentNode.prototype._evaluate = function (scope, dom, tag) {
         if (tag === void 0) { tag = null; }
         return __awaiter(this, void 0, void 0, function () {
             var values, _a, _b, arg, _c, _d, e_1_1;

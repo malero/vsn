@@ -84,7 +84,7 @@ var ScopeMemberNode = /** @class */ (function (_super) {
             this.name
         ];
     };
-    ScopeMemberNode.prototype.evaluate = function (scope, dom, tag) {
+    ScopeMemberNode.prototype._evaluate = function (scope, dom, tag) {
         if (tag === void 0) { tag = null; }
         return __awaiter(this, void 0, void 0, function () {
             var scopes, values, elements, evalScope, scopes_1, scopes_1_1, parent_1, _a, _b, name_1, value, e_1_1;

@@ -21,7 +21,7 @@ export class ConditionalNode extends Node implements TreeNode {
         ];
     }
 
-    public async evaluate(scope: Scope, dom: DOM, tag: Tag = null) {
+    protected async _evaluate(scope: Scope, dom: DOM, tag: Tag = null) {
         const condition = await this.condition.evaluate(scope, dom, tag);
         let evaluation = false;
 

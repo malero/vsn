@@ -15,13 +15,13 @@ export abstract class Node implements TreeNode {
     protected nodeCache: {[key: string]: Node[]} = {};
     public readonly modifiers: Modifiers = new Modifiers();
 
-    async evaluate(scope: Scope, dom: DOM, tag?: Tag) {
+    async evaluate(scope: Scope, dom: DOM, tag?: Tag): Promise<any> {
         if (scope.isGarbage || (tag && tag.state === TagState.Deconstructed))
             return;
         return await this._evaluate(scope, dom, tag);
     }
 
-    protected async _evaluate(scope: Scope, dom: DOM, tag?: Tag) {}
+    protected async _evaluate(scope: Scope, dom: DOM, tag?: Tag): Promise<any> {}
 
     isPreparationRequired(): boolean {
         if (this.requiresPrep)

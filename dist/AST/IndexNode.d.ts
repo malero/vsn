@@ -10,7 +10,7 @@ export declare class IndexNode extends Node implements TreeNode {
     constructor(object: Node, index: Node, indexTwo?: Node);
     protected _getChildNodes(): Node[];
     negativeIndex(obj: any[], index: number | string): number | string;
-    evaluate(scope: Scope, dom: DOM, tag?: Tag): Promise<any>;
+    protected _evaluate(scope: Scope, dom: DOM, tag?: Tag): Promise<any>;
     static match(tokens: Token[]): boolean;
     static parse(lastNode: any, token: any, tokens: Token[]): IndexNode;
 }

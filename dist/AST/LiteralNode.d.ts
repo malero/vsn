@@ -6,5 +6,5 @@ import { Node } from "./Node";
 export declare class LiteralNode<T = any> extends Node implements TreeNode {
     readonly value: T;
     constructor(value: T);
-    evaluate(scope: Scope, dom: DOM, tag?: Tag): Promise<T>;
+    protected _evaluate(scope: Scope, dom: DOM, tag?: Tag): Promise<T>;
 }

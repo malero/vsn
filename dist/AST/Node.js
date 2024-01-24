@@ -69,6 +69,7 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Node = void 0;
+var Tag_1 = require("../Tag");
 var AST_1 = require("../AST");
 var Modifiers_1 = require("../Modifiers");
 var Node = /** @class */ (function () {
@@ -77,6 +78,24 @@ var Node = /** @class */ (function () {
         this.nodeCache = {};
         this.modifiers = new Modifiers_1.Modifiers();
     }
+    Node.prototype.evaluate = function (scope, dom, tag) {
+        return __awaiter(this, void 0, void 0, function () {
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0:
+                        if (scope.isGarbage || (tag && tag.state === Tag_1.TagState.Deconstructed))
+                            return [2 /*return*/];
+                        return [4 /*yield*/, this._evaluate(scope, dom, tag)];
+                    case 1: return [2 /*return*/, _a.sent()];
+                }
+            });
+        });
+    };
+    Node.prototype._evaluate = function (scope, dom, tag) {
+        return __awaiter(this, void 0, void 0, function () { return __generator(this, function (_a) {
+            return [2 /*return*/];
+        }); });
+    };
     Node.prototype.isPreparationRequired = function () {
         var e_1, _a;
         if (this.requiresPrep)

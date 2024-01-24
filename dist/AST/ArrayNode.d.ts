@@ -8,7 +8,7 @@ export declare class ArrayNode extends Node implements TreeNode {
     readonly values: Node[];
     constructor(values: Node[]);
     protected _getChildNodes(): Node[];
-    evaluate(scope: Scope, dom: DOM, tag?: Tag): Promise<WrappedArray<any>>;
+    _evaluate(scope: Scope, dom: DOM, tag?: Tag): Promise<WrappedArray<any>>;
     static match(tokens: Token[]): boolean;
     static parse(lastNode: any, token: any, tokens: Token[]): ArrayNode;
 }

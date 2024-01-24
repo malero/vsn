@@ -23,7 +23,7 @@ export class WithNode extends Node implements TreeNode {
         ]
     }
 
-    public async evaluate(scope: Scope, dom: DOM, tag: Tag = null) {
+    protected async _evaluate(scope: Scope, dom: DOM, tag: Tag = null) {
         const context = await this.context.evaluate(scope, dom, tag);
         let tags = [];
         if (context instanceof TagList) {

@@ -16,7 +16,7 @@ export class StringFormatNode extends Node implements TreeNode {
         return this.segments && Object.values(this.segments) || [];
     }
 
-    async evaluate(scope: Scope, dom: DOM, tag?: Tag) {
+    protected async _evaluate(scope: Scope, dom: DOM, tag?: Tag) {
         let value = this.value;
         for (const key in this.segments) {
             const segment = this.segments[key];

@@ -24,7 +24,7 @@ export class DispatchEventNode extends Node implements TreeNode {
         return nodes;
     }
 
-    public async evaluate(scope: Scope, dom: DOM, tag: Tag = null) {
+    protected async _evaluate(scope: Scope, dom: DOM, tag: Tag = null) {
         let detail = this.data ? (await this.data.evaluate(scope, dom, tag)).objectify : {};
         if (detail instanceof Scope)
             detail = detail.data.getData();

@@ -20,7 +20,7 @@ export class ArithmeticNode extends Node implements TreeNode {
         ]
     }
 
-    public async evaluate(scope: Scope, dom: DOM, tag: Tag = null) {
+    public async _evaluate(scope: Scope, dom: DOM, tag: Tag = null) {
         const left: any = await this.left.evaluate(scope, dom, tag);
         const right: any = await this.right.evaluate(scope, dom, tag);
 

@@ -66,7 +66,7 @@ var AsNode = /** @class */ (function (_super) {
             this.context
         ];
     };
-    AsNode.prototype.evaluate = function (scope, dom, tag) {
+    AsNode.prototype._evaluate = function (scope, dom, tag) {
         if (tag === void 0) { tag = null; }
         return __awaiter(this, void 0, void 0, function () {
             var context;

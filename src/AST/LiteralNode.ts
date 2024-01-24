@@ -11,7 +11,7 @@ export class LiteralNode<T = any> extends Node implements TreeNode {
         super();
     }
 
-    public async evaluate(scope: Scope, dom: DOM, tag: Tag = null) {
+    protected async _evaluate(scope: Scope, dom: DOM, tag: Tag = null) {
         return this.value;
     }
 }

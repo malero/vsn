@@ -7,5 +7,5 @@ export declare class FunctionArgumentNode<T = any> extends Node implements TreeN
     protected args: Node[];
     constructor(args: Node[]);
     protected _getChildNodes(): Node[];
-    evaluate(scope: Scope, dom: DOM, tag?: Tag): Promise<any[]>;
+    protected _evaluate(scope: Scope, dom: DOM, tag?: Tag): Promise<any[]>;
 }

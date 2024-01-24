@@ -12,7 +12,7 @@ export declare class AssignmentNode extends Node implements TreeNode {
     readonly type: TokenType;
     constructor(left: RootScopeMemberNode | ScopeMemberNode, right: TreeNode, type: TokenType);
     protected _getChildNodes(): Node[];
-    evaluate(scope: Scope, dom: DOM, tag?: Tag): Promise<any>;
+    _evaluate(scope: Scope, dom: DOM, tag?: Tag): Promise<any>;
     handle(name: any, left: any, right: any, localScope: any): any;
     handleNumber(key: any, left: any, right: any, scope: any): any;
     handleString(key: any, left: any, right: any, scope: any): any;

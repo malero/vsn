@@ -15,7 +15,7 @@ export class BlockNode extends Node implements TreeNode {
         return [...(this.statements as Node[])];
     }
 
-    public async evaluate(scope: Scope, dom: DOM, tag: Tag = null) {
+    protected async _evaluate(scope: Scope, dom: DOM, tag: Tag = null) {
         let returnValue: any = null;
         for (let i = 0; i < this.statements.length; i++) {
             returnValue = await this.statements[i].evaluate(scope, dom, tag);

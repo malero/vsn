@@ -32,7 +32,7 @@ export class NamedStackNode extends Node implements TreeNode {
         ]
     }
 
-    public async evaluate(scope: Scope, dom: DOM, tag: Tag = null) {
+    protected async _evaluate(scope: Scope, dom: DOM, tag: Tag = null) {
         if (scope instanceof FunctionScope) { // NamedStackNode doesn't work with FunctionScope
             scope = scope.parentScope;
         }

@@ -98,7 +98,7 @@ var IfStatementNode = /** @class */ (function (_super) {
     IfStatementNode.prototype._getChildNodes = function () {
         return __spreadArray([], __read(this.nodes));
     };
-    IfStatementNode.prototype.evaluate = function (scope, dom, tag) {
+    IfStatementNode.prototype._evaluate = function (scope, dom, tag) {
         if (tag === void 0) { tag = null; }
         return __awaiter(this, void 0, void 0, function () {
             var _a, _b, condition, uno, e_1_1;

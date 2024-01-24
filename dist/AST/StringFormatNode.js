@@ -92,7 +92,7 @@ var StringFormatNode = /** @class */ (function (_super) {
     StringFormatNode.prototype.getChildNodes = function () {
         return this.segments && Object.values(this.segments) || [];
     };
-    StringFormatNode.prototype.evaluate = function (scope, dom, tag) {
+    StringFormatNode.prototype._evaluate = function (scope, dom, tag) {
         return __awaiter(this, void 0, void 0, function () {
             var value, _a, _b, _i, key, segment, segmentValue;
             return __generator(this, function (_c) {

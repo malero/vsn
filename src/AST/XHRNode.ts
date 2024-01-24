@@ -22,7 +22,7 @@ export class XHRNode extends Node implements TreeNode {
         return nodes;
     }
 
-    async evaluate(scope: Scope, dom: DOM, tag?: Tag) {
+    protected async _evaluate(scope: Scope, dom: DOM, tag?: Tag) {
         let url = await this.url.evaluate(scope, dom, tag);
         let method: string;
         let data = this.left ? await this.left.evaluate(scope, dom, tag) : {};

@@ -12,7 +12,7 @@ export declare class StringFormatNode extends Node implements TreeNode {
         [key: string]: Node;
     }, value: string);
     getChildNodes(): Node[];
-    evaluate(scope: Scope, dom: DOM, tag?: Tag): Promise<string>;
+    protected _evaluate(scope: Scope, dom: DOM, tag?: Tag): Promise<string>;
     static parse(node: Node, token: Token, tokens: Token[]): StringFormatNode;
     static match(tokens: Token[]): boolean;
 }

@@ -72,7 +72,7 @@ var XHRNode = /** @class */ (function (_super) {
             nodes.push(this.left);
         return nodes;
     };
-    XHRNode.prototype.evaluate = function (scope, dom, tag) {
+    XHRNode.prototype._evaluate = function (scope, dom, tag) {
         return __awaiter(this, void 0, void 0, function () {
             var url, method, data, _a, request, response, contentType;
             return __generator(this, function (_b) {

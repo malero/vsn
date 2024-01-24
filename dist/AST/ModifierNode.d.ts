@@ -9,6 +9,6 @@ export declare class ModifierNode extends Node implements TreeNode {
     readonly block: BlockNode;
     constructor(name: string, block: BlockNode);
     prepare(scope: Scope, dom: DOM, tag?: Tag, meta?: any): Promise<void>;
-    evaluate(scope: Scope, dom: DOM, tag?: Tag): Promise<any>;
+    protected _evaluate(scope: Scope, dom: DOM, tag?: Tag): Promise<any>;
     static parse(lastNode: any, token: any, tokens: Token[]): Node;
 }

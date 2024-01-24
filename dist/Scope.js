@@ -90,10 +90,7 @@ var Scope = /** @class */ (function (_super) {
             finally { if (e_1) throw e_1.error; }
         }
         this.children.length = 0;
-        if (this._parentScope) {
-            this._parentScope.removeChild(this);
-            this._parentScope = null;
-        }
+        this.parentScope = null;
     };
     Object.defineProperty(Scope.prototype, "data", {
         get: function () {

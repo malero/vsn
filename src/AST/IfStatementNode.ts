@@ -19,7 +19,7 @@ export class IfStatementNode extends Node implements TreeNode {
         ]
     }
 
-    public async evaluate(scope: Scope, dom: DOM, tag: Tag = null) {
+    protected async _evaluate(scope: Scope, dom: DOM, tag: Tag = null) {
         for (const condition of this.nodes) {
             const uno: boolean = await condition.evaluate(scope, dom, tag);
             if (uno) {

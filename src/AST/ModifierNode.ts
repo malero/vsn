@@ -18,7 +18,7 @@ export class ModifierNode extends Node implements TreeNode {
         return null;
     }
 
-    public async evaluate(scope: Scope, dom: DOM, tag: Tag = null) {
+    protected async _evaluate(scope: Scope, dom: DOM, tag: Tag = null) {
         return null;
     }
 

@@ -144,7 +144,7 @@ export class ClassNode extends Node implements TreeNode {
         ClassNode.removePreparedClassFromElement(tag.element, this.fullSelector);
     }
 
-    public async evaluate(scope: Scope, dom: DOM, tag: Tag = null) {
+    protected async _evaluate(scope: Scope, dom: DOM, tag: Tag = null) {
         return null;
     }
 

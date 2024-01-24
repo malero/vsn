@@ -21,7 +21,7 @@ export declare class NamedStackNode extends Node implements TreeNode {
     protected static executions: string[];
     constructor(stackName: LiteralNode<string>, statements: BlockNode);
     protected _getChildNodes(): Node[];
-    evaluate(scope: Scope, dom: DOM, tag?: Tag): Promise<void>;
+    protected _evaluate(scope: Scope, dom: DOM, tag?: Tag): Promise<void>;
     static execute(stackName: string): Promise<boolean>;
     static parse(lastNode: any, token: any, tokens: Token[]): NamedStackNode;
 }

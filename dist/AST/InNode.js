@@ -64,7 +64,7 @@ var InNode = /** @class */ (function (_super) {
         _this.flip = flip;
         return _this;
     }
-    InNode.prototype.evaluate = function (scope, dom, tag) {
+    InNode.prototype._evaluate = function (scope, dom, tag) {
         if (tag === void 0) { tag = null; }
         return __awaiter(this, void 0, void 0, function () {
             var toCheck, array, inArray;

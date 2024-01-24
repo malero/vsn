@@ -71,7 +71,7 @@ var ForStatementNode = /** @class */ (function (_super) {
             this.block
         ];
     };
-    ForStatementNode.prototype.evaluate = function (scope, dom, tag) {
+    ForStatementNode.prototype._evaluate = function (scope, dom, tag) {
         if (tag === void 0) { tag = null; }
         return __awaiter(this, void 0, void 0, function () {
             var variable, list, i;

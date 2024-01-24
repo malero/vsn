@@ -105,7 +105,7 @@ var FunctionCallNode = /** @class */ (function (_super) {
             this.args
         ];
     };
-    FunctionCallNode.prototype.evaluate = function (scope, dom, tag) {
+    FunctionCallNode.prototype._evaluate = function (scope, dom, tag) {
         if (tag === void 0) { tag = null; }
         return __awaiter(this, void 0, void 0, function () {
             var tags, functionScope, functionName, instanceOfScopeMemberNode, _tags, values, func, functionName_1, returnValues, toCleanup, calls, tags_1, tags_1_1, _tag, tagNum, _a, _b, className, cls, fnc, _c, _d, e_1_1, e_2_1, toCleanup_1, toCleanup_1_1, fnc, e_3_1, r;

@@ -52,6 +52,7 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ElementQueryNode = void 0;
+var Tag_1 = require("../Tag");
 var Node_1 = require("./Node");
 var AbstractDOM_1 = require("../DOM/AbstractDOM");
 var ElementQueryNode = /** @class */ (function (_super) {
@@ -67,6 +68,20 @@ var ElementQueryNode = /** @class */ (function (_super) {
         return _this;
     }
     ElementQueryNode.prototype.evaluate = function (scope, dom, tag, forceList) {
+        if (forceList === void 0) { forceList = false; }
+        return __awaiter(this, void 0, void 0, function () {
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0:
+                        if (scope.isGarbage || (tag && tag.state === Tag_1.TagState.Deconstructed))
+                            return [2 /*return*/];
+                        return [4 /*yield*/, this._evaluate(scope, dom, tag, forceList)];
+                    case 1: return [2 /*return*/, _a.sent()];
+                }
+            });
+        });
+    };
+    ElementQueryNode.prototype._evaluate = function (scope, dom, tag, forceList) {
         if (tag === void 0) { tag = null; }
         if (forceList === void 0) { forceList = false; }
         return __awaiter(this, void 0, void 0, function () {

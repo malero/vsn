@@ -18,7 +18,7 @@ export class AsNode extends Node implements TreeNode {
         ]
     }
 
-    public async evaluate(scope: Scope, dom: DOM, tag: Tag = null) {
+    public async _evaluate(scope: Scope, dom: DOM, tag: Tag = null) {
         const context = await this.context.evaluate(scope, dom, tag);
         scope.set(this.name, context);
         return context;

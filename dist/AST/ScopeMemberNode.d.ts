@@ -9,5 +9,5 @@ export declare class ScopeMemberNode extends ScopeNodeAbstract implements TreeNo
     readonly name: TreeNode<string>;
     constructor(scope: TreeNode<Scope>, name: TreeNode<string>);
     protected _getChildNodes(): Node[];
-    evaluate(scope: Scope, dom: DOM, tag?: Tag): Promise<any>;
+    protected _evaluate(scope: Scope, dom: DOM, tag?: Tag): Promise<any>;
 }

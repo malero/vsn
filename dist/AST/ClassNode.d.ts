@@ -34,7 +34,7 @@ export declare class ClassNode extends Node implements TreeNode {
     findClassElements(dom: DOM, tag?: Tag): Promise<void>;
     constructTag(tag: Tag, dom: DOM, hasConstruct?: boolean | null): Promise<void>;
     deconstructTag(tag: Tag, dom: DOM, hasDeconstruct?: boolean | null): Promise<void>;
-    evaluate(scope: Scope, dom: DOM, tag?: Tag): Promise<any>;
+    protected _evaluate(scope: Scope, dom: DOM, tag?: Tag): Promise<any>;
     static parse(lastNode: any, token: any, tokens: Token[]): ClassNode;
     getSelectorPath(): string[];
     static checkForClassChanges(element: HTMLElement, dom: DOM, tag?: Tag): Promise<void>;
