@@ -1,4 +1,4 @@
-import {Tag} from "../Tag";
+import {Tag, TagState} from "../Tag";
 import {WrappedWindow} from "./WrappedWindow";
 import {WrappedDocument} from "./WrappedDocument";
 import {Configuration} from "../Configuration";
@@ -22,6 +22,7 @@ export abstract class AbstractDOM extends EventDispatcher {
     protected _root: Tag;
     protected _ready: Promise<boolean>;
     protected tags: Tag[];
+    protected tagsToDeconstruct: Tag[];
     protected observer: MutationObserver;
     protected evaluateTimeout: any;
     protected queued: HTMLElement[] = [];
@@ -43,6 +44,7 @@ export abstract class AbstractDOM extends EventDispatcher {
 
         this.observer = new MutationObserver(this.mutation.bind(this));
         this.tags = [];
+        this.tagsToDeconstruct = [];
 
         this.window = new WrappedWindow(window);
         this.document = new WrappedDocument(window.document);
@@ -212,7 +214,7 @@ export abstract class AbstractDOM extends EventDispatcher {
             for (const ele of Array.from(mutation.removedNodes)) {
                 for (const tag of this.getTagsFromParent(ele)) {
                     if (tag.hasAttribute('vsn-template')) continue;
-                    tag.deconstruct();
+                    this.tagsToDeconstruct.push(tag);
                 }
             }
         }
@@ -352,7 +354,16 @@ export abstract class AbstractDOM extends EventDispatcher {
             this.dispatch('builtRoot')
         }
         this.dispatch('built', newTags);
+        this.cleanupTags();
         return newTags;
+    }
+
+    cleanupTags() {
+        for (const tag of this.tagsToDeconstruct) {
+            if (tag.state !== TagState.Deconstructed)
+                tag.deconstruct();
+        }
+        this.tagsToDeconstruct.length = 0;
     }
 
     async getTagsForElements(elements: Element[], create: boolean = false) {
