@@ -558,21 +558,29 @@ export class Tree {
     async bindToScopeChanges(scope, fnc, dom: DOM, tag: Tag = null) {
         for (const node of this._root.findChildrenByTypes<ScopeMemberNode | ElementAttributeNode>([RootScopeMemberNode, ScopeMemberNode, ElementAttributeNode], 'ScopeMemberNodes')) {
             let _scope: Scope = scope;
-            if (node instanceof ScopeMemberNode)
-                _scope = await node.scope.evaluate(scope, dom);
-            else if (node instanceof ElementAttributeNode && node.elementRef) {
-                _scope = (await node.elementRef.evaluate(scope, dom, tag))[0].scope;
-            }
-
             const name = await node.name.evaluate(scope, dom, tag);
-            _scope.on(`change:${name}`, fnc);
+            if (node instanceof ScopeMemberNode) {
+                _scope = await node.scope.evaluate(scope, dom);
+                _scope.on(`change:${name}`, fnc);
+            } else if (node instanceof ElementAttributeNode && node.elementRef) {
+                const ref = await node.elementRef.evaluate(scope, dom, tag);
+                if (ref instanceof Tag) {
+                    ref.scope.on(`change:${name}`, fnc);
+                } else if (ref instanceof Array) {
+                    for (const tag of ref) {
+                        tag.scope.on(`change:${name}`, fnc);
+                    }
+                } else {
+                    console.warn(`Cannot bind to changes for ${name}.`);
+                }
+            }
         }
     }
 
-    public static reprepareExecutingTrees() {
-        Tree.executing.forEach(async context => {
+    public static async reprepareExecutingTrees() {
+        for (const context of this.executing) {
             await context.tree.prepare(context.scope, context.dom, context.tag);
-        });
+        }
     }
 
     public static tokenize(code: string): Token[] {

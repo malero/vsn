@@ -146,7 +146,7 @@ export declare class Tree {
     evaluate(scope: Scope, dom: DOM, tag?: Tag): Promise<any>;
     prepare(scope: Scope, dom: DOM, tag?: Tag): Promise<void>;
     bindToScopeChanges(scope: any, fnc: any, dom: DOM, tag?: Tag): Promise<void>;
-    static reprepareExecutingTrees(): void;
+    static reprepareExecutingTrees(): Promise<void>;
     static tokenize(code: string): Token[];
     static stripWhiteSpace(tokens: Token[]): Token[];
     static processTokens(tokens: Token[], _node?: Node, _lastBlock?: Node): BlockNode;

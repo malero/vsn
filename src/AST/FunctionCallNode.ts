@@ -29,23 +29,20 @@ export class FunctionCallNode<T = any> extends Node implements TreeNode {
         // @todo: Need to rewrite/refactor this. It's a bit of a mess with element queries.
         let tags: Tag[] = [];
         let functionScope: Scope = scope;
-        let functionName: string = '';
-        let instanceOfScopeMemberNode = false;
         if (this.fnc instanceof ScopeMemberNode) {
-            instanceOfScopeMemberNode = true
-            functionScope = await this.fnc.scope.evaluate(scope, dom, tag);
-            functionName = await this.fnc.name.evaluate(scope, dom, tag);
             if (this.fnc.scope instanceof ElementQueryNode) {
                 const _tags = await this.fnc.scope.evaluate(scope, dom, tag);
                 if (_tags instanceof Array) {
                     tags = _tags;
                 } else if (_tags instanceof Tag) {
                     tags = [_tags];
+                    functionScope = _tags.scope;
                 } else {
                     throw new Error('Invalid element query result');
                 }
             } else {
                tags = [tag];
+               functionScope = await this.fnc.scope.evaluate(scope, dom, tag);
             }
         }
 
@@ -54,28 +51,22 @@ export class FunctionCallNode<T = any> extends Node implements TreeNode {
         if (!func || func instanceof Array) {
             const functionName = await (this.fnc as any).name.evaluate(scope, dom, tag);
             const returnValues = [];
-            const toCleanup = [];
-            let calls = 0;
 
             for (const _tag of tags) {
-                let tagNum = 0;
-                for (const className of _tag.element[ClassNode.ClassesVariable] || []) {
-                    tagNum++;
-                    const cls = Registry.instance.classes.getSynchronous(className);
-                    if (cls) {
-                        if (cls.classScope.has(functionName)) {
-                            const fnc = cls.classScope.get(functionName);
-                            toCleanup.push(fnc);
-                            returnValues.push(await (await fnc.evaluate(_tag.scope, dom, _tag))(...values));
-                            calls++;
-                        }
-                    }
+                functionScope = _tag.scope;
+                func = functionScope.get(functionName);
+                if (func instanceof FunctionNode) {
+                    returnValues.push(await (await func.evaluate(functionScope, dom, _tag) as any)(...values));
+                    await func.collectGarbage();
+                } else if (typeof func === 'function') {
+                    returnValues.push(func.call(functionScope, ...values));
+                    await func.collectGarbage();
+                } else {
+                    console.warn(`Function ${functionName} was not found in current scope.`);
                 }
             }
 
-            for (const fnc of toCleanup) {
-                await fnc.collectGarbage();
-            }
+            const calls = returnValues.length;
             if (calls === 1) {
                 return returnValues[0];
             } else if (calls === 0) {

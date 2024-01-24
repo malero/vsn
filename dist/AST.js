@@ -71,6 +71,7 @@ var _a, _b, _c;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Tree = exports.TreeCache = exports.AttributableNodes = exports.tokenIsBlockCloser = exports.tokenIsBlockOpener = exports.getTokenBlockOpenerConfig = exports.BlockCloseToTypeMap = exports.BlockOpenToTypeMap = exports.BlockTypeConfigurations = exports.TokenType = exports.BlockType = void 0;
 var DOM_1 = require("./DOM");
+var Tag_1 = require("./Tag");
 var RootScopeMemberNode_1 = require("./AST/RootScopeMemberNode");
 var ScopeMemberNode_1 = require("./AST/ScopeMemberNode");
 var ElementAttributeNode_1 = require("./AST/ElementAttributeNode");
@@ -606,68 +607,111 @@ var Tree = /** @class */ (function () {
     Tree.prototype.bindToScopeChanges = function (scope, fnc, dom, tag) {
         if (tag === void 0) { tag = null; }
         return __awaiter(this, void 0, void 0, function () {
-            var _a, _b, node, _scope, name_1, e_2_1;
-            var e_2, _c;
-            return __generator(this, function (_d) {
-                switch (_d.label) {
+            var _a, _b, node, _scope, name_1, ref, ref_1, ref_1_1, tag_1, e_2_1;
+            var e_2, _c, e_3, _d;
+            return __generator(this, function (_e) {
+                switch (_e.label) {
                     case 0:
-                        _d.trys.push([0, 9, 10, 11]);
+                        _e.trys.push([0, 8, 9, 10]);
                         _a = __values(this._root.findChildrenByTypes([RootScopeMemberNode_1.RootScopeMemberNode, ScopeMemberNode_1.ScopeMemberNode, ElementAttributeNode_1.ElementAttributeNode], 'ScopeMemberNodes')), _b = _a.next();
-                        _d.label = 1;
+                        _e.label = 1;
                     case 1:
-                        if (!!_b.done) return [3 /*break*/, 8];
+                        if (!!_b.done) return [3 /*break*/, 7];
                         node = _b.value;
                         _scope = scope;
-                        if (!(node instanceof ScopeMemberNode_1.ScopeMemberNode)) return [3 /*break*/, 3];
-                        return [4 /*yield*/, node.scope.evaluate(scope, dom)];
+                        return [4 /*yield*/, node.name.evaluate(scope, dom, tag)];
                     case 2:
-                        _scope = _d.sent();
-                        return [3 /*break*/, 5];
+                        name_1 = _e.sent();
+                        if (!(node instanceof ScopeMemberNode_1.ScopeMemberNode)) return [3 /*break*/, 4];
+                        return [4 /*yield*/, node.scope.evaluate(scope, dom)];
                     case 3:
-                        if (!(node instanceof ElementAttributeNode_1.ElementAttributeNode && node.elementRef)) return [3 /*break*/, 5];
-                        return [4 /*yield*/, node.elementRef.evaluate(scope, dom, tag)];
-                    case 4:
-                        _scope = (_d.sent())[0].scope;
-                        _d.label = 5;
-                    case 5: return [4 /*yield*/, node.name.evaluate(scope, dom, tag)];
-                    case 6:
-                        name_1 = _d.sent();
+                        _scope = _e.sent();
                         _scope.on("change:" + name_1, fnc);
-                        _d.label = 7;
-                    case 7:
+                        return [3 /*break*/, 6];
+                    case 4:
+                        if (!(node instanceof ElementAttributeNode_1.ElementAttributeNode && node.elementRef)) return [3 /*break*/, 6];
+                        return [4 /*yield*/, node.elementRef.evaluate(scope, dom, tag)];
+                    case 5:
+                        ref = _e.sent();
+                        if (ref instanceof Tag_1.Tag) {
+                            ref.scope.on("change:" + name_1, fnc);
+                        }
+                        else if (ref instanceof Array) {
+                            try {
+                                for (ref_1 = (e_3 = void 0, __values(ref)), ref_1_1 = ref_1.next(); !ref_1_1.done; ref_1_1 = ref_1.next()) {
+                                    tag_1 = ref_1_1.value;
+                                    tag_1.scope.on("change:" + name_1, fnc);
+                                }
+                            }
+                            catch (e_3_1) { e_3 = { error: e_3_1 }; }
+                            finally {
+                                try {
+                                    if (ref_1_1 && !ref_1_1.done && (_d = ref_1.return)) _d.call(ref_1);
+                                }
+                                finally { if (e_3) throw e_3.error; }
+                            }
+                        }
+                        else {
+                            console.warn("Cannot bind to changes for " + name_1 + ".");
+                        }
+                        _e.label = 6;
+                    case 6:
                         _b = _a.next();
                         return [3 /*break*/, 1];
-                    case 8: return [3 /*break*/, 11];
-                    case 9:
-                        e_2_1 = _d.sent();
+                    case 7: return [3 /*break*/, 10];
+                    case 8:
+                        e_2_1 = _e.sent();
                         e_2 = { error: e_2_1 };
-                        return [3 /*break*/, 11];
-                    case 10:
+                        return [3 /*break*/, 10];
+                    case 9:
                         try {
                             if (_b && !_b.done && (_c = _a.return)) _c.call(_a);
                         }
                         finally { if (e_2) throw e_2.error; }
                         return [7 /*endfinally*/];
-                    case 11: return [2 /*return*/];
+                    case 10: return [2 /*return*/];
                 }
             });
         });
     };
     Tree.reprepareExecutingTrees = function () {
-        var _this = this;
-        Tree.executing.forEach(function (context) { return __awaiter(_this, void 0, void 0, function () {
-            return __generator(this, function (_a) {
-                switch (_a.label) {
-                    case 0: return [4 /*yield*/, context.tree.prepare(context.scope, context.dom, context.tag)];
+        return __awaiter(this, void 0, void 0, function () {
+            var _a, _b, context, e_4_1;
+            var e_4, _c;
+            return __generator(this, function (_d) {
+                switch (_d.label) {
+                    case 0:
+                        _d.trys.push([0, 5, 6, 7]);
+                        _a = __values(this.executing), _b = _a.next();
+                        _d.label = 1;
                     case 1:
-                        _a.sent();
-                        return [2 /*return*/];
+                        if (!!_b.done) return [3 /*break*/, 4];
+                        context = _b.value;
+                        return [4 /*yield*/, context.tree.prepare(context.scope, context.dom, context.tag)];
+                    case 2:
+                        _d.sent();
+                        _d.label = 3;
+                    case 3:
+                        _b = _a.next();
+                        return [3 /*break*/, 1];
+                    case 4: return [3 /*break*/, 7];
+                    case 5:
+                        e_4_1 = _d.sent();
+                        e_4 = { error: e_4_1 };
+                        return [3 /*break*/, 7];
+                    case 6:
+                        try {
+                            if (_b && !_b.done && (_c = _a.return)) _c.call(_a);
+                        }
+                        finally { if (e_4) throw e_4.error; }
+                        return [7 /*endfinally*/];
+                    case 7: return [2 /*return*/];
                 }
             });
-        }); });
+        });
     };
     Tree.tokenize = function (code) {
-        var e_3, _a;
+        var e_5, _a;
         var tokens = [];
         if (!code || code.length === 0)
             return tokens;
@@ -675,7 +719,7 @@ var Tree = /** @class */ (function () {
         do {
             foundToken = false;
             try {
-                for (var TOKEN_PATTERNS_1 = (e_3 = void 0, __values(TOKEN_PATTERNS)), TOKEN_PATTERNS_1_1 = TOKEN_PATTERNS_1.next(); !TOKEN_PATTERNS_1_1.done; TOKEN_PATTERNS_1_1 = TOKEN_PATTERNS_1.next()) {
+                for (var TOKEN_PATTERNS_1 = (e_5 = void 0, __values(TOKEN_PATTERNS)), TOKEN_PATTERNS_1_1 = TOKEN_PATTERNS_1.next(); !TOKEN_PATTERNS_1_1.done; TOKEN_PATTERNS_1_1 = TOKEN_PATTERNS_1.next()) {
                     var tp = TOKEN_PATTERNS_1_1.value;
                     var match = tp.pattern.exec(code);
                     if (match) {
@@ -691,12 +735,12 @@ var Tree = /** @class */ (function () {
                     }
                 }
             }
-            catch (e_3_1) { e_3 = { error: e_3_1 }; }
+            catch (e_5_1) { e_5 = { error: e_5_1 }; }
             finally {
                 try {
                     if (TOKEN_PATTERNS_1_1 && !TOKEN_PATTERNS_1_1.done && (_a = TOKEN_PATTERNS_1.return)) _a.call(TOKEN_PATTERNS_1);
                 }
-                finally { if (e_3) throw e_3.error; }
+                finally { if (e_5) throw e_5.error; }
             }
         } while (code.length > 0 && foundToken);
         return tokens;
@@ -711,7 +755,7 @@ var Tree = /** @class */ (function () {
         return tokens;
     };
     Tree.processTokens = function (tokens, _node, _lastBlock) {
-        var e_4, _a;
+        var e_6, _a;
         if (_node === void 0) { _node = null; }
         if (_lastBlock === void 0) { _lastBlock = null; }
         var blockNodes = [];
@@ -832,17 +876,17 @@ var Tree = /** @class */ (function () {
                 var funcArgs = Tree.getBlockTokens(tokens);
                 var nodes = [];
                 try {
-                    for (var funcArgs_1 = (e_4 = void 0, __values(funcArgs)), funcArgs_1_1 = funcArgs_1.next(); !funcArgs_1_1.done; funcArgs_1_1 = funcArgs_1.next()) {
+                    for (var funcArgs_1 = (e_6 = void 0, __values(funcArgs)), funcArgs_1_1 = funcArgs_1.next(); !funcArgs_1_1.done; funcArgs_1_1 = funcArgs_1.next()) {
                         var arg = funcArgs_1_1.value;
                         nodes.push(Tree.processTokens(arg));
                     }
                 }
-                catch (e_4_1) { e_4 = { error: e_4_1 }; }
+                catch (e_6_1) { e_6 = { error: e_6_1 }; }
                 finally {
                     try {
                         if (funcArgs_1_1 && !funcArgs_1_1.done && (_a = funcArgs_1.return)) _a.call(funcArgs_1);
                     }
-                    finally { if (e_4) throw e_4.error; }
+                    finally { if (e_6) throw e_6.error; }
                 }
                 if (node) {
                     node = new FunctionCallNode_1.FunctionCallNode(node, // Previous node should be a NAME
@@ -1068,7 +1112,7 @@ var Tree = /** @class */ (function () {
         return statementTokens;
     };
     Tree.consumeTypes = function (tokens, types) {
-        var e_5, _a;
+        var e_7, _a;
         var matching = [];
         try {
             for (var tokens_1 = __values(tokens), tokens_1_1 = tokens_1.next(); !tokens_1_1.done; tokens_1_1 = tokens_1.next()) {
@@ -1081,12 +1125,12 @@ var Tree = /** @class */ (function () {
                 }
             }
         }
-        catch (e_5_1) { e_5 = { error: e_5_1 }; }
+        catch (e_7_1) { e_7 = { error: e_7_1 }; }
         finally {
             try {
                 if (tokens_1_1 && !tokens_1_1.done && (_a = tokens_1.return)) _a.call(tokens_1);
             }
-            finally { if (e_5) throw e_5.error; }
+            finally { if (e_7) throw e_7.error; }
         }
         tokens.splice(0, matching.length);
         return matching;
