@@ -354,11 +354,10 @@ export abstract class AbstractDOM extends EventDispatcher {
             this.dispatch('builtRoot')
         }
         this.dispatch('built', newTags);
-        this.cleanupTags();
         return newTags;
     }
 
-    cleanupTags() {
+    cleanup() {
         for (const tag of this.tagsToDeconstruct) {
             if (tag.state !== TagState.Deconstructed)
                 tag.deconstruct();

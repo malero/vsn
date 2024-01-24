@@ -813,13 +813,12 @@ var AbstractDOM = /** @class */ (function (_super) {
                             this.dispatch('builtRoot');
                         }
                         this.dispatch('built', newTags);
-                        this.cleanupTags();
                         return [2 /*return*/, newTags];
                 }
             });
         });
     };
-    AbstractDOM.prototype.cleanupTags = function () {
+    AbstractDOM.prototype.cleanup = function () {
         var e_18, _a;
         try {
             for (var _b = __values(this.tagsToDeconstruct), _c = _b.next(); !_c.done; _c = _b.next()) {

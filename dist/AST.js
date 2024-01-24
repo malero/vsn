@@ -70,6 +70,7 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from) {
 var _a, _b, _c;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Tree = exports.TreeCache = exports.AttributableNodes = exports.tokenIsBlockCloser = exports.tokenIsBlockOpener = exports.getTokenBlockOpenerConfig = exports.BlockCloseToTypeMap = exports.BlockOpenToTypeMap = exports.BlockTypeConfigurations = exports.TokenType = exports.BlockType = void 0;
+var DOM_1 = require("./DOM");
 var RootScopeMemberNode_1 = require("./AST/RootScopeMemberNode");
 var ScopeMemberNode_1 = require("./AST/ScopeMemberNode");
 var ElementAttributeNode_1 = require("./AST/ElementAttributeNode");
@@ -577,6 +578,10 @@ var Tree = /** @class */ (function () {
                     case 1:
                         r = _a.sent();
                         Tree.executing.delete(context);
+                        if (Tree.executing.size === 0)
+                            setTimeout(function () {
+                                DOM_1.DOM.instance.cleanup();
+                            }, 1000);
                         return [2 /*return*/, r];
                 }
             });

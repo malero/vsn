@@ -540,6 +540,10 @@ export class Tree {
         Tree.executing.add(context);
         const r = await this._root.evaluate(scope, dom, tag);
         Tree.executing.delete(context);
+        if (Tree.executing.size === 0)
+            setTimeout(() => {
+                DOM.instance.cleanup();
+            }, 1000);
         return r;
     }
 
