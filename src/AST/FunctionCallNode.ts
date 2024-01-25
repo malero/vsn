@@ -35,7 +35,6 @@ export class FunctionCallNode<T = any> extends Node implements TreeNode {
     }
 
     protected async _evaluate(scope: Scope, dom: DOM, tag: Tag = null) {
-        // @todo: Need to rewrite/refactor this. It's a bit of a mess with element queries.
         let tags: Tag[] = [];
         let functionScope: Scope = scope;
         if (this.fnc instanceof ScopeMemberNode) {
@@ -65,13 +64,10 @@ export class FunctionCallNode<T = any> extends Node implements TreeNode {
         let _functionScope: Scope = functionScope;
 
         for (const _tag of tags) {
-            if (_tag === null) {
-                _functionScope = functionScope;
-            } else {
+            if (_tag && _tag.scope.has(functionName)) {
+                func = _tag.scope.get(functionName);
                 _functionScope = _tag.scope;
-            }
-
-            if (_functionScope.has(functionName)) {
+            } else if (_functionScope instanceof Scope && _functionScope.has(functionName)) {
                 func = _functionScope.get(functionName);
             } else {
                 func = await this.fnc.evaluate(scope, dom, _tag);

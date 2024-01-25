@@ -70,6 +70,7 @@ var ServiceDemo = /** @class */ (function (_super) {
         if (num === void 0) { num = 1; }
         return __awaiter(this, void 0, void 0, function () {
             return __generator(this, function (_a) {
+                console.log('ServiceDemo.add', this, num);
                 return [2 /*return*/, this.count += num];
             });
         });

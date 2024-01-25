@@ -22,14 +22,19 @@
     }
 
     class #test {
+        func construct() {
+            this.count|integer = 1;
+        }
+
         func test() {
-            log('huh?');
+            log('huh?', this.count);
         }
     }
 
     class #buttons li button {
         func construct() {
             this.a = 1;
+            #test.count += 1;
         }
 
         on click() {
@@ -45,5 +50,33 @@
         }
     }
 </script>
+
+
+<script type="text/vsn" vsn-script>
+class .simple-construct {
+    func construct() {
+        this.a|integer = "15";
+        log('####### construct', this.a);
+    }
+
+    func test() {
+        this.a += 1;
+        log('####### testing', this.a);
+    }
+}
+</script>
+<div class="simple-construct" id="ele-1" vsn-bind="a"></div>
+<div class="simple-construct" id="ele-2" vsn-bind="a"></div>
+<div class="simple-construct" id="ele-3" vsn-bind="a"></div>
+<div class="simple-construct" id="ele-4" vsn-bind="a"></div>
+<div class="simple-construct" id="ele-5" vsn-bind="a"></div>
+<div class="simple-construct" id="ele-6" vsn-bind="a"></div>
+<div class="simple-construct" id="ele-7" vsn-bind="a"></div>
+<div class="simple-construct" id="ele-8" vsn-bind="a"></div>
+<div class="simple-construct" id="ele-9" vsn-bind="a"></div>
+<div class="simple-construct" id="ele-10" vsn-bind="a"></div>
+
+<button vsn-on:click="?(.simple-construct).test()">Test, All</button>
+<button vsn-on:click="#ele-9.test()">Test, Just 9</button>
 </body>
 </html>

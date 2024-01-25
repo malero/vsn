@@ -35,14 +35,6 @@ describe('Controller', () => {
                 const tag = await dom.exec('#controller');
                 expect(tag).toBeInstanceOf(Tag);
                 expect(tag.scope).toBeInstanceOf(Scope);
-                /*
-                expect(tag.scope.keys).toEqual(['test']);
-                expect(tag.scope.get('test').wrapped).toBeInstanceOf(TestController);
-                expect(await tag.exec('test.isValid()')).toBe(false);
-                expect(await tag.exec('test.test')).toBe('notTest');
-                await tag.exec('test.test = "test"');
-                expect(await tag.exec('test.isValid()')).toBe(true);
-                 */
                 resolve(null);
             });
         });

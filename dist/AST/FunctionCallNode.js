@@ -84,6 +84,7 @@ var __values = (this && this.__values) || function(o) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.FunctionCallNode = void 0;
+var Scope_1 = require("../Scope");
 var Tag_1 = require("../Tag");
 var Node_1 = require("./Node");
 var ScopeMemberNode_1 = require("./ScopeMemberNode");
@@ -176,27 +177,26 @@ var FunctionCallNode = /** @class */ (function (_super) {
                         _functionScope = functionScope;
                         _c.label = 7;
                     case 7:
-                        _c.trys.push([7, 15, 16, 17]);
+                        _c.trys.push([7, 16, 17, 18]);
                         tags_1 = __values(tags), tags_1_1 = tags_1.next();
                         _c.label = 8;
                     case 8:
-                        if (!!tags_1_1.done) return [3 /*break*/, 14];
+                        if (!!tags_1_1.done) return [3 /*break*/, 15];
                         _tag = tags_1_1.value;
-                        if (_tag === null) {
-                            _functionScope = functionScope;
-                        }
-                        else {
-                            _functionScope = _tag.scope;
-                        }
-                        if (!_functionScope.has(functionName)) return [3 /*break*/, 9];
+                        if (!(_tag && _tag.scope.has(functionName))) return [3 /*break*/, 9];
+                        func = _tag.scope.get(functionName);
+                        _functionScope = _tag.scope;
+                        return [3 /*break*/, 12];
+                    case 9:
+                        if (!(_functionScope instanceof Scope_1.Scope && _functionScope.has(functionName))) return [3 /*break*/, 10];
                         func = _functionScope.get(functionName);
-                        return [3 /*break*/, 11];
-                    case 9: return [4 /*yield*/, this.fnc.evaluate(scope, dom, _tag)];
-                    case 10:
+                        return [3 /*break*/, 12];
+                    case 10: return [4 /*yield*/, this.fnc.evaluate(scope, dom, _tag)];
+                    case 11:
                         func = _c.sent();
-                        _c.label = 11;
-                    case 11: return [4 /*yield*/, this.callFunction.apply(this, __spreadArray([func, _functionScope, dom, _tag], __read(values)))];
-                    case 12:
+                        _c.label = 12;
+                    case 12: return [4 /*yield*/, this.callFunction.apply(this, __spreadArray([func, _functionScope, dom, _tag], __read(values)))];
+                    case 13:
                         _a = __read.apply(void 0, [_c.sent(), 2]), result = _a[0], success = _a[1];
                         if (success) {
                             returnValues.push(result);
@@ -205,22 +205,22 @@ var FunctionCallNode = /** @class */ (function (_super) {
                         else {
                             console.warn("Function " + functionName + " was not found in current scope.");
                         }
-                        _c.label = 13;
-                    case 13:
+                        _c.label = 14;
+                    case 14:
                         tags_1_1 = tags_1.next();
                         return [3 /*break*/, 8];
-                    case 14: return [3 /*break*/, 17];
-                    case 15:
+                    case 15: return [3 /*break*/, 18];
+                    case 16:
                         e_1_1 = _c.sent();
                         e_1 = { error: e_1_1 };
-                        return [3 /*break*/, 17];
-                    case 16:
+                        return [3 /*break*/, 18];
+                    case 17:
                         try {
                             if (tags_1_1 && !tags_1_1.done && (_b = tags_1.return)) _b.call(tags_1);
                         }
                         finally { if (e_1) throw e_1.error; }
                         return [7 /*endfinally*/];
-                    case 17:
+                    case 18:
                         if (calls === 1) {
                             return [2 /*return*/, returnValues[0]];
                         }
