@@ -9,5 +9,6 @@ export declare class FunctionCallNode<T = any> extends Node implements TreeNode 
     readonly args: FunctionArgumentNode<any[]>;
     constructor(fnc: TreeNode<(...args: any[]) => any>, args: FunctionArgumentNode<any[]>);
     protected _getChildNodes(): Node[];
+    protected callFunction(func: any, functionScope: any, dom: any, tag: any, ...values: any[]): Promise<[any, boolean]>;
     protected _evaluate(scope: Scope, dom: DOM, tag?: Tag): Promise<any>;
 }

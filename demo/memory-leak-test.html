@@ -8,13 +8,19 @@
 
 <a href="./resources/xhr-memory-leak-test.html" vsn-xhr="#test.@html = '<button>wut?</button>' + response;#test.@class += 'open';">Wut?</a>
 <a href="./resources/xhr-memory-leak-test.html" vsn-xhr="#test.@html = '<button>huh?</button>' + response;#test.@class += 'open';">Huh?</a>
-<button vsn-on:click="#test.@html = '';#test.test();#test.@class -= 'open';">Clear</button>
 <button vsn-on:click="?(#buttons li button).test1();" vsn-if="'open' in #test.@class">Call Test 1</button>
 <button vsn-on:click="?(#buttons li button).test2();" vsn-if="'open' in #test.@class">Call Test 2</button>
-<div id="test"></div>
+<div id="test-container"><div id="test" class="test"></div></div>
 
 <script type="text/javascript" src="vsn.js"></script>
 <script type="text/vsn" vsn-script>
+    class #test-container {
+        func close() {
+            ?>(.test).@html = '';
+            #test.@class -= 'open';
+        }
+    }
+
     class #test {
         func test() {
             log('huh?');

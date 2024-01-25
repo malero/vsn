@@ -386,6 +386,7 @@ var Scope = /** @class */ (function (_super) {
         }
         this.wrapped.get = this.get.bind(this);
         this.wrapped.set = this.set.bind(this);
+        this.wrapped.has = this.has.bind(this);
         this.wrapped.on = this.on.bind(this);
         this.wrapped.once = this.once.bind(this);
         this.wrapped.off = this.off.bind(this);

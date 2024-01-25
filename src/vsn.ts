@@ -6,7 +6,7 @@ import {VisionHelper} from "./helpers/VisionHelper";
 import {Tree} from "./AST";
 import {EventDispatcher} from "./EventDispatcher";
 import {DynamicScopeData} from "./Scope/DynamicScopeData";
-import {Controller} from "./Controller";
+import {Scope} from "./Scope";
 import {VERSION} from "./version";
 import './custom-elements';
 
@@ -42,6 +42,7 @@ export class Vision extends EventDispatcher {
             window['Registry'] = Registry;
             window['vision'] = window['vsn'] = this;
             window['Tree'] = Tree;
+            window['Scope'] = Scope;
             window['$'] = this.exec.bind(this);
             VisionHelper.window.dispatchEvent(new Event('vsn'));
         }

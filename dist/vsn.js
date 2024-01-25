@@ -70,6 +70,7 @@ var VisionHelper_1 = require("./helpers/VisionHelper");
 var AST_1 = require("./AST");
 var EventDispatcher_1 = require("./EventDispatcher");
 var DynamicScopeData_1 = require("./Scope/DynamicScopeData");
+var Scope_1 = require("./Scope");
 var version_1 = require("./version");
 require("./custom-elements");
 var Vision = /** @class */ (function (_super) {
@@ -99,6 +100,7 @@ var Vision = /** @class */ (function (_super) {
             window['Registry'] = Registry_1.Registry;
             window['vision'] = window['vsn'] = _this;
             window['Tree'] = AST_1.Tree;
+            window['Scope'] = Scope_1.Scope;
             window['$'] = _this.exec.bind(_this);
             VisionHelper_1.VisionHelper.window.dispatchEvent(new Event('vsn'));
         }
@@ -177,8 +179,8 @@ var Validators_1 = require("./Validators");
 Object.defineProperty(exports, "Validators", { enumerable: true, get: function () { return Validators_1.Validators; } });
 var DOM_2 = require("./DOM");
 Object.defineProperty(exports, "DOM", { enumerable: true, get: function () { return DOM_2.DOM; } });
-var Scope_1 = require("./Scope");
-Object.defineProperty(exports, "Scope", { enumerable: true, get: function () { return Scope_1.Scope; } });
+var Scope_2 = require("./Scope");
+Object.defineProperty(exports, "Scope", { enumerable: true, get: function () { return Scope_2.Scope; } });
 var ScopeReference_1 = require("./Scope/ScopeReference");
 Object.defineProperty(exports, "ScopeReference", { enumerable: true, get: function () { return ScopeReference_1.ScopeReference; } });
 var WrappedArray_2 = require("./Scope/WrappedArray");

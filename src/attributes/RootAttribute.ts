@@ -10,7 +10,7 @@ export class RootAttribute extends Attribute {
     public async setup() {
         this.tag.scope.set('$mobile', VisionHelper.isMobile());
         for (const key of Registry.instance.functions.keys) {
-            const fn = Registry.instance.functions.get(key);
+            const fn = await Registry.instance.functions.get(key);
             this.tag.scope.set(key, fn);
         }
 

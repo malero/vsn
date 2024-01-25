@@ -50,17 +50,6 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
-var __values = (this && this.__values) || function(o) {
-    var s = typeof Symbol === "function" && Symbol.iterator, m = s && o[s], i = 0;
-    if (m) return m.call(o);
-    if (o && typeof o.length === "number") return {
-        next: function () {
-            if (o && i >= o.length) o = void 0;
-            return { value: o && o[i++], done: !o };
-        }
-    };
-    throw new TypeError(s ? "Object is not iterable." : "Symbol.iterator is not defined.");
-};
 var __read = (this && this.__read) || function (o, n) {
     var m = typeof Symbol === "function" && o[Symbol.iterator];
     if (!m) return o;
@@ -81,6 +70,17 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from) {
     for (var i = 0, il = from.length, j = to.length; i < il; i++, j++)
         to[j] = from[i];
     return to;
+};
+var __values = (this && this.__values) || function(o) {
+    var s = typeof Symbol === "function" && Symbol.iterator, m = s && o[s], i = 0;
+    if (m) return m.call(o);
+    if (o && typeof o.length === "number") return {
+        next: function () {
+            if (o && i >= o.length) o = void 0;
+            return { value: o && o[i++], done: !o };
+        }
+    };
+    throw new TypeError(s ? "Object is not iterable." : "Symbol.iterator is not defined.");
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.FunctionCallNode = void 0;
@@ -103,13 +103,42 @@ var FunctionCallNode = /** @class */ (function (_super) {
             this.args
         ];
     };
+    FunctionCallNode.prototype.callFunction = function (func, functionScope, dom, tag) {
+        var values = [];
+        for (var _i = 4; _i < arguments.length; _i++) {
+            values[_i - 4] = arguments[_i];
+        }
+        return __awaiter(this, void 0, void 0, function () {
+            var r;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0:
+                        if (!(func instanceof FunctionNode_1.FunctionNode)) return [3 /*break*/, 4];
+                        return [4 /*yield*/, func.evaluate(functionScope, dom, tag)];
+                    case 1: return [4 /*yield*/, (_a.sent()).apply(void 0, __spreadArray([], __read(values)))];
+                    case 2:
+                        r = _a.sent();
+                        return [4 /*yield*/, func.collectGarbage()];
+                    case 3:
+                        _a.sent();
+                        return [2 /*return*/, [r, true]];
+                    case 4:
+                        if (typeof func === 'function') {
+                            return [2 /*return*/, [func.call.apply(func, __spreadArray([functionScope.wrapped || functionScope], __read(values))), true]];
+                        }
+                        _a.label = 5;
+                    case 5: return [2 /*return*/, [null, false]];
+                }
+            });
+        });
+    };
     FunctionCallNode.prototype._evaluate = function (scope, dom, tag) {
         if (tag === void 0) { tag = null; }
         return __awaiter(this, void 0, void 0, function () {
-            var tags, functionScope, _tags, values, func, functionName, returnValues, tags_1, tags_1_1, _tag, _a, _b, e_1_1, calls, r;
-            var e_1, _c;
-            return __generator(this, function (_d) {
-                switch (_d.label) {
+            var tags, functionScope, _tags, values, functionName, returnValues, calls, func, _functionScope, tags_1, tags_1_1, _tag, _a, result, success, e_1_1;
+            var e_1, _b;
+            return __generator(this, function (_c) {
+                switch (_c.label) {
                     case 0:
                         tags = [];
                         functionScope = scope;
@@ -117,7 +146,7 @@ var FunctionCallNode = /** @class */ (function (_super) {
                         if (!(this.fnc.scope instanceof ElementQueryNode_1.ElementQueryNode)) return [3 /*break*/, 2];
                         return [4 /*yield*/, this.fnc.scope.evaluate(scope, dom, tag)];
                     case 1:
-                        _tags = _d.sent();
+                        _tags = _c.sent();
                         if (_tags instanceof Array) {
                             tags = _tags;
                         }
@@ -129,69 +158,69 @@ var FunctionCallNode = /** @class */ (function (_super) {
                             throw new Error('Invalid element query result');
                         }
                         return [3 /*break*/, 4];
-                    case 2:
-                        tags = [tag];
-                        return [4 /*yield*/, this.fnc.scope.evaluate(scope, dom, tag)];
+                    case 2: return [4 /*yield*/, this.fnc.scope.evaluate(scope, dom, tag)];
                     case 3:
-                        functionScope = _d.sent();
-                        _d.label = 4;
-                    case 4: return [4 /*yield*/, this.args.evaluate(scope, dom, tag)];
+                        functionScope = _c.sent();
+                        _c.label = 4;
+                    case 4:
+                        if (tags.length === 0)
+                            tags.push(tag);
+                        return [4 /*yield*/, this.args.evaluate(scope, dom, tag)];
                     case 5:
-                        values = _d.sent();
-                        return [4 /*yield*/, this.fnc.evaluate(scope, dom, tag)];
-                    case 6:
-                        func = _d.sent();
-                        if (!(!func || func instanceof Array)) return [3 /*break*/, 21];
+                        values = _c.sent();
                         return [4 /*yield*/, this.fnc.name.evaluate(scope, dom, tag)];
-                    case 7:
-                        functionName = _d.sent();
+                    case 6:
+                        functionName = _c.sent();
                         returnValues = [];
-                        _d.label = 8;
-                    case 8:
-                        _d.trys.push([8, 18, 19, 20]);
+                        calls = 0;
+                        _functionScope = functionScope;
+                        _c.label = 7;
+                    case 7:
+                        _c.trys.push([7, 15, 16, 17]);
                         tags_1 = __values(tags), tags_1_1 = tags_1.next();
-                        _d.label = 9;
-                    case 9:
-                        if (!!tags_1_1.done) return [3 /*break*/, 17];
+                        _c.label = 8;
+                    case 8:
+                        if (!!tags_1_1.done) return [3 /*break*/, 14];
                         _tag = tags_1_1.value;
-                        functionScope = _tag.scope;
-                        func = functionScope.get(functionName);
-                        if (!(func instanceof FunctionNode_1.FunctionNode)) return [3 /*break*/, 13];
-                        _b = (_a = returnValues).push;
-                        return [4 /*yield*/, func.evaluate(functionScope, dom, _tag)];
-                    case 10: return [4 /*yield*/, (_d.sent()).apply(void 0, __spreadArray([], __read(values)))];
-                    case 11:
-                        _b.apply(_a, [_d.sent()]);
-                        return [4 /*yield*/, func.collectGarbage()];
+                        if (_tag === null) {
+                            _functionScope = functionScope;
+                        }
+                        else {
+                            _functionScope = _tag.scope;
+                        }
+                        if (!_functionScope.has(functionName)) return [3 /*break*/, 9];
+                        func = _functionScope.get(functionName);
+                        return [3 /*break*/, 11];
+                    case 9: return [4 /*yield*/, this.fnc.evaluate(scope, dom, _tag)];
+                    case 10:
+                        func = _c.sent();
+                        _c.label = 11;
+                    case 11: return [4 /*yield*/, this.callFunction.apply(this, __spreadArray([func, _functionScope, dom, _tag], __read(values)))];
                     case 12:
-                        _d.sent();
-                        return [3 /*break*/, 16];
+                        _a = __read.apply(void 0, [_c.sent(), 2]), result = _a[0], success = _a[1];
+                        if (success) {
+                            returnValues.push(result);
+                            calls++;
+                        }
+                        else {
+                            console.warn("Function " + functionName + " was not found in current scope.");
+                        }
+                        _c.label = 13;
                     case 13:
-                        if (!(typeof func === 'function')) return [3 /*break*/, 15];
-                        returnValues.push(func.call.apply(func, __spreadArray([functionScope], __read(values))));
-                        return [4 /*yield*/, func.collectGarbage()];
-                    case 14:
-                        _d.sent();
-                        return [3 /*break*/, 16];
-                    case 15:
-                        console.warn("Function " + functionName + " was not found in current scope.");
-                        _d.label = 16;
-                    case 16:
                         tags_1_1 = tags_1.next();
-                        return [3 /*break*/, 9];
-                    case 17: return [3 /*break*/, 20];
-                    case 18:
-                        e_1_1 = _d.sent();
+                        return [3 /*break*/, 8];
+                    case 14: return [3 /*break*/, 17];
+                    case 15:
+                        e_1_1 = _c.sent();
                         e_1 = { error: e_1_1 };
-                        return [3 /*break*/, 20];
-                    case 19:
+                        return [3 /*break*/, 17];
+                    case 16:
                         try {
-                            if (tags_1_1 && !tags_1_1.done && (_c = tags_1.return)) _c.call(tags_1);
+                            if (tags_1_1 && !tags_1_1.done && (_b = tags_1.return)) _b.call(tags_1);
                         }
                         finally { if (e_1) throw e_1.error; }
                         return [7 /*endfinally*/];
-                    case 20:
-                        calls = returnValues.length;
+                    case 17:
                         if (calls === 1) {
                             return [2 /*return*/, returnValues[0]];
                         }
@@ -201,19 +230,7 @@ var FunctionCallNode = /** @class */ (function (_super) {
                         else {
                             return [2 /*return*/, returnValues];
                         }
-                        return [3 /*break*/, 26];
-                    case 21:
-                        if (!(func instanceof FunctionNode_1.FunctionNode)) return [3 /*break*/, 25];
-                        return [4 /*yield*/, func.evaluate(functionScope, dom, tag)];
-                    case 22: return [4 /*yield*/, (_d.sent()).apply(void 0, __spreadArray([], __read(values)))];
-                    case 23:
-                        r = _d.sent();
-                        return [4 /*yield*/, func.collectGarbage()];
-                    case 24:
-                        _d.sent();
-                        return [2 /*return*/, r];
-                    case 25: return [2 /*return*/, func.call.apply(func, __spreadArray([functionScope.wrapped || functionScope], __read(values)))];
-                    case 26: return [2 /*return*/];
+                        return [2 /*return*/];
                 }
             });
         });

@@ -79,29 +79,43 @@ var RootAttribute = /** @class */ (function (_super) {
     }
     RootAttribute.prototype.setup = function () {
         return __awaiter(this, void 0, void 0, function () {
-            var _a, _b, key, fn;
+            var _a, _b, key, fn, e_1_1;
             var e_1, _c;
             return __generator(this, function (_d) {
                 switch (_d.label) {
                     case 0:
                         this.tag.scope.set('$mobile', VisionHelper_1.VisionHelper.isMobile());
+                        _d.label = 1;
+                    case 1:
+                        _d.trys.push([1, 6, 7, 8]);
+                        _a = __values(Registry_1.Registry.instance.functions.keys), _b = _a.next();
+                        _d.label = 2;
+                    case 2:
+                        if (!!_b.done) return [3 /*break*/, 5];
+                        key = _b.value;
+                        return [4 /*yield*/, Registry_1.Registry.instance.functions.get(key)];
+                    case 3:
+                        fn = _d.sent();
+                        this.tag.scope.set(key, fn);
+                        _d.label = 4;
+                    case 4:
+                        _b = _a.next();
+                        return [3 /*break*/, 2];
+                    case 5: return [3 /*break*/, 8];
+                    case 6:
+                        e_1_1 = _d.sent();
+                        e_1 = { error: e_1_1 };
+                        return [3 /*break*/, 8];
+                    case 7:
                         try {
-                            for (_a = __values(Registry_1.Registry.instance.functions.keys), _b = _a.next(); !_b.done; _b = _a.next()) {
-                                key = _b.value;
-                                fn = Registry_1.Registry.instance.functions.get(key);
-                                this.tag.scope.set(key, fn);
-                            }
+                            if (_b && !_b.done && (_c = _a.return)) _c.call(_a);
                         }
-                        catch (e_1_1) { e_1 = { error: e_1_1 }; }
-                        finally {
-                            try {
-                                if (_b && !_b.done && (_c = _a.return)) _c.call(_a);
-                            }
-                            finally { if (e_1) throw e_1.error; }
-                        }
+                        finally { if (e_1) throw e_1.error; }
+                        return [7 /*endfinally*/];
+                    case 8:
                         Registry_1.Registry.instance.functions.on('register', this.registerFunction, this);
                         return [4 /*yield*/, _super.prototype.setup.call(this)];
-                    case 1:
+                    case 9:
                         _d.sent();
                         return [2 /*return*/];
                 }
