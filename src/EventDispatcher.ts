@@ -68,6 +68,11 @@ export class EventDispatcher  {
         (this as any)._listeners = {};
         this._relays.length = 0;
         this._allListeners.length = 0;
+
+        for (const source of EventDispatcher.sources) {
+            source.removeRelay(this);
+            source.noneWithContext(this);
+        }
     }
 
     addRelay(relay: EventDispatcher) {
