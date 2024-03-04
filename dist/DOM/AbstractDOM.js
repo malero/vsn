@@ -97,6 +97,7 @@ var SlotTag_1 = require("../Tag/SlotTag");
 var SlottedTag_1 = require("../Tag/SlottedTag");
 var Scope_1 = require("../Scope");
 var EventDispatcher_1 = require("../EventDispatcher");
+var VisionHelper_1 = require("../helpers/VisionHelper");
 var EQuerySelectDirection;
 (function (EQuerySelectDirection) {
     EQuerySelectDirection[EQuerySelectDirection["ALL"] = 0] = "ALL";
@@ -833,36 +834,75 @@ var AbstractDOM = /** @class */ (function (_super) {
         }
     };
     AbstractDOM.prototype.cleanup = function () {
-        var e_18, _a, e_19, _b;
-        try {
-            for (var _c = __values(this.tagsToDeconstruct), _d = _c.next(); !_d.done; _d = _c.next()) {
-                var tag = _d.value;
-                if (tag.state !== Tag_1.TagState.Deconstructed)
-                    tag.deconstruct();
-            }
-        }
-        catch (e_18_1) { e_18 = { error: e_18_1 }; }
-        finally {
-            try {
-                if (_d && !_d.done && (_a = _c.return)) _a.call(_c);
-            }
-            finally { if (e_18) throw e_18.error; }
-        }
-        this.tagsToDeconstruct.length = 0;
-        try {
-            for (var _e = __values(this.scopesToDeconstruct), _f = _e.next(); !_f.done; _f = _e.next()) {
-                var scope = _f.value;
-                scope.deconstruct();
-            }
-        }
-        catch (e_19_1) { e_19 = { error: e_19_1 }; }
-        finally {
-            try {
-                if (_f && !_f.done && (_b = _e.return)) _b.call(_e);
-            }
-            finally { if (e_19) throw e_19.error; }
-        }
-        this.tagsToDeconstruct.length = 0;
+        return __awaiter(this, void 0, void 0, function () {
+            var _a, _b, tag, e_18_1, _c, _d, scope, e_19_1;
+            var e_18, _e, e_19, _f;
+            return __generator(this, function (_g) {
+                switch (_g.label) {
+                    case 0:
+                        _g.trys.push([0, 6, 7, 8]);
+                        _a = __values(this.tagsToDeconstruct), _b = _a.next();
+                        _g.label = 1;
+                    case 1:
+                        if (!!_b.done) return [3 /*break*/, 5];
+                        tag = _b.value;
+                        if (!(tag.state !== Tag_1.TagState.Deconstructed)) return [3 /*break*/, 3];
+                        return [4 /*yield*/, VisionHelper_1.VisionHelper.wait(0.01)];
+                    case 2:
+                        _g.sent();
+                        _g.label = 3;
+                    case 3:
+                        tag.deconstruct();
+                        _g.label = 4;
+                    case 4:
+                        _b = _a.next();
+                        return [3 /*break*/, 1];
+                    case 5: return [3 /*break*/, 8];
+                    case 6:
+                        e_18_1 = _g.sent();
+                        e_18 = { error: e_18_1 };
+                        return [3 /*break*/, 8];
+                    case 7:
+                        try {
+                            if (_b && !_b.done && (_e = _a.return)) _e.call(_a);
+                        }
+                        finally { if (e_18) throw e_18.error; }
+                        return [7 /*endfinally*/];
+                    case 8:
+                        this.tagsToDeconstruct.length = 0;
+                        _g.label = 9;
+                    case 9:
+                        _g.trys.push([9, 14, 15, 16]);
+                        _c = __values(this.scopesToDeconstruct), _d = _c.next();
+                        _g.label = 10;
+                    case 10:
+                        if (!!_d.done) return [3 /*break*/, 13];
+                        scope = _d.value;
+                        scope.deconstruct();
+                        return [4 /*yield*/, VisionHelper_1.VisionHelper.wait(0.01)];
+                    case 11:
+                        _g.sent();
+                        _g.label = 12;
+                    case 12:
+                        _d = _c.next();
+                        return [3 /*break*/, 10];
+                    case 13: return [3 /*break*/, 16];
+                    case 14:
+                        e_19_1 = _g.sent();
+                        e_19 = { error: e_19_1 };
+                        return [3 /*break*/, 16];
+                    case 15:
+                        try {
+                            if (_d && !_d.done && (_f = _c.return)) _f.call(_c);
+                        }
+                        finally { if (e_19) throw e_19.error; }
+                        return [7 /*endfinally*/];
+                    case 16:
+                        this.tagsToDeconstruct.length = 0;
+                        return [2 /*return*/];
+                }
+            });
+        });
     };
     AbstractDOM.prototype.getTagsForElements = function (elements, create) {
         if (create === void 0) { create = false; }

@@ -11,6 +11,7 @@ import {SlotTag} from "../Tag/SlotTag";
 import {SlottedTag} from "../Tag/SlottedTag";
 import {Scope} from "../Scope";
 import {EventDispatcher} from "../EventDispatcher";
+import {VisionHelper} from "../helpers/VisionHelper";
 
 export enum EQuerySelectDirection {
     ALL,
@@ -370,15 +371,17 @@ export abstract class AbstractDOM extends EventDispatcher {
         }
     }
 
-    cleanup() {
+    async cleanup() {
         for (const tag of this.tagsToDeconstruct) {
             if (tag.state !== TagState.Deconstructed)
+                await VisionHelper.wait(0.01);
                 tag.deconstruct();
         }
         this.tagsToDeconstruct.length = 0;
 
         for (const scope of this.scopesToDeconstruct) {
             scope.deconstruct();
+            await VisionHelper.wait(0.01);
         }
         this.tagsToDeconstruct.length = 0;
     }

@@ -47,7 +47,7 @@ export declare abstract class AbstractDOM extends EventDispatcher {
     removedQueued(element: HTMLElement): void;
     buildFrom(ele: any, isRoot?: boolean, forComponent?: boolean): Promise<Tag[]>;
     addGarbage(garbage: Scope | Tag): void;
-    cleanup(): void;
+    cleanup(): Promise<void>;
     getTagsForElements(elements: Element[], create?: boolean): Promise<TagList>;
     getTagForElement(element: Element, create?: boolean, forComponent?: boolean): any;
     getTagForScope(scope: Scope): Promise<Tag>;
