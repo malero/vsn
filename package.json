@@ -1,58 +1,39 @@
 {
   "name": "vsn",
-  "version": "0.1.149",
+  "version": "0.1.0",
   "description": "SEO Friendly Javascript/Typescript Framework",
-  "keywords": [
-    "framework",
-    "typescript",
-    "html",
-    "ajax",
-    "hateoas",
-    "rest",
-    "seo",
-    "reactive",
-    "component",
-    "web component",
-    "web components",
-    "web component framework"
-  ],
-  "main": "./dist/vsn.js",
-  "scripts": {
-    "build": "rm -rf ./dist/ && npm run-script version && tsc",
-    "version": "echo \"export const VERSION = '${npm_package_version}';\n\" > src/version.ts",
-    "build_dev": "rm -rf ./dist/ && webpack --env BUILD=development BENCHMARK=1",
-    "demo": "webpack --env BUILD=production BENCHMARK=1 && cp ./dist/demo.min.js ./demo/vsn.js",
-    "test": "karma start --single-run",
-    "posttest": "codecov",
-    "clean": "rm -rf ./dist/"
-  },
   "license": "MIT",
-  "dependencies": {},
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "clean": "rm -rf dist",
+    "prepublishOnly": "npm run build"
+  },
   "devDependencies": {
-    "@types/jasmine": "^3.6.10",
-    "codecov": "^3.8.1",
-    "jasmine": "^3.7.0",
-    "karma": "6.3.16",
-    "karma-chrome-launcher": "^3.1.0",
-    "karma-coverage": "^2.0.3",
-    "karma-jasmine": "^4.0.1",
-    "karma-typescript": "^5.5.1",
-    "ts-loader": "^9.1.1",
-    "typescript": "^4.2.4",
-    "webpack": "5.76.0",
-    "webpack-cli": "^4.6.0"
+    "@vitest/coverage-v8": "^2.0.5",
+    "tsup": "^8.2.0",
+    "typescript": "^5.6.3",
+    "vitest": "^2.0.5"
   },
-  "homepage": "https://www.vsnjs.com",
-  "git": "https://github.com/malero/vsn.git",
-  "typings": "./dist/vsn.d.ts",
-  "types": "./dist/vsn.d.ts",
-  "author": "Malero <contact@vsnjs.com> (https://www.vsnjs.com/)",
-  "bugs": {
-    "url": "https://github.com/malero/vsn/issues",
-    "email": "contact@vsnjs.com"
-  },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/malero/vsn.git"
+  "engines": {
+    "node": ">=18.18.0"
   }
 }

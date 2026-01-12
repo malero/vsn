@@ -1,1 +1,0 @@
-export { XHR } from "./XHR";

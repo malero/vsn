@@ -1,0 +1,45 @@
+import { Token, TokenType } from "./token";
+
+export class TokenStream {
+  private index = 0;
+
+  constructor(private tokens: Token[]) {}
+
+  peek(offset = 0): Token | null {
+    return this.tokens[this.index + offset] ?? null;
+  }
+
+  next(): Token {
+    const token = this.tokens[this.index++];
+    if (!token) {
+      throw new Error("Unexpected end of input");
+    }
+    return token;
+  }
+
+  eof(): boolean {
+    return this.index >= this.tokens.length;
+  }
+
+  match(type: TokenType): boolean {
+    if (this.peek()?.type === type) {
+      this.next();
+      return true;
+    }
+    return false;
+  }
+
+  expect(type: TokenType): Token {
+    const token = this.next();
+    if (token.type !== type) {
+      throw new Error(`Expected ${type} but got ${token.type}`);
+    }
+    return token;
+  }
+
+  skipWhitespace(): void {
+    while (this.peek()?.type === TokenType.Whitespace) {
+      this.next();
+    }
+  }
+}
