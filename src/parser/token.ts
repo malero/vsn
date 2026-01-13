@@ -9,6 +9,8 @@ export enum TokenType {
   Behavior = "Behavior",
   State = "State",
   On = "On",
+  Construct = "Construct",
+  Destruct = "Destruct",
 
   LBrace = "LBrace",
   RBrace = "RBrace",

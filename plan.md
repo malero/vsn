@@ -135,6 +135,10 @@ No vsn-controller: Everything is a behavior.
 
 @keyframes for logic: Sequential state changes over time.
 
+Conditional Blocks (Future-Proofing)
+- Reserve @when (expr) { ... } for conditional behavior activation.
+- @media can be implemented as a specialized @when using matchMedia.
+
 8. Scopes & Access Rules
 - Scope lookup: local -> parent -> root.
 - One scope per element. All matching behaviors merge into that scope.
@@ -146,9 +150,9 @@ No vsn-controller: Everything is a behavior.
 9. Attribute Compatibility Layer
 - Any vsn-* attribute implicitly creates/attaches a behavior to that element.
 - This keeps scope/variable rules consistent with explicit behaviors.
-- Core attributes to support: vsn-on:*, vsn-bind, vsn-if, vsn-show, vsn-html, vsn-get, vsn-target, vsn-swap, vsn-list.
+- Core attributes to support: vsn-on:*, vsn-bind, vsn-if, vsn-show, vsn-html, vsn-get, vsn-target, vsn-swap.
 - !trusted on vsn-html/vsn-get allows unsafe HTML insertion + behavior parsing.
-- Defer/deprecate: controller/model/service, exec/script.
+- Defer/deprecate: list/template, controller/model/service, exec/script.
 
 10. Timing & Modifier Controls
 - Use ! flags for modifiers (ex: !important, !trusted, !debounce(50)).
@@ -183,9 +187,8 @@ No vsn-controller: Everything is a behavior.
 - Document CSP guidance (no unsafe-inline).
 
 16. Lists & Templates (Open)
-- Prefer server-rendered list updates by default.
-- Optional client-side repeat behavior using <template>.
-- Fallback idea: if no <template>, allow opt-in marker (data-vsn-template) on first child to use as template.
+- Omit list/repeat features in core v1; rely on server-rendered HTML (htmx-style).
+- Keep list/repeat as an optional extension in a separate package.
 
 17. Engine & Execution Context
 - VSN Engine instance owns registries, observers, caches, and schedulers (no static singletons).
@@ -210,3 +213,9 @@ No vsn-controller: Everything is a behavior.
 - !important affects merge/override decisions.
 - !trusted affects HTML injection + behavior parsing.
 - !debounce affects binding scheduling (default 200ms).
+
+21. Extensibility
+- Engine-scoped registries for flags, attributes, behaviors, and tags.
+- Custom flags can register parse/apply hooks.
+- Custom vsn-* attributes can be added without core changes.
+- Keep core minimal (fast, lightweight); richer features live in extensions.

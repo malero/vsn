@@ -42,4 +42,19 @@ export class TokenStream {
       this.next();
     }
   }
+
+  peekNonWhitespace(offset = 0): Token | null {
+    let count = 0;
+    for (let i = this.index; i < this.tokens.length; i++) {
+      const token = this.tokens[i];
+      if (token.type === TokenType.Whitespace) {
+        continue;
+      }
+      if (count === offset) {
+        return token;
+      }
+      count += 1;
+    }
+    return null;
+  }
 }

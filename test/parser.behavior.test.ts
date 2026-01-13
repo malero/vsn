@@ -30,4 +30,26 @@ describe("parser behavior", () => {
       expect(nestedBehavior.selector.selectorText).toBe("> .btn-close");
     }
   });
+
+  it("parses assignment targets with paths and directives", () => {
+    const source = `behavior .card {
+  on click() {
+    parent.active = false;
+    @aria-pressed = true;
+  }
+}`;
+
+    const program = new Parser(source).parseProgram();
+    const behavior = program.behaviors[0];
+    const onBlock = behavior.body.statements[0];
+
+    expect(onBlock.type).toBe("OnBlock");
+    if (onBlock.type === "OnBlock") {
+      const firstAssignment = onBlock.body.statements[0];
+      expect(firstAssignment.type).toBe("Assignment");
+
+      const secondAssignment = onBlock.body.statements[1];
+      expect(secondAssignment.type).toBe("Assignment");
+    }
+  });
 });

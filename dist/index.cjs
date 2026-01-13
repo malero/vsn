@@ -24,7 +24,9 @@ __export(index_exports, {
   BaseNode: () => BaseNode,
   BehaviorNode: () => BehaviorNode,
   BlockNode: () => BlockNode,
+  DeclarationNode: () => DeclarationNode,
   DirectiveExpression: () => DirectiveExpression,
+  Engine: () => Engine,
   IdentifierExpression: () => IdentifierExpression,
   Lexer: () => Lexer,
   LiteralExpression: () => LiteralExpression,
@@ -53,6 +55,8 @@ var TokenType = /* @__PURE__ */ ((TokenType2) => {
   TokenType2["Behavior"] = "Behavior";
   TokenType2["State"] = "State";
   TokenType2["On"] = "On";
+  TokenType2["Construct"] = "Construct";
+  TokenType2["Destruct"] = "Destruct";
   TokenType2["LBrace"] = "LBrace";
   TokenType2["RBrace"] = "RBrace";
   TokenType2["LParen"] = "LParen";
@@ -82,6 +86,8 @@ var KEYWORDS = {
   behavior: "Behavior" /* Behavior */,
   state: "State" /* State */,
   on: "On" /* On */,
+  construct: "Construct" /* Construct */,
+  destruct: "Destruct" /* Destruct */,
   true: "Boolean" /* Boolean */,
   false: "Boolean" /* Boolean */,
   null: "Null" /* Null */
@@ -344,6 +350,16 @@ var AssignmentNode = class extends BaseNode {
     this.value = value;
   }
 };
+var DeclarationNode = class extends BaseNode {
+  constructor(target, operator, value, flags, flagArgs) {
+    super("Declaration");
+    this.target = target;
+    this.operator = operator;
+    this.value = value;
+    this.flags = flags;
+    this.flagArgs = flagArgs;
+  }
+};
 var IdentifierExpression = class extends BaseNode {
   constructor(name) {
     super("Identifier");
@@ -419,6 +435,20 @@ var TokenStream = class {
       this.next();
     }
   }
+  peekNonWhitespace(offset = 0) {
+    let count = 0;
+    for (let i = this.index; i < this.tokens.length; i++) {
+      const token = this.tokens[i];
+      if (token.type === "Whitespace" /* Whitespace */) {
+        continue;
+      }
+      if (count === offset) {
+        return token;
+      }
+      count += 1;
+    }
+    return null;
+  }
 };
 
 // src/parser/parser.ts
@@ -441,7 +471,7 @@ var Parser = class {
     this.stream.skipWhitespace();
     this.stream.expect("Behavior" /* Behavior */);
     const selector = this.parseSelector();
-    const body = this.parseBlock();
+    const body = this.parseBlock({ allowDeclarations: true });
     return new BehaviorNode(selector, body);
   }
   parseSelector() {
@@ -470,10 +500,12 @@ var Parser = class {
     }
     return new SelectorNode(selectorText.trim());
   }
-  parseBlock() {
+  parseBlock(options) {
+    const allowDeclarations = options?.allowDeclarations ?? false;
     this.stream.skipWhitespace();
     this.stream.expect("LBrace" /* LBrace */);
     const statements = [];
+    let declarationsOpen = allowDeclarations;
     while (true) {
       this.stream.skipWhitespace();
       const next = this.stream.peek();
@@ -484,7 +516,21 @@ var Parser = class {
         this.stream.next();
         break;
       }
-      statements.push(this.parseStatement());
+      const isDeclaration = this.isDeclarationStart();
+      if (isDeclaration) {
+        if (!allowDeclarations) {
+          throw new Error("Declarations are only allowed at the behavior root");
+        }
+        if (!declarationsOpen) {
+          throw new Error("Declarations must appear before blocks");
+        }
+        statements.push(this.parseDeclaration());
+      } else {
+        if (declarationsOpen) {
+          declarationsOpen = false;
+        }
+        statements.push(this.parseStatement());
+      }
     }
     return new BlockNode(statements);
   }
@@ -494,16 +540,19 @@ var Parser = class {
     if (!next) {
       throw new Error("Unexpected end of input");
     }
-    if (next.type === "State" /* State */) {
-      return this.parseStateBlock();
-    }
     if (next.type === "On" /* On */) {
       return this.parseOnBlock();
+    }
+    if (next.type === "Construct" /* Construct */) {
+      return this.parseConstructBlock();
+    }
+    if (next.type === "Destruct" /* Destruct */) {
+      return this.parseDestructBlock();
     }
     if (next.type === "Behavior" /* Behavior */) {
       return this.parseBehavior();
     }
-    if (next.type === "Identifier" /* Identifier */ && this.stream.peek(1)?.type === "Equals" /* Equals */) {
+    if (this.isAssignmentStart()) {
       return this.parseAssignment();
     }
     throw new Error(`Unexpected token ${next.type}`);
@@ -573,18 +622,18 @@ var Parser = class {
       }
       throw new Error(`Unexpected token in on() args: ${next.type}`);
     }
-    const body = this.parseBlock();
+    const body = this.parseBlock({ allowDeclarations: false });
     return new OnBlockNode(event.value, args, body);
   }
   parseAssignment() {
-    const target = this.stream.expect("Identifier" /* Identifier */);
+    const target = this.parseAssignmentTarget();
     this.stream.skipWhitespace();
     this.stream.expect("Equals" /* Equals */);
     this.stream.skipWhitespace();
     const value = this.parseExpression();
     this.stream.skipWhitespace();
     this.stream.expect("Semicolon" /* Semicolon */);
-    return new AssignmentNode(target.value, value);
+    return new AssignmentNode(target, value);
   }
   parseExpression() {
     const token = this.stream.peek();
@@ -606,7 +655,7 @@ var Parser = class {
       return this.parseQueryExpression();
     }
     if (token.type === "Identifier" /* Identifier */) {
-      return new IdentifierExpression(this.stream.next().value);
+      return new IdentifierExpression(this.parseIdentifierPath());
     }
     if (token.type === "Boolean" /* Boolean */) {
       return new LiteralExpression(this.stream.next().value === "true");
@@ -622,6 +671,47 @@ var Parser = class {
       return new LiteralExpression(this.stream.next().value);
     }
     throw new Error(`Unsupported expression token ${token.type}`);
+  }
+  parseAssignmentTarget() {
+    const token = this.stream.peek();
+    if (!token) {
+      throw new Error("Expected assignment target");
+    }
+    if (token.type === "At" /* At */ || token.type === "Dollar" /* Dollar */) {
+      const kind = token.type === "At" /* At */ ? "attr" : "style";
+      this.stream.next();
+      const name = this.stream.expect("Identifier" /* Identifier */);
+      return new DirectiveExpression(kind, name.value);
+    }
+    if (token.type === "Identifier" /* Identifier */) {
+      return new IdentifierExpression(this.parseIdentifierPath());
+    }
+    throw new Error(`Invalid assignment target ${token.type}`);
+  }
+  isAssignmentStart() {
+    const first = this.stream.peekNonWhitespace(0);
+    if (!first) {
+      return false;
+    }
+    if (first.type === "Identifier" /* Identifier */) {
+      const second = this.stream.peekNonWhitespace(1);
+      return second?.type === "Equals" /* Equals */ || second?.type === "Dot" /* Dot */;
+    }
+    if (first.type === "At" /* At */ || first.type === "Dollar" /* Dollar */) {
+      const second = this.stream.peekNonWhitespace(1);
+      const third = this.stream.peekNonWhitespace(2);
+      return second?.type === "Identifier" /* Identifier */ && third?.type === "Equals" /* Equals */;
+    }
+    return false;
+  }
+  parseIdentifierPath() {
+    let value = this.stream.expect("Identifier" /* Identifier */).value;
+    while (this.stream.peek()?.type === "Dot" /* Dot */) {
+      this.stream.next();
+      const part = this.stream.expect("Identifier" /* Identifier */).value;
+      value = `${value}.${part}`;
+    }
+    return value;
   }
   parseQueryExpression() {
     this.stream.expect("Question" /* Question */);
@@ -662,6 +752,415 @@ var Parser = class {
     }
     return selectorText.trim();
   }
+  parseDeclaration() {
+    const target = this.parseDeclarationTarget();
+    this.stream.skipWhitespace();
+    const operator = this.parseDeclarationOperator();
+    this.stream.skipWhitespace();
+    const value = this.parseExpression();
+    const { flags, flagArgs } = this.parseFlags();
+    this.stream.skipWhitespace();
+    this.stream.expect("Semicolon" /* Semicolon */);
+    return new DeclarationNode(target, operator, value, flags, flagArgs);
+  }
+  parseDeclarationTarget() {
+    const token = this.stream.peek();
+    if (!token) {
+      throw new Error("Expected declaration target");
+    }
+    if (token.type === "At" /* At */ || token.type === "Dollar" /* Dollar */) {
+      const kind = token.type === "At" /* At */ ? "attr" : "style";
+      this.stream.next();
+      const name = this.stream.expect("Identifier" /* Identifier */);
+      return new DirectiveExpression(kind, name.value);
+    }
+    if (token.type === "Identifier" /* Identifier */) {
+      return new IdentifierExpression(this.stream.next().value);
+    }
+    throw new Error(`Invalid declaration target ${token.type}`);
+  }
+  parseDeclarationOperator() {
+    this.stream.expect("Colon" /* Colon */);
+    const next = this.stream.peek();
+    if (!next) {
+      return ":";
+    }
+    if (next.type === "Equals" /* Equals */) {
+      this.stream.next();
+      return ":=";
+    }
+    if (next.type === "Less" /* Less */) {
+      this.stream.next();
+      return ":<";
+    }
+    if (next.type === "Greater" /* Greater */) {
+      this.stream.next();
+      return ":>";
+    }
+    return ":";
+  }
+  parseFlags() {
+    const flags = {};
+    const flagArgs = {};
+    while (true) {
+      this.stream.skipWhitespace();
+      if (this.stream.peek()?.type !== "Bang" /* Bang */) {
+        break;
+      }
+      this.stream.next();
+      const name = this.stream.expect("Identifier" /* Identifier */).value;
+      if (name === "important") {
+        flags.important = true;
+      } else if (name === "trusted") {
+        flags.trusted = true;
+      } else if (name === "debounce") {
+        flags.debounce = true;
+        if (this.stream.peek()?.type === "LParen" /* LParen */) {
+          this.stream.next();
+          this.stream.skipWhitespace();
+          const numberToken = this.stream.expect("Number" /* Number */);
+          flagArgs.debounce = Number(numberToken.value);
+          this.stream.skipWhitespace();
+          this.stream.expect("RParen" /* RParen */);
+        } else {
+          flagArgs.debounce = 200;
+        }
+      } else {
+        throw new Error(`Unknown flag ${name}`);
+      }
+    }
+    return { flags, flagArgs };
+  }
+  isDeclarationStart() {
+    const first = this.stream.peekNonWhitespace(0);
+    if (!first) {
+      return false;
+    }
+    if (first.type === "Identifier" /* Identifier */) {
+      const second = this.stream.peekNonWhitespace(1);
+      return second?.type === "Colon" /* Colon */;
+    }
+    if (first.type === "At" /* At */ || first.type === "Dollar" /* Dollar */) {
+      const second = this.stream.peekNonWhitespace(1);
+      const third = this.stream.peekNonWhitespace(2);
+      return second?.type === "Identifier" /* Identifier */ && third?.type === "Colon" /* Colon */;
+    }
+    return false;
+  }
+  parseConstructBlock() {
+    this.stream.expect("Construct" /* Construct */);
+    const body = this.parseBlock({ allowDeclarations: false });
+    body.type = "Construct";
+    return body;
+  }
+  parseDestructBlock() {
+    this.stream.expect("Destruct" /* Destruct */);
+    const body = this.parseBlock({ allowDeclarations: false });
+    body.type = "Destruct";
+    return body;
+  }
+};
+
+// src/runtime/scope.ts
+var Scope = class {
+  data = /* @__PURE__ */ new Map();
+  get(key) {
+    return this.getPath(key);
+  }
+  set(key, value) {
+    this.setPath(key, value);
+  }
+  getPath(path) {
+    const parts = path.split(".");
+    const root = parts[0];
+    if (!root) {
+      return void 0;
+    }
+    let value = this.data.get(root);
+    for (let i = 1; i < parts.length; i += 1) {
+      if (value == null) {
+        return void 0;
+      }
+      const key = parts[i];
+      if (!key) {
+        return void 0;
+      }
+      value = value[key];
+    }
+    return value;
+  }
+  setPath(path, value) {
+    const parts = path.split(".");
+    const root = parts[0];
+    if (!root) {
+      return;
+    }
+    if (parts.length === 1) {
+      this.data.set(root, value);
+      return;
+    }
+    let obj = this.data.get(root);
+    if (obj == null || typeof obj !== "object") {
+      obj = {};
+      this.data.set(root, obj);
+    }
+    let cursor = obj;
+    for (let i = 1; i < parts.length - 1; i += 1) {
+      const key = parts[i];
+      if (!key) {
+        return;
+      }
+      if (cursor[key] == null || typeof cursor[key] !== "object") {
+        cursor[key] = {};
+      }
+      cursor = cursor[key];
+    }
+    const lastKey = parts[parts.length - 1];
+    if (!lastKey) {
+      return;
+    }
+    cursor[lastKey] = value;
+  }
+};
+
+// src/runtime/bindings.ts
+function applyBind(element, expression, scope) {
+  const key = expression.trim();
+  if (!key) {
+    return;
+  }
+  if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) {
+    const value = element.value;
+    if (value !== void 0 && value !== "") {
+      scope.set(key, value);
+    }
+    return;
+  }
+  const text = element.textContent?.trim();
+  if (text) {
+    scope.set(key, text);
+  }
+}
+
+// src/runtime/conditionals.ts
+function readCondition(expression, scope) {
+  const key = expression.trim();
+  if (!key) {
+    return false;
+  }
+  return !!scope.get(key);
+}
+function applyIf(element, expression, scope) {
+  element.style.display = readCondition(expression, scope) ? "" : "none";
+}
+function applyShow(element, expression, scope) {
+  element.style.display = readCondition(expression, scope) ? "" : "none";
+}
+
+// src/runtime/html.ts
+function sanitizeHtml(value) {
+  return value.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, "");
+}
+function applyHtml(element, expression, scope, trusted) {
+  const key = expression.trim();
+  if (!key) {
+    return;
+  }
+  const value = scope.get(key);
+  const html = value == null ? "" : String(value);
+  element.innerHTML = trusted ? html : sanitizeHtml(html);
+}
+
+// src/runtime/http.ts
+async function applyGet(element, config, scope) {
+  if (!globalThis.fetch) {
+    throw new Error("fetch is not available");
+  }
+  const response = await globalThis.fetch(config.url);
+  if (!response || !response.ok) {
+    return;
+  }
+  const html = await response.text();
+  const target = resolveTarget(element, config.targetSelector);
+  if (!target) {
+    element.dispatchEvent(new CustomEvent("vsn:targetError", { detail: { selector: config.targetSelector } }));
+    return;
+  }
+  if (config.swap === "outer") {
+    const wrapper = document.createElement("div");
+    applyHtml(wrapper, "__html", { get: () => html }, config.trusted);
+    const replacement = wrapper.firstElementChild;
+    if (replacement && target.parentNode) {
+      target.parentNode.replaceChild(replacement, target);
+    }
+    return;
+  }
+  applyHtml(target, "__html", { get: () => html }, config.trusted);
+}
+function resolveTarget(element, selector) {
+  if (!selector) {
+    return element;
+  }
+  return element.ownerDocument.querySelector(selector);
+}
+
+// src/runtime/engine.ts
+var Engine = class {
+  scopes = /* @__PURE__ */ new WeakMap();
+  ifBindings = /* @__PURE__ */ new WeakMap();
+  showBindings = /* @__PURE__ */ new WeakMap();
+  htmlBindings = /* @__PURE__ */ new WeakMap();
+  getBindings = /* @__PURE__ */ new WeakMap();
+  async mount(root) {
+    const elements = [root, ...Array.from(root.querySelectorAll("*"))];
+    for (const element of elements) {
+      this.attachAttributes(element);
+    }
+  }
+  getScope(element) {
+    const existing = this.scopes.get(element);
+    if (existing) {
+      return existing;
+    }
+    const scope = new Scope();
+    this.scopes.set(element, scope);
+    return scope;
+  }
+  evaluate(element) {
+    const scope = this.getScope(element);
+    const ifExpr = this.ifBindings.get(element);
+    if (ifExpr && element instanceof HTMLElement) {
+      applyIf(element, ifExpr, scope);
+    }
+    const showExpr = this.showBindings.get(element);
+    if (showExpr && element instanceof HTMLElement) {
+      applyShow(element, showExpr, scope);
+    }
+    const htmlBinding = this.htmlBindings.get(element);
+    if (htmlBinding && element instanceof HTMLElement) {
+      applyHtml(element, htmlBinding.expr, scope, htmlBinding.trusted);
+    }
+  }
+  attachAttributes(element) {
+    const scope = this.getScope(element);
+    for (const name of element.getAttributeNames()) {
+      if (name === "vsn-bind") {
+        const value = element.getAttribute(name) ?? "";
+        applyBind(element, value, scope);
+        continue;
+      }
+      if (name === "vsn-if") {
+        const value = element.getAttribute(name) ?? "";
+        this.ifBindings.set(element, value);
+        if (element instanceof HTMLElement) {
+          applyIf(element, value, scope);
+        }
+        continue;
+      }
+      if (name === "vsn-show") {
+        const value = element.getAttribute(name) ?? "";
+        this.showBindings.set(element, value);
+        if (element instanceof HTMLElement) {
+          applyShow(element, value, scope);
+        }
+        continue;
+      }
+      if (name.startsWith("vsn-html")) {
+        const trusted = name.includes("!trusted");
+        const value = element.getAttribute(name) ?? "";
+        this.htmlBindings.set(element, { expr: value, trusted });
+        if (element instanceof HTMLElement) {
+          applyHtml(element, value, scope, trusted);
+        }
+        continue;
+      }
+      if (name.startsWith("vsn-get")) {
+        const trusted = name.includes("!trusted");
+        const url = element.getAttribute(name) ?? "";
+        const target = element.getAttribute("vsn-target") ?? void 0;
+        const swap = element.getAttribute("vsn-swap") ?? "inner";
+        const config = {
+          url,
+          swap,
+          trusted,
+          ...target ? { targetSelector: target } : {}
+        };
+        this.getBindings.set(element, config);
+        this.attachGetHandler(element);
+        continue;
+      }
+      const eventName = this.getOnEventName(name, null, null);
+      if (eventName) {
+        const value = element.getAttribute(name) ?? "";
+        this.attachOnHandler(element, eventName, value);
+      }
+    }
+  }
+  getOnEventName(name, prefix, localName) {
+    if (name.startsWith("vsn-on:")) {
+      return name.slice("vsn-on:".length);
+    }
+    if (prefix === "vsn-on" && localName) {
+      return localName;
+    }
+    return null;
+  }
+  attachOnHandler(element, eventName, code) {
+    element.addEventListener(eventName, () => {
+      const scope = this.getScope(element);
+      this.execute(code, scope);
+      this.evaluate(element);
+    });
+  }
+  attachGetHandler(element) {
+    element.addEventListener("click", async () => {
+      const config = this.getBindings.get(element);
+      if (!config) {
+        return;
+      }
+      await applyGet(element, config, this.getScope(element));
+    });
+  }
+  execute(code, scope) {
+    const statements = code.split(";").map((s) => s.trim()).filter(Boolean);
+    for (const statement of statements) {
+      const assignmentMatch = statement.match(/^([_a-zA-Z][_a-zA-Z0-9.]+)\s*=\s*(.+)$/);
+      if (assignmentMatch) {
+        const target = assignmentMatch[1];
+        const expr = assignmentMatch[2];
+        if (!target || !expr) {
+          continue;
+        }
+        const value = this.evaluateExpression(expr, scope);
+        scope.setPath(target, value);
+        continue;
+      }
+      this.evaluateExpression(statement, scope);
+    }
+  }
+  evaluateExpression(expr, scope) {
+    const parts = expr.split("+").map((part) => part.trim()).filter(Boolean);
+    if (parts.length > 1) {
+      return parts.reduce((sum, part) => {
+        const value = this.evaluateExpression(part, scope);
+        return sum + value;
+      }, 0);
+    }
+    const token = parts[0];
+    if (!token) {
+      return void 0;
+    }
+    if (token === "true") return true;
+    if (token === "false") return false;
+    if (token === "null") return null;
+    if (/^-?\d+(?:\.\d+)?$/.test(token)) {
+      return Number(token);
+    }
+    if (token.startsWith('"') && token.endsWith('"') || token.startsWith("'") && token.endsWith("'")) {
+      return token.slice(1, -1);
+    }
+    return scope.getPath(token);
+  }
 };
 
 // src/index.ts
@@ -676,7 +1175,9 @@ function parseCFS(source) {
   BaseNode,
   BehaviorNode,
   BlockNode,
+  DeclarationNode,
   DirectiveExpression,
+  Engine,
   IdentifierExpression,
   Lexer,
   LiteralExpression,

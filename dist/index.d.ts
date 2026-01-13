@@ -8,6 +8,8 @@ declare enum TokenType {
     Behavior = "Behavior",
     State = "State",
     On = "On",
+    Construct = "Construct",
+    Destruct = "Destruct",
     LBrace = "LBrace",
     RBrace = "RBrace",
     LParen = "LParen",
@@ -114,11 +116,29 @@ declare class OnBlockNode extends BaseNode {
     constructor(eventName: string, args: string[], body: BlockNode);
 }
 declare class AssignmentNode extends BaseNode {
-    target: string;
+    target: AssignmentTarget;
     value: ExpressionNode;
-    constructor(target: string, value: ExpressionNode);
+    constructor(target: AssignmentTarget, value: ExpressionNode);
+}
+interface DeclarationFlags {
+    important?: boolean;
+    trusted?: boolean;
+    debounce?: boolean;
+}
+interface DeclarationFlagArgs {
+    debounce?: number;
+}
+declare class DeclarationNode extends BaseNode {
+    target: DeclarationTarget;
+    operator: ":" | ":=" | ":<" | ":>";
+    value: ExpressionNode;
+    flags: DeclarationFlags;
+    flagArgs: DeclarationFlagArgs;
+    constructor(target: DeclarationTarget, operator: ":" | ":=" | ":<" | ":>", value: ExpressionNode, flags: DeclarationFlags, flagArgs: DeclarationFlagArgs);
 }
 type ExpressionNode = IdentifierExpression | LiteralExpression | UnaryExpression | DirectiveExpression | QueryExpression;
+type DeclarationTarget = IdentifierExpression | DirectiveExpression;
+type AssignmentTarget = IdentifierExpression | DirectiveExpression;
 declare class IdentifierExpression extends BaseNode {
     name: string;
     constructor(name: string);
@@ -156,12 +176,47 @@ declare class Parser {
     private parseOnBlock;
     private parseAssignment;
     private parseExpression;
+    private parseAssignmentTarget;
+    private isAssignmentStart;
+    private parseIdentifierPath;
     private parseQueryExpression;
     private readSelectorUntil;
+    private parseDeclaration;
+    private parseDeclarationTarget;
+    private parseDeclarationOperator;
+    private parseFlags;
+    private isDeclarationStart;
+    private parseConstructBlock;
+    private parseDestructBlock;
+}
+
+declare class Scope {
+    private data;
+    get(key: string): any;
+    set(key: string, value: any): void;
+    getPath(path: string): any;
+    setPath(path: string, value: any): void;
+}
+
+declare class Engine {
+    private scopes;
+    private ifBindings;
+    private showBindings;
+    private htmlBindings;
+    private getBindings;
+    mount(root: HTMLElement): Promise<void>;
+    getScope(element: Element): Scope;
+    evaluate(element: Element): void;
+    private attachAttributes;
+    private getOnEventName;
+    private attachOnHandler;
+    private attachGetHandler;
+    private execute;
+    private evaluateExpression;
 }
 
 declare const VERSION = "0.1.0";
 
 declare function parseCFS(source: string): ProgramNode;
 
-export { AssignmentNode, BaseNode, BehaviorNode, BlockNode, type CFSNode, DirectiveExpression, type ExecutionContext, type ExpressionNode, IdentifierExpression, Lexer, LiteralExpression, OnBlockNode, Parser, ProgramNode, QueryExpression, SelectorNode, StateBlockNode, StateEntryNode, TokenType, UnaryExpression, VERSION, parseCFS };
+export { AssignmentNode, type AssignmentTarget, BaseNode, BehaviorNode, BlockNode, type CFSNode, type DeclarationFlagArgs, type DeclarationFlags, DeclarationNode, type DeclarationTarget, DirectiveExpression, Engine, type ExecutionContext, type ExpressionNode, IdentifierExpression, Lexer, LiteralExpression, OnBlockNode, Parser, ProgramNode, QueryExpression, SelectorNode, StateBlockNode, StateEntryNode, TokenType, UnaryExpression, VERSION, parseCFS };

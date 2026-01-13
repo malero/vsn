@@ -71,8 +71,30 @@ export class OnBlockNode extends BaseNode {
 }
 
 export class AssignmentNode extends BaseNode {
-  constructor(public target: string, public value: ExpressionNode) {
+  constructor(public target: AssignmentTarget, public value: ExpressionNode) {
     super("Assignment");
+  }
+}
+
+export interface DeclarationFlags {
+  important?: boolean;
+  trusted?: boolean;
+  debounce?: boolean;
+}
+
+export interface DeclarationFlagArgs {
+  debounce?: number;
+}
+
+export class DeclarationNode extends BaseNode {
+  constructor(
+    public target: DeclarationTarget,
+    public operator: ":" | ":=" | ":<" | ":>",
+    public value: ExpressionNode,
+    public flags: DeclarationFlags,
+    public flagArgs: DeclarationFlagArgs
+  ) {
+    super("Declaration");
   }
 }
 
@@ -82,6 +104,9 @@ export type ExpressionNode =
   | UnaryExpression
   | DirectiveExpression
   | QueryExpression;
+
+export type DeclarationTarget = IdentifierExpression | DirectiveExpression;
+export type AssignmentTarget = IdentifierExpression | DirectiveExpression;
 
 export class IdentifierExpression extends BaseNode {
   constructor(public name: string) {

@@ -5,6 +5,7 @@ import { Parser } from "./parser/parser";
 export { Parser };
 export { TokenType } from "./parser/token";
 export * from "./ast/nodes";
+export { Engine } from "./runtime/engine";
 
 export function parseCFS(source: string) {
   const parser = new Parser(source);
