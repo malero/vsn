@@ -1,5 +1,10 @@
 export class Scope {
   private data = new Map<string, any>();
+  private root: Scope;
+
+  constructor(public readonly parent?: Scope) {
+    this.root = parent ? parent.root : this;
+  }
 
   get(key: string): any {
     return this.getPath(key);
@@ -10,12 +15,17 @@ export class Scope {
   }
 
   getPath(path: string): any {
-    const parts = path.split(".");
+    const { targetScope, targetPath } = this.resolveScope(path);
+    if (!targetScope || !targetPath) {
+      return undefined;
+    }
+
+    const parts = targetPath.split(".");
     const root = parts[0];
     if (!root) {
       return undefined;
     }
-    let value = this.data.get(root);
+    let value = targetScope.data.get(root);
     for (let i = 1; i < parts.length; i += 1) {
       if (value == null) {
         return undefined;
@@ -30,19 +40,24 @@ export class Scope {
   }
 
   setPath(path: string, value: any): void {
-    const parts = path.split(".");
+    const { targetScope, targetPath } = this.resolveScope(path);
+    if (!targetScope || !targetPath) {
+      return;
+    }
+
+    const parts = targetPath.split(".");
     const root = parts[0];
     if (!root) {
       return;
     }
     if (parts.length === 1) {
-      this.data.set(root, value);
+      targetScope.data.set(root, value);
       return;
     }
-    let obj = this.data.get(root);
+    let obj = targetScope.data.get(root);
     if (obj == null || typeof obj !== "object") {
       obj = {};
-      this.data.set(root, obj);
+      targetScope.data.set(root, obj);
     }
     let cursor = obj;
     for (let i = 1; i < parts.length - 1; i += 1) {
@@ -60,5 +75,18 @@ export class Scope {
       return;
     }
     cursor[lastKey] = value;
+  }
+
+  private resolveScope(path: string): { targetScope: Scope | undefined; targetPath: string | undefined } {
+    if (path.startsWith("parent.")) {
+      return { targetScope: this.parent, targetPath: path.slice("parent.".length) };
+    }
+    if (path.startsWith("root.")) {
+      return { targetScope: this.root, targetPath: path.slice("root.".length) };
+    }
+    if (path.startsWith("self.")) {
+      return { targetScope: this, targetPath: path.slice("self.".length) };
+    }
+    return { targetScope: this, targetPath: path };
   }
 }

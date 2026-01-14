@@ -35,6 +35,7 @@ describe("parser behavior", () => {
     const source = `behavior .card {
   on click() {
     parent.active = false;
+    root.count = 1;
     @aria-pressed = true;
   }
 }`;
@@ -47,9 +48,20 @@ describe("parser behavior", () => {
     if (onBlock.type === "OnBlock") {
       const firstAssignment = onBlock.body.statements[0];
       expect(firstAssignment.type).toBe("Assignment");
+      if (firstAssignment.type === "Assignment") {
+        expect(firstAssignment.target.type).toBe("Identifier");
+        expect(firstAssignment.target.name).toBe("parent.active");
+      }
 
       const secondAssignment = onBlock.body.statements[1];
       expect(secondAssignment.type).toBe("Assignment");
+      if (secondAssignment.type === "Assignment") {
+        expect(secondAssignment.target.type).toBe("Identifier");
+        expect(secondAssignment.target.name).toBe("root.count");
+      }
+
+      const thirdAssignment = onBlock.body.statements[2];
+      expect(thirdAssignment.type).toBe("Assignment");
     }
   });
 });

@@ -1,7 +1,7 @@
 <html>
 
 <head>
-    <script src="dist/index.min.js" type="text/javascript" />
+    <script src="dist/index.min.js" type="module" auto-mount />
     <script type="text/vsn">
         behavior .button {
             testing : true;
@@ -16,6 +16,6 @@
     </script>
 </head>
 <body>
-<a class="button" vsn-if="testing">Click Me?</a>
+<a class="button" vsn-if="!testing">Click Me?</a>
 </body>
 </html>

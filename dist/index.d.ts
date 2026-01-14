@@ -191,24 +191,32 @@ declare class Parser {
 }
 
 declare class Scope {
+    readonly parent?: Scope | undefined;
     private data;
+    private root;
+    constructor(parent?: Scope | undefined);
     get(key: string): any;
     set(key: string, value: any): void;
     getPath(path: string): any;
     setPath(path: string, value: any): void;
+    private resolveScope;
 }
 
 declare class Engine {
     private scopes;
+    private bindBindings;
     private ifBindings;
     private showBindings;
     private htmlBindings;
     private getBindings;
     mount(root: HTMLElement): Promise<void>;
-    getScope(element: Element): Scope;
+    getScope(element: Element, parentScope?: Scope): Scope;
     evaluate(element: Element): void;
     private attachAttributes;
-    private getOnEventName;
+    private parseBindDirection;
+    private hasVsnAttributes;
+    private findParentScope;
+    private parseOnAttribute;
     private attachOnHandler;
     private attachGetHandler;
     private execute;
@@ -218,5 +226,6 @@ declare class Engine {
 declare const VERSION = "0.1.0";
 
 declare function parseCFS(source: string): ProgramNode;
+declare function autoMount(root?: HTMLElement | Document): Engine | null;
 
-export { AssignmentNode, type AssignmentTarget, BaseNode, BehaviorNode, BlockNode, type CFSNode, type DeclarationFlagArgs, type DeclarationFlags, DeclarationNode, type DeclarationTarget, DirectiveExpression, Engine, type ExecutionContext, type ExpressionNode, IdentifierExpression, Lexer, LiteralExpression, OnBlockNode, Parser, ProgramNode, QueryExpression, SelectorNode, StateBlockNode, StateEntryNode, TokenType, UnaryExpression, VERSION, parseCFS };
+export { AssignmentNode, type AssignmentTarget, BaseNode, BehaviorNode, BlockNode, type CFSNode, type DeclarationFlagArgs, type DeclarationFlags, DeclarationNode, type DeclarationTarget, DirectiveExpression, Engine, type ExecutionContext, type ExpressionNode, IdentifierExpression, Lexer, LiteralExpression, OnBlockNode, Parser, ProgramNode, QueryExpression, SelectorNode, StateBlockNode, StateEntryNode, TokenType, UnaryExpression, VERSION, autoMount, parseCFS };

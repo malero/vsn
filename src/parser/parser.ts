@@ -262,7 +262,11 @@ export class Parser {
     }
 
     if (token.type === TokenType.Identifier) {
-      return new IdentifierExpression(this.parseIdentifierPath());
+      const name = this.parseIdentifierPath();
+      if (name === "self" || name === "parent" || name === "root") {
+        return new IdentifierExpression(name);
+      }
+      return new IdentifierExpression(name);
     }
 
     if (token.type === TokenType.Boolean) {

@@ -40,6 +40,7 @@ __export(index_exports, {
   TokenType: () => TokenType,
   UnaryExpression: () => UnaryExpression,
   VERSION: () => VERSION,
+  autoMount: () => autoMount,
   parseCFS: () => parseCFS
 });
 module.exports = __toCommonJS(index_exports);
@@ -655,7 +656,11 @@ var Parser = class {
       return this.parseQueryExpression();
     }
     if (token.type === "Identifier" /* Identifier */) {
-      return new IdentifierExpression(this.parseIdentifierPath());
+      const name = this.parseIdentifierPath();
+      if (name === "self" || name === "parent" || name === "root") {
+        return new IdentifierExpression(name);
+      }
+      return new IdentifierExpression(name);
     }
     if (token.type === "Boolean" /* Boolean */) {
       return new LiteralExpression(this.stream.next().value === "true");
@@ -863,7 +868,12 @@ var Parser = class {
 
 // src/runtime/scope.ts
 var Scope = class {
+  constructor(parent) {
+    this.parent = parent;
+    this.root = parent ? parent.root : this;
+  }
   data = /* @__PURE__ */ new Map();
+  root;
   get(key) {
     return this.getPath(key);
   }
@@ -871,12 +881,16 @@ var Scope = class {
     this.setPath(key, value);
   }
   getPath(path) {
-    const parts = path.split(".");
+    const { targetScope, targetPath } = this.resolveScope(path);
+    if (!targetScope || !targetPath) {
+      return void 0;
+    }
+    const parts = targetPath.split(".");
     const root = parts[0];
     if (!root) {
       return void 0;
     }
-    let value = this.data.get(root);
+    let value = targetScope.data.get(root);
     for (let i = 1; i < parts.length; i += 1) {
       if (value == null) {
         return void 0;
@@ -890,19 +904,23 @@ var Scope = class {
     return value;
   }
   setPath(path, value) {
-    const parts = path.split(".");
+    const { targetScope, targetPath } = this.resolveScope(path);
+    if (!targetScope || !targetPath) {
+      return;
+    }
+    const parts = targetPath.split(".");
     const root = parts[0];
     if (!root) {
       return;
     }
     if (parts.length === 1) {
-      this.data.set(root, value);
+      targetScope.data.set(root, value);
       return;
     }
-    let obj = this.data.get(root);
+    let obj = targetScope.data.get(root);
     if (obj == null || typeof obj !== "object") {
       obj = {};
-      this.data.set(root, obj);
+      targetScope.data.set(root, obj);
     }
     let cursor = obj;
     for (let i = 1; i < parts.length - 1; i += 1) {
@@ -921,25 +939,55 @@ var Scope = class {
     }
     cursor[lastKey] = value;
   }
+  resolveScope(path) {
+    if (path.startsWith("parent.")) {
+      return { targetScope: this.parent, targetPath: path.slice("parent.".length) };
+    }
+    if (path.startsWith("root.")) {
+      return { targetScope: this.root, targetPath: path.slice("root.".length) };
+    }
+    if (path.startsWith("self.")) {
+      return { targetScope: this, targetPath: path.slice("self.".length) };
+    }
+    return { targetScope: this, targetPath: path };
+  }
 };
 
 // src/runtime/bindings.ts
-function applyBind(element, expression, scope) {
+function getElementValue(element) {
+  if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) {
+    return element.value;
+  }
+  return element.textContent ?? "";
+}
+function setElementValue(element, value) {
+  if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) {
+    element.value = value;
+    element.setAttribute("value", value);
+    return;
+  }
+  element.textContent = value;
+}
+function applyBindToScope(element, expression, scope) {
   const key = expression.trim();
   if (!key) {
     return;
   }
-  if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) {
-    const value = element.value;
-    if (value !== void 0 && value !== "") {
-      scope.set(key, value);
-    }
+  const value = getElementValue(element).trim();
+  if (value !== "") {
+    scope.set(key, value);
+  }
+}
+function applyBindToElement(element, expression, scope) {
+  const key = expression.trim();
+  if (!key) {
     return;
   }
-  const text = element.textContent?.trim();
-  if (text) {
-    scope.set(key, text);
+  const value = scope.get(key);
+  if (value == null) {
+    return;
   }
+  setElementValue(element, String(value));
 }
 
 // src/runtime/conditionals.ts
@@ -1004,9 +1052,24 @@ function resolveTarget(element, selector) {
   return element.ownerDocument.querySelector(selector);
 }
 
+// src/runtime/debounce.ts
+function debounce(fn, waitMs) {
+  let timer;
+  return (...args) => {
+    if (timer) {
+      clearTimeout(timer);
+    }
+    timer = setTimeout(() => {
+      timer = void 0;
+      fn(...args);
+    }, waitMs);
+  };
+}
+
 // src/runtime/engine.ts
 var Engine = class {
   scopes = /* @__PURE__ */ new WeakMap();
+  bindBindings = /* @__PURE__ */ new WeakMap();
   ifBindings = /* @__PURE__ */ new WeakMap();
   showBindings = /* @__PURE__ */ new WeakMap();
   htmlBindings = /* @__PURE__ */ new WeakMap();
@@ -1014,20 +1077,29 @@ var Engine = class {
   async mount(root) {
     const elements = [root, ...Array.from(root.querySelectorAll("*"))];
     for (const element of elements) {
+      if (!this.hasVsnAttributes(element)) {
+        continue;
+      }
+      const parentScope = this.findParentScope(element);
+      this.getScope(element, parentScope);
       this.attachAttributes(element);
     }
   }
-  getScope(element) {
+  getScope(element, parentScope) {
     const existing = this.scopes.get(element);
     if (existing) {
       return existing;
     }
-    const scope = new Scope();
+    const scope = new Scope(parentScope ?? this.findParentScope(element));
     this.scopes.set(element, scope);
     return scope;
   }
   evaluate(element) {
     const scope = this.getScope(element);
+    const bindConfig = this.bindBindings.get(element);
+    if (bindConfig && (bindConfig.direction === "from" || bindConfig.direction === "both")) {
+      applyBindToElement(element, bindConfig.expr, scope);
+    }
     const ifExpr = this.ifBindings.get(element);
     if (ifExpr && element instanceof HTMLElement) {
       applyIf(element, ifExpr, scope);
@@ -1044,9 +1116,13 @@ var Engine = class {
   attachAttributes(element) {
     const scope = this.getScope(element);
     for (const name of element.getAttributeNames()) {
-      if (name === "vsn-bind") {
+      if (name.startsWith("vsn-bind")) {
         const value = element.getAttribute(name) ?? "";
-        applyBind(element, value, scope);
+        const direction = this.parseBindDirection(name);
+        this.bindBindings.set(element, { expr: value, direction });
+        if (direction === "to" || direction === "both") {
+          applyBindToScope(element, value, scope);
+        }
         continue;
       }
       if (name === "vsn-if") {
@@ -1089,28 +1165,67 @@ var Engine = class {
         this.attachGetHandler(element);
         continue;
       }
-      const eventName = this.getOnEventName(name, null, null);
-      if (eventName) {
-        const value = element.getAttribute(name) ?? "";
-        this.attachOnHandler(element, eventName, value);
+      const onConfig = this.parseOnAttribute(name, element.getAttribute(name) ?? "");
+      if (onConfig) {
+        this.attachOnHandler(element, onConfig);
       }
     }
   }
-  getOnEventName(name, prefix, localName) {
-    if (name.startsWith("vsn-on:")) {
-      return name.slice("vsn-on:".length);
+  parseBindDirection(name) {
+    if (name.includes(":from")) {
+      return "from";
     }
-    if (prefix === "vsn-on" && localName) {
-      return localName;
+    if (name.includes(":to")) {
+      return "to";
     }
-    return null;
+    return "both";
   }
-  attachOnHandler(element, eventName, code) {
-    element.addEventListener(eventName, () => {
+  hasVsnAttributes(element) {
+    return element.getAttributeNames().some((name) => name.startsWith("vsn-"));
+  }
+  findParentScope(element) {
+    let parent = element.parentElement;
+    while (parent) {
+      const scope = this.scopes.get(parent);
+      if (scope) {
+        return scope;
+      }
+      parent = parent.parentElement;
+    }
+    return void 0;
+  }
+  parseOnAttribute(name, value) {
+    if (!name.startsWith("vsn-on:")) {
+      return null;
+    }
+    const eventWithFlags = name.slice("vsn-on:".length);
+    const [event, ...flags] = eventWithFlags.split("!");
+    if (!event) {
+      return null;
+    }
+    let debounceMs;
+    for (const flag of flags) {
+      if (!flag.startsWith("debounce")) {
+        continue;
+      }
+      const match = flag.match(/debounce\((\d+)\)/);
+      debounceMs = match ? Number(match[1]) : 200;
+    }
+    const config = {
+      event,
+      code: value,
+      ...debounceMs !== void 0 ? { debounceMs } : {}
+    };
+    return config;
+  }
+  attachOnHandler(element, config) {
+    const handler = () => {
       const scope = this.getScope(element);
-      this.execute(code, scope);
+      this.execute(config.code, scope);
       this.evaluate(element);
-    });
+    };
+    const effectiveHandler = config.debounceMs ? debounce(handler, config.debounceMs) : handler;
+    element.addEventListener(config.event, effectiveHandler);
   }
   attachGetHandler(element) {
     element.addEventListener("click", async () => {
@@ -1169,6 +1284,31 @@ function parseCFS(source) {
   const parser = new Parser(source);
   return parser.parseProgram();
 }
+function autoMount(root = document) {
+  console.log("auto mounting");
+  if (typeof document === "undefined") {
+    return null;
+  }
+  const engine = new Engine();
+  const mount = () => {
+    const target = root instanceof Document ? root.body : root;
+    if (target) {
+      engine.mount(target);
+    }
+  };
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", mount, { once: true });
+  } else {
+    mount();
+  }
+  return engine;
+}
+if (typeof document !== "undefined") {
+  const scriptTag = document.querySelector("script[auto-mount]");
+  if (scriptTag) {
+    autoMount();
+  }
+}
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
   AssignmentNode,
@@ -1191,6 +1331,7 @@ function parseCFS(source) {
   TokenType,
   UnaryExpression,
   VERSION,
+  autoMount,
   parseCFS
 });
 //# sourceMappingURL=index.cjs.map
