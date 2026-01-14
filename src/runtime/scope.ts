@@ -1,6 +1,7 @@
 export class Scope {
   private data = new Map<string, any>();
   private root: Scope;
+  private listeners = new Map<string, Set<() => void>>();
 
   constructor(public readonly parent?: Scope) {
     this.root = parent ? parent.root : this;
@@ -52,6 +53,7 @@ export class Scope {
     }
     if (parts.length === 1) {
       targetScope.data.set(root, value);
+      targetScope.emitChange(targetPath);
       return;
     }
     let obj = targetScope.data.get(root);
@@ -75,6 +77,41 @@ export class Scope {
       return;
     }
     cursor[lastKey] = value;
+    this.emitChange(path);
+  }
+
+  on(path: string, handler: () => void): void {
+    const key = path.trim();
+    if (!key) {
+      return;
+    }
+    const set = this.listeners.get(key) ?? new Set<() => void>();
+    set.add(handler);
+    this.listeners.set(key, set);
+  }
+
+  off(path: string, handler: () => void): void {
+    const key = path.trim();
+    const set = this.listeners.get(key);
+    if (!set) {
+      return;
+    }
+    set.delete(handler);
+    if (set.size === 0) {
+      this.listeners.delete(key);
+    }
+  }
+
+  private emitChange(path: string): void {
+    const key = path.trim();
+    if (!key) {
+      return;
+    }
+    this.listeners.get(key)?.forEach((fn) => fn());
+    const rootKey = key.split(".")[0];
+    if (rootKey && rootKey !== key) {
+      this.listeners.get(rootKey)?.forEach((fn) => fn());
+    }
   }
 
   private resolveScope(path: string): { targetScope: Scope | undefined; targetPath: string | undefined } {

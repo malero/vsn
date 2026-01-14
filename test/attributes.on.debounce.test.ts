@@ -23,7 +23,8 @@ describe("vsn-on debounce", () => {
 
     expect(scope.get("count")).toBe(0);
 
-    vi.advanceTimersByTime(50);
+    await vi.advanceTimersByTimeAsync(50);
+    await Promise.resolve();
     expect(scope.get("count")).toBe(1);
 
     vi.useRealTimers();

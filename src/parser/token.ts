@@ -28,6 +28,7 @@ export enum TokenType {
   Greater = "Greater",
   Less = "Less",
   Plus = "Plus",
+  Minus = "Minus",
   Tilde = "Tilde",
   Star = "Star",
 

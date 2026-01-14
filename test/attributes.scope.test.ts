@@ -31,6 +31,7 @@ describe("scope chain keywords", () => {
     });
 
     child.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    await new Promise((resolve) => setTimeout(resolve, 0));
 
     expect(clicked).toBe(true);
     expect(middleScope.get("count")).toBe(1);

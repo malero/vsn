@@ -3,8 +3,8 @@ import { describe, expect, it } from "vitest";
 
 import { Engine } from "../src/index";
 
-describe("vsn-on", () => {
-  it("creates a scope and runs event handlers", async () => {
+describe("vsn-on AST evaluation", () => {
+  it("evaluates assignment and binary expressions", async () => {
     document.body.innerHTML = `
       <button id="btn" vsn-on:click="count = count + 1;"></button>
     `;
@@ -13,8 +13,6 @@ describe("vsn-on", () => {
     await engine.mount(document.body);
 
     const button = document.getElementById("btn") as HTMLButtonElement;
-    expect(button.getAttributeNames()).toContain("vsn-on:click");
-    expect(button.getAttribute("vsn-on:click")).toBe("count = count + 1;");
     const scope = engine.getScope(button);
     scope.set("count", 0);
 

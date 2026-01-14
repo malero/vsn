@@ -70,6 +70,10 @@ declare class Lexer {
 }
 
 interface ExecutionContext {
+    scope?: {
+        getPath(key: string): any;
+        setPath?(key: string, value: any): void;
+    };
 }
 interface CFSNode {
     type: string;
@@ -89,6 +93,7 @@ declare class ProgramNode extends BaseNode {
 declare class BlockNode extends BaseNode {
     statements: CFSNode[];
     constructor(statements: CFSNode[]);
+    evaluate(context: ExecutionContext): Promise<any>;
 }
 declare class SelectorNode extends BaseNode {
     selectorText: string;
@@ -119,6 +124,7 @@ declare class AssignmentNode extends BaseNode {
     target: AssignmentTarget;
     value: ExpressionNode;
     constructor(target: AssignmentTarget, value: ExpressionNode);
+    evaluate(context: ExecutionContext): Promise<any>;
 }
 interface DeclarationFlags {
     important?: boolean;
@@ -136,12 +142,13 @@ declare class DeclarationNode extends BaseNode {
     flagArgs: DeclarationFlagArgs;
     constructor(target: DeclarationTarget, operator: ":" | ":=" | ":<" | ":>", value: ExpressionNode, flags: DeclarationFlags, flagArgs: DeclarationFlagArgs);
 }
-type ExpressionNode = IdentifierExpression | LiteralExpression | UnaryExpression | DirectiveExpression | QueryExpression;
+type ExpressionNode = IdentifierExpression | LiteralExpression | UnaryExpression | BinaryExpression | DirectiveExpression | QueryExpression;
 type DeclarationTarget = IdentifierExpression | DirectiveExpression;
 type AssignmentTarget = IdentifierExpression | DirectiveExpression;
 declare class IdentifierExpression extends BaseNode {
     name: string;
     constructor(name: string);
+    evaluate(context: ExecutionContext): Promise<any>;
 }
 declare class LiteralExpression extends BaseNode {
     value: string | number | boolean | null;
@@ -152,11 +159,20 @@ declare class UnaryExpression extends BaseNode {
     operator: string;
     argument: ExpressionNode;
     constructor(operator: string, argument: ExpressionNode);
+    evaluate(context: ExecutionContext): Promise<any>;
+}
+declare class BinaryExpression extends BaseNode {
+    operator: string;
+    left: ExpressionNode;
+    right: ExpressionNode;
+    constructor(operator: string, left: ExpressionNode, right: ExpressionNode);
+    evaluate(context: ExecutionContext): Promise<any>;
 }
 declare class DirectiveExpression extends BaseNode {
     kind: "attr" | "style";
     name: string;
     constructor(kind: "attr" | "style", name: string);
+    evaluate(): Promise<any>;
 }
 declare class QueryExpression extends BaseNode {
     direction: "self" | "descendant" | "ancestor";
@@ -167,7 +183,9 @@ declare class QueryExpression extends BaseNode {
 declare class Parser {
     private stream;
     constructor(input: string);
+    static parseInline(code: string): BlockNode;
     parseProgram(): ProgramNode;
+    parseInlineBlock(): BlockNode;
     private parseBehavior;
     private parseSelector;
     private parseBlock;
@@ -176,18 +194,21 @@ declare class Parser {
     private parseOnBlock;
     private parseAssignment;
     private parseExpression;
+    private parseAdditiveExpression;
+    private parseUnaryExpression;
+    private parsePrimaryExpression;
     private parseAssignmentTarget;
-    private isAssignmentStart;
-    private parseIdentifierPath;
-    private parseQueryExpression;
-    private readSelectorUntil;
     private parseDeclaration;
     private parseDeclarationTarget;
     private parseDeclarationOperator;
     private parseFlags;
     private isDeclarationStart;
+    private isAssignmentStart;
     private parseConstructBlock;
     private parseDestructBlock;
+    private parseQueryExpression;
+    private readSelectorUntil;
+    private parseIdentifierPath;
 }
 
 declare class Scope {
@@ -209,6 +230,7 @@ declare class Engine {
     private showBindings;
     private htmlBindings;
     private getBindings;
+    private codeCache;
     mount(root: HTMLElement): Promise<void>;
     getScope(element: Element, parentScope?: Scope): Scope;
     evaluate(element: Element): void;
@@ -228,4 +250,4 @@ declare const VERSION = "0.1.0";
 declare function parseCFS(source: string): ProgramNode;
 declare function autoMount(root?: HTMLElement | Document): Engine | null;
 
-export { AssignmentNode, type AssignmentTarget, BaseNode, BehaviorNode, BlockNode, type CFSNode, type DeclarationFlagArgs, type DeclarationFlags, DeclarationNode, type DeclarationTarget, DirectiveExpression, Engine, type ExecutionContext, type ExpressionNode, IdentifierExpression, Lexer, LiteralExpression, OnBlockNode, Parser, ProgramNode, QueryExpression, SelectorNode, StateBlockNode, StateEntryNode, TokenType, UnaryExpression, VERSION, autoMount, parseCFS };
+export { AssignmentNode, type AssignmentTarget, BaseNode, BehaviorNode, BinaryExpression, BlockNode, type CFSNode, type DeclarationFlagArgs, type DeclarationFlags, DeclarationNode, type DeclarationTarget, DirectiveExpression, Engine, type ExecutionContext, type ExpressionNode, IdentifierExpression, Lexer, LiteralExpression, OnBlockNode, Parser, ProgramNode, QueryExpression, SelectorNode, StateBlockNode, StateEntryNode, TokenType, UnaryExpression, VERSION, autoMount, parseCFS };

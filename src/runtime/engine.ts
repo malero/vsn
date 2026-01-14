@@ -4,6 +4,8 @@ import { applyIf, applyShow } from "./conditionals";
 import { applyHtml } from "./html";
 import { applyGet, GetConfig } from "./http";
 import { debounce } from "./debounce";
+import { Parser } from "../parser/parser";
+import { BlockNode, ExecutionContext } from "../ast/nodes";
 
 interface OnConfig {
   event: string;
@@ -23,6 +25,7 @@ export class Engine {
   private showBindings = new WeakMap<Element, string>();
   private htmlBindings = new WeakMap<Element, { expr: string; trusted: boolean }>();
   private getBindings = new WeakMap<Element, GetConfig>();
+  private codeCache = new Map<string, BlockNode>();
 
   async mount(root: HTMLElement): Promise<void> {
     const elements: Element[] = [root, ...Array.from(root.querySelectorAll("*"))];
@@ -76,6 +79,9 @@ export class Engine {
         if (direction === "to" || direction === "both") {
           applyBindToScope(element, value, scope);
         }
+        if (direction === "from" || direction === "both") {
+          this.watch(scope, value, () => applyBindToElement(element, value, scope));
+        }
         continue;
       }
 
@@ -85,6 +91,7 @@ export class Engine {
         if (element instanceof HTMLElement) {
           applyIf(element, value, scope);
         }
+        this.watch(scope, value, () => this.evaluate(element));
         continue;
       }
 
@@ -94,6 +101,7 @@ export class Engine {
         if (element instanceof HTMLElement) {
           applyShow(element, value, scope);
         }
+        this.watch(scope, value, () => this.evaluate(element));
         continue;
       }
 
@@ -104,6 +112,7 @@ export class Engine {
         if (element instanceof HTMLElement) {
           applyHtml(element, value, scope, trusted);
         }
+        this.watch(scope, value, () => this.evaluate(element));
         continue;
       }
 
@@ -156,6 +165,14 @@ export class Engine {
     return undefined;
   }
 
+  private watch(scope: Scope, expr: string, handler: () => void): void {
+    const key = expr.trim();
+    if (!key) {
+      return;
+    }
+    scope.on(key, handler);
+  }
+
   private parseOnAttribute(name: string, value: string): OnConfig | null {
     if (!name.startsWith("vsn-on:")) {
       return null;
@@ -185,9 +202,9 @@ export class Engine {
   }
 
   private attachOnHandler(element: Element, config: OnConfig): void {
-    const handler = () => {
+    const handler = async () => {
       const scope = this.getScope(element);
-      this.execute(config.code, scope);
+      await this.execute(config.code, scope);
       this.evaluate(element);
     };
     const effectiveHandler = config.debounceMs ? debounce(handler, config.debounceMs) : handler;
@@ -204,22 +221,14 @@ export class Engine {
     });
   }
 
-  private execute(code: string, scope: Scope): void {
-    const statements = code.split(";").map((s) => s.trim()).filter(Boolean);
-    for (const statement of statements) {
-      const assignmentMatch = statement.match(/^([_a-zA-Z][_a-zA-Z0-9.]+)\s*=\s*(.+)$/);
-      if (assignmentMatch) {
-        const target = assignmentMatch[1];
-        const expr = assignmentMatch[2];
-        if (!target || !expr) {
-          continue;
-        }
-        const value = this.evaluateExpression(expr, scope);
-        scope.setPath(target, value);
-        continue;
-      }
-      this.evaluateExpression(statement, scope);
+  private async execute(code: string, scope: Scope): Promise<void> {
+    let block = this.codeCache.get(code);
+    if (!block) {
+      block = Parser.parseInline(code);
+      this.codeCache.set(code, block);
     }
+    const context: ExecutionContext = { scope };
+    await block.evaluate(context);
   }
 
   private evaluateExpression(expr: string, scope: Scope): any {

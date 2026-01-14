@@ -1,5 +1,8 @@
 export interface ExecutionContext {
-  // Placeholder for runtime context
+  scope?: {
+    getPath(key: string): any;
+    setPath?(key: string, value: any): void;
+  };
 }
 
 export interface CFSNode {
@@ -29,6 +32,14 @@ export class ProgramNode extends BaseNode {
 export class BlockNode extends BaseNode {
   constructor(public statements: CFSNode[]) {
     super("Block");
+  }
+
+  async evaluate(context: ExecutionContext): Promise<any> {
+    for (const statement of this.statements) {
+      if (statement && typeof statement.evaluate === "function") {
+        await statement.evaluate(context);
+      }
+    }
   }
 }
 
@@ -74,6 +85,22 @@ export class AssignmentNode extends BaseNode {
   constructor(public target: AssignmentTarget, public value: ExpressionNode) {
     super("Assignment");
   }
+
+  async evaluate(context: ExecutionContext): Promise<any> {
+    if (!context.scope || !context.scope.setPath) {
+      return undefined;
+    }
+    let targetPath: string | undefined;
+    if (this.target instanceof IdentifierExpression) {
+      targetPath = this.target.name;
+    }
+    if (!targetPath) {
+      return undefined;
+    }
+    const value = await this.value.evaluate(context);
+    context.scope.setPath(targetPath, value);
+    return value;
+  }
 }
 
 export interface DeclarationFlags {
@@ -102,6 +129,7 @@ export type ExpressionNode =
   | IdentifierExpression
   | LiteralExpression
   | UnaryExpression
+  | BinaryExpression
   | DirectiveExpression
   | QueryExpression;
 
@@ -111,6 +139,13 @@ export type AssignmentTarget = IdentifierExpression | DirectiveExpression;
 export class IdentifierExpression extends BaseNode {
   constructor(public name: string) {
     super("Identifier");
+  }
+
+  async evaluate(context: ExecutionContext): Promise<any> {
+    if (!context.scope) {
+      return undefined;
+    }
+    return context.scope.getPath(this.name);
   }
 }
 
@@ -128,11 +163,48 @@ export class UnaryExpression extends BaseNode {
   constructor(public operator: string, public argument: ExpressionNode) {
     super("UnaryExpression");
   }
+
+  async evaluate(context: ExecutionContext): Promise<any> {
+    const value = await this.argument.evaluate(context);
+    if (this.operator === "!") {
+      return !value;
+    }
+    if (this.operator === "-") {
+      return -(value as any);
+    }
+    return value;
+  }
+}
+
+export class BinaryExpression extends BaseNode {
+  constructor(
+    public operator: string,
+    public left: ExpressionNode,
+    public right: ExpressionNode
+  ) {
+    super("BinaryExpression");
+  }
+
+  async evaluate(context: ExecutionContext): Promise<any> {
+    const left = await this.left.evaluate(context);
+    const right = await this.right.evaluate(context);
+    if (this.operator === "+") {
+      return (left as any) + (right as any);
+    }
+    if (this.operator === "-") {
+      return (left as any) - (right as any);
+    }
+    return undefined;
+  }
 }
 
 export class DirectiveExpression extends BaseNode {
   constructor(public kind: "attr" | "style", public name: string) {
     super("Directive");
+  }
+
+  async evaluate(): Promise<any> {
+    return `${this.kind}:${this.name}`;
   }
 }
 

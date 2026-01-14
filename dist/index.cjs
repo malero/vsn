@@ -23,6 +23,7 @@ __export(index_exports, {
   AssignmentNode: () => AssignmentNode,
   BaseNode: () => BaseNode,
   BehaviorNode: () => BehaviorNode,
+  BinaryExpression: () => BinaryExpression,
   BlockNode: () => BlockNode,
   DeclarationNode: () => DeclarationNode,
   DirectiveExpression: () => DirectiveExpression,
@@ -308,6 +309,13 @@ var BlockNode = class extends BaseNode {
     super("Block");
     this.statements = statements;
   }
+  async evaluate(context) {
+    for (const statement of this.statements) {
+      if (statement && typeof statement.evaluate === "function") {
+        await statement.evaluate(context);
+      }
+    }
+  }
 };
 var SelectorNode = class extends BaseNode {
   constructor(selectorText) {
@@ -350,6 +358,21 @@ var AssignmentNode = class extends BaseNode {
     this.target = target;
     this.value = value;
   }
+  async evaluate(context) {
+    if (!context.scope || !context.scope.setPath) {
+      return void 0;
+    }
+    let targetPath;
+    if (this.target instanceof IdentifierExpression) {
+      targetPath = this.target.name;
+    }
+    if (!targetPath) {
+      return void 0;
+    }
+    const value = await this.value.evaluate(context);
+    context.scope.setPath(targetPath, value);
+    return value;
+  }
 };
 var DeclarationNode = class extends BaseNode {
   constructor(target, operator, value, flags, flagArgs) {
@@ -365,6 +388,12 @@ var IdentifierExpression = class extends BaseNode {
   constructor(name) {
     super("Identifier");
     this.name = name;
+  }
+  async evaluate(context) {
+    if (!context.scope) {
+      return void 0;
+    }
+    return context.scope.getPath(this.name);
   }
 };
 var LiteralExpression = class extends BaseNode {
@@ -382,12 +411,38 @@ var UnaryExpression = class extends BaseNode {
     this.operator = operator;
     this.argument = argument;
   }
+  async evaluate(context) {
+    const value = await this.argument.evaluate(context);
+    if (this.operator === "!") {
+      return !value;
+    }
+    return value;
+  }
+};
+var BinaryExpression = class extends BaseNode {
+  constructor(operator, left, right) {
+    super("BinaryExpression");
+    this.operator = operator;
+    this.left = left;
+    this.right = right;
+  }
+  async evaluate(context) {
+    const left = await this.left.evaluate(context);
+    const right = await this.right.evaluate(context);
+    if (this.operator === "+") {
+      return left + right;
+    }
+    return void 0;
+  }
 };
 var DirectiveExpression = class extends BaseNode {
   constructor(kind, name) {
     super("Directive");
     this.kind = kind;
     this.name = name;
+  }
+  async evaluate() {
+    return `${this.kind}:${this.name}`;
   }
 };
 var QueryExpression = class extends BaseNode {
@@ -453,11 +508,15 @@ var TokenStream = class {
 };
 
 // src/parser/parser.ts
-var Parser = class {
+var Parser = class _Parser {
   stream;
   constructor(input) {
     const lexer = new Lexer(input);
     this.stream = new TokenStream(lexer.tokenize());
+  }
+  static parseInline(code) {
+    const parser = new _Parser(`{${code}}`);
+    return parser.parseInlineBlock();
   }
   parseProgram() {
     const behaviors = [];
@@ -467,6 +526,10 @@ var Parser = class {
       this.stream.skipWhitespace();
     }
     return new ProgramNode(behaviors);
+  }
+  parseInlineBlock() {
+    this.stream.skipWhitespace();
+    return this.parseBlock({ allowDeclarations: false });
   }
   parseBehavior() {
     this.stream.skipWhitespace();
@@ -637,14 +700,39 @@ var Parser = class {
     return new AssignmentNode(target, value);
   }
   parseExpression() {
+    return this.parseAdditiveExpression();
+  }
+  parseAdditiveExpression() {
+    let left = this.parseUnaryExpression();
+    this.stream.skipWhitespace();
+    while (this.stream.peekNonWhitespace(0)?.type === "Plus" /* Plus */) {
+      this.stream.skipWhitespace();
+      this.stream.expect("Plus" /* Plus */);
+      this.stream.skipWhitespace();
+      const right = this.parseUnaryExpression();
+      this.stream.skipWhitespace();
+      left = new BinaryExpression("+", left, right);
+    }
+    return left;
+  }
+  parseUnaryExpression() {
+    this.stream.skipWhitespace();
     const token = this.stream.peek();
     if (!token) {
       throw new Error("Expected expression");
     }
     if (token.type === "Bang" /* Bang */) {
       this.stream.next();
-      const argument = this.parseExpression();
+      const argument = this.parseUnaryExpression();
       return new UnaryExpression("!", argument);
+    }
+    return this.parsePrimaryExpression();
+  }
+  parsePrimaryExpression() {
+    this.stream.skipWhitespace();
+    const token = this.stream.peek();
+    if (!token) {
+      throw new Error("Expected expression");
     }
     if (token.type === "At" /* At */ || token.type === "Dollar" /* Dollar */) {
       const kind = token.type === "At" /* At */ ? "attr" : "style";
@@ -657,9 +745,6 @@ var Parser = class {
     }
     if (token.type === "Identifier" /* Identifier */) {
       const name = this.parseIdentifierPath();
-      if (name === "self" || name === "parent" || name === "root") {
-        return new IdentifierExpression(name);
-      }
       return new IdentifierExpression(name);
     }
     if (token.type === "Boolean" /* Boolean */) {
@@ -692,70 +777,6 @@ var Parser = class {
       return new IdentifierExpression(this.parseIdentifierPath());
     }
     throw new Error(`Invalid assignment target ${token.type}`);
-  }
-  isAssignmentStart() {
-    const first = this.stream.peekNonWhitespace(0);
-    if (!first) {
-      return false;
-    }
-    if (first.type === "Identifier" /* Identifier */) {
-      const second = this.stream.peekNonWhitespace(1);
-      return second?.type === "Equals" /* Equals */ || second?.type === "Dot" /* Dot */;
-    }
-    if (first.type === "At" /* At */ || first.type === "Dollar" /* Dollar */) {
-      const second = this.stream.peekNonWhitespace(1);
-      const third = this.stream.peekNonWhitespace(2);
-      return second?.type === "Identifier" /* Identifier */ && third?.type === "Equals" /* Equals */;
-    }
-    return false;
-  }
-  parseIdentifierPath() {
-    let value = this.stream.expect("Identifier" /* Identifier */).value;
-    while (this.stream.peek()?.type === "Dot" /* Dot */) {
-      this.stream.next();
-      const part = this.stream.expect("Identifier" /* Identifier */).value;
-      value = `${value}.${part}`;
-    }
-    return value;
-  }
-  parseQueryExpression() {
-    this.stream.expect("Question" /* Question */);
-    let direction = "self";
-    if (this.stream.peek()?.type === "Greater" /* Greater */) {
-      this.stream.next();
-      direction = "descendant";
-    } else if (this.stream.peek()?.type === "Less" /* Less */) {
-      this.stream.next();
-      direction = "ancestor";
-    }
-    this.stream.skipWhitespace();
-    this.stream.expect("LParen" /* LParen */);
-    const selector = this.readSelectorUntil("RParen" /* RParen */);
-    return new QueryExpression(direction, selector);
-  }
-  readSelectorUntil(terminator) {
-    let selectorText = "";
-    let sawNonWhitespace = false;
-    while (true) {
-      const token = this.stream.peek();
-      if (!token) {
-        throw new Error("Unterminated selector");
-      }
-      if (token.type === terminator) {
-        this.stream.next();
-        break;
-      }
-      if (token.type === "Whitespace" /* Whitespace */) {
-        this.stream.next();
-        if (sawNonWhitespace && selectorText[selectorText.length - 1] !== " ") {
-          selectorText += " ";
-        }
-        continue;
-      }
-      sawNonWhitespace = true;
-      selectorText += this.stream.next().value;
-    }
-    return selectorText.trim();
   }
   parseDeclaration() {
     const target = this.parseDeclarationTarget();
@@ -852,6 +873,22 @@ var Parser = class {
     }
     return false;
   }
+  isAssignmentStart() {
+    const first = this.stream.peekNonWhitespace(0);
+    if (!first) {
+      return false;
+    }
+    if (first.type === "Identifier" /* Identifier */) {
+      const second = this.stream.peekNonWhitespace(1);
+      return second?.type === "Equals" /* Equals */ || second?.type === "Dot" /* Dot */;
+    }
+    if (first.type === "At" /* At */ || first.type === "Dollar" /* Dollar */) {
+      const second = this.stream.peekNonWhitespace(1);
+      const third = this.stream.peekNonWhitespace(2);
+      return second?.type === "Identifier" /* Identifier */ && third?.type === "Equals" /* Equals */;
+    }
+    return false;
+  }
   parseConstructBlock() {
     this.stream.expect("Construct" /* Construct */);
     const body = this.parseBlock({ allowDeclarations: false });
@@ -863,6 +900,54 @@ var Parser = class {
     const body = this.parseBlock({ allowDeclarations: false });
     body.type = "Destruct";
     return body;
+  }
+  parseQueryExpression() {
+    this.stream.expect("Question" /* Question */);
+    let direction = "self";
+    if (this.stream.peek()?.type === "Greater" /* Greater */) {
+      this.stream.next();
+      direction = "descendant";
+    } else if (this.stream.peek()?.type === "Less" /* Less */) {
+      this.stream.next();
+      direction = "ancestor";
+    }
+    this.stream.skipWhitespace();
+    this.stream.expect("LParen" /* LParen */);
+    const selector = this.readSelectorUntil("RParen" /* RParen */);
+    return new QueryExpression(direction, selector);
+  }
+  readSelectorUntil(terminator) {
+    let selectorText = "";
+    let sawNonWhitespace = false;
+    while (true) {
+      const token = this.stream.peek();
+      if (!token) {
+        throw new Error("Unterminated selector");
+      }
+      if (token.type === terminator) {
+        this.stream.next();
+        break;
+      }
+      if (token.type === "Whitespace" /* Whitespace */) {
+        this.stream.next();
+        if (sawNonWhitespace && selectorText[selectorText.length - 1] !== " ") {
+          selectorText += " ";
+        }
+        continue;
+      }
+      sawNonWhitespace = true;
+      selectorText += this.stream.next().value;
+    }
+    return selectorText.trim();
+  }
+  parseIdentifierPath() {
+    let value = this.stream.expect("Identifier" /* Identifier */).value;
+    while (this.stream.peek()?.type === "Dot" /* Dot */) {
+      this.stream.next();
+      const part = this.stream.expect("Identifier" /* Identifier */).value;
+      value = `${value}.${part}`;
+    }
+    return value;
   }
 };
 
@@ -1074,6 +1159,7 @@ var Engine = class {
   showBindings = /* @__PURE__ */ new WeakMap();
   htmlBindings = /* @__PURE__ */ new WeakMap();
   getBindings = /* @__PURE__ */ new WeakMap();
+  codeCache = /* @__PURE__ */ new Map();
   async mount(root) {
     const elements = [root, ...Array.from(root.querySelectorAll("*"))];
     for (const element of elements) {
@@ -1219,9 +1305,9 @@ var Engine = class {
     return config;
   }
   attachOnHandler(element, config) {
-    const handler = () => {
+    const handler = async () => {
       const scope = this.getScope(element);
-      this.execute(config.code, scope);
+      await this.execute(config.code, scope);
       this.evaluate(element);
     };
     const effectiveHandler = config.debounceMs ? debounce(handler, config.debounceMs) : handler;
@@ -1236,22 +1322,14 @@ var Engine = class {
       await applyGet(element, config, this.getScope(element));
     });
   }
-  execute(code, scope) {
-    const statements = code.split(";").map((s) => s.trim()).filter(Boolean);
-    for (const statement of statements) {
-      const assignmentMatch = statement.match(/^([_a-zA-Z][_a-zA-Z0-9.]+)\s*=\s*(.+)$/);
-      if (assignmentMatch) {
-        const target = assignmentMatch[1];
-        const expr = assignmentMatch[2];
-        if (!target || !expr) {
-          continue;
-        }
-        const value = this.evaluateExpression(expr, scope);
-        scope.setPath(target, value);
-        continue;
-      }
-      this.evaluateExpression(statement, scope);
+  async execute(code, scope) {
+    let block = this.codeCache.get(code);
+    if (!block) {
+      block = Parser.parseInline(code);
+      this.codeCache.set(code, block);
     }
+    const context = { scope };
+    await block.evaluate(context);
   }
   evaluateExpression(expr, scope) {
     const parts = expr.split("+").map((part) => part.trim()).filter(Boolean);
@@ -1314,6 +1392,7 @@ if (typeof document !== "undefined") {
   AssignmentNode,
   BaseNode,
   BehaviorNode,
+  BinaryExpression,
   BlockNode,
   DeclarationNode,
   DirectiveExpression,

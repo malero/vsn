@@ -35,7 +35,7 @@ describe("parser behavior", () => {
     const source = `behavior .card {
   on click() {
     parent.active = false;
-    root.count = 1;
+    root.count = (root.count + 1) - 1;
     @aria-pressed = true;
   }
 }`;
@@ -58,6 +58,7 @@ describe("parser behavior", () => {
       if (secondAssignment.type === "Assignment") {
         expect(secondAssignment.target.type).toBe("Identifier");
         expect(secondAssignment.target.name).toBe("root.count");
+        expect(secondAssignment.value.type).toBe("BinaryExpression");
       }
 
       const thirdAssignment = onBlock.body.statements[2];

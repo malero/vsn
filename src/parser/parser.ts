@@ -1,6 +1,7 @@
 import {
   AssignmentNode,
   BehaviorNode,
+  BinaryExpression,
   BlockNode,
   AssignmentTarget,
   DeclarationNode,
@@ -31,6 +32,11 @@ export class Parser {
     this.stream = new TokenStream(lexer.tokenize());
   }
 
+  static parseInline(code: string): BlockNode {
+    const parser = new Parser(`{${code}}`);
+    return parser.parseInlineBlock();
+  }
+
   parseProgram(): ProgramNode {
     const behaviors: BehaviorNode[] = [];
     this.stream.skipWhitespace();
@@ -39,6 +45,11 @@ export class Parser {
       this.stream.skipWhitespace();
     }
     return new ProgramNode(behaviors);
+  }
+
+  parseInlineBlock(): BlockNode {
+    this.stream.skipWhitespace();
+    return this.parseBlock({ allowDeclarations: false });
   }
 
   private parseBehavior(): BehaviorNode {
@@ -239,15 +250,51 @@ export class Parser {
   }
 
   private parseExpression(): ExpressionNode {
+    return this.parseAdditiveExpression();
+  }
+
+  private parseAdditiveExpression(): ExpressionNode {
+    let left = this.parseUnaryExpression();
+    this.stream.skipWhitespace();
+    while (true) {
+      const next = this.stream.peekNonWhitespace(0);
+      if (!next || (next.type !== TokenType.Plus && next.type !== TokenType.Minus)) {
+        break;
+      }
+      this.stream.skipWhitespace();
+      const op = this.stream.next();
+      this.stream.skipWhitespace();
+      const right = this.parseUnaryExpression();
+      this.stream.skipWhitespace();
+      left = new BinaryExpression(op.type === TokenType.Plus ? "+" : "-", left, right);
+    }
+    return left;
+  }
+
+  private parseUnaryExpression(): ExpressionNode {
+    this.stream.skipWhitespace();
     const token = this.stream.peek();
     if (!token) {
       throw new Error("Expected expression");
     }
-
     if (token.type === TokenType.Bang) {
       this.stream.next();
-      const argument = this.parseExpression();
+      const argument = this.parseUnaryExpression();
       return new UnaryExpression("!", argument);
+    }
+    if (token.type === TokenType.Minus) {
+      this.stream.next();
+      const argument = this.parseUnaryExpression();
+      return new UnaryExpression("-", argument);
+    }
+    return this.parsePrimaryExpression();
+  }
+
+  private parsePrimaryExpression(): ExpressionNode {
+    this.stream.skipWhitespace();
+    const token = this.stream.peek();
+    if (!token) {
+      throw new Error("Expected expression");
     }
 
     if (token.type === TokenType.At || token.type === TokenType.Dollar) {
@@ -261,11 +308,16 @@ export class Parser {
       return this.parseQueryExpression();
     }
 
+    if (token.type === TokenType.LParen) {
+      this.stream.next();
+      const value = this.parseExpression();
+      this.stream.skipWhitespace();
+      this.stream.expect(TokenType.RParen);
+      return value;
+    }
+
     if (token.type === TokenType.Identifier) {
       const name = this.parseIdentifierPath();
-      if (name === "self" || name === "parent" || name === "root") {
-        return new IdentifierExpression(name);
-      }
       return new IdentifierExpression(name);
     }
 
@@ -307,83 +359,6 @@ export class Parser {
     }
 
     throw new Error(`Invalid assignment target ${token.type}`);
-  }
-
-  private isAssignmentStart(): boolean {
-    const first = this.stream.peekNonWhitespace(0);
-    if (!first) {
-      return false;
-    }
-
-    if (first.type === TokenType.Identifier) {
-      const second = this.stream.peekNonWhitespace(1);
-      return second?.type === TokenType.Equals || second?.type === TokenType.Dot;
-    }
-
-    if (first.type === TokenType.At || first.type === TokenType.Dollar) {
-      const second = this.stream.peekNonWhitespace(1);
-      const third = this.stream.peekNonWhitespace(2);
-      return second?.type === TokenType.Identifier && third?.type === TokenType.Equals;
-    }
-
-    return false;
-  }
-
-  private parseIdentifierPath(): string {
-    let value = this.stream.expect(TokenType.Identifier).value;
-    while (this.stream.peek()?.type === TokenType.Dot) {
-      this.stream.next();
-      const part = this.stream.expect(TokenType.Identifier).value;
-      value = `${value}.${part}`;
-    }
-    return value;
-  }
-
-  private parseQueryExpression(): QueryExpression {
-    this.stream.expect(TokenType.Question);
-    let direction: "self" | "descendant" | "ancestor" = "self";
-
-    if (this.stream.peek()?.type === TokenType.Greater) {
-      this.stream.next();
-      direction = "descendant";
-    } else if (this.stream.peek()?.type === TokenType.Less) {
-      this.stream.next();
-      direction = "ancestor";
-    }
-
-    this.stream.skipWhitespace();
-    this.stream.expect(TokenType.LParen);
-    const selector = this.readSelectorUntil(TokenType.RParen);
-    return new QueryExpression(direction, selector);
-  }
-
-  private readSelectorUntil(terminator: TokenType): string {
-    let selectorText = "";
-    let sawNonWhitespace = false;
-
-    while (true) {
-      const token = this.stream.peek();
-      if (!token) {
-        throw new Error("Unterminated selector");
-      }
-      if (token.type === terminator) {
-        this.stream.next();
-        break;
-      }
-
-      if (token.type === TokenType.Whitespace) {
-        this.stream.next();
-        if (sawNonWhitespace && selectorText[selectorText.length - 1] !== " ") {
-          selectorText += " ";
-        }
-        continue;
-      }
-
-      sawNonWhitespace = true;
-      selectorText += this.stream.next().value;
-    }
-
-    return selectorText.trim();
   }
 
   private parseDeclaration(): DeclarationNode {
@@ -495,6 +470,26 @@ export class Parser {
     return false;
   }
 
+  private isAssignmentStart(): boolean {
+    const first = this.stream.peekNonWhitespace(0);
+    if (!first) {
+      return false;
+    }
+
+    if (first.type === TokenType.Identifier) {
+      const second = this.stream.peekNonWhitespace(1);
+      return second?.type === TokenType.Equals || second?.type === TokenType.Dot;
+    }
+
+    if (first.type === TokenType.At || first.type === TokenType.Dollar) {
+      const second = this.stream.peekNonWhitespace(1);
+      const third = this.stream.peekNonWhitespace(2);
+      return second?.type === TokenType.Identifier && third?.type === TokenType.Equals;
+    }
+
+    return false;
+  }
+
   private parseConstructBlock(): BlockNode {
     this.stream.expect(TokenType.Construct);
     const body = this.parseBlock({ allowDeclarations: false });
@@ -507,5 +502,62 @@ export class Parser {
     const body = this.parseBlock({ allowDeclarations: false });
     body.type = "Destruct";
     return body;
+  }
+
+  private parseQueryExpression(): QueryExpression {
+    this.stream.expect(TokenType.Question);
+    let direction: "self" | "descendant" | "ancestor" = "self";
+
+    if (this.stream.peek()?.type === TokenType.Greater) {
+      this.stream.next();
+      direction = "descendant";
+    } else if (this.stream.peek()?.type === TokenType.Less) {
+      this.stream.next();
+      direction = "ancestor";
+    }
+
+    this.stream.skipWhitespace();
+    this.stream.expect(TokenType.LParen);
+    const selector = this.readSelectorUntil(TokenType.RParen);
+    return new QueryExpression(direction, selector);
+  }
+
+  private readSelectorUntil(terminator: TokenType): string {
+    let selectorText = "";
+    let sawNonWhitespace = false;
+
+    while (true) {
+      const token = this.stream.peek();
+      if (!token) {
+        throw new Error("Unterminated selector");
+      }
+      if (token.type === terminator) {
+        this.stream.next();
+        break;
+      }
+
+      if (token.type === TokenType.Whitespace) {
+        this.stream.next();
+        if (sawNonWhitespace && selectorText[selectorText.length - 1] !== " ") {
+          selectorText += " ";
+        }
+        continue;
+      }
+
+      sawNonWhitespace = true;
+      selectorText += this.stream.next().value;
+    }
+
+    return selectorText.trim();
+  }
+
+  private parseIdentifierPath(): string {
+    let value = this.stream.expect(TokenType.Identifier).value;
+    while (this.stream.peek()?.type === TokenType.Dot) {
+      this.stream.next();
+      const part = this.stream.expect(TokenType.Identifier).value;
+      value = `${value}.${part}`;
+    }
+    return value;
   }
 }

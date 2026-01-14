@@ -166,6 +166,7 @@ export class Lexer {
       ">": TokenType.Greater,
       "<": TokenType.Less,
       "+": TokenType.Plus,
+      "-": TokenType.Minus,
       "~": TokenType.Tilde,
       "*": TokenType.Star,
       "=": TokenType.Equals,
