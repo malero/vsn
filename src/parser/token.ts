@@ -7,6 +7,7 @@ export enum TokenType {
   Null = "Null",
 
   Behavior = "Behavior",
+  Use = "Use",
   State = "State",
   On = "On",
   Construct = "Construct",
@@ -33,6 +34,12 @@ export enum TokenType {
   Star = "Star",
 
   Equals = "Equals",
+  DoubleEquals = "DoubleEquals",
+  NotEquals = "NotEquals",
+  LessEqual = "LessEqual",
+  GreaterEqual = "GreaterEqual",
+  And = "And",
+  Or = "Or",
   Bang = "Bang",
 
   At = "At",

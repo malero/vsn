@@ -2,6 +2,7 @@ import { Token, TokenType } from "./token";
 
 const KEYWORDS: Record<string, TokenType> = {
   behavior: TokenType.Behavior,
+  use: TokenType.Use,
   state: TokenType.State,
   on: TokenType.On,
   construct: TokenType.Construct,
@@ -151,6 +152,38 @@ export class Lexer {
   private readPunctuator(): Token | null {
     const start = this.position();
     const ch = this.peek();
+    const next = this.peek(1);
+
+    if (ch === "=" && next === "=") {
+      this.next();
+      this.next();
+      return this.token(TokenType.DoubleEquals, "==", start);
+    }
+    if (ch === "!" && next === "=") {
+      this.next();
+      this.next();
+      return this.token(TokenType.NotEquals, "!=", start);
+    }
+    if (ch === "<" && next === "=") {
+      this.next();
+      this.next();
+      return this.token(TokenType.LessEqual, "<=", start);
+    }
+    if (ch === ">" && next === "=") {
+      this.next();
+      this.next();
+      return this.token(TokenType.GreaterEqual, ">=", start);
+    }
+    if (ch === "&" && next === "&") {
+      this.next();
+      this.next();
+      return this.token(TokenType.And, "&&", start);
+    }
+    if (ch === "|" && next === "|") {
+      this.next();
+      this.next();
+      return this.token(TokenType.Or, "||", start);
+    }
     const punctMap: Record<string, TokenType> = {
       "{": TokenType.LBrace,
       "}": TokenType.RBrace,

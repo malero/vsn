@@ -35,4 +35,24 @@ describe("ast expressions", () => {
     expect(value).toBe(3);
     expect(negValue).toBe(-3);
   });
+
+  it("evaluates comparisons and boolean ops", async () => {
+    const scope = new Scope();
+    scope.set("count", 2);
+
+    const lt = new BinaryExpression(
+      "<",
+      new IdentifierExpression("count"),
+      new LiteralExpression(3)
+    );
+    const eq = new BinaryExpression(
+      "==",
+      new IdentifierExpression("count"),
+      new LiteralExpression(2)
+    );
+    const andExpr = new BinaryExpression("&&", lt, eq);
+
+    const andValue = await andExpr.evaluate({ scope });
+    expect(andValue).toBe(true);
+  });
 });

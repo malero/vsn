@@ -19,6 +19,7 @@ import {
   StateBlockNode,
   StateEntryNode,
   UnaryExpression,
+  UseNode,
   ExpressionNode
 } from "../ast/nodes";
 import { Lexer } from "./lexer";
@@ -40,12 +41,21 @@ export class Parser {
 
   parseProgram(): ProgramNode {
     const behaviors: BehaviorNode[] = [];
+    const uses: UseNode[] = [];
     this.stream.skipWhitespace();
     while (!this.stream.eof()) {
-      behaviors.push(this.parseBehavior());
+      const next = this.stream.peek();
+      if (!next) {
+        break;
+      }
+      if (next.type === TokenType.Use) {
+        uses.push(this.parseUseStatement());
+      } else {
+        behaviors.push(this.parseBehavior());
+      }
       this.stream.skipWhitespace();
     }
-    return new ProgramNode(behaviors);
+    return new ProgramNode(behaviors, uses);
   }
 
   parseInlineBlock(): BlockNode {
@@ -92,6 +102,23 @@ export class Parser {
     }
 
     return new SelectorNode(selectorText.trim());
+  }
+
+  private parseUseStatement(): UseNode {
+    this.stream.expect(TokenType.Use);
+    this.stream.skipWhitespace();
+    const name = this.parseIdentifierPath();
+    this.stream.skipWhitespace();
+    let alias = name;
+    const next = this.stream.peek();
+    if (next?.type === TokenType.Identifier && next.value === "as") {
+      this.stream.next();
+      this.stream.skipWhitespace();
+      alias = this.stream.expect(TokenType.Identifier).value;
+    }
+    this.stream.skipWhitespace();
+    this.stream.expect(TokenType.Semicolon);
+    return new UseNode(name, alias);
   }
 
   private parseBlock(options?: { allowDeclarations?: boolean }): BlockNode {
@@ -255,7 +282,93 @@ export class Parser {
   }
 
   private parseExpression(): ExpressionNode {
-    return this.parseAdditiveExpression();
+    return this.parseLogicalOrExpression();
+  }
+
+  private parseLogicalOrExpression(): ExpressionNode {
+    let left = this.parseLogicalAndExpression();
+    this.stream.skipWhitespace();
+    while (true) {
+      const next = this.stream.peekNonWhitespace(0);
+      if (!next || next.type !== TokenType.Or) {
+        break;
+      }
+      this.stream.skipWhitespace();
+      this.stream.next();
+      this.stream.skipWhitespace();
+      const right = this.parseLogicalAndExpression();
+      this.stream.skipWhitespace();
+      left = new BinaryExpression("||", left, right);
+    }
+    return left;
+  }
+
+  private parseLogicalAndExpression(): ExpressionNode {
+    let left = this.parseEqualityExpression();
+    this.stream.skipWhitespace();
+    while (true) {
+      const next = this.stream.peekNonWhitespace(0);
+      if (!next || next.type !== TokenType.And) {
+        break;
+      }
+      this.stream.skipWhitespace();
+      this.stream.next();
+      this.stream.skipWhitespace();
+      const right = this.parseEqualityExpression();
+      this.stream.skipWhitespace();
+      left = new BinaryExpression("&&", left, right);
+    }
+    return left;
+  }
+
+  private parseEqualityExpression(): ExpressionNode {
+    let left = this.parseComparisonExpression();
+    this.stream.skipWhitespace();
+    while (true) {
+      const next = this.stream.peekNonWhitespace(0);
+      if (!next || (next.type !== TokenType.DoubleEquals && next.type !== TokenType.NotEquals)) {
+        break;
+      }
+      this.stream.skipWhitespace();
+      const op = this.stream.next();
+      this.stream.skipWhitespace();
+      const right = this.parseComparisonExpression();
+      this.stream.skipWhitespace();
+      left = new BinaryExpression(op.type === TokenType.DoubleEquals ? "==" : "!=", left, right);
+    }
+    return left;
+  }
+
+  private parseComparisonExpression(): ExpressionNode {
+    let left = this.parseAdditiveExpression();
+    this.stream.skipWhitespace();
+    while (true) {
+      const next = this.stream.peekNonWhitespace(0);
+      if (!next) {
+        break;
+      }
+      if (next.type !== TokenType.Less &&
+          next.type !== TokenType.Greater &&
+          next.type !== TokenType.LessEqual &&
+          next.type !== TokenType.GreaterEqual) {
+        break;
+      }
+      this.stream.skipWhitespace();
+      const op = this.stream.next();
+      this.stream.skipWhitespace();
+      const right = this.parseAdditiveExpression();
+      this.stream.skipWhitespace();
+      let operator = "<";
+      if (op.type === TokenType.Greater) {
+        operator = ">";
+      } else if (op.type === TokenType.LessEqual) {
+        operator = "<=";
+      } else if (op.type === TokenType.GreaterEqual) {
+        operator = ">=";
+      }
+      left = new BinaryExpression(operator, left, right);
+    }
+    return left;
   }
 
   private parseAdditiveExpression(): ExpressionNode {

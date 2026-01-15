@@ -67,6 +67,7 @@ export class Engine {
 
   constructor() {
     this.registerGlobal("console", console);
+    this.registerQueryHelpers();
     this.registerDefaultAttributeHandlers();
   }
 
@@ -91,6 +92,14 @@ export class Engine {
 
   registerBehaviors(source: string): void {
     const program = new Parser(source).parseProgram();
+    for (const use of program.uses) {
+      const value = this.resolveGlobalPath(use.name);
+      if (value === undefined) {
+        console.warn(`vsn: global '${use.name}' not found`);
+        continue;
+      }
+      this.registerGlobal(use.alias, value);
+    }
     for (const behavior of program.behaviors) {
       this.collectBehavior(behavior);
     }
@@ -106,6 +115,23 @@ export class Engine {
 
   registerAttributeHandler(handler: AttributeHandler): void {
     this.attributeHandlers.push(handler);
+  }
+
+  private resolveGlobalPath(name: string): any {
+    const parts = name.split(".");
+    const root = parts[0];
+    if (!root) {
+      return undefined;
+    }
+    let value: any = (globalThis as any)[root];
+    for (let i = 1; i < parts.length; i += 1) {
+      const part = parts[i];
+      if (!part) {
+        return undefined;
+      }
+      value = value?.[part];
+    }
+    return value;
   }
 
   getScope(element: Element, parentScope?: Scope): Scope {
@@ -400,12 +426,20 @@ export class Engine {
       block = Parser.parseInline(code);
       this.codeCache.set(code, block);
     }
-    const context: ExecutionContext = { scope, globals: this.globals, element };
+    const context: ExecutionContext = {
+      scope,
+      globals: this.globals,
+      ...(element ? { element } : {})
+    };
     await block.evaluate(context);
   }
 
   private async executeBlock(block: BlockNode, scope: Scope, element?: Element): Promise<void> {
-    const context: ExecutionContext = { scope, globals: this.globals, element };
+    const context: ExecutionContext = {
+      scope,
+      globals: this.globals,
+      ...(element ? { element } : {})
+    };
     await block.evaluate(context);
   }
 
@@ -437,6 +471,40 @@ export class Engine {
     const pseudoMatches = selector.match(/:[\w-]+/g)?.length ?? 0;
     const elementMatches = selector.match(/(^|[\s>+~])([a-zA-Z][\w-]*)/g)?.length ?? 0;
     return idMatches * 100 + (classMatches + attrMatches + pseudoMatches) * 10 + elementMatches;
+  }
+
+  private registerQueryHelpers(): void {
+    const queryDoc = (selector: string) => {
+      if (typeof document === "undefined") {
+        return [];
+      }
+      return Array.from(document.querySelectorAll(selector));
+    };
+    const queryWithin = (element: Element | undefined, selector: string) => {
+      if (!element) {
+        return [];
+      }
+      return Array.from(element.querySelectorAll(selector));
+    };
+    const queryAncestors = (element: Element | undefined, selector: string) => {
+      const results: Element[] = [];
+      let cursor = element?.parentElement;
+      while (cursor) {
+        if (cursor.matches(selector)) {
+          results.push(cursor);
+        }
+        cursor = cursor.parentElement;
+      }
+      return results;
+    };
+
+    this.registerGlobal("?", (selector: string) => queryDoc(selector));
+    this.registerGlobal("?>", (selector: string, element?: Element) => {
+      return queryWithin(element, selector);
+    });
+    this.registerGlobal("?<", (selector: string, element?: Element) => {
+      return queryAncestors(element, selector);
+    });
   }
 
   private getImportantKey(declaration: DeclarationNode): string | undefined {

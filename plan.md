@@ -221,13 +221,13 @@ Conditional Blocks (Future-Proofing)
 - Keep core minimal (fast, lightweight); richer features live in extensions.
 
 22. Implementation TODOs
-- Implement behavior-level declarations/bindings runtime (state init, :/:=/:</:> handlers, !debounce, !important merge rules).
-- Ensure behavior-level on/construct/destruct honor declaration ordering (declarations first).
-- Add behavior-level binding reactivity (scope change -> DOM update) matching attribute behavior.
-- Wire behavior registry to MutationObserver for new elements (bind behaviors on insertion).
 - Expose public API for registering custom attributes/flags with docs/examples.
 - Expression comparisons (==, !=, <, >, <=, >=) + boolean ops.
 - Array literals + indexing + .length.
 - Whitelisted globals: setInterval, clearInterval.
-- Selector helpers (e.g., ?>(selector) returning elements array) or allow document.querySelectorAll in a safe whitelist.
-- 
+- Align query helper syntax with parser (support ?("selector")/?>()/<?() or remove globals and document ?>(...) only).
+- Add element->scope change listeners for @checked (and other non-@value targets) when using :>/ := bindings.
+- Decide whether !important should block inline vsn-* overrides or keep HTML as absolute highest specificity.
+- Function declarations on scope (callable methods in behaviors).
+- DOM helpers for refs/queries and event modifiers (Alpine-style ergonomics).
+- Timer utilities (setTimeout) and optional async support for demos.

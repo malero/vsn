@@ -41,6 +41,7 @@ __export(index_exports, {
   StateEntryNode: () => StateEntryNode,
   TokenType: () => TokenType,
   UnaryExpression: () => UnaryExpression,
+  UseNode: () => UseNode,
   VERSION: () => VERSION,
   autoMount: () => autoMount,
   parseCFS: () => parseCFS
@@ -56,6 +57,7 @@ var TokenType = /* @__PURE__ */ ((TokenType2) => {
   TokenType2["Boolean"] = "Boolean";
   TokenType2["Null"] = "Null";
   TokenType2["Behavior"] = "Behavior";
+  TokenType2["Use"] = "Use";
   TokenType2["State"] = "State";
   TokenType2["On"] = "On";
   TokenType2["Construct"] = "Construct";
@@ -78,6 +80,12 @@ var TokenType = /* @__PURE__ */ ((TokenType2) => {
   TokenType2["Tilde"] = "Tilde";
   TokenType2["Star"] = "Star";
   TokenType2["Equals"] = "Equals";
+  TokenType2["DoubleEquals"] = "DoubleEquals";
+  TokenType2["NotEquals"] = "NotEquals";
+  TokenType2["LessEqual"] = "LessEqual";
+  TokenType2["GreaterEqual"] = "GreaterEqual";
+  TokenType2["And"] = "And";
+  TokenType2["Or"] = "Or";
   TokenType2["Bang"] = "Bang";
   TokenType2["At"] = "At";
   TokenType2["Dollar"] = "Dollar";
@@ -88,6 +96,7 @@ var TokenType = /* @__PURE__ */ ((TokenType2) => {
 // src/parser/lexer.ts
 var KEYWORDS = {
   behavior: "Behavior" /* Behavior */,
+  use: "Use" /* Use */,
   state: "State" /* State */,
   on: "On" /* On */,
   construct: "Construct" /* Construct */,
@@ -217,6 +226,37 @@ var Lexer = class {
   readPunctuator() {
     const start = this.position();
     const ch = this.peek();
+    const next = this.peek(1);
+    if (ch === "=" && next === "=") {
+      this.next();
+      this.next();
+      return this.token("DoubleEquals" /* DoubleEquals */, "==", start);
+    }
+    if (ch === "!" && next === "=") {
+      this.next();
+      this.next();
+      return this.token("NotEquals" /* NotEquals */, "!=", start);
+    }
+    if (ch === "<" && next === "=") {
+      this.next();
+      this.next();
+      return this.token("LessEqual" /* LessEqual */, "<=", start);
+    }
+    if (ch === ">" && next === "=") {
+      this.next();
+      this.next();
+      return this.token("GreaterEqual" /* GreaterEqual */, ">=", start);
+    }
+    if (ch === "&" && next === "&") {
+      this.next();
+      this.next();
+      return this.token("And" /* And */, "&&", start);
+    }
+    if (ch === "|" && next === "|") {
+      this.next();
+      this.next();
+      return this.token("Or" /* Or */, "||", start);
+    }
     const punctMap = {
       "{": "LBrace" /* LBrace */,
       "}": "RBrace" /* RBrace */,
@@ -302,9 +342,17 @@ var BaseNode = class {
   }
 };
 var ProgramNode = class extends BaseNode {
-  constructor(behaviors) {
+  constructor(behaviors, uses = []) {
     super("Program");
     this.behaviors = behaviors;
+    this.uses = uses;
+  }
+};
+var UseNode = class extends BaseNode {
+  constructor(name, alias) {
+    super("Use");
+    this.name = name;
+    this.alias = alias;
   }
 };
 var BlockNode = class extends BaseNode {
@@ -433,6 +481,14 @@ var BinaryExpression = class extends BaseNode {
     this.right = right;
   }
   async evaluate(context) {
+    if (this.operator === "&&") {
+      const leftValue = await this.left.evaluate(context);
+      return leftValue && await this.right.evaluate(context);
+    }
+    if (this.operator === "||") {
+      const leftValue = await this.left.evaluate(context);
+      return leftValue || await this.right.evaluate(context);
+    }
     const left = await this.left.evaluate(context);
     const right = await this.right.evaluate(context);
     if (this.operator === "+") {
@@ -440,6 +496,24 @@ var BinaryExpression = class extends BaseNode {
     }
     if (this.operator === "-") {
       return left - right;
+    }
+    if (this.operator === "==") {
+      return left == right;
+    }
+    if (this.operator === "!=") {
+      return left != right;
+    }
+    if (this.operator === "<") {
+      return left < right;
+    }
+    if (this.operator === ">") {
+      return left > right;
+    }
+    if (this.operator === "<=") {
+      return left <= right;
+    }
+    if (this.operator === ">=") {
+      return left >= right;
     }
     return void 0;
   }
@@ -501,6 +575,28 @@ var QueryExpression = class extends BaseNode {
     super("Query");
     this.direction = direction;
     this.selector = selector;
+  }
+  async evaluate(context) {
+    const selector = this.selector.trim();
+    if (!selector) {
+      return [];
+    }
+    if (this.direction === "ancestor") {
+      const results = [];
+      let cursor = context.element?.parentElement;
+      while (cursor) {
+        if (cursor.matches(selector)) {
+          results.push(cursor);
+        }
+        cursor = cursor.parentElement;
+      }
+      return results;
+    }
+    const root = this.direction === "descendant" ? context.element ?? (typeof document !== "undefined" ? document : void 0) : typeof document !== "undefined" ? document : void 0;
+    if (!root || !("querySelectorAll" in root)) {
+      return [];
+    }
+    return Array.from(root.querySelectorAll(selector));
   }
 };
 
@@ -571,12 +667,21 @@ var Parser = class _Parser {
   }
   parseProgram() {
     const behaviors = [];
+    const uses = [];
     this.stream.skipWhitespace();
     while (!this.stream.eof()) {
-      behaviors.push(this.parseBehavior());
+      const next = this.stream.peek();
+      if (!next) {
+        break;
+      }
+      if (next.type === "Use" /* Use */) {
+        uses.push(this.parseUseStatement());
+      } else {
+        behaviors.push(this.parseBehavior());
+      }
       this.stream.skipWhitespace();
     }
-    return new ProgramNode(behaviors);
+    return new ProgramNode(behaviors, uses);
   }
   parseInlineBlock() {
     this.stream.skipWhitespace();
@@ -614,6 +719,22 @@ var Parser = class _Parser {
       throw new Error("Behavior selector is required");
     }
     return new SelectorNode(selectorText.trim());
+  }
+  parseUseStatement() {
+    this.stream.expect("Use" /* Use */);
+    this.stream.skipWhitespace();
+    const name = this.parseIdentifierPath();
+    this.stream.skipWhitespace();
+    let alias = name;
+    const next = this.stream.peek();
+    if (next?.type === "Identifier" /* Identifier */ && next.value === "as") {
+      this.stream.next();
+      this.stream.skipWhitespace();
+      alias = this.stream.expect("Identifier" /* Identifier */).value;
+    }
+    this.stream.skipWhitespace();
+    this.stream.expect("Semicolon" /* Semicolon */);
+    return new UseNode(name, alias);
   }
   parseBlock(options) {
     const allowDeclarations = options?.allowDeclarations ?? false;
@@ -754,7 +875,86 @@ var Parser = class _Parser {
     return new AssignmentNode(target, value);
   }
   parseExpression() {
-    return this.parseAdditiveExpression();
+    return this.parseLogicalOrExpression();
+  }
+  parseLogicalOrExpression() {
+    let left = this.parseLogicalAndExpression();
+    this.stream.skipWhitespace();
+    while (true) {
+      const next = this.stream.peekNonWhitespace(0);
+      if (!next || next.type !== "Or" /* Or */) {
+        break;
+      }
+      this.stream.skipWhitespace();
+      this.stream.next();
+      this.stream.skipWhitespace();
+      const right = this.parseLogicalAndExpression();
+      this.stream.skipWhitespace();
+      left = new BinaryExpression("||", left, right);
+    }
+    return left;
+  }
+  parseLogicalAndExpression() {
+    let left = this.parseEqualityExpression();
+    this.stream.skipWhitespace();
+    while (true) {
+      const next = this.stream.peekNonWhitespace(0);
+      if (!next || next.type !== "And" /* And */) {
+        break;
+      }
+      this.stream.skipWhitespace();
+      this.stream.next();
+      this.stream.skipWhitespace();
+      const right = this.parseEqualityExpression();
+      this.stream.skipWhitespace();
+      left = new BinaryExpression("&&", left, right);
+    }
+    return left;
+  }
+  parseEqualityExpression() {
+    let left = this.parseComparisonExpression();
+    this.stream.skipWhitespace();
+    while (true) {
+      const next = this.stream.peekNonWhitespace(0);
+      if (!next || next.type !== "DoubleEquals" /* DoubleEquals */ && next.type !== "NotEquals" /* NotEquals */) {
+        break;
+      }
+      this.stream.skipWhitespace();
+      const op = this.stream.next();
+      this.stream.skipWhitespace();
+      const right = this.parseComparisonExpression();
+      this.stream.skipWhitespace();
+      left = new BinaryExpression(op.type === "DoubleEquals" /* DoubleEquals */ ? "==" : "!=", left, right);
+    }
+    return left;
+  }
+  parseComparisonExpression() {
+    let left = this.parseAdditiveExpression();
+    this.stream.skipWhitespace();
+    while (true) {
+      const next = this.stream.peekNonWhitespace(0);
+      if (!next) {
+        break;
+      }
+      if (next.type !== "Less" /* Less */ && next.type !== "Greater" /* Greater */ && next.type !== "LessEqual" /* LessEqual */ && next.type !== "GreaterEqual" /* GreaterEqual */) {
+        break;
+      }
+      this.stream.skipWhitespace();
+      const op = this.stream.next();
+      this.stream.skipWhitespace();
+      const right = this.parseAdditiveExpression();
+      this.stream.skipWhitespace();
+      let operator = "<";
+      if (op.type === "Greater" /* Greater */) {
+        operator = ">";
+      } else if (op.type === "LessEqual" /* LessEqual */) {
+        operator = "<=";
+      } else if (op.type === "GreaterEqual" /* GreaterEqual */) {
+        operator = ">=";
+      }
+      left = new BinaryExpression(operator, left, right);
+    }
+    return left;
   }
   parseAdditiveExpression() {
     let left = this.parseUnaryExpression();
@@ -1326,8 +1526,10 @@ var Engine = class {
   observer;
   attributeHandlers = [];
   globals = {};
+  importantFlags = /* @__PURE__ */ new WeakMap();
   constructor() {
     this.registerGlobal("console", console);
+    this.registerQueryHelpers();
     this.registerDefaultAttributeHandlers();
   }
   async mount(root) {
@@ -1349,6 +1551,14 @@ var Engine = class {
   }
   registerBehaviors(source) {
     const program = new Parser(source).parseProgram();
+    for (const use of program.uses) {
+      const value = this.resolveGlobalPath(use.name);
+      if (value === void 0) {
+        console.warn(`vsn: global '${use.name}' not found`);
+        continue;
+      }
+      this.registerGlobal(use.alias, value);
+    }
     for (const behavior of program.behaviors) {
       this.collectBehavior(behavior);
     }
@@ -1361,6 +1571,22 @@ var Engine = class {
   }
   registerAttributeHandler(handler) {
     this.attributeHandlers.push(handler);
+  }
+  resolveGlobalPath(name) {
+    const parts = name.split(".");
+    const root = parts[0];
+    if (!root) {
+      return void 0;
+    }
+    let value = globalThis[root];
+    for (let i = 1; i < parts.length; i += 1) {
+      const part = parts[i];
+      if (!part) {
+        return void 0;
+      }
+      value = value?.[part];
+    }
+    return value;
   }
   getScope(element, parentScope) {
     const existing = this.scopes.get(element);
@@ -1443,28 +1669,36 @@ var Engine = class {
     if (this.behaviorRegistry.length === 0) {
       return;
     }
-    for (const behavior of this.behaviorRegistry) {
-      const matches = [];
-      if (root.matches(behavior.selector)) {
-        matches.push(root);
-      }
-      matches.push(...Array.from(root.querySelectorAll(behavior.selector)));
-      for (const element of matches) {
-        const bound = this.behaviorBindings.get(element) ?? /* @__PURE__ */ new Set();
+    const elements = [root, ...Array.from(root.querySelectorAll("*"))];
+    for (const element of elements) {
+      const bound = this.behaviorBindings.get(element) ?? /* @__PURE__ */ new Set();
+      const matches = this.behaviorRegistry.filter((behavior) => {
         if (bound.has(behavior.id)) {
-          continue;
+          return false;
         }
+        return element.matches(behavior.selector);
+      });
+      if (matches.length === 0) {
+        continue;
+      }
+      matches.sort((a, b) => {
+        if (a.specificity !== b.specificity) {
+          return a.specificity - b.specificity;
+        }
+        return a.order - b.order;
+      });
+      const scope = this.getScope(element);
+      for (const behavior of matches) {
         bound.add(behavior.id);
-        this.behaviorBindings.set(element, bound);
-        const scope = this.getScope(element);
         await this.applyBehaviorDeclarations(element, scope, behavior.declarations);
         if (behavior.construct) {
-          await this.executeBlock(behavior.construct, scope);
+          await this.executeBlock(behavior.construct, scope, element);
         }
         for (const onBlock of behavior.onBlocks) {
           this.attachBehaviorOnHandler(element, onBlock.event, onBlock.body);
         }
       }
+      this.behaviorBindings.set(element, bound);
     }
   }
   runBehaviorDestruct(element) {
@@ -1477,7 +1711,7 @@ var Engine = class {
       if (!bound.has(behavior.id) || !behavior.destruct) {
         continue;
       }
-      void this.executeBlock(behavior.destruct, scope);
+      void this.executeBlock(behavior.destruct, scope, element);
     }
   }
   attachAttributes(element) {
@@ -1508,7 +1742,7 @@ var Engine = class {
       return;
     }
     const scope = this.getScope(element);
-    this.execute(config.construct, scope);
+    this.execute(config.construct, scope, element);
   }
   runDestruct(element) {
     const config = this.lifecycleBindings.get(element);
@@ -1516,7 +1750,7 @@ var Engine = class {
       return;
     }
     const scope = this.getScope(element);
-    this.execute(config.destruct, scope);
+    this.execute(config.destruct, scope, element);
   }
   attachBindInputHandler(element, expr) {
     if (!(element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement || element instanceof HTMLSelectElement)) {
@@ -1593,7 +1827,7 @@ var Engine = class {
   attachOnHandler(element, config) {
     const handler = async () => {
       const scope = this.getScope(element);
-      await this.execute(config.code, scope);
+      await this.execute(config.code, scope, element);
       this.evaluate(element);
     };
     const effectiveHandler = config.debounceMs ? debounce(handler, config.debounceMs) : handler;
@@ -1602,7 +1836,7 @@ var Engine = class {
   attachBehaviorOnHandler(element, event, body) {
     const handler = async () => {
       const scope = this.getScope(element);
-      await this.executeBlock(body, scope);
+      await this.executeBlock(body, scope, element);
       this.evaluate(element);
     };
     element.addEventListener(event, handler);
@@ -1616,17 +1850,25 @@ var Engine = class {
       await applyGet(element, config, this.getScope(element));
     });
   }
-  async execute(code, scope) {
+  async execute(code, scope, element) {
     let block = this.codeCache.get(code);
     if (!block) {
       block = Parser.parseInline(code);
       this.codeCache.set(code, block);
     }
-    const context = { scope, globals: this.globals };
+    const context = {
+      scope,
+      globals: this.globals,
+      ...element ? { element } : {}
+    };
     await block.evaluate(context);
   }
-  async executeBlock(block, scope) {
-    const context = { scope, globals: this.globals };
+  async executeBlock(block, scope, element) {
+    const context = {
+      scope,
+      globals: this.globals,
+      ...element ? { element } : {}
+    };
     await block.evaluate(context);
   }
   collectBehavior(behavior, parentSelector) {
@@ -1635,6 +1877,8 @@ var Engine = class {
     this.behaviorRegistry.push({
       id: this.behaviorId += 1,
       selector,
+      specificity: this.computeSpecificity(selector),
+      order: this.behaviorRegistry.length,
       onBlocks: this.extractOnBlocks(behavior.body),
       declarations: this.extractDeclarations(behavior.body),
       ...lifecycle
@@ -1644,6 +1888,64 @@ var Engine = class {
         this.collectBehavior(statement, selector);
       }
     }
+  }
+  computeSpecificity(selector) {
+    const idMatches = selector.match(/#[\w-]+/g)?.length ?? 0;
+    const classMatches = selector.match(/\.[\w-]+/g)?.length ?? 0;
+    const attrMatches = selector.match(/\[[^\]]+\]/g)?.length ?? 0;
+    const pseudoMatches = selector.match(/:[\w-]+/g)?.length ?? 0;
+    const elementMatches = selector.match(/(^|[\s>+~])([a-zA-Z][\w-]*)/g)?.length ?? 0;
+    return idMatches * 100 + (classMatches + attrMatches + pseudoMatches) * 10 + elementMatches;
+  }
+  registerQueryHelpers() {
+    const queryDoc = (selector) => {
+      if (typeof document === "undefined") {
+        return [];
+      }
+      return Array.from(document.querySelectorAll(selector));
+    };
+    const queryWithin = (element, selector) => {
+      if (!element) {
+        return [];
+      }
+      return Array.from(element.querySelectorAll(selector));
+    };
+    const queryAncestors = (element, selector) => {
+      const results = [];
+      let cursor = element?.parentElement;
+      while (cursor) {
+        if (cursor.matches(selector)) {
+          results.push(cursor);
+        }
+        cursor = cursor.parentElement;
+      }
+      return results;
+    };
+    this.registerGlobal("?", (selector) => queryDoc(selector));
+    this.registerGlobal("?>", (selector, element) => {
+      return queryWithin(element, selector);
+    });
+    this.registerGlobal("?<", (selector, element) => {
+      return queryAncestors(element, selector);
+    });
+  }
+  getImportantKey(declaration) {
+    if (declaration.target instanceof IdentifierExpression) {
+      return `state:${declaration.target.name}`;
+    }
+    if (declaration.target instanceof DirectiveExpression) {
+      return `${declaration.target.kind}:${declaration.target.name}`;
+    }
+    return void 0;
+  }
+  isImportant(element, key) {
+    const set = this.importantFlags.get(element);
+    return set ? set.has(key) : false;
+  }
+  markImportant(element, key) {
+    const set = this.importantFlags.get(element) ?? /* @__PURE__ */ new Set();
+    set.add(key);
+    this.importantFlags.set(element, set);
   }
   extractLifecycle(body) {
     let construct;
@@ -1687,12 +1989,19 @@ var Engine = class {
     }
   }
   async applyBehaviorDeclaration(element, scope, declaration) {
-    const context = { scope };
+    const context = { scope, element };
     const operator = declaration.operator;
     const debounceMs = declaration.flags.debounce ? declaration.flagArgs.debounce ?? 200 : void 0;
+    const importantKey = this.getImportantKey(declaration);
+    if (!declaration.flags.important && importantKey && this.isImportant(element, importantKey)) {
+      return;
+    }
     if (declaration.target instanceof IdentifierExpression) {
       const value = await declaration.value.evaluate(context);
       scope.setPath(declaration.target.name, value);
+      if (declaration.flags.important && importantKey) {
+        this.markImportant(element, importantKey);
+      }
       return;
     }
     if (!(declaration.target instanceof DirectiveExpression)) {
@@ -1704,6 +2013,9 @@ var Engine = class {
       if (exprIdentifier) {
         this.applyDirectiveToScope(element, target, exprIdentifier, scope, debounceMs);
       }
+      if (declaration.flags.important && importantKey) {
+        this.markImportant(element, importantKey);
+      }
       return;
     }
     if (operator === ":=" && exprIdentifier) {
@@ -1712,6 +2024,9 @@ var Engine = class {
     if (!exprIdentifier) {
       const value = await declaration.value.evaluate(context);
       this.setDirectiveValue(element, target, value, declaration.flags.trusted);
+      if (declaration.flags.important && importantKey) {
+        this.markImportant(element, importantKey);
+      }
       return;
     }
     const shouldWatch = operator === ":<" || operator === ":=";
@@ -1724,6 +2039,9 @@ var Engine = class {
       debounceMs,
       shouldWatch
     );
+    if (declaration.flags.important && importantKey) {
+      this.markImportant(element, importantKey);
+    }
   }
   applyDirectiveFromScope(element, target, expr, scope, trusted, debounceMs, watch = true) {
     if (target.kind === "attr" && target.name === "html" && element instanceof HTMLElement) {
@@ -1976,6 +2294,7 @@ if (typeof document !== "undefined") {
   StateEntryNode,
   TokenType,
   UnaryExpression,
+  UseNode,
   VERSION,
   autoMount,
   parseCFS

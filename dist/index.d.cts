@@ -6,6 +6,7 @@ declare enum TokenType {
     Boolean = "Boolean",
     Null = "Null",
     Behavior = "Behavior",
+    Use = "Use",
     State = "State",
     On = "On",
     Construct = "Construct",
@@ -28,6 +29,12 @@ declare enum TokenType {
     Tilde = "Tilde",
     Star = "Star",
     Equals = "Equals",
+    DoubleEquals = "DoubleEquals",
+    NotEquals = "NotEquals",
+    LessEqual = "LessEqual",
+    GreaterEqual = "GreaterEqual",
+    And = "And",
+    Or = "Or",
     Bang = "Bang",
     At = "At",
     Dollar = "Dollar",
@@ -76,6 +83,7 @@ interface ExecutionContext {
         setPath?(key: string, value: any): void;
     };
     globals?: Record<string, any>;
+    element?: Element;
 }
 interface CFSNode {
     type: string;
@@ -90,7 +98,13 @@ declare abstract class BaseNode implements CFSNode {
 }
 declare class ProgramNode extends BaseNode {
     behaviors: BehaviorNode[];
-    constructor(behaviors: BehaviorNode[]);
+    uses: UseNode[];
+    constructor(behaviors: BehaviorNode[], uses?: UseNode[]);
+}
+declare class UseNode extends BaseNode {
+    name: string;
+    alias: string;
+    constructor(name: string, alias: string);
 }
 declare class BlockNode extends BaseNode {
     statements: CFSNode[];
@@ -187,6 +201,7 @@ declare class QueryExpression extends BaseNode {
     direction: "self" | "descendant" | "ancestor";
     selector: string;
     constructor(direction: "self" | "descendant" | "ancestor", selector: string);
+    evaluate(context: ExecutionContext): Promise<any>;
 }
 
 declare class Parser {
@@ -197,12 +212,17 @@ declare class Parser {
     parseInlineBlock(): BlockNode;
     private parseBehavior;
     private parseSelector;
+    private parseUseStatement;
     private parseBlock;
     private parseStatement;
     private parseStateBlock;
     private parseOnBlock;
     private parseAssignment;
     private parseExpression;
+    private parseLogicalOrExpression;
+    private parseLogicalAndExpression;
+    private parseEqualityExpression;
+    private parseComparisonExpression;
     private parseAdditiveExpression;
     private parseUnaryExpression;
     private parseCallExpression;
@@ -259,6 +279,7 @@ declare class Engine {
     private observer?;
     private attributeHandlers;
     private globals;
+    private importantFlags;
     constructor();
     mount(root: HTMLElement): Promise<void>;
     unmount(element: Element): void;
@@ -266,6 +287,7 @@ declare class Engine {
     registerGlobal(name: string, value: any): void;
     registerGlobals(values: Record<string, any>): void;
     registerAttributeHandler(handler: AttributeHandler): void;
+    private resolveGlobalPath;
     getScope(element: Element, parentScope?: Scope): Scope;
     evaluate(element: Element): void;
     private attachObserver;
@@ -290,6 +312,11 @@ declare class Engine {
     private execute;
     private executeBlock;
     private collectBehavior;
+    private computeSpecificity;
+    private registerQueryHelpers;
+    private getImportantKey;
+    private isImportant;
+    private markImportant;
     private extractLifecycle;
     private extractOnBlocks;
     private extractDeclarations;
@@ -308,4 +335,4 @@ declare const VERSION = "0.1.0";
 declare function parseCFS(source: string): ProgramNode;
 declare function autoMount(root?: HTMLElement | Document): Engine | null;
 
-export { AssignmentNode, type AssignmentTarget, BaseNode, BehaviorNode, BinaryExpression, BlockNode, type CFSNode, CallExpression, type DeclarationFlagArgs, type DeclarationFlags, DeclarationNode, type DeclarationTarget, DirectiveExpression, Engine, type ExecutionContext, type ExpressionNode, IdentifierExpression, Lexer, LiteralExpression, OnBlockNode, Parser, ProgramNode, QueryExpression, SelectorNode, StateBlockNode, StateEntryNode, TokenType, UnaryExpression, VERSION, autoMount, parseCFS };
+export { AssignmentNode, type AssignmentTarget, BaseNode, BehaviorNode, BinaryExpression, BlockNode, type CFSNode, CallExpression, type DeclarationFlagArgs, type DeclarationFlags, DeclarationNode, type DeclarationTarget, DirectiveExpression, Engine, type ExecutionContext, type ExpressionNode, IdentifierExpression, Lexer, LiteralExpression, OnBlockNode, Parser, ProgramNode, QueryExpression, SelectorNode, StateBlockNode, StateEntryNode, TokenType, UnaryExpression, UseNode, VERSION, autoMount, parseCFS };

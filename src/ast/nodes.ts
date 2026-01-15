@@ -26,8 +26,14 @@ export abstract class BaseNode implements CFSNode {
 }
 
 export class ProgramNode extends BaseNode {
-  constructor(public behaviors: BehaviorNode[]) {
+  constructor(public behaviors: BehaviorNode[], public uses: UseNode[] = []) {
     super("Program");
+  }
+}
+
+export class UseNode extends BaseNode {
+  constructor(public name: string, public alias: string) {
+    super("Use");
   }
 }
 
@@ -189,6 +195,14 @@ export class BinaryExpression extends BaseNode {
   }
 
   async evaluate(context: ExecutionContext): Promise<any> {
+    if (this.operator === "&&") {
+      const leftValue = await this.left.evaluate(context);
+      return leftValue && (await this.right.evaluate(context));
+    }
+    if (this.operator === "||") {
+      const leftValue = await this.left.evaluate(context);
+      return leftValue || (await this.right.evaluate(context));
+    }
     const left = await this.left.evaluate(context);
     const right = await this.right.evaluate(context);
     if (this.operator === "+") {
@@ -196,6 +210,24 @@ export class BinaryExpression extends BaseNode {
     }
     if (this.operator === "-") {
       return (left as any) - (right as any);
+    }
+    if (this.operator === "==") {
+      return left == right;
+    }
+    if (this.operator === "!=") {
+      return left != right;
+    }
+    if (this.operator === "<") {
+      return (left as any) < (right as any);
+    }
+    if (this.operator === ">") {
+      return (left as any) > (right as any);
+    }
+    if (this.operator === "<=") {
+      return (left as any) <= (right as any);
+    }
+    if (this.operator === ">=") {
+      return (left as any) >= (right as any);
     }
     return undefined;
   }
@@ -279,7 +311,7 @@ export class QueryExpression extends BaseNode {
     }
     const root = this.direction === "descendant"
       ? context.element ?? (typeof document !== "undefined" ? document : undefined)
-      : context.element ?? (typeof document !== "undefined" ? document : undefined);
+      : (typeof document !== "undefined" ? document : undefined);
     if (!root || !("querySelectorAll" in root)) {
       return [];
     }
