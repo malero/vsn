@@ -14,7 +14,6 @@ export function parseCFS(source: string) {
 }
 
 export function autoMount(root: HTMLElement | Document = document): Engine | null {
-  console.log('auto mounting');
   if (typeof document === "undefined") {
     return null;
   }
@@ -22,6 +21,12 @@ export function autoMount(root: HTMLElement | Document = document): Engine | nul
   const mount = () => {
     const target = root instanceof Document ? root.body : root;
     if (target) {
+      const sources = Array.from(document.querySelectorAll('script[type="text/vsn"]'))
+        .map((script) => script.textContent ?? "")
+        .join("\n");
+      if (sources.trim()) {
+        engine.registerBehaviors(sources);
+      }
       engine.mount(target);
     }
   };

@@ -395,6 +395,48 @@ var BinaryExpression = class extends BaseNode {
     return void 0;
   }
 };
+var CallExpression = class extends BaseNode {
+  constructor(callee, args) {
+    super("CallExpression");
+    this.callee = callee;
+    this.args = args;
+  }
+  async evaluate(context) {
+    const resolved = this.resolveCallee(context);
+    const fn = resolved?.fn ?? await this.callee.evaluate(context);
+    if (typeof fn !== "function") {
+      return void 0;
+    }
+    const values = [];
+    for (const arg of this.args) {
+      values.push(await arg.evaluate(context));
+    }
+    return fn.apply(resolved?.thisArg, values);
+  }
+  resolveCallee(context) {
+    if (!(this.callee instanceof IdentifierExpression)) {
+      return void 0;
+    }
+    const name = this.callee.name;
+    const globals = context.globals ?? {};
+    const parts = name.split(".");
+    const root = parts[0];
+    if (!root || !(root in globals)) {
+      return void 0;
+    }
+    let value = globals[root];
+    let parent = void 0;
+    for (let i = 1; i < parts.length; i += 1) {
+      parent = value;
+      const part = parts[i];
+      if (!part) {
+        return void 0;
+      }
+      value = value?.[part];
+    }
+    return { fn: value, thisArg: parent };
+  }
+};
 var DirectiveExpression = class extends BaseNode {
   constructor(kind, name) {
     super("Directive");
@@ -576,6 +618,9 @@ var Parser = class _Parser {
     if (next.type === "Behavior" /* Behavior */) {
       return this.parseBehavior();
     }
+    if (this.isCallStart()) {
+      return this.parseExpressionStatement();
+    }
     if (this.isAssignmentStart()) {
       return this.parseAssignment();
     }
@@ -695,7 +740,42 @@ var Parser = class _Parser {
       const argument = this.parseUnaryExpression();
       return new UnaryExpression("-", argument);
     }
-    return this.parsePrimaryExpression();
+    return this.parseCallExpression();
+  }
+  parseCallExpression() {
+    let expr = this.parsePrimaryExpression();
+    while (true) {
+      this.stream.skipWhitespace();
+      if (this.stream.peek()?.type !== "LParen" /* LParen */) {
+        break;
+      }
+      this.stream.next();
+      const args = [];
+      while (true) {
+        this.stream.skipWhitespace();
+        const next = this.stream.peek();
+        if (!next) {
+          throw new Error("Unterminated call expression");
+        }
+        if (next.type === "RParen" /* RParen */) {
+          this.stream.next();
+          break;
+        }
+        args.push(this.parseExpression());
+        this.stream.skipWhitespace();
+        if (this.stream.peek()?.type === "Comma" /* Comma */) {
+          this.stream.next();
+          continue;
+        }
+        if (this.stream.peek()?.type === "RParen" /* RParen */) {
+          this.stream.next();
+          break;
+        }
+        throw new Error("Expected ',' or ')' in call arguments");
+      }
+      expr = new CallExpression(expr, args);
+    }
+    return expr;
   }
   parsePrimaryExpression() {
     this.stream.skipWhitespace();
@@ -855,8 +935,11 @@ var Parser = class _Parser {
       return false;
     }
     if (first.type === "Identifier" /* Identifier */) {
-      const second = this.stream.peekNonWhitespace(1);
-      return second?.type === "Equals" /* Equals */ || second?.type === "Dot" /* Dot */;
+      let index = 1;
+      while (this.stream.peekNonWhitespace(index)?.type === "Dot" /* Dot */ && this.stream.peekNonWhitespace(index + 1)?.type === "Identifier" /* Identifier */) {
+        index += 2;
+      }
+      return this.stream.peekNonWhitespace(index)?.type === "Equals" /* Equals */;
     }
     if (first.type === "At" /* At */ || first.type === "Dollar" /* Dollar */) {
       const second = this.stream.peekNonWhitespace(1);
@@ -864,6 +947,23 @@ var Parser = class _Parser {
       return second?.type === "Identifier" /* Identifier */ && third?.type === "Equals" /* Equals */;
     }
     return false;
+  }
+  isCallStart() {
+    const first = this.stream.peekNonWhitespace(0);
+    if (!first || first.type !== "Identifier" /* Identifier */) {
+      return false;
+    }
+    let index = 1;
+    while (this.stream.peekNonWhitespace(index)?.type === "Dot" /* Dot */ && this.stream.peekNonWhitespace(index + 1)?.type === "Identifier" /* Identifier */) {
+      index += 2;
+    }
+    return this.stream.peekNonWhitespace(index)?.type === "LParen" /* LParen */;
+  }
+  parseExpressionStatement() {
+    const expr = this.parseExpression();
+    this.stream.skipWhitespace();
+    this.stream.expect("Semicolon" /* Semicolon */);
+    return expr;
   }
   parseConstructBlock() {
     this.stream.expect("Construct" /* Construct */);
@@ -1176,7 +1276,9 @@ var Engine = class {
   codeCache = /* @__PURE__ */ new Map();
   observer;
   attributeHandlers = [];
+  globals = {};
   constructor() {
+    this.registerGlobal("console", console);
     this.registerDefaultAttributeHandlers();
   }
   async mount(root) {
@@ -1201,6 +1303,12 @@ var Engine = class {
     for (const behavior of program.behaviors) {
       this.collectBehavior(behavior);
     }
+  }
+  registerGlobal(name, value) {
+    this.globals[name] = value;
+  }
+  registerGlobals(values) {
+    Object.assign(this.globals, values);
   }
   registerAttributeHandler(handler) {
     this.attributeHandlers.push(handler);
@@ -1239,6 +1347,11 @@ var Engine = class {
     }
     this.observer = new MutationObserver((mutations) => {
       for (const mutation of mutations) {
+        for (const node of Array.from(mutation.addedNodes)) {
+          if (node && node.nodeType === 1) {
+            this.handleAddedNode(node);
+          }
+        }
         for (const node of Array.from(mutation.removedNodes)) {
           if (node && node.nodeType === 1) {
             this.handleRemovedNode(node);
@@ -1264,6 +1377,19 @@ var Engine = class {
       }
     }
   }
+  handleAddedNode(node) {
+    const elements = [node, ...Array.from(node.querySelectorAll("*"))];
+    for (const element of elements) {
+      if (!this.hasVsnAttributes(element)) {
+        continue;
+      }
+      const parentScope = this.findParentScope(element);
+      this.getScope(element, parentScope);
+      this.attachAttributes(element);
+      this.runConstruct(element);
+    }
+    void this.applyBehaviors(node);
+  }
   async applyBehaviors(root) {
     if (this.behaviorRegistry.length === 0) {
       return;
@@ -1282,8 +1408,12 @@ var Engine = class {
         bound.add(behavior.id);
         this.behaviorBindings.set(element, bound);
         const scope = this.getScope(element);
+        await this.applyBehaviorDeclarations(element, scope, behavior.declarations);
         if (behavior.construct) {
           await this.executeBlock(behavior.construct, scope);
+        }
+        for (const onBlock of behavior.onBlocks) {
+          this.attachBehaviorOnHandler(element, onBlock.event, onBlock.body);
         }
       }
     }
@@ -1380,6 +1510,13 @@ var Engine = class {
     }
     scope.on(key, handler);
   }
+  watchWithDebounce(scope, expr, handler, debounceMs) {
+    if (debounceMs) {
+      this.watch(scope, expr, debounce(handler, debounceMs));
+    } else {
+      this.watch(scope, expr, handler);
+    }
+  }
   parseOnAttribute(name, value) {
     if (!name.startsWith("vsn-on:")) {
       return null;
@@ -1413,6 +1550,14 @@ var Engine = class {
     const effectiveHandler = config.debounceMs ? debounce(handler, config.debounceMs) : handler;
     element.addEventListener(config.event, effectiveHandler);
   }
+  attachBehaviorOnHandler(element, event, body) {
+    const handler = async () => {
+      const scope = this.getScope(element);
+      await this.executeBlock(body, scope);
+      this.evaluate(element);
+    };
+    element.addEventListener(event, handler);
+  }
   attachGetHandler(element) {
     element.addEventListener("click", async () => {
       const config = this.getBindings.get(element);
@@ -1428,11 +1573,11 @@ var Engine = class {
       block = Parser.parseInline(code);
       this.codeCache.set(code, block);
     }
-    const context = { scope };
+    const context = { scope, globals: this.globals };
     await block.evaluate(context);
   }
   async executeBlock(block, scope) {
-    const context = { scope };
+    const context = { scope, globals: this.globals };
     await block.evaluate(context);
   }
   collectBehavior(behavior, parentSelector) {
@@ -1441,6 +1586,8 @@ var Engine = class {
     this.behaviorRegistry.push({
       id: this.behaviorId += 1,
       selector,
+      onBlocks: this.extractOnBlocks(behavior.body),
+      declarations: this.extractDeclarations(behavior.body),
       ...lifecycle
     });
     for (const statement of behavior.body.statements) {
@@ -1466,6 +1613,167 @@ var Engine = class {
       ...construct ? { construct } : {},
       ...destruct ? { destruct } : {}
     };
+  }
+  extractOnBlocks(body) {
+    const blocks = [];
+    for (const statement of body.statements) {
+      if (statement instanceof OnBlockNode) {
+        blocks.push({ event: statement.eventName, body: statement.body });
+      }
+    }
+    return blocks;
+  }
+  extractDeclarations(body) {
+    const declarations = [];
+    for (const statement of body.statements) {
+      if (statement instanceof DeclarationNode) {
+        declarations.push(statement);
+      }
+    }
+    return declarations;
+  }
+  async applyBehaviorDeclarations(element, scope, declarations) {
+    for (const declaration of declarations) {
+      await this.applyBehaviorDeclaration(element, scope, declaration);
+    }
+  }
+  async applyBehaviorDeclaration(element, scope, declaration) {
+    const context = { scope };
+    const operator = declaration.operator;
+    const debounceMs = declaration.flags.debounce ? declaration.flagArgs.debounce ?? 200 : void 0;
+    if (declaration.target instanceof IdentifierExpression) {
+      const value = await declaration.value.evaluate(context);
+      scope.setPath(declaration.target.name, value);
+      return;
+    }
+    if (!(declaration.target instanceof DirectiveExpression)) {
+      return;
+    }
+    const target = declaration.target;
+    const exprIdentifier = declaration.value instanceof IdentifierExpression ? declaration.value.name : void 0;
+    if (operator === ":>") {
+      if (exprIdentifier) {
+        this.applyDirectiveToScope(element, target, exprIdentifier, scope, debounceMs);
+      }
+      return;
+    }
+    if (operator === ":=" && exprIdentifier) {
+      this.applyDirectiveToScope(element, target, exprIdentifier, scope, debounceMs);
+    }
+    if (!exprIdentifier) {
+      const value = await declaration.value.evaluate(context);
+      this.setDirectiveValue(element, target, value, declaration.flags.trusted);
+      return;
+    }
+    const shouldWatch = operator === ":<" || operator === ":=";
+    this.applyDirectiveFromScope(
+      element,
+      target,
+      exprIdentifier,
+      scope,
+      declaration.flags.trusted,
+      debounceMs,
+      shouldWatch
+    );
+  }
+  applyDirectiveFromScope(element, target, expr, scope, trusted, debounceMs, watch = true) {
+    if (target.kind === "attr" && target.name === "html" && element instanceof HTMLElement) {
+      const handler2 = () => applyHtml(element, expr, scope, Boolean(trusted));
+      handler2();
+      if (watch) {
+        this.watchWithDebounce(scope, expr, handler2, debounceMs);
+      }
+      return;
+    }
+    const handler = () => {
+      const value = scope.get(expr);
+      if (value == null) {
+        return;
+      }
+      this.setDirectiveValue(element, target, value, trusted);
+    };
+    handler();
+    if (watch) {
+      this.watchWithDebounce(scope, expr, handler, debounceMs);
+    }
+  }
+  applyDirectiveToScope(element, target, expr, scope, debounceMs) {
+    if (target.kind === "attr" && target.name === "value") {
+      this.applyValueBindingToScope(element, expr, debounceMs);
+      return;
+    }
+    const value = this.getDirectiveValue(element, target);
+    if (value != null) {
+      scope.set(expr, value);
+    }
+  }
+  applyValueBindingToScope(element, expr, debounceMs) {
+    if (!(element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement || element instanceof HTMLSelectElement)) {
+      return;
+    }
+    const handler = () => {
+      const scope = this.getScope(element);
+      applyBindToScope(element, expr, scope);
+    };
+    const effectiveHandler = debounceMs ? debounce(handler, debounceMs) : handler;
+    effectiveHandler();
+    element.addEventListener("input", effectiveHandler);
+    element.addEventListener("change", effectiveHandler);
+  }
+  setDirectiveValue(element, target, value, trusted) {
+    if (target.kind === "attr" && target.name === "html" && element instanceof HTMLElement) {
+      const html = value == null ? "" : String(value);
+      element.innerHTML = trusted ? html : html.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, "");
+      return;
+    }
+    if (target.kind === "attr") {
+      if (target.name === "value") {
+        if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) {
+          element.value = value == null ? "" : String(value);
+          element.setAttribute("value", element.value);
+          return;
+        }
+        if (element instanceof HTMLSelectElement) {
+          element.value = value == null ? "" : String(value);
+          return;
+        }
+      }
+      if (target.name === "checked" && element instanceof HTMLInputElement) {
+        const checked = Boolean(value);
+        element.checked = checked;
+        if (checked) {
+          element.setAttribute("checked", "");
+        } else {
+          element.removeAttribute("checked");
+        }
+        return;
+      }
+      element.setAttribute(target.name, value == null ? "" : String(value));
+      return;
+    }
+    if (target.kind === "style" && element instanceof HTMLElement) {
+      element.style.setProperty(target.name, value == null ? "" : String(value));
+    }
+  }
+  getDirectiveValue(element, target) {
+    if (target.kind === "attr") {
+      if (target.name === "value") {
+        if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) {
+          return element.value;
+        }
+        if (element instanceof HTMLSelectElement) {
+          return element.value;
+        }
+      }
+      if (target.name === "checked" && element instanceof HTMLInputElement) {
+        return element.checked ? "true" : "false";
+      }
+      return element.getAttribute(target.name) ?? void 0;
+    }
+    if (target.kind === "style" && element instanceof HTMLElement) {
+      return element.style.getPropertyValue(target.name) ?? void 0;
+    }
+    return void 0;
   }
   registerDefaultAttributeHandlers() {
     this.registerAttributeHandler({
@@ -1569,7 +1877,6 @@ function parseCFS(source) {
   return parser.parseProgram();
 }
 function autoMount(root = document) {
-  console.log("auto mounting");
   if (typeof document === "undefined") {
     return null;
   }
@@ -1577,6 +1884,10 @@ function autoMount(root = document) {
   const mount = () => {
     const target = root instanceof Document ? root.body : root;
     if (target) {
+      const sources = Array.from(document.querySelectorAll('script[type="text/vsn"]')).map((script) => script.textContent ?? "").join("\n");
+      if (sources.trim()) {
+        engine.registerBehaviors(sources);
+      }
       engine.mount(target);
     }
   };
@@ -1599,6 +1910,7 @@ export {
   BehaviorNode,
   BinaryExpression,
   BlockNode,
+  CallExpression,
   DeclarationNode,
   DirectiveExpression,
   Engine,

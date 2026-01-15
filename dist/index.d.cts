@@ -75,6 +75,7 @@ interface ExecutionContext {
         getPath(key: string): any;
         setPath?(key: string, value: any): void;
     };
+    globals?: Record<string, any>;
 }
 interface CFSNode {
     type: string;
@@ -143,7 +144,7 @@ declare class DeclarationNode extends BaseNode {
     flagArgs: DeclarationFlagArgs;
     constructor(target: DeclarationTarget, operator: ":" | ":=" | ":<" | ":>", value: ExpressionNode, flags: DeclarationFlags, flagArgs: DeclarationFlagArgs);
 }
-type ExpressionNode = IdentifierExpression | LiteralExpression | UnaryExpression | BinaryExpression | DirectiveExpression | QueryExpression;
+type ExpressionNode = IdentifierExpression | LiteralExpression | UnaryExpression | BinaryExpression | CallExpression | DirectiveExpression | QueryExpression;
 type DeclarationTarget = IdentifierExpression | DirectiveExpression;
 type AssignmentTarget = IdentifierExpression | DirectiveExpression;
 declare class IdentifierExpression extends BaseNode {
@@ -168,6 +169,13 @@ declare class BinaryExpression extends BaseNode {
     right: ExpressionNode;
     constructor(operator: string, left: ExpressionNode, right: ExpressionNode);
     evaluate(context: ExecutionContext): Promise<any>;
+}
+declare class CallExpression extends BaseNode {
+    callee: ExpressionNode;
+    args: ExpressionNode[];
+    constructor(callee: ExpressionNode, args: ExpressionNode[]);
+    evaluate(context: ExecutionContext): Promise<any>;
+    private resolveCallee;
 }
 declare class DirectiveExpression extends BaseNode {
     kind: "attr" | "style";
@@ -197,6 +205,7 @@ declare class Parser {
     private parseExpression;
     private parseAdditiveExpression;
     private parseUnaryExpression;
+    private parseCallExpression;
     private parsePrimaryExpression;
     private parseAssignmentTarget;
     private parseDeclaration;
@@ -205,6 +214,8 @@ declare class Parser {
     private parseFlags;
     private isDeclarationStart;
     private isAssignmentStart;
+    private isCallStart;
+    private parseExpressionStatement;
     private parseConstructBlock;
     private parseDestructBlock;
     private parseQueryExpression;
@@ -247,15 +258,19 @@ declare class Engine {
     private codeCache;
     private observer?;
     private attributeHandlers;
+    private globals;
     constructor();
     mount(root: HTMLElement): Promise<void>;
     unmount(element: Element): void;
     registerBehaviors(source: string): void;
+    registerGlobal(name: string, value: any): void;
+    registerGlobals(values: Record<string, any>): void;
     registerAttributeHandler(handler: AttributeHandler): void;
     getScope(element: Element, parentScope?: Scope): Scope;
     evaluate(element: Element): void;
     private attachObserver;
     private handleRemovedNode;
+    private handleAddedNode;
     private applyBehaviors;
     private runBehaviorDestruct;
     private attachAttributes;
@@ -267,13 +282,24 @@ declare class Engine {
     private hasVsnAttributes;
     private findParentScope;
     private watch;
+    private watchWithDebounce;
     private parseOnAttribute;
     private attachOnHandler;
+    private attachBehaviorOnHandler;
     private attachGetHandler;
     private execute;
     private executeBlock;
     private collectBehavior;
     private extractLifecycle;
+    private extractOnBlocks;
+    private extractDeclarations;
+    private applyBehaviorDeclarations;
+    private applyBehaviorDeclaration;
+    private applyDirectiveFromScope;
+    private applyDirectiveToScope;
+    private applyValueBindingToScope;
+    private setDirectiveValue;
+    private getDirectiveValue;
     private registerDefaultAttributeHandlers;
 }
 
@@ -282,4 +308,4 @@ declare const VERSION = "0.1.0";
 declare function parseCFS(source: string): ProgramNode;
 declare function autoMount(root?: HTMLElement | Document): Engine | null;
 
-export { AssignmentNode, type AssignmentTarget, BaseNode, BehaviorNode, BinaryExpression, BlockNode, type CFSNode, type DeclarationFlagArgs, type DeclarationFlags, DeclarationNode, type DeclarationTarget, DirectiveExpression, Engine, type ExecutionContext, type ExpressionNode, IdentifierExpression, Lexer, LiteralExpression, OnBlockNode, Parser, ProgramNode, QueryExpression, SelectorNode, StateBlockNode, StateEntryNode, TokenType, UnaryExpression, VERSION, autoMount, parseCFS };
+export { AssignmentNode, type AssignmentTarget, BaseNode, BehaviorNode, BinaryExpression, BlockNode, type CFSNode, CallExpression, type DeclarationFlagArgs, type DeclarationFlags, DeclarationNode, type DeclarationTarget, DirectiveExpression, Engine, type ExecutionContext, type ExpressionNode, IdentifierExpression, Lexer, LiteralExpression, OnBlockNode, Parser, ProgramNode, QueryExpression, SelectorNode, StateBlockNode, StateEntryNode, TokenType, UnaryExpression, VERSION, autoMount, parseCFS };

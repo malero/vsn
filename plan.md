@@ -226,3 +226,8 @@ Conditional Blocks (Future-Proofing)
 - Add behavior-level binding reactivity (scope change -> DOM update) matching attribute behavior.
 - Wire behavior registry to MutationObserver for new elements (bind behaviors on insertion).
 - Expose public API for registering custom attributes/flags with docs/examples.
+- Expression comparisons (==, !=, <, >, <=, >=) + boolean ops.
+- Array literals + indexing + .length.
+- Whitelisted globals: setInterval, clearInterval.
+- Selector helpers (e.g., ?>(selector) returning elements array) or allow document.querySelectorAll in a safe whitelist.
+- 

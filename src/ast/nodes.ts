@@ -3,6 +3,8 @@ export interface ExecutionContext {
     getPath(key: string): any;
     setPath?(key: string, value: any): void;
   };
+  globals?: Record<string, any>;
+  element?: Element;
 }
 
 export interface CFSNode {
@@ -130,6 +132,7 @@ export type ExpressionNode =
   | LiteralExpression
   | UnaryExpression
   | BinaryExpression
+  | CallExpression
   | DirectiveExpression
   | QueryExpression;
 
@@ -198,6 +201,51 @@ export class BinaryExpression extends BaseNode {
   }
 }
 
+export class CallExpression extends BaseNode {
+  constructor(public callee: ExpressionNode, public args: ExpressionNode[]) {
+    super("CallExpression");
+  }
+
+  async evaluate(context: ExecutionContext): Promise<any> {
+    const resolved = this.resolveCallee(context);
+    const fn = resolved?.fn ?? (await this.callee.evaluate(context));
+    if (typeof fn !== "function") {
+      return undefined;
+    }
+    const values = [];
+    for (const arg of this.args) {
+      values.push(await arg.evaluate(context));
+    }
+    return fn.apply(resolved?.thisArg, values);
+  }
+
+  private resolveCallee(
+    context: ExecutionContext
+  ): { fn: any; thisArg?: any } | undefined {
+    if (!(this.callee instanceof IdentifierExpression)) {
+      return undefined;
+    }
+    const name = this.callee.name;
+    const globals = context.globals ?? {};
+    const parts = name.split(".");
+    const root = parts[0];
+    if (!root || !(root in globals)) {
+      return undefined;
+    }
+    let value = globals[root];
+    let parent: any = undefined;
+    for (let i = 1; i < parts.length; i += 1) {
+      parent = value;
+      const part = parts[i];
+      if (!part) {
+        return undefined;
+      }
+      value = value?.[part];
+    }
+    return { fn: value, thisArg: parent };
+  }
+}
+
 export class DirectiveExpression extends BaseNode {
   constructor(public kind: "attr" | "style", public name: string) {
     super("Directive");
@@ -211,5 +259,30 @@ export class DirectiveExpression extends BaseNode {
 export class QueryExpression extends BaseNode {
   constructor(public direction: "self" | "descendant" | "ancestor", public selector: string) {
     super("Query");
+  }
+
+  async evaluate(context: ExecutionContext): Promise<any> {
+    const selector = this.selector.trim();
+    if (!selector) {
+      return [];
+    }
+    if (this.direction === "ancestor") {
+      const results: Element[] = [];
+      let cursor = context.element?.parentElement;
+      while (cursor) {
+        if (cursor.matches(selector)) {
+          results.push(cursor);
+        }
+        cursor = cursor.parentElement;
+      }
+      return results;
+    }
+    const root = this.direction === "descendant"
+      ? context.element ?? (typeof document !== "undefined" ? document : undefined)
+      : context.element ?? (typeof document !== "undefined" ? document : undefined);
+    if (!root || !("querySelectorAll" in root)) {
+      return [];
+    }
+    return Array.from((root as ParentNode).querySelectorAll(selector));
   }
 }

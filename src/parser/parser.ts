@@ -4,6 +4,7 @@ import {
   BinaryExpression,
   BlockNode,
   AssignmentTarget,
+  CallExpression,
   DeclarationNode,
   DeclarationTarget,
   DeclarationFlags,
@@ -154,6 +155,10 @@ export class Parser {
       return this.parseBehavior();
     }
 
+    if (this.isCallStart()) {
+      return this.parseExpressionStatement();
+    }
+
     if (this.isAssignmentStart()) {
       return this.parseAssignment();
     }
@@ -287,7 +292,43 @@ export class Parser {
       const argument = this.parseUnaryExpression();
       return new UnaryExpression("-", argument);
     }
-    return this.parsePrimaryExpression();
+    return this.parseCallExpression();
+  }
+
+  private parseCallExpression(): ExpressionNode {
+    let expr = this.parsePrimaryExpression();
+    while (true) {
+      this.stream.skipWhitespace();
+      if (this.stream.peek()?.type !== TokenType.LParen) {
+        break;
+      }
+      this.stream.next();
+      const args: ExpressionNode[] = [];
+      while (true) {
+        this.stream.skipWhitespace();
+        const next = this.stream.peek();
+        if (!next) {
+          throw new Error("Unterminated call expression");
+        }
+        if (next.type === TokenType.RParen) {
+          this.stream.next();
+          break;
+        }
+        args.push(this.parseExpression());
+        this.stream.skipWhitespace();
+        if (this.stream.peek()?.type === TokenType.Comma) {
+          this.stream.next();
+          continue;
+        }
+        if (this.stream.peek()?.type === TokenType.RParen) {
+          this.stream.next();
+          break;
+        }
+        throw new Error("Expected ',' or ')' in call arguments");
+      }
+      expr = new CallExpression(expr, args);
+    }
+    return expr;
   }
 
   private parsePrimaryExpression(): ExpressionNode {
@@ -477,8 +518,14 @@ export class Parser {
     }
 
     if (first.type === TokenType.Identifier) {
-      const second = this.stream.peekNonWhitespace(1);
-      return second?.type === TokenType.Equals || second?.type === TokenType.Dot;
+      let index = 1;
+      while (
+        this.stream.peekNonWhitespace(index)?.type === TokenType.Dot &&
+        this.stream.peekNonWhitespace(index + 1)?.type === TokenType.Identifier
+      ) {
+        index += 2;
+      }
+      return this.stream.peekNonWhitespace(index)?.type === TokenType.Equals;
     }
 
     if (first.type === TokenType.At || first.type === TokenType.Dollar) {
@@ -488,6 +535,28 @@ export class Parser {
     }
 
     return false;
+  }
+
+  private isCallStart(): boolean {
+    const first = this.stream.peekNonWhitespace(0);
+    if (!first || first.type !== TokenType.Identifier) {
+      return false;
+    }
+    let index = 1;
+    while (
+      this.stream.peekNonWhitespace(index)?.type === TokenType.Dot &&
+      this.stream.peekNonWhitespace(index + 1)?.type === TokenType.Identifier
+    ) {
+      index += 2;
+    }
+    return this.stream.peekNonWhitespace(index)?.type === TokenType.LParen;
+  }
+
+  private parseExpressionStatement(): ExpressionNode {
+    const expr = this.parseExpression();
+    this.stream.skipWhitespace();
+    this.stream.expect(TokenType.Semicolon);
+    return expr;
   }
 
   private parseConstructBlock(): BlockNode {
