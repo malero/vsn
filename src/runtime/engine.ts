@@ -5,7 +5,7 @@ import { applyHtml } from "./html";
 import { applyGet, GetConfig } from "./http";
 import { debounce } from "./debounce";
 import { Parser } from "../parser/parser";
-import { BlockNode, ExecutionContext } from "../ast/nodes";
+import { BehaviorNode, BlockNode, ExecutionContext } from "../ast/nodes";
 
 interface OnConfig {
   event: string;
@@ -18,6 +18,24 @@ interface BindConfig {
   direction: BindDirection;
 }
 
+interface LifecycleConfig {
+  construct?: string;
+  destruct?: string;
+}
+
+interface RegisteredBehavior {
+  id: number;
+  selector: string;
+  construct?: BlockNode;
+  destruct?: BlockNode;
+}
+
+type AttributeHandler = {
+  id: string;
+  match: (name: string) => boolean;
+  handle: (element: Element, name: string, value: string, scope: Scope) => boolean | void;
+};
+
 export class Engine {
   private scopes = new WeakMap<Element, Scope>();
   private bindBindings = new WeakMap<Element, BindConfig>();
@@ -25,7 +43,17 @@ export class Engine {
   private showBindings = new WeakMap<Element, string>();
   private htmlBindings = new WeakMap<Element, { expr: string; trusted: boolean }>();
   private getBindings = new WeakMap<Element, GetConfig>();
+  private lifecycleBindings = new WeakMap<Element, LifecycleConfig>();
+  private behaviorRegistry: RegisteredBehavior[] = [];
+  private behaviorBindings = new WeakMap<Element, Set<number>>();
+  private behaviorId = 0;
   private codeCache = new Map<string, BlockNode>();
+  private observer?: MutationObserver;
+  private attributeHandlers: AttributeHandler[] = [];
+
+  constructor() {
+    this.registerDefaultAttributeHandlers();
+  }
 
   async mount(root: HTMLElement): Promise<void> {
     const elements: Element[] = [root, ...Array.from(root.querySelectorAll("*"))];
@@ -36,7 +64,25 @@ export class Engine {
       const parentScope = this.findParentScope(element);
       this.getScope(element, parentScope);
       this.attachAttributes(element);
+      this.runConstruct(element);
     }
+    await this.applyBehaviors(root);
+    this.attachObserver(root);
+  }
+
+  unmount(element: Element): void {
+    this.runDestruct(element);
+  }
+
+  registerBehaviors(source: string): void {
+    const program = new Parser(source).parseProgram();
+    for (const behavior of program.behaviors) {
+      this.collectBehavior(behavior);
+    }
+  }
+
+  registerAttributeHandler(handler: AttributeHandler): void {
+    this.attributeHandlers.push(handler);
   }
 
   getScope(element: Element, parentScope?: Scope): Scope {
@@ -69,74 +115,130 @@ export class Engine {
     }
   }
 
+  private attachObserver(root: HTMLElement): void {
+    if (this.observer) {
+      return;
+    }
+    this.observer = new MutationObserver((mutations) => {
+      for (const mutation of mutations) {
+        for (const node of Array.from(mutation.removedNodes)) {
+          if (node && node.nodeType === 1) {
+            this.handleRemovedNode(node as Element);
+          }
+        }
+      }
+    });
+    this.observer.observe(root, { childList: true, subtree: true });
+  }
+
+  private handleRemovedNode(node: Element): void {
+    if (this.lifecycleBindings.has(node)) {
+      this.runDestruct(node);
+    }
+    if (this.behaviorBindings.has(node)) {
+      this.runBehaviorDestruct(node);
+    }
+    for (const child of Array.from(node.querySelectorAll("*"))) {
+      if (this.lifecycleBindings.has(child)) {
+        this.runDestruct(child);
+      }
+      if (this.behaviorBindings.has(child)) {
+        this.runBehaviorDestruct(child);
+      }
+    }
+  }
+
+  private async applyBehaviors(root: HTMLElement): Promise<void> {
+    if (this.behaviorRegistry.length === 0) {
+      return;
+    }
+    for (const behavior of this.behaviorRegistry) {
+      const matches: Element[] = [];
+      if (root.matches(behavior.selector)) {
+        matches.push(root);
+      }
+      matches.push(...Array.from(root.querySelectorAll(behavior.selector)));
+      for (const element of matches) {
+        const bound = this.behaviorBindings.get(element) ?? new Set<number>();
+        if (bound.has(behavior.id)) {
+          continue;
+        }
+        bound.add(behavior.id);
+        this.behaviorBindings.set(element, bound);
+        const scope = this.getScope(element);
+        if (behavior.construct) {
+          await this.executeBlock(behavior.construct, scope);
+        }
+      }
+    }
+  }
+
+  private runBehaviorDestruct(element: Element): void {
+    const bound = this.behaviorBindings.get(element);
+    if (!bound) {
+      return;
+    }
+    const scope = this.getScope(element);
+    for (const behavior of this.behaviorRegistry) {
+      if (!bound.has(behavior.id) || !behavior.destruct) {
+        continue;
+      }
+      void this.executeBlock(behavior.destruct, scope);
+    }
+  }
+
   private attachAttributes(element: Element): void {
     const scope = this.getScope(element);
     for (const name of element.getAttributeNames()) {
-      if (name.startsWith("vsn-bind")) {
-        const value = element.getAttribute(name) ?? "";
-        const direction = this.parseBindDirection(name);
-        this.bindBindings.set(element, { expr: value, direction });
-        if (direction === "to" || direction === "both") {
-          applyBindToScope(element, value, scope);
-        }
-        if (direction === "from" || direction === "both") {
-          this.watch(scope, value, () => applyBindToElement(element, value, scope));
-        }
+      if (!name.startsWith("vsn-")) {
         continue;
       }
-
-      if (name === "vsn-if") {
-        const value = element.getAttribute(name) ?? "";
-        this.ifBindings.set(element, value);
-        if (element instanceof HTMLElement) {
-          applyIf(element, value, scope);
+      const value = element.getAttribute(name) ?? "";
+      for (const handler of this.attributeHandlers) {
+        if (!handler.match(name)) {
+          continue;
         }
-        this.watch(scope, value, () => this.evaluate(element));
-        continue;
-      }
-
-      if (name === "vsn-show") {
-        const value = element.getAttribute(name) ?? "";
-        this.showBindings.set(element, value);
-        if (element instanceof HTMLElement) {
-          applyShow(element, value, scope);
+        const handled = handler.handle(element, name, value, scope);
+        if (handled !== false) {
+          break;
         }
-        this.watch(scope, value, () => this.evaluate(element));
-        continue;
-      }
-
-      if (name.startsWith("vsn-html")) {
-        const trusted = name.includes("!trusted");
-        const value = element.getAttribute(name) ?? "";
-        this.htmlBindings.set(element, { expr: value, trusted });
-        if (element instanceof HTMLElement) {
-          applyHtml(element, value, scope, trusted);
-        }
-        this.watch(scope, value, () => this.evaluate(element));
-        continue;
-      }
-
-      if (name.startsWith("vsn-get")) {
-        const trusted = name.includes("!trusted");
-        const url = element.getAttribute(name) ?? "";
-        const target = element.getAttribute("vsn-target") ?? undefined;
-        const swap = (element.getAttribute("vsn-swap") as "inner" | "outer" | null) ?? "inner";
-        const config: GetConfig = {
-          url,
-          swap,
-          trusted,
-          ...(target ? { targetSelector: target } : {})
-        };
-        this.getBindings.set(element, config);
-        this.attachGetHandler(element);
-        continue;
-      }
-
-      const onConfig = this.parseOnAttribute(name, element.getAttribute(name) ?? "");
-      if (onConfig) {
-        this.attachOnHandler(element, onConfig);
       }
     }
+  }
+
+  private setLifecycle(element: Element, patch: LifecycleConfig): void {
+    const current = this.lifecycleBindings.get(element) ?? {};
+    this.lifecycleBindings.set(element, { ...current, ...patch });
+  }
+
+  private runConstruct(element: Element): void {
+    const config = this.lifecycleBindings.get(element);
+    if (!config?.construct) {
+      return;
+    }
+    const scope = this.getScope(element);
+    this.execute(config.construct, scope);
+  }
+
+  private runDestruct(element: Element): void {
+    const config = this.lifecycleBindings.get(element);
+    if (!config?.destruct) {
+      return;
+    }
+    const scope = this.getScope(element);
+    this.execute(config.destruct, scope);
+  }
+
+  private attachBindInputHandler(element: Element, expr: string): void {
+    if (!(element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement || element instanceof HTMLSelectElement)) {
+      return;
+    }
+    const handler = () => {
+      const scope = this.getScope(element);
+      applyBindToScope(element, expr, scope);
+    };
+    element.addEventListener("input", handler);
+    element.addEventListener("change", handler);
   }
 
   private parseBindDirection(name: string): BindDirection {
@@ -231,28 +333,145 @@ export class Engine {
     await block.evaluate(context);
   }
 
-  private evaluateExpression(expr: string, scope: Scope): any {
-    const parts = expr.split("+").map((part) => part.trim()).filter(Boolean);
-    if (parts.length > 1) {
-      return parts.reduce((sum, part) => {
-        const value = this.evaluateExpression(part, scope);
-        return (sum as any) + (value as any);
-      }, 0 as any);
-    }
+  private async executeBlock(block: BlockNode, scope: Scope): Promise<void> {
+    const context: ExecutionContext = { scope };
+    await block.evaluate(context);
+  }
 
-    const token = parts[0];
-    if (!token) {
-      return undefined;
+  private collectBehavior(behavior: BehaviorNode, parentSelector?: string): void {
+    const selector = parentSelector
+      ? `${parentSelector} ${behavior.selector.selectorText}`
+      : behavior.selector.selectorText;
+    const lifecycle = this.extractLifecycle(behavior.body);
+    this.behaviorRegistry.push({
+      id: this.behaviorId += 1,
+      selector,
+      ...lifecycle
+    });
+    for (const statement of behavior.body.statements) {
+      if (statement instanceof BehaviorNode) {
+        this.collectBehavior(statement, selector);
+      }
     }
-    if (token === "true") return true;
-    if (token === "false") return false;
-    if (token === "null") return null;
-    if (/^-?\d+(?:\.\d+)?$/.test(token)) {
-      return Number(token);
+  }
+
+  private extractLifecycle(body: BlockNode): { construct?: BlockNode; destruct?: BlockNode } {
+    let construct: BlockNode | undefined;
+    let destruct: BlockNode | undefined;
+    for (const statement of body.statements) {
+      if (!(statement instanceof BlockNode)) {
+        continue;
+      }
+      if (statement.type === "Construct") {
+        construct = statement;
+      } else if (statement.type === "Destruct") {
+        destruct = statement;
+      }
     }
-    if ((token.startsWith("\"") && token.endsWith("\"")) || (token.startsWith("'") && token.endsWith("'"))) {
-      return token.slice(1, -1);
-    }
-    return scope.getPath(token);
+    return {
+      ...(construct ? { construct } : {}),
+      ...(destruct ? { destruct } : {})
+    };
+  }
+
+  private registerDefaultAttributeHandlers(): void {
+    this.registerAttributeHandler({
+      id: "vsn-bind",
+      match: (name) => name.startsWith("vsn-bind"),
+      handle: (element, name, value, scope) => {
+        const direction = this.parseBindDirection(name);
+        this.bindBindings.set(element, { expr: value, direction });
+        if (direction === "to" || direction === "both") {
+          applyBindToScope(element, value, scope);
+          this.attachBindInputHandler(element, value);
+        }
+        if (direction === "from" || direction === "both") {
+          this.watch(scope, value, () => applyBindToElement(element, value, scope));
+        }
+      }
+    });
+
+    this.registerAttributeHandler({
+      id: "vsn-if",
+      match: (name) => name === "vsn-if",
+      handle: (element, _name, value, scope) => {
+        this.ifBindings.set(element, value);
+        if (element instanceof HTMLElement) {
+          applyIf(element, value, scope);
+        }
+        this.watch(scope, value, () => this.evaluate(element));
+      }
+    });
+
+    this.registerAttributeHandler({
+      id: "vsn-show",
+      match: (name) => name === "vsn-show",
+      handle: (element, _name, value, scope) => {
+        this.showBindings.set(element, value);
+        if (element instanceof HTMLElement) {
+          applyShow(element, value, scope);
+        }
+        this.watch(scope, value, () => this.evaluate(element));
+      }
+    });
+
+    this.registerAttributeHandler({
+      id: "vsn-html",
+      match: (name) => name.startsWith("vsn-html"),
+      handle: (element, name, value, scope) => {
+        const trusted = name.includes("!trusted");
+        this.htmlBindings.set(element, { expr: value, trusted });
+        if (element instanceof HTMLElement) {
+          applyHtml(element, value, scope, trusted);
+        }
+        this.watch(scope, value, () => this.evaluate(element));
+      }
+    });
+
+    this.registerAttributeHandler({
+      id: "vsn-get",
+      match: (name) => name.startsWith("vsn-get"),
+      handle: (element, name) => {
+        const trusted = name.includes("!trusted");
+        const url = element.getAttribute(name) ?? "";
+        const target = element.getAttribute("vsn-target") ?? undefined;
+        const swap = (element.getAttribute("vsn-swap") as "inner" | "outer" | null) ?? "inner";
+        const config: GetConfig = {
+          url,
+          swap,
+          trusted,
+          ...(target ? { targetSelector: target } : {})
+        };
+        this.getBindings.set(element, config);
+        this.attachGetHandler(element);
+      }
+    });
+
+    this.registerAttributeHandler({
+      id: "vsn-construct",
+      match: (name) => name === "vsn-construct",
+      handle: (element, _name, value) => {
+        this.setLifecycle(element, { construct: value });
+      }
+    });
+
+    this.registerAttributeHandler({
+      id: "vsn-destruct",
+      match: (name) => name === "vsn-destruct",
+      handle: (element, _name, value) => {
+        this.setLifecycle(element, { destruct: value });
+      }
+    });
+
+    this.registerAttributeHandler({
+      id: "vsn-on",
+      match: (name) => name.startsWith("vsn-on:"),
+      handle: (element, name, value) => {
+        const onConfig = this.parseOnAttribute(name, value);
+        if (onConfig) {
+          this.attachOnHandler(element, onConfig);
+        }
+      }
+    });
   }
 }

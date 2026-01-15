@@ -24,6 +24,7 @@ declare enum TokenType {
     Greater = "Greater",
     Less = "Less",
     Plus = "Plus",
+    Minus = "Minus",
     Tilde = "Tilde",
     Star = "Star",
     Equals = "Equals",
@@ -215,14 +216,23 @@ declare class Scope {
     readonly parent?: Scope | undefined;
     private data;
     private root;
+    private listeners;
     constructor(parent?: Scope | undefined);
     get(key: string): any;
     set(key: string, value: any): void;
     getPath(path: string): any;
     setPath(path: string, value: any): void;
+    on(path: string, handler: () => void): void;
+    off(path: string, handler: () => void): void;
+    private emitChange;
     private resolveScope;
 }
 
+type AttributeHandler = {
+    id: string;
+    match: (name: string) => boolean;
+    handle: (element: Element, name: string, value: string, scope: Scope) => boolean | void;
+};
 declare class Engine {
     private scopes;
     private bindBindings;
@@ -230,19 +240,41 @@ declare class Engine {
     private showBindings;
     private htmlBindings;
     private getBindings;
+    private lifecycleBindings;
+    private behaviorRegistry;
+    private behaviorBindings;
+    private behaviorId;
     private codeCache;
+    private observer?;
+    private attributeHandlers;
+    constructor();
     mount(root: HTMLElement): Promise<void>;
+    unmount(element: Element): void;
+    registerBehaviors(source: string): void;
+    registerAttributeHandler(handler: AttributeHandler): void;
     getScope(element: Element, parentScope?: Scope): Scope;
     evaluate(element: Element): void;
+    private attachObserver;
+    private handleRemovedNode;
+    private applyBehaviors;
+    private runBehaviorDestruct;
     private attachAttributes;
+    private setLifecycle;
+    private runConstruct;
+    private runDestruct;
+    private attachBindInputHandler;
     private parseBindDirection;
     private hasVsnAttributes;
     private findParentScope;
+    private watch;
     private parseOnAttribute;
     private attachOnHandler;
     private attachGetHandler;
     private execute;
-    private evaluateExpression;
+    private executeBlock;
+    private collectBehavior;
+    private extractLifecycle;
+    private registerDefaultAttributeHandlers;
 }
 
 declare const VERSION = "0.1.0";

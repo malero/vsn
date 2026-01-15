@@ -73,6 +73,7 @@ var TokenType = /* @__PURE__ */ ((TokenType2) => {
   TokenType2["Greater"] = "Greater";
   TokenType2["Less"] = "Less";
   TokenType2["Plus"] = "Plus";
+  TokenType2["Minus"] = "Minus";
   TokenType2["Tilde"] = "Tilde";
   TokenType2["Star"] = "Star";
   TokenType2["Equals"] = "Equals";
@@ -230,6 +231,7 @@ var Lexer = class {
       ">": "Greater" /* Greater */,
       "<": "Less" /* Less */,
       "+": "Plus" /* Plus */,
+      "-": "Minus" /* Minus */,
       "~": "Tilde" /* Tilde */,
       "*": "Star" /* Star */,
       "=": "Equals" /* Equals */,
@@ -416,6 +418,9 @@ var UnaryExpression = class extends BaseNode {
     if (this.operator === "!") {
       return !value;
     }
+    if (this.operator === "-") {
+      return -value;
+    }
     return value;
   }
 };
@@ -431,6 +436,9 @@ var BinaryExpression = class extends BaseNode {
     const right = await this.right.evaluate(context);
     if (this.operator === "+") {
       return left + right;
+    }
+    if (this.operator === "-") {
+      return left - right;
     }
     return void 0;
   }
@@ -705,13 +713,17 @@ var Parser = class _Parser {
   parseAdditiveExpression() {
     let left = this.parseUnaryExpression();
     this.stream.skipWhitespace();
-    while (this.stream.peekNonWhitespace(0)?.type === "Plus" /* Plus */) {
+    while (true) {
+      const next = this.stream.peekNonWhitespace(0);
+      if (!next || next.type !== "Plus" /* Plus */ && next.type !== "Minus" /* Minus */) {
+        break;
+      }
       this.stream.skipWhitespace();
-      this.stream.expect("Plus" /* Plus */);
+      const op = this.stream.next();
       this.stream.skipWhitespace();
       const right = this.parseUnaryExpression();
       this.stream.skipWhitespace();
-      left = new BinaryExpression("+", left, right);
+      left = new BinaryExpression(op.type === "Plus" /* Plus */ ? "+" : "-", left, right);
     }
     return left;
   }
@@ -725,6 +737,11 @@ var Parser = class _Parser {
       this.stream.next();
       const argument = this.parseUnaryExpression();
       return new UnaryExpression("!", argument);
+    }
+    if (token.type === "Minus" /* Minus */) {
+      this.stream.next();
+      const argument = this.parseUnaryExpression();
+      return new UnaryExpression("-", argument);
     }
     return this.parsePrimaryExpression();
   }
@@ -742,6 +759,13 @@ var Parser = class _Parser {
     }
     if (token.type === "Question" /* Question */) {
       return this.parseQueryExpression();
+    }
+    if (token.type === "LParen" /* LParen */) {
+      this.stream.next();
+      const value = this.parseExpression();
+      this.stream.skipWhitespace();
+      this.stream.expect("RParen" /* RParen */);
+      return value;
     }
     if (token.type === "Identifier" /* Identifier */) {
       const name = this.parseIdentifierPath();
@@ -959,6 +983,7 @@ var Scope = class {
   }
   data = /* @__PURE__ */ new Map();
   root;
+  listeners = /* @__PURE__ */ new Map();
   get(key) {
     return this.getPath(key);
   }
@@ -1000,6 +1025,7 @@ var Scope = class {
     }
     if (parts.length === 1) {
       targetScope.data.set(root, value);
+      targetScope.emitChange(targetPath);
       return;
     }
     let obj = targetScope.data.get(root);
@@ -1023,6 +1049,38 @@ var Scope = class {
       return;
     }
     cursor[lastKey] = value;
+    this.emitChange(path);
+  }
+  on(path, handler) {
+    const key = path.trim();
+    if (!key) {
+      return;
+    }
+    const set = this.listeners.get(key) ?? /* @__PURE__ */ new Set();
+    set.add(handler);
+    this.listeners.set(key, set);
+  }
+  off(path, handler) {
+    const key = path.trim();
+    const set = this.listeners.get(key);
+    if (!set) {
+      return;
+    }
+    set.delete(handler);
+    if (set.size === 0) {
+      this.listeners.delete(key);
+    }
+  }
+  emitChange(path) {
+    const key = path.trim();
+    if (!key) {
+      return;
+    }
+    this.listeners.get(key)?.forEach((fn) => fn());
+    const rootKey = key.split(".")[0];
+    if (rootKey && rootKey !== key) {
+      this.listeners.get(rootKey)?.forEach((fn) => fn());
+    }
   }
   resolveScope(path) {
     if (path.startsWith("parent.")) {
@@ -1159,7 +1217,16 @@ var Engine = class {
   showBindings = /* @__PURE__ */ new WeakMap();
   htmlBindings = /* @__PURE__ */ new WeakMap();
   getBindings = /* @__PURE__ */ new WeakMap();
+  lifecycleBindings = /* @__PURE__ */ new WeakMap();
+  behaviorRegistry = [];
+  behaviorBindings = /* @__PURE__ */ new WeakMap();
+  behaviorId = 0;
   codeCache = /* @__PURE__ */ new Map();
+  observer;
+  attributeHandlers = [];
+  constructor() {
+    this.registerDefaultAttributeHandlers();
+  }
   async mount(root) {
     const elements = [root, ...Array.from(root.querySelectorAll("*"))];
     for (const element of elements) {
@@ -1169,7 +1236,22 @@ var Engine = class {
       const parentScope = this.findParentScope(element);
       this.getScope(element, parentScope);
       this.attachAttributes(element);
+      this.runConstruct(element);
     }
+    await this.applyBehaviors(root);
+    this.attachObserver(root);
+  }
+  unmount(element) {
+    this.runDestruct(element);
+  }
+  registerBehaviors(source) {
+    const program = new Parser(source).parseProgram();
+    for (const behavior of program.behaviors) {
+      this.collectBehavior(behavior);
+    }
+  }
+  registerAttributeHandler(handler) {
+    this.attributeHandlers.push(handler);
   }
   getScope(element, parentScope) {
     const existing = this.scopes.get(element);
@@ -1199,63 +1281,122 @@ var Engine = class {
       applyHtml(element, htmlBinding.expr, scope, htmlBinding.trusted);
     }
   }
+  attachObserver(root) {
+    if (this.observer) {
+      return;
+    }
+    this.observer = new MutationObserver((mutations) => {
+      for (const mutation of mutations) {
+        for (const node of Array.from(mutation.removedNodes)) {
+          if (node && node.nodeType === 1) {
+            this.handleRemovedNode(node);
+          }
+        }
+      }
+    });
+    this.observer.observe(root, { childList: true, subtree: true });
+  }
+  handleRemovedNode(node) {
+    if (this.lifecycleBindings.has(node)) {
+      this.runDestruct(node);
+    }
+    if (this.behaviorBindings.has(node)) {
+      this.runBehaviorDestruct(node);
+    }
+    for (const child of Array.from(node.querySelectorAll("*"))) {
+      if (this.lifecycleBindings.has(child)) {
+        this.runDestruct(child);
+      }
+      if (this.behaviorBindings.has(child)) {
+        this.runBehaviorDestruct(child);
+      }
+    }
+  }
+  async applyBehaviors(root) {
+    if (this.behaviorRegistry.length === 0) {
+      return;
+    }
+    for (const behavior of this.behaviorRegistry) {
+      const matches = [];
+      if (root.matches(behavior.selector)) {
+        matches.push(root);
+      }
+      matches.push(...Array.from(root.querySelectorAll(behavior.selector)));
+      for (const element of matches) {
+        const bound = this.behaviorBindings.get(element) ?? /* @__PURE__ */ new Set();
+        if (bound.has(behavior.id)) {
+          continue;
+        }
+        bound.add(behavior.id);
+        this.behaviorBindings.set(element, bound);
+        const scope = this.getScope(element);
+        if (behavior.construct) {
+          await this.executeBlock(behavior.construct, scope);
+        }
+      }
+    }
+  }
+  runBehaviorDestruct(element) {
+    const bound = this.behaviorBindings.get(element);
+    if (!bound) {
+      return;
+    }
+    const scope = this.getScope(element);
+    for (const behavior of this.behaviorRegistry) {
+      if (!bound.has(behavior.id) || !behavior.destruct) {
+        continue;
+      }
+      void this.executeBlock(behavior.destruct, scope);
+    }
+  }
   attachAttributes(element) {
     const scope = this.getScope(element);
     for (const name of element.getAttributeNames()) {
-      if (name.startsWith("vsn-bind")) {
-        const value = element.getAttribute(name) ?? "";
-        const direction = this.parseBindDirection(name);
-        this.bindBindings.set(element, { expr: value, direction });
-        if (direction === "to" || direction === "both") {
-          applyBindToScope(element, value, scope);
+      if (!name.startsWith("vsn-")) {
+        continue;
+      }
+      const value = element.getAttribute(name) ?? "";
+      for (const handler of this.attributeHandlers) {
+        if (!handler.match(name)) {
+          continue;
         }
-        continue;
-      }
-      if (name === "vsn-if") {
-        const value = element.getAttribute(name) ?? "";
-        this.ifBindings.set(element, value);
-        if (element instanceof HTMLElement) {
-          applyIf(element, value, scope);
+        const handled = handler.handle(element, name, value, scope);
+        if (handled !== false) {
+          break;
         }
-        continue;
-      }
-      if (name === "vsn-show") {
-        const value = element.getAttribute(name) ?? "";
-        this.showBindings.set(element, value);
-        if (element instanceof HTMLElement) {
-          applyShow(element, value, scope);
-        }
-        continue;
-      }
-      if (name.startsWith("vsn-html")) {
-        const trusted = name.includes("!trusted");
-        const value = element.getAttribute(name) ?? "";
-        this.htmlBindings.set(element, { expr: value, trusted });
-        if (element instanceof HTMLElement) {
-          applyHtml(element, value, scope, trusted);
-        }
-        continue;
-      }
-      if (name.startsWith("vsn-get")) {
-        const trusted = name.includes("!trusted");
-        const url = element.getAttribute(name) ?? "";
-        const target = element.getAttribute("vsn-target") ?? void 0;
-        const swap = element.getAttribute("vsn-swap") ?? "inner";
-        const config = {
-          url,
-          swap,
-          trusted,
-          ...target ? { targetSelector: target } : {}
-        };
-        this.getBindings.set(element, config);
-        this.attachGetHandler(element);
-        continue;
-      }
-      const onConfig = this.parseOnAttribute(name, element.getAttribute(name) ?? "");
-      if (onConfig) {
-        this.attachOnHandler(element, onConfig);
       }
     }
+  }
+  setLifecycle(element, patch) {
+    const current = this.lifecycleBindings.get(element) ?? {};
+    this.lifecycleBindings.set(element, { ...current, ...patch });
+  }
+  runConstruct(element) {
+    const config = this.lifecycleBindings.get(element);
+    if (!config?.construct) {
+      return;
+    }
+    const scope = this.getScope(element);
+    this.execute(config.construct, scope);
+  }
+  runDestruct(element) {
+    const config = this.lifecycleBindings.get(element);
+    if (!config?.destruct) {
+      return;
+    }
+    const scope = this.getScope(element);
+    this.execute(config.destruct, scope);
+  }
+  attachBindInputHandler(element, expr) {
+    if (!(element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement || element instanceof HTMLSelectElement)) {
+      return;
+    }
+    const handler = () => {
+      const scope = this.getScope(element);
+      applyBindToScope(element, expr, scope);
+    };
+    element.addEventListener("input", handler);
+    element.addEventListener("change", handler);
   }
   parseBindDirection(name) {
     if (name.includes(":from")) {
@@ -1279,6 +1420,13 @@ var Engine = class {
       parent = parent.parentElement;
     }
     return void 0;
+  }
+  watch(scope, expr, handler) {
+    const key = expr.trim();
+    if (!key) {
+      return;
+    }
+    scope.on(key, handler);
   }
   parseOnAttribute(name, value) {
     if (!name.startsWith("vsn-on:")) {
@@ -1331,28 +1479,134 @@ var Engine = class {
     const context = { scope };
     await block.evaluate(context);
   }
-  evaluateExpression(expr, scope) {
-    const parts = expr.split("+").map((part) => part.trim()).filter(Boolean);
-    if (parts.length > 1) {
-      return parts.reduce((sum, part) => {
-        const value = this.evaluateExpression(part, scope);
-        return sum + value;
-      }, 0);
+  async executeBlock(block, scope) {
+    const context = { scope };
+    await block.evaluate(context);
+  }
+  collectBehavior(behavior, parentSelector) {
+    const selector = parentSelector ? `${parentSelector} ${behavior.selector.selectorText}` : behavior.selector.selectorText;
+    const lifecycle = this.extractLifecycle(behavior.body);
+    this.behaviorRegistry.push({
+      id: this.behaviorId += 1,
+      selector,
+      ...lifecycle
+    });
+    for (const statement of behavior.body.statements) {
+      if (statement instanceof BehaviorNode) {
+        this.collectBehavior(statement, selector);
+      }
     }
-    const token = parts[0];
-    if (!token) {
-      return void 0;
+  }
+  extractLifecycle(body) {
+    let construct;
+    let destruct;
+    for (const statement of body.statements) {
+      if (!(statement instanceof BlockNode)) {
+        continue;
+      }
+      if (statement.type === "Construct") {
+        construct = statement;
+      } else if (statement.type === "Destruct") {
+        destruct = statement;
+      }
     }
-    if (token === "true") return true;
-    if (token === "false") return false;
-    if (token === "null") return null;
-    if (/^-?\d+(?:\.\d+)?$/.test(token)) {
-      return Number(token);
-    }
-    if (token.startsWith('"') && token.endsWith('"') || token.startsWith("'") && token.endsWith("'")) {
-      return token.slice(1, -1);
-    }
-    return scope.getPath(token);
+    return {
+      ...construct ? { construct } : {},
+      ...destruct ? { destruct } : {}
+    };
+  }
+  registerDefaultAttributeHandlers() {
+    this.registerAttributeHandler({
+      id: "vsn-bind",
+      match: (name) => name.startsWith("vsn-bind"),
+      handle: (element, name, value, scope) => {
+        const direction = this.parseBindDirection(name);
+        this.bindBindings.set(element, { expr: value, direction });
+        if (direction === "to" || direction === "both") {
+          applyBindToScope(element, value, scope);
+          this.attachBindInputHandler(element, value);
+        }
+        if (direction === "from" || direction === "both") {
+          this.watch(scope, value, () => applyBindToElement(element, value, scope));
+        }
+      }
+    });
+    this.registerAttributeHandler({
+      id: "vsn-if",
+      match: (name) => name === "vsn-if",
+      handle: (element, _name, value, scope) => {
+        this.ifBindings.set(element, value);
+        if (element instanceof HTMLElement) {
+          applyIf(element, value, scope);
+        }
+        this.watch(scope, value, () => this.evaluate(element));
+      }
+    });
+    this.registerAttributeHandler({
+      id: "vsn-show",
+      match: (name) => name === "vsn-show",
+      handle: (element, _name, value, scope) => {
+        this.showBindings.set(element, value);
+        if (element instanceof HTMLElement) {
+          applyShow(element, value, scope);
+        }
+        this.watch(scope, value, () => this.evaluate(element));
+      }
+    });
+    this.registerAttributeHandler({
+      id: "vsn-html",
+      match: (name) => name.startsWith("vsn-html"),
+      handle: (element, name, value, scope) => {
+        const trusted = name.includes("!trusted");
+        this.htmlBindings.set(element, { expr: value, trusted });
+        if (element instanceof HTMLElement) {
+          applyHtml(element, value, scope, trusted);
+        }
+        this.watch(scope, value, () => this.evaluate(element));
+      }
+    });
+    this.registerAttributeHandler({
+      id: "vsn-get",
+      match: (name) => name.startsWith("vsn-get"),
+      handle: (element, name) => {
+        const trusted = name.includes("!trusted");
+        const url = element.getAttribute(name) ?? "";
+        const target = element.getAttribute("vsn-target") ?? void 0;
+        const swap = element.getAttribute("vsn-swap") ?? "inner";
+        const config = {
+          url,
+          swap,
+          trusted,
+          ...target ? { targetSelector: target } : {}
+        };
+        this.getBindings.set(element, config);
+        this.attachGetHandler(element);
+      }
+    });
+    this.registerAttributeHandler({
+      id: "vsn-construct",
+      match: (name) => name === "vsn-construct",
+      handle: (element, _name, value) => {
+        this.setLifecycle(element, { construct: value });
+      }
+    });
+    this.registerAttributeHandler({
+      id: "vsn-destruct",
+      match: (name) => name === "vsn-destruct",
+      handle: (element, _name, value) => {
+        this.setLifecycle(element, { destruct: value });
+      }
+    });
+    this.registerAttributeHandler({
+      id: "vsn-on",
+      match: (name) => name.startsWith("vsn-on:"),
+      handle: (element, name, value) => {
+        const onConfig = this.parseOnAttribute(name, value);
+        if (onConfig) {
+          this.attachOnHandler(element, onConfig);
+        }
+      }
+    });
   }
 };
 
