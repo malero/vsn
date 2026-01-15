@@ -5,7 +5,15 @@ import { applyHtml } from "./html";
 import { applyGet, GetConfig } from "./http";
 import { debounce } from "./debounce";
 import { Parser } from "../parser/parser";
-import { BehaviorNode, BlockNode, ExecutionContext, OnBlockNode } from "../ast/nodes";
+import {
+  BehaviorNode,
+  BlockNode,
+  DeclarationNode,
+  DirectiveExpression,
+  ExecutionContext,
+  IdentifierExpression,
+  OnBlockNode
+} from "../ast/nodes";
 
 interface OnConfig {
   event: string;
@@ -29,6 +37,7 @@ interface RegisteredBehavior {
   construct?: BlockNode;
   destruct?: BlockNode;
   onBlocks: { event: string; body: BlockNode }[];
+  declarations: DeclarationNode[];
 }
 
 type AttributeHandler = {
@@ -167,6 +176,7 @@ export class Engine {
         bound.add(behavior.id);
         this.behaviorBindings.set(element, bound);
         const scope = this.getScope(element);
+        await this.applyBehaviorDeclarations(element, scope, behavior.declarations);
         if (behavior.construct) {
           await this.executeBlock(behavior.construct, scope);
         }
@@ -279,6 +289,14 @@ export class Engine {
     scope.on(key, handler);
   }
 
+  private watchWithDebounce(scope: Scope, expr: string, handler: () => void, debounceMs?: number): void {
+    if (debounceMs) {
+      this.watch(scope, expr, debounce(handler, debounceMs));
+    } else {
+      this.watch(scope, expr, handler);
+    }
+  }
+
   private parseOnAttribute(name: string, value: string): OnConfig | null {
     if (!name.startsWith("vsn-on:")) {
       return null;
@@ -360,6 +378,7 @@ export class Engine {
       id: this.behaviorId += 1,
       selector,
       onBlocks: this.extractOnBlocks(behavior.body),
+      declarations: this.extractDeclarations(behavior.body),
       ...lifecycle
     });
     for (const statement of behavior.body.statements) {
@@ -396,6 +415,194 @@ export class Engine {
       }
     }
     return blocks;
+  }
+
+  private extractDeclarations(body: BlockNode): DeclarationNode[] {
+    const declarations: DeclarationNode[] = [];
+    for (const statement of body.statements) {
+      if (statement instanceof DeclarationNode) {
+        declarations.push(statement);
+      }
+    }
+    return declarations;
+  }
+
+  private async applyBehaviorDeclarations(
+    element: Element,
+    scope: Scope,
+    declarations: DeclarationNode[]
+  ): Promise<void> {
+    for (const declaration of declarations) {
+      await this.applyBehaviorDeclaration(element, scope, declaration);
+    }
+  }
+
+  private async applyBehaviorDeclaration(
+    element: Element,
+    scope: Scope,
+    declaration: DeclarationNode
+  ): Promise<void> {
+    const context: ExecutionContext = { scope };
+    const operator = declaration.operator;
+    const debounceMs = declaration.flags.debounce
+      ? declaration.flagArgs.debounce ?? 200
+      : undefined;
+
+    if (declaration.target instanceof IdentifierExpression) {
+      const value = await declaration.value.evaluate(context);
+      scope.setPath(declaration.target.name, value);
+      return;
+    }
+
+    if (!(declaration.target instanceof DirectiveExpression)) {
+      return;
+    }
+
+    const target = declaration.target;
+    const exprIdentifier =
+      declaration.value instanceof IdentifierExpression ? declaration.value.name : undefined;
+
+    if (operator === ":>" || operator === ":=") {
+      if (exprIdentifier) {
+        this.applyDirectiveToScope(element, target, exprIdentifier, scope, debounceMs);
+      }
+      if (operator === ":>" && exprIdentifier) {
+        return;
+      }
+    }
+
+    if (!exprIdentifier) {
+      const value = await declaration.value.evaluate(context);
+      this.setDirectiveValue(element, target, value, declaration.flags.trusted);
+      return;
+    }
+
+    this.applyDirectiveFromScope(
+      element,
+      target,
+      exprIdentifier,
+      scope,
+      declaration.flags.trusted,
+      debounceMs
+    );
+  }
+
+  private applyDirectiveFromScope(
+    element: Element,
+    target: DirectiveExpression,
+    expr: string,
+    scope: Scope,
+    trusted: boolean | undefined,
+    debounceMs?: number
+  ): void {
+    if (target.kind === "attr" && target.name === "html" && element instanceof HTMLElement) {
+      const handler = () => applyHtml(element, expr, scope, Boolean(trusted));
+      handler();
+      this.watchWithDebounce(scope, expr, handler, debounceMs);
+      return;
+    }
+    const handler = () => {
+      const value = scope.get(expr);
+      if (value == null) {
+        return;
+      }
+      this.setDirectiveValue(element, target, value, trusted);
+    };
+    handler();
+    this.watchWithDebounce(scope, expr, handler, debounceMs);
+  }
+
+  private applyDirectiveToScope(
+    element: Element,
+    target: DirectiveExpression,
+    expr: string,
+    scope: Scope,
+    debounceMs?: number
+  ): void {
+    if (target.kind === "attr" && target.name === "value") {
+      this.applyValueBindingToScope(element, expr, debounceMs);
+      return;
+    }
+    const value = this.getDirectiveValue(element, target);
+    if (value != null) {
+      scope.set(expr, value);
+    }
+  }
+
+  private applyValueBindingToScope(element: Element, expr: string, debounceMs?: number): void {
+    if (!(element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement || element instanceof HTMLSelectElement)) {
+      return;
+    }
+    const handler = () => {
+      const scope = this.getScope(element);
+      applyBindToScope(element, expr, scope);
+    };
+    const effectiveHandler = debounceMs ? debounce(handler, debounceMs) : handler;
+    effectiveHandler();
+    element.addEventListener("input", effectiveHandler);
+    element.addEventListener("change", effectiveHandler);
+  }
+
+  private setDirectiveValue(
+    element: Element,
+    target: DirectiveExpression,
+    value: unknown,
+    trusted: boolean | undefined
+  ): void {
+    if (target.kind === "attr" && target.name === "html" && element instanceof HTMLElement) {
+      const html = value == null ? "" : String(value);
+      element.innerHTML = trusted ? html : html.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, "");
+      return;
+    }
+    if (target.kind === "attr") {
+      if (target.name === "value") {
+        if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) {
+          element.value = value == null ? "" : String(value);
+          element.setAttribute("value", element.value);
+          return;
+        }
+        if (element instanceof HTMLSelectElement) {
+          element.value = value == null ? "" : String(value);
+          return;
+        }
+      }
+      if (target.name === "checked" && element instanceof HTMLInputElement) {
+        const checked = Boolean(value);
+        element.checked = checked;
+        if (checked) {
+          element.setAttribute("checked", "");
+        } else {
+          element.removeAttribute("checked");
+        }
+        return;
+      }
+      element.setAttribute(target.name, value == null ? "" : String(value));
+      return;
+    }
+    if (target.kind === "style" && element instanceof HTMLElement) {
+      element.style.setProperty(target.name, value == null ? "" : String(value));
+    }
+  }
+
+  private getDirectiveValue(element: Element, target: DirectiveExpression): string | undefined {
+    if (target.kind === "attr") {
+      if (target.name === "value") {
+        if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) {
+          return element.value;
+        }
+        if (element instanceof HTMLSelectElement) {
+          return element.value;
+        }
+      }
+      if (target.name === "checked" && element instanceof HTMLInputElement) {
+        return element.checked ? "true" : "false";
+      }
+      return element.getAttribute(target.name) ?? undefined;
+    }
+    if (target.kind === "style" && element instanceof HTMLElement) {
+      return element.style.getPropertyValue(target.name) ?? undefined;
+    }
+    return undefined;
   }
 
   private registerDefaultAttributeHandlers(): void {
