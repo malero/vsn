@@ -219,3 +219,10 @@ Conditional Blocks (Future-Proofing)
 - Custom flags can register parse/apply hooks.
 - Custom vsn-* attributes can be added without core changes.
 - Keep core minimal (fast, lightweight); richer features live in extensions.
+
+22. Implementation TODOs
+- Implement behavior-level declarations/bindings runtime (state init, :/:=/:</:> handlers, !debounce, !important merge rules).
+- Ensure behavior-level on/construct/destruct honor declaration ordering (declarations first).
+- Add behavior-level binding reactivity (scope change -> DOM update) matching attribute behavior.
+- Wire behavior registry to MutationObserver for new elements (bind behaviors on insertion).
+- Expose public API for registering custom attributes/flags with docs/examples.

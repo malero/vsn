@@ -5,7 +5,7 @@ import { applyHtml } from "./html";
 import { applyGet, GetConfig } from "./http";
 import { debounce } from "./debounce";
 import { Parser } from "../parser/parser";
-import { BehaviorNode, BlockNode, ExecutionContext } from "../ast/nodes";
+import { BehaviorNode, BlockNode, ExecutionContext, OnBlockNode } from "../ast/nodes";
 
 interface OnConfig {
   event: string;
@@ -28,6 +28,7 @@ interface RegisteredBehavior {
   selector: string;
   construct?: BlockNode;
   destruct?: BlockNode;
+  onBlocks: { event: string; body: BlockNode }[];
 }
 
 type AttributeHandler = {
@@ -168,6 +169,9 @@ export class Engine {
         const scope = this.getScope(element);
         if (behavior.construct) {
           await this.executeBlock(behavior.construct, scope);
+        }
+        for (const onBlock of behavior.onBlocks) {
+          this.attachBehaviorOnHandler(element, onBlock.event, onBlock.body);
         }
       }
     }
@@ -313,6 +317,15 @@ export class Engine {
     element.addEventListener(config.event, effectiveHandler);
   }
 
+  private attachBehaviorOnHandler(element: Element, event: string, body: BlockNode): void {
+    const handler = async () => {
+      const scope = this.getScope(element);
+      await this.executeBlock(body, scope);
+      this.evaluate(element);
+    };
+    element.addEventListener(event, handler);
+  }
+
   private attachGetHandler(element: Element): void {
     element.addEventListener("click", async () => {
       const config = this.getBindings.get(element);
@@ -346,6 +359,7 @@ export class Engine {
     this.behaviorRegistry.push({
       id: this.behaviorId += 1,
       selector,
+      onBlocks: this.extractOnBlocks(behavior.body),
       ...lifecycle
     });
     for (const statement of behavior.body.statements) {
@@ -372,6 +386,16 @@ export class Engine {
       ...(construct ? { construct } : {}),
       ...(destruct ? { destruct } : {})
     };
+  }
+
+  private extractOnBlocks(body: BlockNode): { event: string; body: BlockNode }[] {
+    const blocks: { event: string; body: BlockNode }[] = [];
+    for (const statement of body.statements) {
+      if (statement instanceof OnBlockNode) {
+        blocks.push({ event: statement.eventName, body: statement.body });
+      }
+    }
+    return blocks;
   }
 
   private registerDefaultAttributeHandlers(): void {
