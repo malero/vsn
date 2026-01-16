@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { BinaryExpression, IdentifierExpression, LiteralExpression, UnaryExpression } from "../src/index";
+import { BinaryExpression, IdentifierExpression, LiteralExpression, Parser, UnaryExpression } from "../src/index";
 import { Scope } from "../src/runtime/scope";
 
 describe("ast expressions", () => {
@@ -54,5 +54,24 @@ describe("ast expressions", () => {
 
     const andValue = await andExpr.evaluate({ scope });
     expect(andValue).toBe(true);
+  });
+
+  it("evaluates array literals, indexing, and length access", async () => {
+    const block = Parser.parseInline(`
+      items = [1, 2, 3];
+      value = items[1];
+      empty = [];
+      len = items.length;
+      first = [5, 6][0];
+    `);
+    const scope = new Scope();
+
+    await block.evaluate({ scope });
+
+    expect(scope.get("items")).toEqual([1, 2, 3]);
+    expect(scope.get("value")).toBe(2);
+    expect(scope.get("empty")).toEqual([]);
+    expect(scope.get("len")).toBe(3);
+    expect(scope.get("first")).toBe(5);
   });
 });

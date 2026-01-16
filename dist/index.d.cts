@@ -158,7 +158,7 @@ declare class DeclarationNode extends BaseNode {
     flagArgs: DeclarationFlagArgs;
     constructor(target: DeclarationTarget, operator: ":" | ":=" | ":<" | ":>", value: ExpressionNode, flags: DeclarationFlags, flagArgs: DeclarationFlagArgs);
 }
-type ExpressionNode = IdentifierExpression | LiteralExpression | UnaryExpression | BinaryExpression | CallExpression | DirectiveExpression | QueryExpression;
+type ExpressionNode = IdentifierExpression | LiteralExpression | UnaryExpression | BinaryExpression | CallExpression | ArrayExpression | IndexExpression | DirectiveExpression | QueryExpression;
 type DeclarationTarget = IdentifierExpression | DirectiveExpression;
 type AssignmentTarget = IdentifierExpression | DirectiveExpression;
 declare class IdentifierExpression extends BaseNode {
@@ -190,6 +190,17 @@ declare class CallExpression extends BaseNode {
     constructor(callee: ExpressionNode, args: ExpressionNode[]);
     evaluate(context: ExecutionContext): Promise<any>;
     private resolveCallee;
+}
+declare class ArrayExpression extends BaseNode {
+    elements: ExpressionNode[];
+    constructor(elements: ExpressionNode[]);
+    evaluate(context: ExecutionContext): Promise<any>;
+}
+declare class IndexExpression extends BaseNode {
+    target: ExpressionNode;
+    index: ExpressionNode;
+    constructor(target: ExpressionNode, index: ExpressionNode);
+    evaluate(context: ExecutionContext): Promise<any>;
 }
 declare class DirectiveExpression extends BaseNode {
     kind: "attr" | "style";
@@ -227,6 +238,7 @@ declare class Parser {
     private parseUnaryExpression;
     private parseCallExpression;
     private parsePrimaryExpression;
+    private parseArrayExpression;
     private parseAssignmentTarget;
     private parseDeclaration;
     private parseDeclarationTarget;
@@ -324,6 +336,7 @@ declare class Engine {
     private applyBehaviorDeclaration;
     private applyDirectiveFromScope;
     private applyDirectiveToScope;
+    private applyCheckedBindingToScope;
     private applyValueBindingToScope;
     private setDirectiveValue;
     private getDirectiveValue;
@@ -335,4 +348,4 @@ declare const VERSION = "0.1.0";
 declare function parseCFS(source: string): ProgramNode;
 declare function autoMount(root?: HTMLElement | Document): Engine | null;
 
-export { AssignmentNode, type AssignmentTarget, BaseNode, BehaviorNode, BinaryExpression, BlockNode, type CFSNode, CallExpression, type DeclarationFlagArgs, type DeclarationFlags, DeclarationNode, type DeclarationTarget, DirectiveExpression, Engine, type ExecutionContext, type ExpressionNode, IdentifierExpression, Lexer, LiteralExpression, OnBlockNode, Parser, ProgramNode, QueryExpression, SelectorNode, StateBlockNode, StateEntryNode, TokenType, UnaryExpression, UseNode, VERSION, autoMount, parseCFS };
+export { ArrayExpression, AssignmentNode, type AssignmentTarget, BaseNode, BehaviorNode, BinaryExpression, BlockNode, type CFSNode, CallExpression, type DeclarationFlagArgs, type DeclarationFlags, DeclarationNode, type DeclarationTarget, DirectiveExpression, Engine, type ExecutionContext, type ExpressionNode, IdentifierExpression, IndexExpression, Lexer, LiteralExpression, OnBlockNode, Parser, ProgramNode, QueryExpression, SelectorNode, StateBlockNode, StateEntryNode, TokenType, UnaryExpression, UseNode, VERSION, autoMount, parseCFS };

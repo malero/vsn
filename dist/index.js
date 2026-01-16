@@ -510,6 +510,37 @@ var CallExpression = class extends BaseNode {
     return { fn: value, thisArg: parent };
   }
 };
+var ArrayExpression = class extends BaseNode {
+  constructor(elements) {
+    super("ArrayExpression");
+    this.elements = elements;
+  }
+  async evaluate(context) {
+    const values = [];
+    for (const element of this.elements) {
+      values.push(await element.evaluate(context));
+    }
+    return values;
+  }
+};
+var IndexExpression = class extends BaseNode {
+  constructor(target, index) {
+    super("IndexExpression");
+    this.target = target;
+    this.index = index;
+  }
+  async evaluate(context) {
+    const target = await this.target.evaluate(context);
+    if (target == null) {
+      return void 0;
+    }
+    const index = await this.index.evaluate(context);
+    if (index == null) {
+      return void 0;
+    }
+    return target[index];
+  }
+};
 var DirectiveExpression = class extends BaseNode {
   constructor(kind, name) {
     super("Directive");
@@ -945,34 +976,48 @@ var Parser = class _Parser {
     let expr = this.parsePrimaryExpression();
     while (true) {
       this.stream.skipWhitespace();
-      if (this.stream.peek()?.type !== "LParen" /* LParen */) {
+      const next = this.stream.peek();
+      if (!next) {
         break;
       }
-      this.stream.next();
-      const args = [];
-      while (true) {
-        this.stream.skipWhitespace();
-        const next = this.stream.peek();
-        if (!next) {
-          throw new Error("Unterminated call expression");
+      if (next.type === "LParen" /* LParen */) {
+        this.stream.next();
+        const args = [];
+        while (true) {
+          this.stream.skipWhitespace();
+          const argToken = this.stream.peek();
+          if (!argToken) {
+            throw new Error("Unterminated call expression");
+          }
+          if (argToken.type === "RParen" /* RParen */) {
+            this.stream.next();
+            break;
+          }
+          args.push(this.parseExpression());
+          this.stream.skipWhitespace();
+          if (this.stream.peek()?.type === "Comma" /* Comma */) {
+            this.stream.next();
+            continue;
+          }
+          if (this.stream.peek()?.type === "RParen" /* RParen */) {
+            this.stream.next();
+            break;
+          }
+          throw new Error("Expected ',' or ')' in call arguments");
         }
-        if (next.type === "RParen" /* RParen */) {
-          this.stream.next();
-          break;
-        }
-        args.push(this.parseExpression());
-        this.stream.skipWhitespace();
-        if (this.stream.peek()?.type === "Comma" /* Comma */) {
-          this.stream.next();
-          continue;
-        }
-        if (this.stream.peek()?.type === "RParen" /* RParen */) {
-          this.stream.next();
-          break;
-        }
-        throw new Error("Expected ',' or ')' in call arguments");
+        expr = new CallExpression(expr, args);
+        continue;
       }
-      expr = new CallExpression(expr, args);
+      if (next.type === "LBracket" /* LBracket */) {
+        this.stream.next();
+        this.stream.skipWhitespace();
+        const index = this.parseExpression();
+        this.stream.skipWhitespace();
+        this.stream.expect("RBracket" /* RBracket */);
+        expr = new IndexExpression(expr, index);
+        continue;
+      }
+      break;
     }
     return expr;
   }
@@ -990,6 +1035,9 @@ var Parser = class _Parser {
     }
     if (token.type === "Question" /* Question */) {
       return this.parseQueryExpression();
+    }
+    if (token.type === "LBracket" /* LBracket */) {
+      return this.parseArrayExpression();
     }
     if (token.type === "LParen" /* LParen */) {
       this.stream.next();
@@ -1016,6 +1064,38 @@ var Parser = class _Parser {
       return new LiteralExpression(this.stream.next().value);
     }
     throw new Error(`Unsupported expression token ${token.type}`);
+  }
+  parseArrayExpression() {
+    this.stream.expect("LBracket" /* LBracket */);
+    const elements = [];
+    while (true) {
+      this.stream.skipWhitespace();
+      const next = this.stream.peek();
+      if (!next) {
+        throw new Error("Unterminated array literal");
+      }
+      if (next.type === "RBracket" /* RBracket */) {
+        this.stream.next();
+        break;
+      }
+      elements.push(this.parseExpression());
+      this.stream.skipWhitespace();
+      if (this.stream.peek()?.type === "Comma" /* Comma */) {
+        this.stream.next();
+        this.stream.skipWhitespace();
+        if (this.stream.peek()?.type === "RBracket" /* RBracket */) {
+          this.stream.next();
+          break;
+        }
+        continue;
+      }
+      if (this.stream.peek()?.type === "RBracket" /* RBracket */) {
+        this.stream.next();
+        break;
+      }
+      throw new Error("Expected ',' or ']' in array literal");
+    }
+    return new ArrayExpression(elements);
   }
   parseAssignmentTarget() {
     const token = this.stream.peek();
@@ -2019,10 +2099,30 @@ var Engine = class {
       this.applyValueBindingToScope(element, expr, debounceMs);
       return;
     }
+    if (target.kind === "attr" && target.name === "checked") {
+      this.applyCheckedBindingToScope(element, expr, debounceMs);
+      return;
+    }
     const value = this.getDirectiveValue(element, target);
     if (value != null) {
       scope.set(expr, value);
     }
+  }
+  applyCheckedBindingToScope(element, expr, debounceMs) {
+    if (!(element instanceof HTMLInputElement)) {
+      return;
+    }
+    const handler = () => {
+      const scope = this.getScope(element);
+      if (!scope) {
+        return;
+      }
+      scope.set(expr, element.checked);
+    };
+    const effectiveHandler = debounceMs ? debounce(handler, debounceMs) : handler;
+    effectiveHandler();
+    element.addEventListener("change", effectiveHandler);
+    element.addEventListener("input", effectiveHandler);
   }
   applyValueBindingToScope(element, expr, debounceMs) {
     if (!(element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement || element instanceof HTMLSelectElement)) {
@@ -2056,7 +2156,7 @@ var Engine = class {
         }
       }
       if (target.name === "checked" && element instanceof HTMLInputElement) {
-        const checked = Boolean(value);
+        const checked = value === true || value === "true" || value === 1 || value === "1";
         element.checked = checked;
         if (checked) {
           element.setAttribute("checked", "");
@@ -2083,7 +2183,7 @@ var Engine = class {
         }
       }
       if (target.name === "checked" && element instanceof HTMLInputElement) {
-        return element.checked ? "true" : "false";
+        return element.checked;
       }
       return element.getAttribute(target.name) ?? void 0;
     }
@@ -2222,6 +2322,7 @@ if (typeof document !== "undefined") {
   }
 }
 export {
+  ArrayExpression,
   AssignmentNode,
   BaseNode,
   BehaviorNode,
@@ -2232,6 +2333,7 @@ export {
   DirectiveExpression,
   Engine,
   IdentifierExpression,
+  IndexExpression,
   Lexer,
   LiteralExpression,
   OnBlockNode,

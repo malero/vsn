@@ -7,6 +7,7 @@ const KEYWORDS: Record<string, TokenType> = {
   on: TokenType.On,
   construct: TokenType.Construct,
   destruct: TokenType.Destruct,
+  return: TokenType.Return,
   true: TokenType.Boolean,
   false: TokenType.Boolean,
   null: TokenType.Null

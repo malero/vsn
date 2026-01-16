@@ -5,6 +5,8 @@ export interface ExecutionContext {
   };
   globals?: Record<string, any>;
   element?: Element;
+  returnValue?: any;
+  returning?: boolean;
 }
 
 export interface CFSNode {
@@ -44,6 +46,9 @@ export class BlockNode extends BaseNode {
 
   async evaluate(context: ExecutionContext): Promise<any> {
     for (const statement of this.statements) {
+      if (context.returning) {
+        break;
+      }
       if (statement && typeof statement.evaluate === "function") {
         await statement.evaluate(context);
       }
@@ -111,6 +116,27 @@ export class AssignmentNode extends BaseNode {
   }
 }
 
+export class ReturnNode extends BaseNode {
+  constructor(public value?: ExpressionNode) {
+    super("Return");
+  }
+
+  async evaluate(context: ExecutionContext): Promise<any> {
+    if (context.returning) {
+      return context.returnValue;
+    }
+    context.returnValue = this.value ? await this.value.evaluate(context) : undefined;
+    context.returning = true;
+    return context.returnValue;
+  }
+}
+
+export class FunctionDeclarationNode extends BaseNode {
+  constructor(public name: string, public params: string[], public body: BlockNode) {
+    super("FunctionDeclaration");
+  }
+}
+
 export interface DeclarationFlags {
   important?: boolean;
   trusted?: boolean;
@@ -139,6 +165,8 @@ export type ExpressionNode =
   | UnaryExpression
   | BinaryExpression
   | CallExpression
+  | ArrayExpression
+  | IndexExpression
   | DirectiveExpression
   | QueryExpression;
 
@@ -275,6 +303,38 @@ export class CallExpression extends BaseNode {
       value = value?.[part];
     }
     return { fn: value, thisArg: parent };
+  }
+}
+
+export class ArrayExpression extends BaseNode {
+  constructor(public elements: ExpressionNode[]) {
+    super("ArrayExpression");
+  }
+
+  async evaluate(context: ExecutionContext): Promise<any> {
+    const values: any[] = [];
+    for (const element of this.elements) {
+      values.push(await element.evaluate(context));
+    }
+    return values;
+  }
+}
+
+export class IndexExpression extends BaseNode {
+  constructor(public target: ExpressionNode, public index: ExpressionNode) {
+    super("IndexExpression");
+  }
+
+  async evaluate(context: ExecutionContext): Promise<any> {
+    const target = await this.target.evaluate(context);
+    if (target == null) {
+      return undefined;
+    }
+    const index = await this.index.evaluate(context);
+    if (index == null) {
+      return undefined;
+    }
+    return (target as any)[index as any];
   }
 }
 

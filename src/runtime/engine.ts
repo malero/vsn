@@ -11,6 +11,7 @@ import {
   DeclarationNode,
   DirectiveExpression,
   ExecutionContext,
+  FunctionDeclarationNode,
   IdentifierExpression,
   OnBlockNode
 } from "../ast/nodes";
@@ -40,6 +41,7 @@ interface RegisteredBehavior {
   destruct?: BlockNode;
   onBlocks: { event: string; body: BlockNode }[];
   declarations: DeclarationNode[];
+  functions: FunctionDeclarationNode[];
 }
 
 type AttributeHandler = {
@@ -67,7 +69,6 @@ export class Engine {
 
   constructor() {
     this.registerGlobal("console", console);
-    this.registerQueryHelpers();
     this.registerDefaultAttributeHandlers();
   }
 
@@ -241,6 +242,7 @@ export class Engine {
       const scope = this.getScope(element);
       for (const behavior of matches) {
         bound.add(behavior.id);
+        this.applyBehaviorFunctions(element, scope, behavior.functions);
         await this.applyBehaviorDeclarations(element, scope, behavior.declarations);
         if (behavior.construct) {
           await this.executeBlock(behavior.construct, scope, element);
@@ -455,6 +457,7 @@ export class Engine {
       order: this.behaviorRegistry.length,
       onBlocks: this.extractOnBlocks(behavior.body),
       declarations: this.extractDeclarations(behavior.body),
+      functions: this.extractFunctionDeclarations(behavior.body),
       ...lifecycle
     });
     for (const statement of behavior.body.statements) {
@@ -473,39 +476,6 @@ export class Engine {
     return idMatches * 100 + (classMatches + attrMatches + pseudoMatches) * 10 + elementMatches;
   }
 
-  private registerQueryHelpers(): void {
-    const queryDoc = (selector: string) => {
-      if (typeof document === "undefined") {
-        return [];
-      }
-      return Array.from(document.querySelectorAll(selector));
-    };
-    const queryWithin = (element: Element | undefined, selector: string) => {
-      if (!element) {
-        return [];
-      }
-      return Array.from(element.querySelectorAll(selector));
-    };
-    const queryAncestors = (element: Element | undefined, selector: string) => {
-      const results: Element[] = [];
-      let cursor = element?.parentElement;
-      while (cursor) {
-        if (cursor.matches(selector)) {
-          results.push(cursor);
-        }
-        cursor = cursor.parentElement;
-      }
-      return results;
-    };
-
-    this.registerGlobal("?", (selector: string) => queryDoc(selector));
-    this.registerGlobal("?>", (selector: string, element?: Element) => {
-      return queryWithin(element, selector);
-    });
-    this.registerGlobal("?<", (selector: string, element?: Element) => {
-      return queryAncestors(element, selector);
-    });
-  }
 
   private getImportantKey(declaration: DeclarationNode): string | undefined {
     if (declaration.target instanceof IdentifierExpression) {
@@ -565,6 +535,58 @@ export class Engine {
       }
     }
     return declarations;
+  }
+
+  private extractFunctionDeclarations(body: BlockNode): FunctionDeclarationNode[] {
+    const functions: FunctionDeclarationNode[] = [];
+    for (const statement of body.statements) {
+      if (statement instanceof FunctionDeclarationNode) {
+        functions.push(statement);
+      }
+    }
+    return functions;
+  }
+
+  private applyBehaviorFunctions(
+    element: Element,
+    scope: Scope,
+    functions: FunctionDeclarationNode[]
+  ): void {
+    for (const declaration of functions) {
+      this.applyBehaviorFunction(element, scope, declaration);
+    }
+  }
+
+  private applyBehaviorFunction(
+    element: Element,
+    scope: Scope,
+    declaration: FunctionDeclarationNode
+  ): void {
+    const existing = scope.getPath(declaration.name);
+    if (existing !== undefined && typeof existing !== "function") {
+      throw new Error(`Cannot override non-function '${declaration.name}' with a function`);
+    }
+    const fn = async (...args: any[]) => {
+      const context: ExecutionContext = {
+        scope,
+        globals: this.globals,
+        element,
+        returnValue: undefined,
+        returning: false
+      };
+      const previousValues = new Map<string, any>();
+      for (let i = 0; i < declaration.params.length; i += 1) {
+        const name = declaration.params[i];
+        previousValues.set(name, scope.getPath(name));
+        scope.setPath(name, args[i]);
+      }
+      await declaration.body.evaluate(context);
+      for (const name of declaration.params) {
+        scope.setPath(name, previousValues.get(name));
+      }
+      return context.returnValue;
+    };
+    scope.setPath(declaration.name, fn);
   }
 
   private async applyBehaviorDeclarations(
@@ -688,10 +710,31 @@ export class Engine {
       this.applyValueBindingToScope(element, expr, debounceMs);
       return;
     }
+    if (target.kind === "attr" && target.name === "checked") {
+      this.applyCheckedBindingToScope(element, expr, debounceMs);
+      return;
+    }
     const value = this.getDirectiveValue(element, target);
     if (value != null) {
       scope.set(expr, value);
     }
+  }
+
+  private applyCheckedBindingToScope(element: Element, expr: string, debounceMs?: number): void {
+    if (!(element instanceof HTMLInputElement)) {
+      return;
+    }
+    const handler = () => {
+      const scope = this.getScope(element);
+      if (!scope) {
+        return;
+      }
+      scope.set(expr, element.checked);
+    };
+    const effectiveHandler = debounceMs ? debounce(handler, debounceMs) : handler;
+    effectiveHandler();
+    element.addEventListener("change", effectiveHandler);
+    element.addEventListener("input", effectiveHandler);
   }
 
   private applyValueBindingToScope(element: Element, expr: string, debounceMs?: number): void {
@@ -732,7 +775,7 @@ export class Engine {
         }
       }
       if (target.name === "checked" && element instanceof HTMLInputElement) {
-        const checked = Boolean(value);
+        const checked = value === true || value === "true" || value === 1 || value === "1";
         element.checked = checked;
         if (checked) {
           element.setAttribute("checked", "");
@@ -749,7 +792,7 @@ export class Engine {
     }
   }
 
-  private getDirectiveValue(element: Element, target: DirectiveExpression): string | undefined {
+  private getDirectiveValue(element: Element, target: DirectiveExpression): unknown {
     if (target.kind === "attr") {
       if (target.name === "value") {
         if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) {
@@ -760,7 +803,7 @@ export class Engine {
         }
       }
       if (target.name === "checked" && element instanceof HTMLInputElement) {
-        return element.checked ? "true" : "false";
+        return element.checked;
       }
       return element.getAttribute(target.name) ?? undefined;
     }

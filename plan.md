@@ -222,12 +222,6 @@ Conditional Blocks (Future-Proofing)
 
 22. Implementation TODOs
 - Expose public API for registering custom attributes/flags with docs/examples.
-- Expression comparisons (==, !=, <, >, <=, >=) + boolean ops.
-- Array literals + indexing + .length.
-- Whitelisted globals: setInterval, clearInterval.
-- Align query helper syntax with parser (support ?("selector")/?>()/<?() or remove globals and document ?>(...) only).
-- Add element->scope change listeners for @checked (and other non-@value targets) when using :>/ := bindings.
-- Decide whether !important should block inline vsn-* overrides or keep HTML as absolute highest specificity.
-- Function declarations on scope (callable methods in behaviors).
+- Support anonymous function expressions like `f = () => { ... }`.
 - DOM helpers for refs/queries and event modifiers (Alpine-style ergonomics).
 - Timer utilities (setTimeout) and optional async support for demos.

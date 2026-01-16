@@ -1,5 +1,6 @@
 import {
   AssignmentNode,
+  ArrayExpression,
   BehaviorNode,
   BinaryExpression,
   BlockNode,
@@ -10,16 +11,19 @@ import {
   DeclarationFlags,
   DeclarationFlagArgs,
   DirectiveExpression,
+  FunctionDeclarationNode,
   IdentifierExpression,
   LiteralExpression,
   OnBlockNode,
   ProgramNode,
   QueryExpression,
+  ReturnNode,
   SelectorNode,
   StateBlockNode,
   StateEntryNode,
   UnaryExpression,
   UseNode,
+  IndexExpression,
   ExpressionNode
 } from "../ast/nodes";
 import { Lexer } from "./lexer";
@@ -139,6 +143,14 @@ export class Parser {
         break;
       }
 
+      const isFunctionDeclaration = allowDeclarations && this.isFunctionDeclarationStart();
+      if (isFunctionDeclaration) {
+        if (!declarationsOpen) {
+          throw new Error("Declarations must appear before blocks");
+        }
+        statements.push(this.parseFunctionDeclaration());
+        continue;
+      }
       const isDeclaration = this.isDeclarationStart();
       if (isDeclaration) {
         if (!allowDeclarations) {
@@ -159,26 +171,36 @@ export class Parser {
     return new BlockNode(statements);
   }
 
-  private parseStatement() {
+  private parseStatement(options?: { allowBlocks?: boolean; allowReturn?: boolean }) {
     this.stream.skipWhitespace();
     const next = this.stream.peek();
     if (!next) {
       throw new Error("Unexpected end of input");
     }
 
-    if (next.type === TokenType.On) {
+    const allowBlocks = options?.allowBlocks ?? true;
+    const allowReturn = options?.allowReturn ?? false;
+
+    if (next.type === TokenType.Return) {
+      if (!allowReturn) {
+        throw new Error("Return is only allowed inside functions");
+      }
+      return this.parseReturnStatement();
+    }
+
+    if (allowBlocks && next.type === TokenType.On) {
       return this.parseOnBlock();
     }
 
-    if (next.type === TokenType.Construct) {
+    if (allowBlocks && next.type === TokenType.Construct) {
       return this.parseConstructBlock();
     }
 
-    if (next.type === TokenType.Destruct) {
+    if (allowBlocks && next.type === TokenType.Destruct) {
       return this.parseDestructBlock();
     }
 
-    if (next.type === TokenType.Behavior) {
+    if (allowBlocks && next.type === TokenType.Behavior) {
       return this.parseBehavior();
     }
 
@@ -412,34 +434,48 @@ export class Parser {
     let expr = this.parsePrimaryExpression();
     while (true) {
       this.stream.skipWhitespace();
-      if (this.stream.peek()?.type !== TokenType.LParen) {
+      const next = this.stream.peek();
+      if (!next) {
         break;
       }
-      this.stream.next();
-      const args: ExpressionNode[] = [];
-      while (true) {
-        this.stream.skipWhitespace();
-        const next = this.stream.peek();
-        if (!next) {
-          throw new Error("Unterminated call expression");
+      if (next.type === TokenType.LParen) {
+        this.stream.next();
+        const args: ExpressionNode[] = [];
+        while (true) {
+          this.stream.skipWhitespace();
+          const argToken = this.stream.peek();
+          if (!argToken) {
+            throw new Error("Unterminated call expression");
+          }
+          if (argToken.type === TokenType.RParen) {
+            this.stream.next();
+            break;
+          }
+          args.push(this.parseExpression());
+          this.stream.skipWhitespace();
+          if (this.stream.peek()?.type === TokenType.Comma) {
+            this.stream.next();
+            continue;
+          }
+          if (this.stream.peek()?.type === TokenType.RParen) {
+            this.stream.next();
+            break;
+          }
+          throw new Error("Expected ',' or ')' in call arguments");
         }
-        if (next.type === TokenType.RParen) {
-          this.stream.next();
-          break;
-        }
-        args.push(this.parseExpression());
-        this.stream.skipWhitespace();
-        if (this.stream.peek()?.type === TokenType.Comma) {
-          this.stream.next();
-          continue;
-        }
-        if (this.stream.peek()?.type === TokenType.RParen) {
-          this.stream.next();
-          break;
-        }
-        throw new Error("Expected ',' or ')' in call arguments");
+        expr = new CallExpression(expr, args);
+        continue;
       }
-      expr = new CallExpression(expr, args);
+      if (next.type === TokenType.LBracket) {
+        this.stream.next();
+        this.stream.skipWhitespace();
+        const index = this.parseExpression();
+        this.stream.skipWhitespace();
+        this.stream.expect(TokenType.RBracket);
+        expr = new IndexExpression(expr, index);
+        continue;
+      }
+      break;
     }
     return expr;
   }
@@ -460,6 +496,10 @@ export class Parser {
 
     if (token.type === TokenType.Question) {
       return this.parseQueryExpression();
+    }
+
+    if (token.type === TokenType.LBracket) {
+      return this.parseArrayExpression();
     }
 
     if (token.type === TokenType.LParen) {
@@ -493,6 +533,39 @@ export class Parser {
     }
 
     throw new Error(`Unsupported expression token ${token.type}`);
+  }
+
+  private parseArrayExpression(): ExpressionNode {
+    this.stream.expect(TokenType.LBracket);
+    const elements: ExpressionNode[] = [];
+    while (true) {
+      this.stream.skipWhitespace();
+      const next = this.stream.peek();
+      if (!next) {
+        throw new Error("Unterminated array literal");
+      }
+      if (next.type === TokenType.RBracket) {
+        this.stream.next();
+        break;
+      }
+      elements.push(this.parseExpression());
+      this.stream.skipWhitespace();
+      if (this.stream.peek()?.type === TokenType.Comma) {
+        this.stream.next();
+        this.stream.skipWhitespace();
+        if (this.stream.peek()?.type === TokenType.RBracket) {
+          this.stream.next();
+          break;
+        }
+        continue;
+      }
+      if (this.stream.peek()?.type === TokenType.RBracket) {
+        this.stream.next();
+        break;
+      }
+      throw new Error("Expected ',' or ']' in array literal");
+    }
+    return new ArrayExpression(elements);
   }
 
   private parseAssignmentTarget(): AssignmentTarget {
@@ -665,6 +738,36 @@ export class Parser {
     return this.stream.peekNonWhitespace(index)?.type === TokenType.LParen;
   }
 
+  private isFunctionDeclarationStart(): boolean {
+    const first = this.stream.peekNonWhitespace(0);
+    if (!first || first.type !== TokenType.Identifier) {
+      return false;
+    }
+    let index = 1;
+    if (this.stream.peekNonWhitespace(index)?.type !== TokenType.LParen) {
+      return false;
+    }
+    index += 1;
+    let depth = 1;
+    while (true) {
+      const token = this.stream.peekNonWhitespace(index);
+      if (!token) {
+        return false;
+      }
+      if (token.type === TokenType.LParen) {
+        depth += 1;
+      } else if (token.type === TokenType.RParen) {
+        depth -= 1;
+        if (depth === 0) {
+          index += 1;
+          break;
+        }
+      }
+      index += 1;
+    }
+    return this.stream.peekNonWhitespace(index)?.type === TokenType.LBrace;
+  }
+
   private parseExpressionStatement(): ExpressionNode {
     const expr = this.parseExpression();
     this.stream.skipWhitespace();
@@ -702,6 +805,70 @@ export class Parser {
     this.stream.expect(TokenType.LParen);
     const selector = this.readSelectorUntil(TokenType.RParen);
     return new QueryExpression(direction, selector);
+  }
+
+  private parseFunctionDeclaration(): FunctionDeclarationNode {
+    const name = this.stream.expect(TokenType.Identifier).value;
+    this.stream.skipWhitespace();
+    this.stream.expect(TokenType.LParen);
+    const params: string[] = [];
+    while (true) {
+      this.stream.skipWhitespace();
+      const next = this.stream.peek();
+      if (!next) {
+        throw new Error("Unterminated function parameters");
+      }
+      if (next.type === TokenType.RParen) {
+        this.stream.next();
+        break;
+      }
+      const param = this.stream.expect(TokenType.Identifier).value;
+      params.push(param);
+      this.stream.skipWhitespace();
+      if (this.stream.peek()?.type === TokenType.Comma) {
+        this.stream.next();
+        continue;
+      }
+      if (this.stream.peek()?.type === TokenType.RParen) {
+        this.stream.next();
+        break;
+      }
+      throw new Error("Expected ',' or ')' in function parameters");
+    }
+    this.stream.skipWhitespace();
+    const body = this.parseFunctionBlock();
+    return new FunctionDeclarationNode(name, params, body);
+  }
+
+  private parseFunctionBlock(): BlockNode {
+    this.stream.expect(TokenType.LBrace);
+    const statements = [];
+    while (true) {
+      this.stream.skipWhitespace();
+      const next = this.stream.peek();
+      if (!next) {
+        throw new Error("Unterminated function block");
+      }
+      if (next.type === TokenType.RBrace) {
+        this.stream.next();
+        break;
+      }
+      statements.push(this.parseStatement({ allowBlocks: false, allowReturn: true }));
+    }
+    return new BlockNode(statements);
+  }
+
+  private parseReturnStatement(): ReturnNode {
+    this.stream.expect(TokenType.Return);
+    this.stream.skipWhitespace();
+    if (this.stream.peek()?.type === TokenType.Semicolon) {
+      this.stream.next();
+      return new ReturnNode();
+    }
+    const value = this.parseExpression();
+    this.stream.skipWhitespace();
+    this.stream.expect(TokenType.Semicolon);
+    return new ReturnNode(value);
   }
 
   private readSelectorUntil(terminator: TokenType): string {
