@@ -64,6 +64,14 @@
         todos = todoOps.clearCompleted(todos);
         sync();
       }
+
+      behavior .chip {
+        @data-filter :> value;
+        @aria-pressed :< (root.filter == value);
+        on click() {
+          root.setFilter(value);
+        }
+      }
     }
   </script>
 
@@ -78,7 +86,7 @@
     </div>
   </header>
 
-  <form class="todo-form" vsn-on:submit!prevent="addTodo()">
+  <form class="todo-form" vsn-on:submit!prevent="addTodo();">
     <input
       class="todo-input"
       placeholder="Add a new task"
@@ -90,18 +98,18 @@
 
   <div class="todo-toolbar">
     <div class="todo-filters">
-      <button class="chip" vsn-on:click="setFilter('all')" @aria-pressed :< (filter == "all")>
+      <button class="chip" data-filter="all">
         All
       </button>
-      <button class="chip" vsn-on:click="setFilter('active')" @aria-pressed :< (filter == "active")>
+      <button class="chip" data-filter="active">
         Active
       </button>
-      <button class="chip" vsn-on:click="setFilter('done')" @aria-pressed :< (filter == "done")>
+      <button class="chip" data-filter="done">
         Done
       </button>
     </div>
-    <button class="btn secondary" vsn-on:click="clearCompleted()">Clear done</button>
+    <button class="btn secondary" vsn-on:click="clearCompleted();">Clear done</button>
   </div>
 
-  <ul class="todo-list" @html!trusted :< listHtml></ul>
+  <ul class="todo-list" vsn-html!trusted="listHtml"></ul>
 </section>

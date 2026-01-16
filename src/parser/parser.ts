@@ -36,6 +36,7 @@ export class Parser {
   private stream: TokenStream;
   private source: string;
   private customFlags: Set<string>;
+  private allowImplicitSemicolon = false;
 
   constructor(input: string, options?: { customFlags?: Set<string> }) {
     this.source = input;
@@ -73,6 +74,7 @@ export class Parser {
   parseInlineBlock(): BlockNode {
     return this.wrapErrors(() => {
       this.stream.skipWhitespace();
+      this.allowImplicitSemicolon = true;
       return this.parseBlock({ allowDeclarations: false });
     });
   }
@@ -375,8 +377,7 @@ export class Parser {
     this.stream.expect(TokenType.Equals);
     this.stream.skipWhitespace();
     const value = this.parseExpression();
-    this.stream.skipWhitespace();
-    this.stream.expect(TokenType.Semicolon);
+    this.consumeStatementTerminator();
     return new AssignmentNode(target, value);
   }
 
@@ -662,6 +663,19 @@ export class Parser {
       throw new Error("Expected ',' or ']' in array literal");
     }
     return new ArrayExpression(elements);
+  }
+
+  private consumeStatementTerminator(): void {
+    this.stream.skipWhitespace();
+    const next = this.stream.peek();
+    if (next?.type === TokenType.Semicolon) {
+      this.stream.next();
+      return;
+    }
+    if (this.allowImplicitSemicolon && next?.type === TokenType.RBrace) {
+      return;
+    }
+    this.stream.expect(TokenType.Semicolon);
   }
 
   private parseAssignmentTarget(): AssignmentTarget {
@@ -958,8 +972,7 @@ export class Parser {
 
   private parseExpressionStatement(): ExpressionNode {
     const expr = this.parseExpression();
-    this.stream.skipWhitespace();
-    this.stream.expect(TokenType.Semicolon);
+    this.consumeStatementTerminator();
     return expr;
   }
 

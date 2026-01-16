@@ -357,6 +357,18 @@ export class CallExpression extends BaseNode {
     const parts = name.split(".");
     const root = parts[0];
     if (!root || !(root in globals)) {
+      if (parts.length > 1 && context.scope) {
+        const parentPath = parts.slice(0, -1).join(".");
+        const methodName = parts[parts.length - 1];
+        if (!methodName) {
+          return undefined;
+        }
+        const parentValue = context.scope.getPath(parentPath);
+        if (parentValue == null) {
+          return undefined;
+        }
+        return { fn: parentValue?.[methodName], thisArg: parentValue };
+      }
       return undefined;
     }
     let value = globals[root];
@@ -410,8 +422,32 @@ export class DirectiveExpression extends BaseNode {
     super("Directive");
   }
 
-  async evaluate(): Promise<any> {
-    return `${this.kind}:${this.name}`;
+  async evaluate(context: ExecutionContext): Promise<any> {
+    const element = context.element;
+    if (!element) {
+      return `${this.kind}:${this.name}`;
+    }
+    if (this.kind === "attr") {
+      if (this.name === "value") {
+        if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) {
+          return element.value;
+        }
+        if (element instanceof HTMLSelectElement) {
+          return element.value;
+        }
+      }
+      if (this.name === "checked" && element instanceof HTMLInputElement) {
+        return element.checked;
+      }
+      if (this.name === "html" && element instanceof HTMLElement) {
+        return element.innerHTML;
+      }
+      return element.getAttribute(this.name) ?? undefined;
+    }
+    if (this.kind === "style" && element instanceof HTMLElement) {
+      return element.style.getPropertyValue(this.name) ?? undefined;
+    }
+    return undefined;
   }
 }
 

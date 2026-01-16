@@ -65,7 +65,7 @@
                 "\">" +
                 "<button class=\"todo-check\" data-id=\"" +
                 todo[0] +
-                "\" vsn-on:click=\"toggleTodo(@data-id)\">" +
+                "\" vsn-on:click=\"toggleTodo(@data-id);\">" +
                 label +
                 "</button>" +
                 "<span class=\"todo-title\">" +
@@ -73,7 +73,7 @@
                 "</span>" +
                 "<button class=\"todo-delete\" data-id=\"" +
                 todo[0] +
-                "\" vsn-on:click=\"removeTodo(@data-id)\">Remove</button>" +
+                "\" vsn-on:click=\"removeTodo(@data-id);\">Remove</button>" +
                 "</li>"
               );
             })

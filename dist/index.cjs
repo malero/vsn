@@ -644,6 +644,18 @@ var CallExpression = class extends BaseNode {
     const parts = name.split(".");
     const root = parts[0];
     if (!root || !(root in globals)) {
+      if (parts.length > 1 && context.scope) {
+        const parentPath = parts.slice(0, -1).join(".");
+        const methodName = parts[parts.length - 1];
+        if (!methodName) {
+          return void 0;
+        }
+        const parentValue = context.scope.getPath(parentPath);
+        if (parentValue == null) {
+          return void 0;
+        }
+        return { fn: parentValue?.[methodName], thisArg: parentValue };
+      }
       return void 0;
     }
     let value = globals[root];
@@ -696,8 +708,32 @@ var DirectiveExpression = class extends BaseNode {
     this.kind = kind;
     this.name = name;
   }
-  async evaluate() {
-    return `${this.kind}:${this.name}`;
+  async evaluate(context) {
+    const element = context.element;
+    if (!element) {
+      return `${this.kind}:${this.name}`;
+    }
+    if (this.kind === "attr") {
+      if (this.name === "value") {
+        if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) {
+          return element.value;
+        }
+        if (element instanceof HTMLSelectElement) {
+          return element.value;
+        }
+      }
+      if (this.name === "checked" && element instanceof HTMLInputElement) {
+        return element.checked;
+      }
+      if (this.name === "html" && element instanceof HTMLElement) {
+        return element.innerHTML;
+      }
+      return element.getAttribute(this.name) ?? void 0;
+    }
+    if (this.kind === "style" && element instanceof HTMLElement) {
+      return element.style.getPropertyValue(this.name) ?? void 0;
+    }
+    return void 0;
   }
 };
 var QueryExpression = class extends BaseNode {
@@ -789,6 +825,7 @@ var Parser = class _Parser {
   stream;
   source;
   customFlags;
+  allowImplicitSemicolon = false;
   constructor(input, options) {
     this.source = input;
     this.customFlags = options?.customFlags ?? /* @__PURE__ */ new Set();
@@ -822,6 +859,7 @@ var Parser = class _Parser {
   parseInlineBlock() {
     return this.wrapErrors(() => {
       this.stream.skipWhitespace();
+      this.allowImplicitSemicolon = true;
       return this.parseBlock({ allowDeclarations: false });
     });
   }
@@ -1089,8 +1127,7 @@ ${caret}`;
     this.stream.expect("Equals" /* Equals */);
     this.stream.skipWhitespace();
     const value = this.parseExpression();
-    this.stream.skipWhitespace();
-    this.stream.expect("Semicolon" /* Semicolon */);
+    this.consumeStatementTerminator();
     return new AssignmentNode(target, value);
   }
   parseExpression() {
@@ -1353,6 +1390,18 @@ ${caret}`;
     }
     return new ArrayExpression(elements);
   }
+  consumeStatementTerminator() {
+    this.stream.skipWhitespace();
+    const next = this.stream.peek();
+    if (next?.type === "Semicolon" /* Semicolon */) {
+      this.stream.next();
+      return;
+    }
+    if (this.allowImplicitSemicolon && next?.type === "RBrace" /* RBrace */) {
+      return;
+    }
+    this.stream.expect("Semicolon" /* Semicolon */);
+  }
   parseAssignmentTarget() {
     const token = this.stream.peek();
     if (!token) {
@@ -1614,8 +1663,7 @@ ${caret}`;
   }
   parseExpressionStatement() {
     const expr = this.parseExpression();
-    this.stream.skipWhitespace();
-    this.stream.expect("Semicolon" /* Semicolon */);
+    this.consumeStatementTerminator();
     return expr;
   }
   parseConstructBlock() {
@@ -2473,11 +2521,15 @@ var Engine = class {
       if (!config) {
         return;
       }
-      await applyGet(element, config, this.getScope(element), (target) => {
-        if (config.trusted) {
-          this.handleTrustedHtml(target);
-        }
-      });
+      try {
+        await applyGet(element, config, this.getScope(element), (target) => {
+          if (config.trusted) {
+            this.handleTrustedHtml(target);
+          }
+        });
+      } catch (error) {
+        element.dispatchEvent(new CustomEvent("vsn:getError", { detail: { error } }));
+      }
     };
     element.addEventListener("click", (event) => {
       if (event.target !== element) {

@@ -237,7 +237,7 @@ declare class DirectiveExpression extends BaseNode {
     kind: "attr" | "style";
     name: string;
     constructor(kind: "attr" | "style", name: string);
-    evaluate(): Promise<any>;
+    evaluate(context: ExecutionContext): Promise<any>;
 }
 declare class QueryExpression extends BaseNode {
     direction: "self" | "descendant" | "ancestor";
@@ -250,6 +250,7 @@ declare class Parser {
     private stream;
     private source;
     private customFlags;
+    private allowImplicitSemicolon;
     constructor(input: string, options?: {
         customFlags?: Set<string>;
     });
@@ -279,6 +280,7 @@ declare class Parser {
     private parseCallExpression;
     private parsePrimaryExpression;
     private parseArrayExpression;
+    private consumeStatementTerminator;
     private parseAssignmentTarget;
     private parseDeclaration;
     private parseDeclarationTarget;

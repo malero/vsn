@@ -528,11 +528,15 @@ export class Engine {
       if (!config) {
         return;
       }
-      await applyGet(element, config, this.getScope(element), (target) => {
-        if (config.trusted) {
-          this.handleTrustedHtml(target);
-        }
-      });
+      try {
+        await applyGet(element, config, this.getScope(element), (target) => {
+          if (config.trusted) {
+            this.handleTrustedHtml(target);
+          }
+        });
+      } catch (error) {
+        element.dispatchEvent(new CustomEvent("vsn:getError", { detail: { error } }));
+      }
     };
 
     element.addEventListener("click", (event) => {
