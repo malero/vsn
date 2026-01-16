@@ -133,13 +133,22 @@ export class ReturnNode extends BaseNode {
 }
 
 export class FunctionDeclarationNode extends BaseNode {
-  constructor(public name: string, public params: string[], public body: BlockNode) {
+  constructor(
+    public name: string,
+    public params: string[],
+    public body: BlockNode,
+    public isAsync = false
+  ) {
     super("FunctionDeclaration");
   }
 }
 
 export class FunctionExpression extends BaseNode {
-  constructor(public params: string[], public body: BlockNode) {
+  constructor(
+    public params: string[],
+    public body: BlockNode,
+    public isAsync = false
+  ) {
     super("FunctionExpression");
   }
 
@@ -215,6 +224,7 @@ export type ExpressionNode =
   | ArrayExpression
   | IndexExpression
   | FunctionExpression
+  | AwaitExpression
   | TernaryExpression
   | DirectiveExpression
   | QueryExpression;
@@ -448,6 +458,17 @@ export class DirectiveExpression extends BaseNode {
       return element.style.getPropertyValue(this.name) ?? undefined;
     }
     return undefined;
+  }
+}
+
+export class AwaitExpression extends BaseNode {
+  constructor(public argument: ExpressionNode) {
+    super("AwaitExpression");
+  }
+
+  async evaluate(context: ExecutionContext): Promise<any> {
+    const value = await this.argument.evaluate(context);
+    return await value;
   }
 }
 

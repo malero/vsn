@@ -804,14 +804,16 @@ export class Engine {
         type,
         name: node.name ?? "",
         params: Array.isArray(node.params) ? node.params : [],
-        body: this.normalizeNode(node.body)
+        body: this.normalizeNode(node.body),
+        isAsync: Boolean(node.isAsync)
       };
     }
     if (type === "FunctionExpression") {
       return {
         type,
         params: Array.isArray(node.params) ? node.params : [],
-        body: this.normalizeNode(node.body)
+        body: this.normalizeNode(node.body),
+        isAsync: Boolean(node.isAsync)
       };
     }
     if (type === "Return") {
@@ -854,6 +856,12 @@ export class Engine {
         type,
         callee: this.normalizeNode(node.callee),
         args: Array.isArray(node.args) ? node.args.map((arg: any) => this.normalizeNode(arg)) : []
+      };
+    }
+    if (type === "AwaitExpression") {
+      return {
+        type,
+        argument: this.normalizeNode(node.argument)
       };
     }
     if (type === "Directive") {

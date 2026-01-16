@@ -156,12 +156,14 @@ declare class FunctionDeclarationNode extends BaseNode {
     name: string;
     params: string[];
     body: BlockNode;
-    constructor(name: string, params: string[], body: BlockNode);
+    isAsync: boolean;
+    constructor(name: string, params: string[], body: BlockNode, isAsync?: boolean);
 }
 declare class FunctionExpression extends BaseNode {
     params: string[];
     body: BlockNode;
-    constructor(params: string[], body: BlockNode);
+    isAsync: boolean;
+    constructor(params: string[], body: BlockNode, isAsync?: boolean);
     evaluate(context: ExecutionContext): Promise<any>;
 }
 interface DeclarationFlags {
@@ -182,7 +184,7 @@ declare class DeclarationNode extends BaseNode {
     flagArgs: DeclarationFlagArgs;
     constructor(target: DeclarationTarget, operator: ":" | ":=" | ":<" | ":>", value: ExpressionNode, flags: DeclarationFlags, flagArgs: DeclarationFlagArgs);
 }
-type ExpressionNode = IdentifierExpression | LiteralExpression | UnaryExpression | BinaryExpression | CallExpression | ArrayExpression | IndexExpression | FunctionExpression | TernaryExpression | DirectiveExpression | QueryExpression;
+type ExpressionNode = IdentifierExpression | LiteralExpression | UnaryExpression | BinaryExpression | CallExpression | ArrayExpression | IndexExpression | FunctionExpression | AwaitExpression | TernaryExpression | DirectiveExpression | QueryExpression;
 type DeclarationTarget = IdentifierExpression | DirectiveExpression;
 type AssignmentTarget = IdentifierExpression | DirectiveExpression;
 declare class IdentifierExpression extends BaseNode {
@@ -239,6 +241,11 @@ declare class DirectiveExpression extends BaseNode {
     constructor(kind: "attr" | "style", name: string);
     evaluate(context: ExecutionContext): Promise<any>;
 }
+declare class AwaitExpression extends BaseNode {
+    argument: ExpressionNode;
+    constructor(argument: ExpressionNode);
+    evaluate(context: ExecutionContext): Promise<any>;
+}
 declare class QueryExpression extends BaseNode {
     direction: "self" | "descendant" | "ancestor";
     selector: string;
@@ -251,6 +258,7 @@ declare class Parser {
     private source;
     private customFlags;
     private allowImplicitSemicolon;
+    private awaitStack;
     constructor(input: string, options?: {
         customFlags?: Set<string>;
     });
@@ -281,6 +289,9 @@ declare class Parser {
     private parsePrimaryExpression;
     private parseArrayExpression;
     private consumeStatementTerminator;
+    private parseFunctionBlockWithAwait;
+    private isAsyncToken;
+    private isAwaitAllowed;
     private parseAssignmentTarget;
     private parseDeclaration;
     private parseDeclarationTarget;
@@ -292,6 +303,7 @@ declare class Parser {
     private isCallStart;
     private isFunctionDeclarationStart;
     private isArrowFunctionStart;
+    private isAsyncArrowFunctionStart;
     private isFunctionExpressionAssignmentStart;
     private parseExpressionStatement;
     private parseConstructBlock;
@@ -440,4 +452,4 @@ declare const VERSION = "0.1.0";
 declare function parseCFS(source: string): ProgramNode;
 declare function autoMount(root?: HTMLElement | Document): Engine | null;
 
-export { ArrayExpression, AssignmentNode, type AssignmentTarget, BaseNode, BehaviorNode, BinaryExpression, BlockNode, type CFSNode, CallExpression, type DeclarationFlagArgs, type DeclarationFlags, DeclarationNode, type DeclarationTarget, DirectiveExpression, Engine, type ExecutionContext, type ExpressionNode, FunctionDeclarationNode, FunctionExpression, IdentifierExpression, IndexExpression, Lexer, LiteralExpression, OnBlockNode, Parser, ProgramNode, QueryExpression, ReturnNode, SelectorNode, StateBlockNode, StateEntryNode, TernaryExpression, TokenType, UnaryExpression, UseNode, VERSION, autoMount, parseCFS };
+export { ArrayExpression, AssignmentNode, type AssignmentTarget, AwaitExpression, BaseNode, BehaviorNode, BinaryExpression, BlockNode, type CFSNode, CallExpression, type DeclarationFlagArgs, type DeclarationFlags, DeclarationNode, type DeclarationTarget, DirectiveExpression, Engine, type ExecutionContext, type ExpressionNode, FunctionDeclarationNode, FunctionExpression, IdentifierExpression, IndexExpression, Lexer, LiteralExpression, OnBlockNode, Parser, ProgramNode, QueryExpression, ReturnNode, SelectorNode, StateBlockNode, StateEntryNode, TernaryExpression, TokenType, UnaryExpression, UseNode, VERSION, autoMount, parseCFS };

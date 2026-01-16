@@ -402,18 +402,20 @@ var ReturnNode = class extends BaseNode {
   }
 };
 var FunctionDeclarationNode = class extends BaseNode {
-  constructor(name, params, body) {
+  constructor(name, params, body, isAsync = false) {
     super("FunctionDeclaration");
     this.name = name;
     this.params = params;
     this.body = body;
+    this.isAsync = isAsync;
   }
 };
 var FunctionExpression = class extends BaseNode {
-  constructor(params, body) {
+  constructor(params, body, isAsync = false) {
     super("FunctionExpression");
     this.params = params;
     this.body = body;
+    this.isAsync = isAsync;
   }
   async evaluate(context) {
     const scope = context.scope;
@@ -680,6 +682,16 @@ var DirectiveExpression = class extends BaseNode {
     return void 0;
   }
 };
+var AwaitExpression = class extends BaseNode {
+  constructor(argument) {
+    super("AwaitExpression");
+    this.argument = argument;
+  }
+  async evaluate(context) {
+    const value = await this.argument.evaluate(context);
+    return await value;
+  }
+};
 var QueryExpression = class extends BaseNode {
   constructor(direction, selector) {
     super("Query");
@@ -770,6 +782,7 @@ var Parser = class _Parser {
   source;
   customFlags;
   allowImplicitSemicolon = false;
+  awaitStack = [];
   constructor(input, options) {
     this.source = input;
     this.customFlags = options?.customFlags ?? /* @__PURE__ */ new Set();
@@ -1204,6 +1217,11 @@ ${caret}`;
       const argument = this.parseUnaryExpression();
       return new UnaryExpression("-", argument);
     }
+    if (this.isAwaitAllowed() && token.type === "Identifier" /* Identifier */ && token.value === "await") {
+      this.stream.next();
+      const argument = this.parseUnaryExpression();
+      return new AwaitExpression(argument);
+    }
     return this.parseCallExpression();
   }
   parseCallExpression() {
@@ -1284,6 +1302,11 @@ ${caret}`;
       return value;
     }
     if (token.type === "Identifier" /* Identifier */) {
+      if (this.isAsyncToken(token) && this.isAsyncArrowFunctionStart()) {
+        this.stream.next();
+        this.stream.skipWhitespace();
+        return this.parseArrowFunctionExpression(true);
+      }
       const name = this.parseIdentifierPath();
       return new IdentifierExpression(name);
     }
@@ -1345,6 +1368,37 @@ ${caret}`;
       return;
     }
     this.stream.expect("Semicolon" /* Semicolon */);
+  }
+  parseFunctionBlockWithAwait(allowAwait) {
+    this.stream.expect("LBrace" /* LBrace */);
+    const statements = [];
+    this.awaitStack.push(allowAwait);
+    try {
+      while (true) {
+        this.stream.skipWhitespace();
+        const next = this.stream.peek();
+        if (!next) {
+          throw new Error("Unterminated function block");
+        }
+        if (next.type === "RBrace" /* RBrace */) {
+          this.stream.next();
+          break;
+        }
+        statements.push(this.parseStatement({ allowBlocks: false, allowReturn: true }));
+      }
+    } finally {
+      this.awaitStack.pop();
+    }
+    return new BlockNode(statements);
+  }
+  isAsyncToken(token) {
+    return token?.type === "Identifier" /* Identifier */ && token.value === "async";
+  }
+  isAwaitAllowed() {
+    if (this.awaitStack.length === 0) {
+      return false;
+    }
+    return this.awaitStack[this.awaitStack.length - 1] === true;
   }
   parseAssignmentTarget() {
     const token = this.stream.peek();
@@ -1521,10 +1575,20 @@ ${caret}`;
   }
   isFunctionDeclarationStart() {
     const first = this.stream.peekNonWhitespace(0);
-    if (!first || first.type !== "Identifier" /* Identifier */) {
+    if (!first) {
       return false;
     }
-    let index = 1;
+    let index = 0;
+    if (this.isAsyncToken(first)) {
+      const next = this.stream.peekNonWhitespace(1);
+      if (!next || next.type !== "Identifier" /* Identifier */) {
+        return false;
+      }
+      index = 1;
+    } else if (first.type !== "Identifier" /* Identifier */) {
+      return false;
+    }
+    index += 1;
     if (this.stream.peekNonWhitespace(index)?.type !== "LParen" /* LParen */) {
       return false;
     }
@@ -1573,6 +1637,34 @@ ${caret}`;
     }
     return this.stream.peekNonWhitespace(index)?.type === "Arrow" /* Arrow */;
   }
+  isAsyncArrowFunctionStart() {
+    const first = this.stream.peekNonWhitespace(0);
+    if (!this.isAsyncToken(first)) {
+      return false;
+    }
+    if (this.stream.peekNonWhitespace(1)?.type !== "LParen" /* LParen */) {
+      return false;
+    }
+    let index = 2;
+    let depth = 1;
+    while (true) {
+      const token = this.stream.peekNonWhitespace(index);
+      if (!token) {
+        return false;
+      }
+      if (token.type === "LParen" /* LParen */) {
+        depth += 1;
+      } else if (token.type === "RParen" /* RParen */) {
+        depth -= 1;
+        if (depth === 0) {
+          index += 1;
+          break;
+        }
+      }
+      index += 1;
+    }
+    return this.stream.peekNonWhitespace(index)?.type === "Arrow" /* Arrow */;
+  }
   isFunctionExpressionAssignmentStart() {
     const first = this.stream.peekNonWhitespace(0);
     if (!first || first.type !== "Identifier" /* Identifier */) {
@@ -1582,6 +1674,9 @@ ${caret}`;
       return false;
     }
     let index = 2;
+    if (this.isAsyncToken(this.stream.peekNonWhitespace(index))) {
+      index += 1;
+    }
     if (this.stream.peekNonWhitespace(index)?.type !== "LParen" /* LParen */) {
       return false;
     }
@@ -1638,6 +1733,13 @@ ${caret}`;
     return new QueryExpression(direction, selector);
   }
   parseFunctionDeclaration() {
+    let isAsync = false;
+    const first = this.stream.peekNonWhitespace(0);
+    if (this.isAsyncToken(first)) {
+      this.stream.next();
+      this.stream.skipWhitespace();
+      isAsync = true;
+    }
     const name = this.stream.expect("Identifier" /* Identifier */).value;
     this.stream.skipWhitespace();
     this.stream.expect("LParen" /* LParen */);
@@ -1666,25 +1768,11 @@ ${caret}`;
       throw new Error("Expected ',' or ')' in function parameters");
     }
     this.stream.skipWhitespace();
-    const body = this.parseFunctionBlock();
-    return new FunctionDeclarationNode(name, params, body);
+    const body = this.parseFunctionBlockWithAwait(isAsync);
+    return new FunctionDeclarationNode(name, params, body, isAsync);
   }
   parseFunctionBlock() {
-    this.stream.expect("LBrace" /* LBrace */);
-    const statements = [];
-    while (true) {
-      this.stream.skipWhitespace();
-      const next = this.stream.peek();
-      if (!next) {
-        throw new Error("Unterminated function block");
-      }
-      if (next.type === "RBrace" /* RBrace */) {
-        this.stream.next();
-        break;
-      }
-      statements.push(this.parseStatement({ allowBlocks: false, allowReturn: true }));
-    }
-    return new BlockNode(statements);
+    return this.parseFunctionBlockWithAwait(false);
   }
   parseReturnStatement() {
     this.stream.expect("Return" /* Return */);
@@ -1698,7 +1786,7 @@ ${caret}`;
     this.stream.expect("Semicolon" /* Semicolon */);
     return new ReturnNode(value);
   }
-  parseArrowFunctionExpression() {
+  parseArrowFunctionExpression(isAsync = false) {
     this.stream.expect("LParen" /* LParen */);
     const params = [];
     while (true) {
@@ -1727,8 +1815,8 @@ ${caret}`;
     this.stream.skipWhitespace();
     this.stream.expect("Arrow" /* Arrow */);
     this.stream.skipWhitespace();
-    const body = this.parseFunctionBlock();
-    return new FunctionExpression(params, body);
+    const body = this.parseFunctionBlockWithAwait(isAsync);
+    return new FunctionExpression(params, body, isAsync);
   }
   readSelectorUntil(terminator) {
     let selectorText = "";
@@ -2717,14 +2805,16 @@ var Engine = class {
         type,
         name: node.name ?? "",
         params: Array.isArray(node.params) ? node.params : [],
-        body: this.normalizeNode(node.body)
+        body: this.normalizeNode(node.body),
+        isAsync: Boolean(node.isAsync)
       };
     }
     if (type === "FunctionExpression") {
       return {
         type,
         params: Array.isArray(node.params) ? node.params : [],
-        body: this.normalizeNode(node.body)
+        body: this.normalizeNode(node.body),
+        isAsync: Boolean(node.isAsync)
       };
     }
     if (type === "Return") {
@@ -2767,6 +2857,12 @@ var Engine = class {
         type,
         callee: this.normalizeNode(node.callee),
         args: Array.isArray(node.args) ? node.args.map((arg) => this.normalizeNode(arg)) : []
+      };
+    }
+    if (type === "AwaitExpression") {
+      return {
+        type,
+        argument: this.normalizeNode(node.argument)
       };
     }
     if (type === "Directive") {
@@ -3220,6 +3316,7 @@ if (typeof document !== "undefined") {
 export {
   ArrayExpression,
   AssignmentNode,
+  AwaitExpression,
   BaseNode,
   BehaviorNode,
   BinaryExpression,

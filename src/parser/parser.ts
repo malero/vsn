@@ -26,17 +26,19 @@ import {
   UnaryExpression,
   UseNode,
   IndexExpression,
-  ExpressionNode
+  ExpressionNode,
+  AwaitExpression
 } from "../ast/nodes";
 import { Lexer } from "./lexer";
 import { TokenStream } from "./token-stream";
-import { TokenType } from "./token";
+import { Token, TokenType } from "./token";
 
 export class Parser {
   private stream: TokenStream;
   private source: string;
   private customFlags: Set<string>;
   private allowImplicitSemicolon = false;
+  private awaitStack: boolean[] = [];
 
   constructor(input: string, options?: { customFlags?: Set<string> }) {
     this.source = input;
@@ -521,6 +523,11 @@ export class Parser {
       const argument = this.parseUnaryExpression();
       return new UnaryExpression("-", argument);
     }
+    if (this.isAwaitAllowed() && token.type === TokenType.Identifier && token.value === "await") {
+      this.stream.next();
+      const argument = this.parseUnaryExpression();
+      return new AwaitExpression(argument);
+    }
     return this.parseCallExpression();
   }
 
@@ -608,6 +615,11 @@ export class Parser {
     }
 
     if (token.type === TokenType.Identifier) {
+      if (this.isAsyncToken(token) && this.isAsyncArrowFunctionStart()) {
+        this.stream.next();
+        this.stream.skipWhitespace();
+        return this.parseArrowFunctionExpression(true);
+      }
       const name = this.parseIdentifierPath();
       return new IdentifierExpression(name);
     }
@@ -676,6 +688,40 @@ export class Parser {
       return;
     }
     this.stream.expect(TokenType.Semicolon);
+  }
+
+  private parseFunctionBlockWithAwait(allowAwait: boolean): BlockNode {
+    this.stream.expect(TokenType.LBrace);
+    const statements = [];
+    this.awaitStack.push(allowAwait);
+    try {
+      while (true) {
+        this.stream.skipWhitespace();
+        const next = this.stream.peek();
+        if (!next) {
+          throw new Error("Unterminated function block");
+        }
+        if (next.type === TokenType.RBrace) {
+          this.stream.next();
+          break;
+        }
+        statements.push(this.parseStatement({ allowBlocks: false, allowReturn: true }));
+      }
+    } finally {
+      this.awaitStack.pop();
+    }
+    return new BlockNode(statements);
+  }
+
+  private isAsyncToken(token?: Token | null): boolean {
+    return token?.type === TokenType.Identifier && token.value === "async";
+  }
+
+  private isAwaitAllowed(): boolean {
+    if (this.awaitStack.length === 0) {
+      return false;
+    }
+    return this.awaitStack[this.awaitStack.length - 1] === true;
   }
 
   private parseAssignmentTarget(): AssignmentTarget {
@@ -883,10 +929,20 @@ export class Parser {
 
   private isFunctionDeclarationStart(): boolean {
     const first = this.stream.peekNonWhitespace(0);
-    if (!first || first.type !== TokenType.Identifier) {
+    if (!first) {
       return false;
     }
-    let index = 1;
+    let index = 0;
+    if (this.isAsyncToken(first)) {
+      const next = this.stream.peekNonWhitespace(1);
+      if (!next || next.type !== TokenType.Identifier) {
+        return false;
+      }
+      index = 1;
+    } else if (first.type !== TokenType.Identifier) {
+      return false;
+    }
+    index += 1;
     if (this.stream.peekNonWhitespace(index)?.type !== TokenType.LParen) {
       return false;
     }
@@ -937,6 +993,35 @@ export class Parser {
     return this.stream.peekNonWhitespace(index)?.type === TokenType.Arrow;
   }
 
+  private isAsyncArrowFunctionStart(): boolean {
+    const first = this.stream.peekNonWhitespace(0);
+    if (!this.isAsyncToken(first)) {
+      return false;
+    }
+    if (this.stream.peekNonWhitespace(1)?.type !== TokenType.LParen) {
+      return false;
+    }
+    let index = 2;
+    let depth = 1;
+    while (true) {
+      const token = this.stream.peekNonWhitespace(index);
+      if (!token) {
+        return false;
+      }
+      if (token.type === TokenType.LParen) {
+        depth += 1;
+      } else if (token.type === TokenType.RParen) {
+        depth -= 1;
+        if (depth === 0) {
+          index += 1;
+          break;
+        }
+      }
+      index += 1;
+    }
+    return this.stream.peekNonWhitespace(index)?.type === TokenType.Arrow;
+  }
+
   private isFunctionExpressionAssignmentStart(): boolean {
     const first = this.stream.peekNonWhitespace(0);
     if (!first || first.type !== TokenType.Identifier) {
@@ -946,6 +1031,9 @@ export class Parser {
       return false;
     }
     let index = 2;
+    if (this.isAsyncToken(this.stream.peekNonWhitespace(index))) {
+      index += 1;
+    }
     if (this.stream.peekNonWhitespace(index)?.type !== TokenType.LParen) {
       return false;
     }
@@ -1009,6 +1097,13 @@ export class Parser {
   }
 
   private parseFunctionDeclaration(): FunctionDeclarationNode {
+    let isAsync = false;
+    const first = this.stream.peekNonWhitespace(0);
+    if (this.isAsyncToken(first)) {
+      this.stream.next();
+      this.stream.skipWhitespace();
+      isAsync = true;
+    }
     const name = this.stream.expect(TokenType.Identifier).value;
     this.stream.skipWhitespace();
     this.stream.expect(TokenType.LParen);
@@ -1037,26 +1132,12 @@ export class Parser {
       throw new Error("Expected ',' or ')' in function parameters");
     }
     this.stream.skipWhitespace();
-    const body = this.parseFunctionBlock();
-    return new FunctionDeclarationNode(name, params, body);
+    const body = this.parseFunctionBlockWithAwait(isAsync);
+    return new FunctionDeclarationNode(name, params, body, isAsync);
   }
 
   private parseFunctionBlock(): BlockNode {
-    this.stream.expect(TokenType.LBrace);
-    const statements = [];
-    while (true) {
-      this.stream.skipWhitespace();
-      const next = this.stream.peek();
-      if (!next) {
-        throw new Error("Unterminated function block");
-      }
-      if (next.type === TokenType.RBrace) {
-        this.stream.next();
-        break;
-      }
-      statements.push(this.parseStatement({ allowBlocks: false, allowReturn: true }));
-    }
-    return new BlockNode(statements);
+    return this.parseFunctionBlockWithAwait(false);
   }
 
   private parseReturnStatement(): ReturnNode {
@@ -1072,7 +1153,7 @@ export class Parser {
     return new ReturnNode(value);
   }
 
-  private parseArrowFunctionExpression(): FunctionExpression {
+  private parseArrowFunctionExpression(isAsync = false): FunctionExpression {
     this.stream.expect(TokenType.LParen);
     const params: string[] = [];
     while (true) {
@@ -1101,8 +1182,8 @@ export class Parser {
     this.stream.skipWhitespace();
     this.stream.expect(TokenType.Arrow);
     this.stream.skipWhitespace();
-    const body = this.parseFunctionBlock();
-    return new FunctionExpression(params, body);
+    const body = this.parseFunctionBlockWithAwait(isAsync);
+    return new FunctionExpression(params, body, isAsync);
   }
 
   private readSelectorUntil(terminator: TokenType): string {
