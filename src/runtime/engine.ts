@@ -44,7 +44,7 @@ interface RegisteredBehavior {
   order: number;
   construct?: BlockNode;
   destruct?: BlockNode;
-  onBlocks: { event: string; body: BlockNode; modifiers: string[] }[];
+  onBlocks: { event: string; body: BlockNode; modifiers: string[]; args: string[] }[];
   declarations: DeclarationNode[];
   functions: FunctionBinding[];
 }
@@ -71,7 +71,7 @@ type EachBinding = {
 type CachedBehavior = {
   construct?: BlockNode;
   destruct?: BlockNode;
-  onBlocks: { event: string; body: BlockNode; modifiers: string[] }[];
+  onBlocks: { event: string; body: BlockNode; modifiers: string[]; args: string[] }[];
   declarations: DeclarationNode[];
   functions: FunctionBinding[];
 };
@@ -432,7 +432,14 @@ export class Engine {
       await this.executeBlock(behavior.construct, scope, element);
     }
     for (const onBlock of behavior.onBlocks) {
-      this.attachBehaviorOnHandler(element, onBlock.event, onBlock.body, onBlock.modifiers, behavior.id);
+      this.attachBehaviorOnHandler(
+        element,
+        onBlock.event,
+        onBlock.body,
+        onBlock.modifiers,
+        onBlock.args,
+        behavior.id
+      );
     }
   }
 
@@ -784,6 +791,7 @@ export class Engine {
     event: string,
     body: BlockNode,
     modifiers: string[] | undefined,
+    args: string[] | undefined,
     behaviorId: number
   ): void {
     const descriptor = this.parseEventDescriptor(event);
@@ -793,7 +801,18 @@ export class Engine {
       }
       this.applyEventModifiers(evt, modifiers);
       const scope = this.getScope(element);
+      const previousValues = new Map<string, any>();
+      if (args && args.length > 0) {
+        const argName = args[0];
+        if (argName) {
+          previousValues.set(argName, scope.getPath(argName));
+          scope.setPath(argName, evt);
+        }
+      }
       await this.executeBlock(body, scope, element);
+      for (const [name, value] of previousValues.entries()) {
+        scope.setPath(name, value);
+      }
       this.evaluate(element);
     };
     const options = this.getListenerOptions(modifiers);
@@ -968,11 +987,16 @@ export class Engine {
     };
   }
 
-  private extractOnBlocks(body: BlockNode): { event: string; body: BlockNode; modifiers: string[] }[] {
-    const blocks: { event: string; body: BlockNode; modifiers: string[] }[] = [];
+  private extractOnBlocks(body: BlockNode): { event: string; body: BlockNode; modifiers: string[]; args: string[] }[] {
+    const blocks: { event: string; body: BlockNode; modifiers: string[]; args: string[] }[] = [];
     for (const statement of body.statements) {
       if (statement instanceof OnBlockNode) {
-        blocks.push({ event: statement.eventName, body: statement.body, modifiers: statement.modifiers });
+        blocks.push({
+          event: statement.eventName,
+          body: statement.body,
+          modifiers: statement.modifiers,
+          args: statement.args
+        });
       }
     }
     return blocks;

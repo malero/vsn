@@ -324,6 +324,7 @@ declare class Parser {
     private isDeclarationStart;
     private isAssignmentStart;
     private isCallStart;
+    private isExpressionStatementStart;
     private isFunctionDeclarationStart;
     private isArrowFunctionStart;
     private isAsyncArrowFunctionStart;

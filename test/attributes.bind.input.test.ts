@@ -37,4 +37,25 @@ describe("vsn-bind input", () => {
 
     expect(scope.get("title")).toBe("  spaced  ");
   });
+
+  it("binds select values instead of text content", async () => {
+    document.body.innerHTML = `
+      <select id="priority" vsn-bind="priority">
+        <option value="low">Low</option>
+        <option value="medium">Medium</option>
+        <option value="high">High</option>
+      </select>
+    `;
+
+    const engine = new Engine();
+    await engine.mount(document.body);
+
+    const select = document.getElementById("priority") as HTMLSelectElement;
+    const scope = engine.getScope(select);
+
+    select.value = "high";
+    select.dispatchEvent(new Event("change", { bubbles: true }));
+
+    expect(scope.get("priority")).toBe("high");
+  });
 });

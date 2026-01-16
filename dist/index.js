@@ -1105,11 +1105,11 @@ ${caret}`;
     if (this.isAwaitAllowed() && next.type === "Identifier" /* Identifier */ && next.value === "await") {
       return this.parseExpressionStatement();
     }
-    if (this.isCallStart()) {
-      return this.parseExpressionStatement();
-    }
     if (this.isAssignmentStart()) {
       return this.parseAssignment();
+    }
+    if (this.isExpressionStatementStart()) {
+      return this.parseExpressionStatement();
     }
     throw new Error(`Unexpected token ${next.type}`);
   }
@@ -1735,6 +1735,16 @@ ${caret}`;
     }
     return this.stream.peekNonWhitespace(index)?.type === "LParen" /* LParen */;
   }
+  isExpressionStatementStart() {
+    const first = this.stream.peekNonWhitespace(0);
+    if (!first) {
+      return false;
+    }
+    if (first.type === "Identifier" /* Identifier */) {
+      return true;
+    }
+    return first.type === "Number" /* Number */ || first.type === "String" /* String */ || first.type === "Boolean" /* Boolean */ || first.type === "Null" /* Null */ || first.type === "LParen" /* LParen */ || first.type === "LBracket" /* LBracket */ || first.type === "At" /* At */ || first.type === "Dollar" /* Dollar */ || first.type === "Question" /* Question */ || first.type === "Bang" /* Bang */ || first.type === "Minus" /* Minus */;
+  }
   isFunctionDeclarationStart() {
     const first = this.stream.peekNonWhitespace(0);
     if (!first) {
@@ -2198,12 +2208,19 @@ function getElementValue(element) {
   if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) {
     return element.value;
   }
+  if (element instanceof HTMLSelectElement) {
+    return element.value;
+  }
   return element.textContent ?? "";
 }
 function setElementValue(element, value) {
   if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) {
     element.value = value;
     element.setAttribute("value", value);
+    return;
+  }
+  if (element instanceof HTMLSelectElement) {
+    element.value = value;
     return;
   }
   if (element instanceof HTMLElement && element.querySelector("*")) {
@@ -2618,7 +2635,14 @@ var Engine = class _Engine {
       await this.executeBlock(behavior.construct, scope, element);
     }
     for (const onBlock of behavior.onBlocks) {
-      this.attachBehaviorOnHandler(element, onBlock.event, onBlock.body, onBlock.modifiers, behavior.id);
+      this.attachBehaviorOnHandler(
+        element,
+        onBlock.event,
+        onBlock.body,
+        onBlock.modifiers,
+        onBlock.args,
+        behavior.id
+      );
     }
   }
   unbindBehaviorForElement(behavior, element, scope, bound) {
@@ -2931,7 +2955,7 @@ var Engine = class _Engine {
     const effectiveHandler = config.debounceMs ? debounce(handler, config.debounceMs) : handler;
     element.addEventListener(config.event, effectiveHandler, this.getListenerOptions(config.modifiers));
   }
-  attachBehaviorOnHandler(element, event, body, modifiers, behaviorId) {
+  attachBehaviorOnHandler(element, event, body, modifiers, args, behaviorId) {
     const descriptor = this.parseEventDescriptor(event);
     const handler = async (evt) => {
       if (!this.matchesKeyModifiers(evt, descriptor.keyModifiers)) {
@@ -2939,7 +2963,18 @@ var Engine = class _Engine {
       }
       this.applyEventModifiers(evt, modifiers);
       const scope = this.getScope(element);
+      const previousValues = /* @__PURE__ */ new Map();
+      if (args && args.length > 0) {
+        const argName = args[0];
+        if (argName) {
+          previousValues.set(argName, scope.getPath(argName));
+          scope.setPath(argName, evt);
+        }
+      }
       await this.executeBlock(body, scope, element);
+      for (const [name, value] of previousValues.entries()) {
+        scope.setPath(name, value);
+      }
       this.evaluate(element);
     };
     const options = this.getListenerOptions(modifiers);
@@ -3101,7 +3136,12 @@ var Engine = class _Engine {
     const blocks = [];
     for (const statement of body.statements) {
       if (statement instanceof OnBlockNode) {
-        blocks.push({ event: statement.eventName, body: statement.body, modifiers: statement.modifiers });
+        blocks.push({
+          event: statement.eventName,
+          body: statement.body,
+          modifiers: statement.modifiers,
+          args: statement.args
+        });
       }
     }
     return blocks;

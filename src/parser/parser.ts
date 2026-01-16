@@ -284,12 +284,12 @@ export class Parser {
       return this.parseExpressionStatement();
     }
 
-    if (this.isCallStart()) {
-      return this.parseExpressionStatement();
-    }
-
     if (this.isAssignmentStart()) {
       return this.parseAssignment();
+    }
+
+    if (this.isExpressionStatementStart()) {
+      return this.parseExpressionStatement();
     }
 
     throw new Error(`Unexpected token ${next.type}`);
@@ -987,6 +987,29 @@ export class Parser {
       index += 2;
     }
     return this.stream.peekNonWhitespace(index)?.type === TokenType.LParen;
+  }
+
+  private isExpressionStatementStart(): boolean {
+    const first = this.stream.peekNonWhitespace(0);
+    if (!first) {
+      return false;
+    }
+    if (first.type === TokenType.Identifier) {
+      return true;
+    }
+    return (
+      first.type === TokenType.Number
+      || first.type === TokenType.String
+      || first.type === TokenType.Boolean
+      || first.type === TokenType.Null
+      || first.type === TokenType.LParen
+      || first.type === TokenType.LBracket
+      || first.type === TokenType.At
+      || first.type === TokenType.Dollar
+      || first.type === TokenType.Question
+      || first.type === TokenType.Bang
+      || first.type === TokenType.Minus
+    );
   }
 
   private isFunctionDeclarationStart(): boolean {

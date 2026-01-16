@@ -16,7 +16,7 @@
       placeholder="Add a new task"
       autocomplete="off"
       vsn-bind="newTitle"
-      vsn-on:keyup.enter="console.log('enter');submit();"
+      vsn-on:keyup.enter="submit();"
     />
     <button class="btn" type="submit">Add</button>
   </form>
@@ -82,7 +82,6 @@
     }
 
     submit() {
-      console.log("addTodo", newTitle);
       title = newTitle.trim();
       return title == "" ? null : addTodo(title);
     }
@@ -96,29 +95,22 @@
 
     async toggleTodo(index) {
       todo = todos[index];
-      console.log("toggle todo", index, todo);
       return !todo ? null : toggleTodoCore(todo, index);
     }
 
     async toggleTodoCore(todo, index) {
       updated = [todo[0], todo[1], !todo[2]];
-      before = todos.slice(0, index);
-      after = todos.slice(index + 1);
-      before = before.concat([updated]);
-      todos = before.concat(after);
+      todos = todos.slice(0, index).concat([updated]).concat(todos.slice(index + 1));
       await sync();
     }
 
     async removeTodo(index) {
-      before = todos.slice(0, index);
-      after = todos.slice(index + 1);
-      todos = before.concat(after);
+      todos = todos.slice(0, index).concat(todos.slice(index + 1));
       await sync();
     }
 
     setFilter(value) {
       filter = value;
-      console.log('setFilter', value);
     }
 
     async clearCompleted() {
@@ -131,7 +123,6 @@
       @aria-pressed :< (root.filter == value);
 
       on click() {
-        console.log("filtering...");
         setFilter(value);
       }
     }
