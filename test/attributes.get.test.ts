@@ -7,6 +7,7 @@ describe("vsn-get", () => {
   const originalFetch = globalThis.fetch;
 
   beforeEach(() => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
     globalThis.fetch = vi.fn(async () => {
       return {
         text: async () => "<span>Loaded</span>",

@@ -41,4 +41,28 @@ describe("vsn-each", () => {
     expect(rows[0]?.querySelector(".label")?.textContent).toBe("z");
     expect(rows[0]?.querySelector(".idx")?.textContent).toBe("0");
   });
+
+  it("scopes item bindings when parent already has the same key", async () => {
+    document.body.innerHTML = `
+      <div id="host" vsn-construct="item = 'parent'; items = ['child'];">
+        <ul>
+          <template id="row" vsn-each="items as item, index">
+            <li class="row">
+              <span class="label" vsn-bind:from="item"></span>
+              <span class="idx" vsn-bind:from="index"></span>
+            </li>
+          </template>
+        </ul>
+      </div>
+    `;
+
+    const engine = new Engine();
+    await engine.mount(document.body);
+
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    const row = document.querySelector(".row") as HTMLLIElement;
+    expect(row.querySelector(".label")?.textContent).toBe("child");
+    expect(row.querySelector(".idx")?.textContent).toBe("0");
+  });
 });

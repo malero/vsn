@@ -6,7 +6,7 @@ import { Engine } from "../src/index";
 describe("vsn-on modifiers", () => {
   it("prevents default and supports once", async () => {
     document.body.innerHTML = `
-      <a id="link" href="https://example.com" vsn-on:click!prevent!once="count = (count || 0) + 1;"></a>
+      <a id="link" href="#example" vsn-on:click!prevent!once="count = (count || 0) + 1;"></a>
     `;
 
     const engine = new Engine();

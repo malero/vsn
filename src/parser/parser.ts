@@ -10,6 +10,7 @@ import {
   DeclarationTarget,
   DeclarationFlags,
   DeclarationFlagArgs,
+  MemberExpression,
   DirectiveExpression,
   FunctionDeclarationNode,
   FunctionExpression,
@@ -571,6 +572,12 @@ export class Parser {
         expr = new CallExpression(expr, args);
         continue;
       }
+      if (next.type === TokenType.Dot) {
+        this.stream.next();
+        const name = this.stream.expect(TokenType.Identifier);
+        expr = new MemberExpression(expr, name.value);
+        continue;
+      }
       if (next.type === TokenType.LBracket) {
         this.stream.next();
         this.stream.skipWhitespace();
@@ -624,8 +631,7 @@ export class Parser {
         this.stream.skipWhitespace();
         return this.parseArrowFunctionExpression(true);
       }
-      const name = this.parseIdentifierPath();
-      return new IdentifierExpression(name);
+      return new IdentifierExpression(this.stream.next().value);
     }
 
     if (token.type === TokenType.Boolean) {

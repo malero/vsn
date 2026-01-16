@@ -471,10 +471,15 @@ var IdentifierExpression = class extends BaseNode {
     this.name = name;
   }
   async evaluate(context) {
-    if (!context.scope) {
-      return void 0;
+    if (context.scope) {
+      const value = context.scope.getPath(this.name);
+      const root = this.name.split(".")[0];
+      const explicit = this.name.startsWith("parent.") || this.name.startsWith("root.") || this.name.startsWith("self.");
+      if (explicit || value !== void 0 || root && context.scope.hasKey?.(root)) {
+        return value;
+      }
     }
-    return context.scope.getPath(this.name);
+    return context.globals ? context.globals[this.name] : void 0;
   }
 };
 var LiteralExpression = class extends BaseNode {
@@ -563,6 +568,95 @@ var TernaryExpression = class extends BaseNode {
     return this.alternate.evaluate(context);
   }
 };
+var MemberExpression = class _MemberExpression extends BaseNode {
+  constructor(target, property) {
+    super("MemberExpression");
+    this.target = target;
+    this.property = property;
+  }
+  async evaluate(context) {
+    const resolved = await this.resolve(context);
+    return resolved?.value;
+  }
+  async resolve(context) {
+    const path = this.getIdentifierPath();
+    if (path) {
+      const resolved = this.resolveFromScope(context, path);
+      if (resolved) {
+        return resolved;
+      }
+      const resolvedGlobal = this.resolveFromGlobals(context, path);
+      if (resolvedGlobal) {
+        return resolvedGlobal;
+      }
+    }
+    const target = await this.target.evaluate(context);
+    if (target == null) {
+      return { value: void 0, target };
+    }
+    return { value: target[this.property], target };
+  }
+  getIdentifierPath() {
+    const targetPath = this.getTargetIdentifierPath();
+    if (!targetPath) {
+      return void 0;
+    }
+    const path = `${targetPath.path}.${this.property}`;
+    return { path, root: targetPath.root };
+  }
+  getTargetIdentifierPath() {
+    if (this.target instanceof IdentifierExpression) {
+      const name = this.target.name;
+      const root = name.split(".")[0];
+      if (!root) {
+        return void 0;
+      }
+      return { path: name, root };
+    }
+    if (this.target instanceof _MemberExpression) {
+      return this.target.getIdentifierPath();
+    }
+    return void 0;
+  }
+  resolveFromScope(context, path) {
+    if (!context.scope) {
+      return void 0;
+    }
+    const value = context.scope.getPath(path.path);
+    const explicit = path.path.startsWith("parent.") || path.path.startsWith("root.") || path.path.startsWith("self.");
+    if (!explicit && value === void 0 && !context.scope.hasKey?.(path.root)) {
+      return void 0;
+    }
+    const targetPath = this.getTargetPath(path.path);
+    const target = targetPath ? context.scope.getPath(targetPath) : void 0;
+    return { value, target };
+  }
+  resolveFromGlobals(context, path) {
+    const globals = context.globals ?? {};
+    if (!path.root || !(path.root in globals)) {
+      return void 0;
+    }
+    let value = globals[path.root];
+    let parent = void 0;
+    const parts = path.path.split(".");
+    for (let i = 1; i < parts.length; i += 1) {
+      parent = value;
+      const part = parts[i];
+      if (!part) {
+        return { value: void 0, target: parent };
+      }
+      value = value?.[part];
+    }
+    return { value, target: parent };
+  }
+  getTargetPath(path) {
+    const parts = path.split(".");
+    if (parts.length <= 1) {
+      return void 0;
+    }
+    return parts.slice(0, -1).join(".");
+  }
+};
 var CallExpression = class extends BaseNode {
   constructor(callee, args) {
     super("CallExpression");
@@ -570,7 +664,7 @@ var CallExpression = class extends BaseNode {
     this.args = args;
   }
   async evaluate(context) {
-    const resolved = this.resolveCallee(context);
+    const resolved = await this.resolveCallee(context);
     const fn = resolved?.fn ?? await this.callee.evaluate(context);
     if (typeof fn !== "function") {
       return void 0;
@@ -581,7 +675,14 @@ var CallExpression = class extends BaseNode {
     }
     return fn.apply(resolved?.thisArg, values);
   }
-  resolveCallee(context) {
+  async resolveCallee(context) {
+    if (this.callee instanceof MemberExpression) {
+      const resolved = await this.callee.resolve(context);
+      if (!resolved) {
+        return void 0;
+      }
+      return { fn: resolved.value, thisArg: resolved.target };
+    }
     if (!(this.callee instanceof IdentifierExpression)) {
       return void 0;
     }
@@ -1263,6 +1364,12 @@ ${caret}`;
         expr = new CallExpression(expr, args);
         continue;
       }
+      if (next.type === "Dot" /* Dot */) {
+        this.stream.next();
+        const name = this.stream.expect("Identifier" /* Identifier */);
+        expr = new MemberExpression(expr, name.value);
+        continue;
+      }
       if (next.type === "LBracket" /* LBracket */) {
         this.stream.next();
         this.stream.skipWhitespace();
@@ -1310,8 +1417,7 @@ ${caret}`;
         this.stream.skipWhitespace();
         return this.parseArrowFunctionExpression(true);
       }
-      const name = this.parseIdentifierPath();
-      return new IdentifierExpression(name);
+      return new IdentifierExpression(this.stream.next().value);
     }
     if (token.type === "Boolean" /* Boolean */) {
       return new LiteralExpression(this.stream.next().value === "true");
@@ -2066,10 +2172,8 @@ function applyBindToScope(element, expression, scope) {
   if (!key) {
     return;
   }
-  const value = getElementValue(element).trim();
-  if (value !== "") {
-    scope.set(key, value);
-  }
+  const value = getElementValue(element);
+  scope.set(key, value);
 }
 function applyBindToElement(element, expression, scope) {
   const key = expression.trim();
@@ -2162,7 +2266,8 @@ function debounce(fn, waitMs) {
 }
 
 // src/runtime/engine.ts
-var Engine = class {
+var Engine = class _Engine {
+  static activeEngines = /* @__PURE__ */ new WeakMap();
   scopes = /* @__PURE__ */ new WeakMap();
   bindBindings = /* @__PURE__ */ new WeakMap();
   ifBindings = /* @__PURE__ */ new WeakMap();
@@ -2178,6 +2283,7 @@ var Engine = class {
   codeCache = /* @__PURE__ */ new Map();
   behaviorCache = /* @__PURE__ */ new Map();
   observer;
+  observerRoot;
   attributeHandlers = [];
   globals = {};
   importantFlags = /* @__PURE__ */ new WeakMap();
@@ -2187,6 +2293,7 @@ var Engine = class {
   pendingRemoved = /* @__PURE__ */ new Set();
   pendingUpdated = /* @__PURE__ */ new Set();
   observerFlush;
+  ignoredAdded = /* @__PURE__ */ new WeakMap();
   constructor() {
     this.registerGlobal("console", console);
     this.registerGlobal("list", {
@@ -2228,6 +2335,12 @@ var Engine = class {
     this.registerDefaultAttributeHandlers();
   }
   async mount(root) {
+    const documentRoot = root.ownerDocument;
+    const active = _Engine.activeEngines.get(documentRoot);
+    if (active && active !== this) {
+      active.disconnectObserver();
+    }
+    _Engine.activeEngines.set(documentRoot, this);
     const elements = [root, ...Array.from(root.querySelectorAll("*"))];
     for (const element of elements) {
       if (!this.hasVsnAttributes(element)) {
@@ -2243,6 +2356,7 @@ var Engine = class {
   }
   unmount(element) {
     this.runDestruct(element);
+    this.disconnectObserver();
   }
   registerBehaviors(source) {
     const program = new Parser(source, { customFlags: new Set(this.flagHandlers.keys()) }).parseProgram();
@@ -2331,6 +2445,7 @@ var Engine = class {
     if (this.observer) {
       return;
     }
+    this.observerRoot = root;
     this.observerFlush = debounce(() => this.flushObserverQueue(), 10);
     this.observer = new MutationObserver((mutations) => {
       for (const mutation of mutations) {
@@ -2339,7 +2454,12 @@ var Engine = class {
         }
         for (const node of Array.from(mutation.addedNodes)) {
           if (node && node.nodeType === 1) {
-            this.pendingAdded.add(node);
+            const element = node;
+            if (this.ignoredAdded.has(element)) {
+              this.ignoredAdded.delete(element);
+              continue;
+            }
+            this.pendingAdded.add(element);
           }
         }
         for (const node of Array.from(mutation.removedNodes)) {
@@ -2351,6 +2471,14 @@ var Engine = class {
       this.observerFlush?.();
     });
     this.observer.observe(root, { childList: true, subtree: true, attributes: true, attributeFilter: ["class"] });
+  }
+  disconnectObserver() {
+    this.observer?.disconnect();
+    this.observer = void 0;
+    this.observerRoot = void 0;
+    this.pendingAdded.clear();
+    this.pendingRemoved.clear();
+    this.pendingUpdated.clear();
   }
   flushObserverQueue() {
     const removed = Array.from(this.pendingRemoved);
@@ -2557,15 +2685,16 @@ var Engine = class {
       const fragment = element.content.cloneNode(true);
       const roots = Array.from(fragment.children);
       const itemScope = new Scope(scope);
-      itemScope.setPath(binding.itemName, item);
+      itemScope.setPath(`self.${binding.itemName}`, item);
       if (binding.indexName) {
-        itemScope.setPath(binding.indexName, index);
+        itemScope.setPath(`self.${binding.indexName}`, index);
       }
       for (const root of roots) {
         this.getScope(root, itemScope);
       }
       parent.insertBefore(fragment, element);
       for (const root of roots) {
+        this.ignoredAdded.set(root, true);
         rendered.push(root);
         this.handleAddedNode(root);
         this.evaluate(root);
@@ -2863,9 +2992,20 @@ var Engine = class {
       order: this.behaviorRegistry.length,
       ...cached
     });
-    for (const statement of behavior.body.statements) {
+    this.collectNestedBehaviors(behavior.body, selector);
+  }
+  collectNestedBehaviors(block, parentSelector) {
+    for (const statement of block.statements) {
       if (statement instanceof BehaviorNode) {
-        this.collectBehavior(statement, selector);
+        this.collectBehavior(statement, parentSelector);
+        continue;
+      }
+      if (statement instanceof OnBlockNode) {
+        this.collectNestedBehaviors(statement.body, parentSelector);
+        continue;
+      }
+      if (statement instanceof BlockNode) {
+        this.collectNestedBehaviors(statement, parentSelector);
       }
     }
   }
@@ -3081,6 +3221,13 @@ var Engine = class {
         test: this.normalizeNode(node.test),
         consequent: this.normalizeNode(node.consequent),
         alternate: this.normalizeNode(node.alternate)
+      };
+    }
+    if (type === "MemberExpression") {
+      return {
+        type,
+        target: this.normalizeNode(node.target),
+        property: node.property ?? ""
       };
     }
     if (type === "CallExpression") {
@@ -3575,6 +3722,7 @@ export {
   IndexExpression,
   Lexer,
   LiteralExpression,
+  MemberExpression,
   OnBlockNode,
   Parser,
   ProgramNode,

@@ -2,6 +2,7 @@ export interface ExecutionContext {
   scope?: {
     getPath(key: string): any;
     setPath?(key: string, value: any): void;
+    hasKey?(key: string): boolean;
   };
   globals?: Record<string, any>;
   element?: Element;
@@ -220,6 +221,7 @@ export type ExpressionNode =
   | LiteralExpression
   | UnaryExpression
   | BinaryExpression
+  | MemberExpression
   | CallExpression
   | ArrayExpression
   | IndexExpression
@@ -238,10 +240,17 @@ export class IdentifierExpression extends BaseNode {
   }
 
   async evaluate(context: ExecutionContext): Promise<any> {
-    if (!context.scope) {
-      return undefined;
+    if (context.scope) {
+      const value = context.scope.getPath(this.name);
+      const root = this.name.split(".")[0];
+      const explicit = this.name.startsWith("parent.")
+        || this.name.startsWith("root.")
+        || this.name.startsWith("self.");
+      if (explicit || value !== undefined || (root && context.scope.hasKey?.(root))) {
+        return value;
+      }
     }
-    return context.scope.getPath(this.name);
+    return context.globals ? context.globals[this.name] : undefined;
   }
 }
 
@@ -338,13 +347,119 @@ export class TernaryExpression extends BaseNode {
   }
 }
 
+export class MemberExpression extends BaseNode {
+  constructor(public target: ExpressionNode, public property: string) {
+    super("MemberExpression");
+  }
+
+  async evaluate(context: ExecutionContext): Promise<any> {
+    const resolved = await this.resolve(context);
+    return resolved?.value;
+  }
+
+  async resolve(
+    context: ExecutionContext
+  ): Promise<{ value: any; target?: any } | undefined> {
+    const path = this.getIdentifierPath();
+    if (path) {
+      const resolved = this.resolveFromScope(context, path);
+      if (resolved) {
+        return resolved;
+      }
+      const resolvedGlobal = this.resolveFromGlobals(context, path);
+      if (resolvedGlobal) {
+        return resolvedGlobal;
+      }
+    }
+
+    const target = await this.target.evaluate(context);
+    if (target == null) {
+      return { value: undefined, target };
+    }
+    return { value: (target as any)[this.property], target };
+  }
+
+  getIdentifierPath(): { path: string; root: string } | undefined {
+    const targetPath = this.getTargetIdentifierPath();
+    if (!targetPath) {
+      return undefined;
+    }
+    const path = `${targetPath.path}.${this.property}`;
+    return { path, root: targetPath.root };
+  }
+
+  private getTargetIdentifierPath(): { path: string; root: string } | undefined {
+    if (this.target instanceof IdentifierExpression) {
+      const name = this.target.name;
+      const root = name.split(".")[0];
+      if (!root) {
+        return undefined;
+      }
+      return { path: name, root };
+    }
+    if (this.target instanceof MemberExpression) {
+      return this.target.getIdentifierPath();
+    }
+    return undefined;
+  }
+
+  private resolveFromScope(
+    context: ExecutionContext,
+    path: { path: string; root: string }
+  ): { value: any; target?: any } | undefined {
+    if (!context.scope) {
+      return undefined;
+    }
+    const value = context.scope.getPath(path.path);
+    const explicit = path.path.startsWith("parent.")
+      || path.path.startsWith("root.")
+      || path.path.startsWith("self.");
+    if (!explicit && value === undefined && !context.scope.hasKey?.(path.root)) {
+      return undefined;
+    }
+    const targetPath = this.getTargetPath(path.path);
+    const target = targetPath ? context.scope.getPath(targetPath) : undefined;
+    return { value, target };
+  }
+
+  private resolveFromGlobals(
+    context: ExecutionContext,
+    path: { path: string; root: string }
+  ): { value: any; target?: any } | undefined {
+    const globals = context.globals ?? {};
+    if (!path.root || !(path.root in globals)) {
+      return undefined;
+    }
+    let value = globals[path.root];
+    let parent: any = undefined;
+    const parts = path.path.split(".");
+    for (let i = 1; i < parts.length; i += 1) {
+      parent = value;
+      const part = parts[i];
+      if (!part) {
+        return { value: undefined, target: parent };
+      }
+      value = value?.[part];
+    }
+    return { value, target: parent };
+  }
+
+  private getTargetPath(path: string): string | undefined {
+    const parts = path.split(".");
+    if (parts.length <= 1) {
+      return undefined;
+    }
+    return parts.slice(0, -1).join(".");
+  }
+}
+
 export class CallExpression extends BaseNode {
   constructor(public callee: ExpressionNode, public args: ExpressionNode[]) {
     super("CallExpression");
   }
 
   async evaluate(context: ExecutionContext): Promise<any> {
-    const resolved = this.resolveCallee(context);
+    const resolved = await this.resolveCallee(context);
     const fn = resolved?.fn ?? (await this.callee.evaluate(context));
     if (typeof fn !== "function") {
       return undefined;
@@ -356,9 +471,16 @@ export class CallExpression extends BaseNode {
     return fn.apply(resolved?.thisArg, values);
   }
 
-  private resolveCallee(
+  private async resolveCallee(
     context: ExecutionContext
-  ): { fn: any; thisArg?: any } | undefined {
+  ): Promise<{ fn: any; thisArg?: any } | undefined> {
+    if (this.callee instanceof MemberExpression) {
+      const resolved = await this.callee.resolve(context);
+      if (!resolved) {
+        return undefined;
+      }
+      return { fn: resolved.value, thisArg: resolved.target };
+    }
     if (!(this.callee instanceof IdentifierExpression)) {
       return undefined;
     }

@@ -15,7 +15,7 @@
       class="todo-input"
       placeholder="Add a new task"
       autocomplete="off"
-      vsn-bind:to="newTitle"
+      vsn-bind="newTitle"
       vsn-on:keyup.enter="console.log('enter');submit();"
     />
     <button class="btn" type="submit">Add</button>
@@ -61,7 +61,6 @@
     total: 0;
 
     construct {
-      console.log("construct");
       load();
     }
 
@@ -97,6 +96,7 @@
 
     async toggleTodo(index) {
       todo = todos[index];
+      console.log("toggle todo", index, todo);
       return !todo ? null : toggleTodoCore(todo, index);
     }
 
@@ -118,6 +118,7 @@
 
     setFilter(value) {
       filter = value;
+      console.log('setFilter', value);
     }
 
     async clearCompleted() {
@@ -128,8 +129,10 @@
     behavior .chip {
       @data-filter :> value;
       @aria-pressed :< (root.filter == value);
+
       on click() {
-        root.setFilter(value);
+        console.log("filtering...");
+        setFilter(value);
       }
     }
 

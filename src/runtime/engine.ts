@@ -95,6 +95,7 @@ type FlagHandler = {
 };
 
 export class Engine {
+  private static activeEngines = new WeakMap<Document, Engine>();
   private scopes = new WeakMap<Element, Scope>();
   private bindBindings = new WeakMap<Element, BindConfig>();
   private ifBindings = new WeakMap<Element, string>();
@@ -109,7 +110,8 @@ export class Engine {
   private behaviorId = 0;
   private codeCache = new Map<string, BlockNode>();
   private behaviorCache = new Map<string, CachedBehavior>();
-  private observer?: MutationObserver;
+  private observer: MutationObserver | undefined;
+  private observerRoot: HTMLElement | undefined;
   private attributeHandlers: AttributeHandler[] = [];
   private globals: Record<string, any> = {};
   private importantFlags = new WeakMap<Element, Set<string>>();
@@ -119,6 +121,7 @@ export class Engine {
   private pendingRemoved = new Set<Element>();
   private pendingUpdated = new Set<Element>();
   private observerFlush?: () => void;
+  private ignoredAdded = new WeakMap<Element, boolean>();
 
   constructor() {
     this.registerGlobal("console", console);
@@ -162,6 +165,12 @@ export class Engine {
   }
 
   async mount(root: HTMLElement): Promise<void> {
+    const documentRoot = root.ownerDocument;
+    const active = Engine.activeEngines.get(documentRoot);
+    if (active && active !== this) {
+      active.disconnectObserver();
+    }
+    Engine.activeEngines.set(documentRoot, this);
     const elements: Element[] = [root, ...Array.from(root.querySelectorAll("*"))];
     for (const element of elements) {
       if (!this.hasVsnAttributes(element)) {
@@ -178,6 +187,7 @@ export class Engine {
 
   unmount(element: Element): void {
     this.runDestruct(element);
+    this.disconnectObserver();
   }
 
   registerBehaviors(source: string): void {
@@ -276,6 +286,7 @@ export class Engine {
     if (this.observer) {
       return;
     }
+    this.observerRoot = root;
     this.observerFlush = debounce(() => this.flushObserverQueue(), 10);
     this.observer = new MutationObserver((mutations) => {
       for (const mutation of mutations) {
@@ -284,7 +295,12 @@ export class Engine {
         }
         for (const node of Array.from(mutation.addedNodes)) {
           if (node && node.nodeType === 1) {
-            this.pendingAdded.add(node as Element);
+            const element = node as Element;
+            if (this.ignoredAdded.has(element)) {
+              this.ignoredAdded.delete(element);
+              continue;
+            }
+            this.pendingAdded.add(element);
           }
         }
         for (const node of Array.from(mutation.removedNodes)) {
@@ -296,6 +312,15 @@ export class Engine {
       this.observerFlush?.();
     });
     this.observer.observe(root, { childList: true, subtree: true, attributes: true, attributeFilter: ["class"] });
+  }
+
+  private disconnectObserver(): void {
+    this.observer?.disconnect();
+    this.observer = undefined;
+    this.observerRoot = undefined;
+    this.pendingAdded.clear();
+    this.pendingRemoved.clear();
+    this.pendingUpdated.clear();
   }
 
   private flushObserverQueue(): void {
@@ -534,15 +559,16 @@ export class Engine {
       const fragment = element.content.cloneNode(true) as DocumentFragment;
       const roots = Array.from(fragment.children) as Element[];
       const itemScope = new Scope(scope);
-      itemScope.setPath(binding.itemName, item);
+      itemScope.setPath(`self.${binding.itemName}`, item);
       if (binding.indexName) {
-        itemScope.setPath(binding.indexName, index);
+        itemScope.setPath(`self.${binding.indexName}`, index);
       }
       for (const root of roots) {
         this.getScope(root, itemScope);
       }
       parent.insertBefore(fragment, element);
       for (const root of roots) {
+        this.ignoredAdded.set(root, true);
         rendered.push(root);
         this.handleAddedNode(root);
         this.evaluate(root);
@@ -873,9 +899,21 @@ export class Engine {
       order: this.behaviorRegistry.length,
       ...cached
     });
-    for (const statement of behavior.body.statements) {
+    this.collectNestedBehaviors(behavior.body, selector);
+  }
+
+  private collectNestedBehaviors(block: BlockNode, parentSelector: string): void {
+    for (const statement of block.statements) {
       if (statement instanceof BehaviorNode) {
-        this.collectBehavior(statement, selector);
+        this.collectBehavior(statement, parentSelector);
+        continue;
+      }
+      if (statement instanceof OnBlockNode) {
+        this.collectNestedBehaviors(statement.body, parentSelector);
+        continue;
+      }
+      if (statement instanceof BlockNode) {
+        this.collectNestedBehaviors(statement, parentSelector);
       }
     }
   }
@@ -1107,6 +1145,13 @@ export class Engine {
         test: this.normalizeNode(node.test),
         consequent: this.normalizeNode(node.consequent),
         alternate: this.normalizeNode(node.alternate)
+      };
+    }
+    if (type === "MemberExpression") {
+      return {
+        type,
+        target: this.normalizeNode(node.target),
+        property: node.property ?? ""
       };
     }
     if (type === "CallExpression") {

@@ -27,10 +27,8 @@ export function applyBindToScope(element: Element, expression: string, scope: Sc
     return;
   }
 
-  const value = getElementValue(element).trim();
-  if (value !== "") {
-    scope.set(key, value);
-  }
+  const value = getElementValue(element);
+  scope.set(key, value);
 }
 
 export function applyBindToElement(element: Element, expression: string, scope: Scope): void {

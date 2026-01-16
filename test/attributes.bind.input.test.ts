@@ -20,4 +20,21 @@ describe("vsn-bind input", () => {
 
     expect(scope.get("name")).toBe("Vision");
   });
+
+  it("preserves whitespace for two-way bindings", async () => {
+    document.body.innerHTML = `
+      <input id="title" value="" vsn-bind="title" />
+    `;
+
+    const engine = new Engine();
+    await engine.mount(document.body);
+
+    const input = document.getElementById("title") as HTMLInputElement;
+    const scope = engine.getScope(input);
+
+    input.value = "  spaced  ";
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+
+    expect(scope.get("title")).toBe("  spaced  ");
+  });
 });

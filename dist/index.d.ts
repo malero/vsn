@@ -83,6 +83,7 @@ interface ExecutionContext {
     scope?: {
         getPath(key: string): any;
         setPath?(key: string, value: any): void;
+        hasKey?(key: string): boolean;
     };
     globals?: Record<string, any>;
     element?: Element;
@@ -184,7 +185,7 @@ declare class DeclarationNode extends BaseNode {
     flagArgs: DeclarationFlagArgs;
     constructor(target: DeclarationTarget, operator: ":" | ":=" | ":<" | ":>", value: ExpressionNode, flags: DeclarationFlags, flagArgs: DeclarationFlagArgs);
 }
-type ExpressionNode = IdentifierExpression | LiteralExpression | UnaryExpression | BinaryExpression | CallExpression | ArrayExpression | IndexExpression | FunctionExpression | AwaitExpression | TernaryExpression | DirectiveExpression | QueryExpression;
+type ExpressionNode = IdentifierExpression | LiteralExpression | UnaryExpression | BinaryExpression | MemberExpression | CallExpression | ArrayExpression | IndexExpression | FunctionExpression | AwaitExpression | TernaryExpression | DirectiveExpression | QueryExpression;
 type DeclarationTarget = IdentifierExpression | DirectiveExpression;
 type AssignmentTarget = IdentifierExpression | DirectiveExpression;
 declare class IdentifierExpression extends BaseNode {
@@ -216,6 +217,24 @@ declare class TernaryExpression extends BaseNode {
     alternate: ExpressionNode;
     constructor(test: ExpressionNode, consequent: ExpressionNode, alternate: ExpressionNode);
     evaluate(context: ExecutionContext): Promise<any>;
+}
+declare class MemberExpression extends BaseNode {
+    target: ExpressionNode;
+    property: string;
+    constructor(target: ExpressionNode, property: string);
+    evaluate(context: ExecutionContext): Promise<any>;
+    resolve(context: ExecutionContext): Promise<{
+        value: any;
+        target?: any;
+    } | undefined>;
+    getIdentifierPath(): {
+        path: string;
+        root: string;
+    } | undefined;
+    private getTargetIdentifierPath;
+    private resolveFromScope;
+    private resolveFromGlobals;
+    private getTargetPath;
 }
 declare class CallExpression extends BaseNode {
     callee: ExpressionNode;
@@ -356,6 +375,7 @@ type FlagHandler = {
     onApply?: (context: FlagApplyContext) => void;
 };
 declare class Engine {
+    private static activeEngines;
     private scopes;
     private bindBindings;
     private ifBindings;
@@ -370,7 +390,8 @@ declare class Engine {
     private behaviorId;
     private codeCache;
     private behaviorCache;
-    private observer?;
+    private observer;
+    private observerRoot;
     private attributeHandlers;
     private globals;
     private importantFlags;
@@ -380,6 +401,7 @@ declare class Engine {
     private pendingRemoved;
     private pendingUpdated;
     private observerFlush?;
+    private ignoredAdded;
     constructor();
     mount(root: HTMLElement): Promise<void>;
     unmount(element: Element): void;
@@ -396,6 +418,7 @@ declare class Engine {
     getScope(element: Element, parentScope?: Scope): Scope;
     evaluate(element: Element): void;
     private attachObserver;
+    private disconnectObserver;
     private flushObserverQueue;
     private handleRemovedNode;
     private handleAddedNode;
@@ -431,6 +454,7 @@ declare class Engine {
     private execute;
     private executeBlock;
     private collectBehavior;
+    private collectNestedBehaviors;
     private computeSpecificity;
     private getImportantKey;
     private isImportant;
@@ -464,4 +488,4 @@ declare const VERSION = "0.1.0";
 declare function parseCFS(source: string): ProgramNode;
 declare function autoMount(root?: HTMLElement | Document): Engine | null;
 
-export { ArrayExpression, AssignmentNode, type AssignmentTarget, AwaitExpression, BaseNode, BehaviorNode, BinaryExpression, BlockNode, type CFSNode, CallExpression, type DeclarationFlagArgs, type DeclarationFlags, DeclarationNode, type DeclarationTarget, DirectiveExpression, Engine, type ExecutionContext, type ExpressionNode, FunctionDeclarationNode, FunctionExpression, IdentifierExpression, IndexExpression, Lexer, LiteralExpression, OnBlockNode, Parser, ProgramNode, QueryExpression, ReturnNode, SelectorNode, StateBlockNode, StateEntryNode, TernaryExpression, TokenType, UnaryExpression, UseNode, VERSION, autoMount, parseCFS };
+export { ArrayExpression, AssignmentNode, type AssignmentTarget, AwaitExpression, BaseNode, BehaviorNode, BinaryExpression, BlockNode, type CFSNode, CallExpression, type DeclarationFlagArgs, type DeclarationFlags, DeclarationNode, type DeclarationTarget, DirectiveExpression, Engine, type ExecutionContext, type ExpressionNode, FunctionDeclarationNode, FunctionExpression, IdentifierExpression, IndexExpression, Lexer, LiteralExpression, MemberExpression, OnBlockNode, Parser, ProgramNode, QueryExpression, ReturnNode, SelectorNode, StateBlockNode, StateEntryNode, TernaryExpression, TokenType, UnaryExpression, UseNode, VERSION, autoMount, parseCFS };
