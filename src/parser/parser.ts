@@ -181,6 +181,7 @@ export class Parser {
     let declarationsOpen = allowDeclarations;
     let sawConstruct = false;
     let sawFunctionOrOn = false;
+    let sawNestedBehavior = false;
 
     while (true) {
       this.stream.skipWhitespace();
@@ -191,6 +192,14 @@ export class Parser {
       if (next.type === TokenType.RBrace) {
         this.stream.next();
         break;
+      }
+
+      if (allowDeclarations && next.type === TokenType.Behavior) {
+        sawNestedBehavior = true;
+      }
+
+      if (allowDeclarations && sawNestedBehavior && next.type !== TokenType.Behavior) {
+        throw new Error("Nested behaviors must appear after construct, function, and on blocks");
       }
 
       const isFunctionDeclaration = allowDeclarations && this.isFunctionDeclarationStart();
@@ -389,7 +398,40 @@ export class Parser {
   }
 
   private parseExpression(): ExpressionNode {
-    return this.parseTernaryExpression();
+    return this.parsePipeExpression();
+  }
+
+  private parsePipeExpression(): ExpressionNode {
+    let expr = this.parseTernaryExpression();
+    while (true) {
+      this.stream.skipWhitespace();
+      if (this.stream.peek()?.type !== TokenType.Pipe) {
+        break;
+      }
+      this.stream.next();
+      this.stream.skipWhitespace();
+      let awaitStage = false;
+      const next = this.stream.peek();
+      if (this.isAwaitAllowed() && next?.type === TokenType.Identifier && next.value === "await") {
+        this.stream.next();
+        this.stream.skipWhitespace();
+        awaitStage = true;
+      }
+      const stage = this.parseCallExpression();
+      const call = this.buildPipeCall(expr, stage);
+      expr = awaitStage ? new AwaitExpression(call) : call;
+    }
+    return expr;
+  }
+
+  private buildPipeCall(input: ExpressionNode, stage: ExpressionNode): ExpressionNode {
+    if (stage instanceof CallExpression) {
+      return new CallExpression(stage.callee, [input, ...stage.args]);
+    }
+    if (stage instanceof IdentifierExpression || stage instanceof MemberExpression) {
+      return new CallExpression(stage, [input]);
+    }
+    throw new Error("Pipe operator requires a function call");
   }
 
   private parseTernaryExpression(): ExpressionNode {

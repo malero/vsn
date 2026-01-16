@@ -42,6 +42,7 @@ export enum TokenType {
   GreaterEqual = "GreaterEqual",
   And = "And",
   Or = "Or",
+  Pipe = "Pipe",
   Bang = "Bang",
 
   At = "At",

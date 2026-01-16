@@ -96,6 +96,7 @@ var TokenType = /* @__PURE__ */ ((TokenType2) => {
   TokenType2["GreaterEqual"] = "GreaterEqual";
   TokenType2["And"] = "And";
   TokenType2["Or"] = "Or";
+  TokenType2["Pipe"] = "Pipe";
   TokenType2["Bang"] = "Bang";
   TokenType2["At"] = "At";
   TokenType2["Dollar"] = "Dollar";
@@ -272,6 +273,11 @@ var Lexer = class {
       this.next();
       this.next();
       return this.token("Or" /* Or */, "||", start);
+    }
+    if (ch === "|" && next === ">") {
+      this.next();
+      this.next();
+      return this.token("Pipe" /* Pipe */, "|>", start);
     }
     const punctMap = {
       "{": "LBrace" /* LBrace */,
@@ -1068,6 +1074,7 @@ ${caret}`;
     let declarationsOpen = allowDeclarations;
     let sawConstruct = false;
     let sawFunctionOrOn = false;
+    let sawNestedBehavior = false;
     while (true) {
       this.stream.skipWhitespace();
       const next = this.stream.peek();
@@ -1077,6 +1084,12 @@ ${caret}`;
       if (next.type === "RBrace" /* RBrace */) {
         this.stream.next();
         break;
+      }
+      if (allowDeclarations && next.type === "Behavior" /* Behavior */) {
+        sawNestedBehavior = true;
+      }
+      if (allowDeclarations && sawNestedBehavior && next.type !== "Behavior" /* Behavior */) {
+        throw new Error("Nested behaviors must appear after construct, function, and on blocks");
       }
       const isFunctionDeclaration = allowDeclarations && this.isFunctionDeclarationStart();
       if (isFunctionDeclaration) {
@@ -1250,7 +1263,38 @@ ${caret}`;
     return new AssignmentNode(target, value);
   }
   parseExpression() {
-    return this.parseTernaryExpression();
+    return this.parsePipeExpression();
+  }
+  parsePipeExpression() {
+    let expr = this.parseTernaryExpression();
+    while (true) {
+      this.stream.skipWhitespace();
+      if (this.stream.peek()?.type !== "Pipe" /* Pipe */) {
+        break;
+      }
+      this.stream.next();
+      this.stream.skipWhitespace();
+      let awaitStage = false;
+      const next = this.stream.peek();
+      if (this.isAwaitAllowed() && next?.type === "Identifier" /* Identifier */ && next.value === "await") {
+        this.stream.next();
+        this.stream.skipWhitespace();
+        awaitStage = true;
+      }
+      const stage = this.parseCallExpression();
+      const call = this.buildPipeCall(expr, stage);
+      expr = awaitStage ? new AwaitExpression(call) : call;
+    }
+    return expr;
+  }
+  buildPipeCall(input, stage) {
+    if (stage instanceof CallExpression) {
+      return new CallExpression(stage.callee, [input, ...stage.args]);
+    }
+    if (stage instanceof IdentifierExpression || stage instanceof MemberExpression) {
+      return new CallExpression(stage, [input]);
+    }
+    throw new Error("Pipe operator requires a function call");
   }
   parseTernaryExpression() {
     let test = this.parseLogicalOrExpression();

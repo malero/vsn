@@ -37,6 +37,7 @@ declare enum TokenType {
     GreaterEqual = "GreaterEqual",
     And = "And",
     Or = "Or",
+    Pipe = "Pipe",
     Bang = "Bang",
     At = "At",
     Dollar = "Dollar",
@@ -297,6 +298,8 @@ declare class Parser {
     private parseOnModifiers;
     private parseAssignment;
     private parseExpression;
+    private parsePipeExpression;
+    private buildPipeCall;
     private parseTernaryExpression;
     private parseLogicalOrExpression;
     private parseLogicalAndExpression;

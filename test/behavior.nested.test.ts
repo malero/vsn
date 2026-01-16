@@ -30,4 +30,25 @@ describe("nested behaviors", () => {
 
     expect(scope.get("ready")).toBe(true);
   });
+
+  it("requires nested behaviors after construct, functions, and on blocks", async () => {
+    document.body.innerHTML = `<div class="card"><span class="item"></span></div>`;
+
+    const source = `
+      behavior .card {
+        behavior .item {
+          construct { ready = true; }
+        }
+
+        construct { }
+
+        on click() { }
+      }
+    `;
+
+    const engine = new Engine();
+    expect(() => engine.registerBehaviors(source)).toThrow(
+      "Nested behaviors must appear after construct, function, and on blocks"
+    );
+  });
 });

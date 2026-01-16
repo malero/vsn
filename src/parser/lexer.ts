@@ -190,6 +190,11 @@ export class Lexer {
       this.next();
       return this.token(TokenType.Or, "||", start);
     }
+    if (ch === "|" && next === ">") {
+      this.next();
+      this.next();
+      return this.token(TokenType.Pipe, "|>", start);
+    }
     const punctMap: Record<string, TokenType> = {
       "{": TokenType.LBrace,
       "}": TokenType.RBrace,
