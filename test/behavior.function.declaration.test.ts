@@ -9,8 +9,12 @@ describe("behavior function declarations", () => {
 
     const source = `
       behavior .card {
-        add(a, b) { return a + b; }
         count: 1;
+        
+        construct {
+        }
+
+        add(a, b) { return a + b; }
 
         on click() {
           count = add(count, 2);
@@ -73,5 +77,26 @@ describe("behavior function declarations", () => {
     engine.registerBehaviors(source);
 
     await expect(engine.mount(document.body)).rejects.toThrow("value");
+  });
+
+  it("requires construct before function declarations and on blocks when construct is present", async () => {
+    document.body.innerHTML = `<button class="card"></button>`;
+
+    const source = `
+      behavior .card {
+        count: 0;
+
+        add(a, b) { return a + b; }
+
+        construct { }
+      
+        on click() {
+          count = add(count, 1);
+        }
+      }
+    `;
+
+    const engine = new Engine();
+    expect(() => engine.registerBehaviors(source)).toThrow("construct");
   });
 });

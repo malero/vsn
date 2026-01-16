@@ -221,7 +221,4 @@ Conditional Blocks (Future-Proofing)
 - Keep core minimal (fast, lightweight); richer features live in extensions.
 
 22. Implementation TODOs
-- Expose public API for registering custom attributes/flags with docs/examples.
-- Support anonymous function expressions like `f = () => { ... }`.
 - DOM helpers for refs/queries and event modifiers (Alpine-style ergonomics).
-- Timer utilities (setTimeout) and optional async support for demos.

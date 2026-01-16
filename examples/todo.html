@@ -1,0 +1,107 @@
+<section id="todo-app" class="example-card">
+  <script type="text/vsn">
+    use localStorage as storage;
+    use JSON as json;
+    use todoOps;
+
+    behavior #todo-app {
+      key: "vsn:todos";
+      newTitle: "";
+      filter: "all";
+      todos: [];
+      listHtml: "";
+      remaining: 0;
+      total: 0;
+
+      construct {
+        load();
+      }
+
+      load() {
+        raw = storage.getItem(key);
+        todos = raw ? json.parse(raw) : [];
+        sync();
+      }
+
+      save() {
+        storage.setItem(key, json.stringify(todos));
+      }
+
+      sync() {
+        total = todos.length;
+        remaining = todoOps.remaining(todos);
+        listHtml = todoOps.listHtml(todoOps.visible(todos, filter));
+        save();
+      }
+
+      addTodo() {
+        title = newTitle.trim();
+        return title == "" ? null : addTodoCore(title);
+      }
+
+      addTodoCore(title) {
+        todos = todoOps.add(todos, title);
+        newTitle = "";
+        sync();
+      }
+
+      toggleTodo(id) {
+        todos = todoOps.toggle(todos, id);
+        sync();
+      }
+
+      removeTodo(id) {
+        todos = todoOps.remove(todos, id);
+        sync();
+      }
+
+      setFilter(value) {
+        filter = value;
+        listHtml = todoOps.listHtml(todoOps.visible(todos, filter));
+      }
+
+      clearCompleted() {
+        todos = todoOps.clearCompleted(todos);
+        sync();
+      }
+    }
+  </script>
+
+  <header class="todo-header">
+    <div>
+      <h1>Todo List</h1>
+      <p class="todo-subtitle">Persisted with localStorage, driven by CFS state.</p>
+    </div>
+    <div class="todo-stats">
+      <span class="todo-count"><strong vsn-bind:from="remaining">0</strong> left</span>
+      <span class="todo-total">of <span vsn-bind:from="total">0</span></span>
+    </div>
+  </header>
+
+  <form class="todo-form" vsn-on:submit!prevent="addTodo()">
+    <input
+      class="todo-input"
+      placeholder="Add a new task"
+      autocomplete="off"
+      vsn-bind:to="newTitle"
+    />
+    <button class="btn" type="submit">Add</button>
+  </form>
+
+  <div class="todo-toolbar">
+    <div class="todo-filters">
+      <button class="chip" vsn-on:click="setFilter('all')" @aria-pressed :< (filter == "all")>
+        All
+      </button>
+      <button class="chip" vsn-on:click="setFilter('active')" @aria-pressed :< (filter == "active")>
+        Active
+      </button>
+      <button class="chip" vsn-on:click="setFilter('done')" @aria-pressed :< (filter == "done")>
+        Done
+      </button>
+    </div>
+    <button class="btn secondary" vsn-on:click="clearCompleted()">Clear done</button>
+  </div>
+
+  <ul class="todo-list" @html!trusted :< listHtml></ul>
+</section>

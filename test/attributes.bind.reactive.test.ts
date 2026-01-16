@@ -19,4 +19,24 @@ describe("reactive bindings", () => {
 
     expect(span.textContent).toBe("Vision");
   });
+
+  it("updates child bindings when parent scope changes", async () => {
+    document.body.innerHTML = `
+      <div id="parent" vsn-bind="count">0
+        <span id="child" vsn-bind:from="count"></span>
+      </div>
+    `;
+
+    const engine = new Engine();
+    await engine.mount(document.body);
+
+    const parent = document.getElementById("parent") as HTMLDivElement;
+    const child = document.getElementById("child") as HTMLSpanElement;
+    const parentScope = engine.getScope(parent);
+
+    parentScope.set("count", 12);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(child.textContent).toBe("12");
+  });
 });

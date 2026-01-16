@@ -35,6 +35,7 @@ export enum TokenType {
   Star = "Star",
 
   Equals = "Equals",
+  Arrow = "Arrow",
   DoubleEquals = "DoubleEquals",
   NotEquals = "NotEquals",
   LessEqual = "LessEqual",

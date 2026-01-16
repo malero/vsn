@@ -160,6 +160,11 @@ export class Lexer {
       this.next();
       return this.token(TokenType.DoubleEquals, "==", start);
     }
+    if (ch === "=" && next === ">") {
+      this.next();
+      this.next();
+      return this.token(TokenType.Arrow, "=>", start);
+    }
     if (ch === "!" && next === "=") {
       this.next();
       this.next();

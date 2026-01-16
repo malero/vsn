@@ -12,6 +12,7 @@ import {
   DeclarationFlagArgs,
   DirectiveExpression,
   FunctionDeclarationNode,
+  FunctionExpression,
   IdentifierExpression,
   LiteralExpression,
   OnBlockNode,
@@ -21,6 +22,7 @@ import {
   SelectorNode,
   StateBlockNode,
   StateEntryNode,
+  TernaryExpression,
   UnaryExpression,
   UseNode,
   IndexExpression,
@@ -32,8 +34,12 @@ import { TokenType } from "./token";
 
 export class Parser {
   private stream: TokenStream;
+  private source: string;
+  private customFlags: Set<string>;
 
-  constructor(input: string) {
+  constructor(input: string, options?: { customFlags?: Set<string> }) {
+    this.source = input;
+    this.customFlags = options?.customFlags ?? new Set<string>();
     const lexer = new Lexer(input);
     this.stream = new TokenStream(lexer.tokenize());
   }
@@ -44,35 +50,41 @@ export class Parser {
   }
 
   parseProgram(): ProgramNode {
-    const behaviors: BehaviorNode[] = [];
-    const uses: UseNode[] = [];
-    this.stream.skipWhitespace();
-    while (!this.stream.eof()) {
-      const next = this.stream.peek();
-      if (!next) {
-        break;
-      }
-      if (next.type === TokenType.Use) {
-        uses.push(this.parseUseStatement());
-      } else {
-        behaviors.push(this.parseBehavior());
-      }
+    return this.wrapErrors(() => {
+      const behaviors: BehaviorNode[] = [];
+      const uses: UseNode[] = [];
       this.stream.skipWhitespace();
-    }
-    return new ProgramNode(behaviors, uses);
+      while (!this.stream.eof()) {
+        const next = this.stream.peek();
+        if (!next) {
+          break;
+        }
+        if (next.type === TokenType.Use) {
+          uses.push(this.parseUseStatement());
+        } else {
+          behaviors.push(this.parseBehavior());
+        }
+        this.stream.skipWhitespace();
+      }
+      return new ProgramNode(behaviors, uses);
+    });
   }
 
   parseInlineBlock(): BlockNode {
-    this.stream.skipWhitespace();
-    return this.parseBlock({ allowDeclarations: false });
+    return this.wrapErrors(() => {
+      this.stream.skipWhitespace();
+      return this.parseBlock({ allowDeclarations: false });
+    });
   }
 
   private parseBehavior(): BehaviorNode {
-    this.stream.skipWhitespace();
-    this.stream.expect(TokenType.Behavior);
-    const selector = this.parseSelector();
-    const body = this.parseBlock({ allowDeclarations: true });
-    return new BehaviorNode(selector, body);
+    return this.wrapErrors(() => {
+      this.stream.skipWhitespace();
+      this.stream.expect(TokenType.Behavior);
+      const selector = this.parseSelector();
+      const body = this.parseBlock({ allowDeclarations: true });
+      return new BehaviorNode(selector, body);
+    });
   }
 
   private parseSelector(): SelectorNode {
@@ -109,20 +121,51 @@ export class Parser {
   }
 
   private parseUseStatement(): UseNode {
-    this.stream.expect(TokenType.Use);
-    this.stream.skipWhitespace();
-    const name = this.parseIdentifierPath();
-    this.stream.skipWhitespace();
-    let alias = name;
-    const next = this.stream.peek();
-    if (next?.type === TokenType.Identifier && next.value === "as") {
-      this.stream.next();
+    return this.wrapErrors(() => {
+      this.stream.expect(TokenType.Use);
       this.stream.skipWhitespace();
-      alias = this.stream.expect(TokenType.Identifier).value;
+      const name = this.parseIdentifierPath();
+      this.stream.skipWhitespace();
+      let alias = name;
+      const next = this.stream.peek();
+      if (next?.type === TokenType.Identifier && next.value === "as") {
+        this.stream.next();
+        this.stream.skipWhitespace();
+        alias = this.stream.expect(TokenType.Identifier).value;
+      }
+      this.stream.skipWhitespace();
+      this.stream.expect(TokenType.Semicolon);
+      return new UseNode(name, alias);
+    });
+  }
+
+  private wrapErrors<T>(fn: () => T): T {
+    try {
+      return fn();
+    } catch (error) {
+      if (error instanceof Error && !/\(line\s+\d+, column\s+\d+\)/i.test(error.message)) {
+        throw new Error(this.formatError(error.message));
+      }
+      throw error;
     }
-    this.stream.skipWhitespace();
-    this.stream.expect(TokenType.Semicolon);
-    return new UseNode(name, alias);
+  }
+
+  private formatError(message: string): string {
+    const token = this.stream.peek() ?? this.stream.peekNonWhitespace(0);
+    if (!token) {
+      return `Parse error: ${message}`;
+    }
+    const line = token.start.line;
+    const column = token.start.column;
+    const snippet = this.getLineSnippet(line, column);
+    return `Parse error (line ${line}, column ${column}): ${message}\n${snippet}`;
+  }
+
+  private getLineSnippet(line: number, column: number): string {
+    const lines = this.source.split(/\r?\n/);
+    const content = lines[line - 1] ?? "";
+    const caret = `${" ".repeat(Math.max(column - 1, 0))}^`;
+    return `${content}\n${caret}`;
   }
 
   private parseBlock(options?: { allowDeclarations?: boolean }): BlockNode {
@@ -131,6 +174,8 @@ export class Parser {
     this.stream.expect(TokenType.LBrace);
     const statements = [];
     let declarationsOpen = allowDeclarations;
+    let sawConstruct = false;
+    let sawFunctionOrOn = false;
 
     while (true) {
       this.stream.skipWhitespace();
@@ -145,10 +190,18 @@ export class Parser {
 
       const isFunctionDeclaration = allowDeclarations && this.isFunctionDeclarationStart();
       if (isFunctionDeclaration) {
+        if (!sawConstruct) {
+          sawFunctionOrOn = true;
+        }
+        statements.push(this.parseFunctionDeclaration());
+        continue;
+      }
+      const isFunctionExpressionAssignment = allowDeclarations && this.isFunctionExpressionAssignmentStart();
+      if (isFunctionExpressionAssignment) {
         if (!declarationsOpen) {
           throw new Error("Declarations must appear before blocks");
         }
-        statements.push(this.parseFunctionDeclaration());
+        statements.push(this.parseAssignment());
         continue;
       }
       const isDeclaration = this.isDeclarationStart();
@@ -163,6 +216,15 @@ export class Parser {
       } else {
         if (declarationsOpen) {
           declarationsOpen = false;
+        }
+        if (allowDeclarations && next.type === TokenType.On && !sawConstruct) {
+          sawFunctionOrOn = true;
+        }
+        if (allowDeclarations && next.type === TokenType.Construct) {
+          if (sawFunctionOrOn) {
+            throw new Error("Construct blocks must appear before functions and on blocks");
+          }
+          sawConstruct = true;
         }
         statements.push(this.parseStatement());
       }
@@ -288,8 +350,23 @@ export class Parser {
       throw new Error(`Unexpected token in on() args: ${next.type}`);
     }
 
+    const modifiers = this.parseOnModifiers();
     const body = this.parseBlock({ allowDeclarations: false });
-    return new OnBlockNode(event.value, args, body);
+    return new OnBlockNode(event.value, args, body, modifiers);
+  }
+
+  private parseOnModifiers(): string[] {
+    const modifiers: string[] = [];
+    while (true) {
+      this.stream.skipWhitespace();
+      if (this.stream.peek()?.type !== TokenType.Bang) {
+        break;
+      }
+      this.stream.next();
+      const name = this.stream.expect(TokenType.Identifier).value;
+      modifiers.push(name);
+    }
+    return modifiers;
   }
 
   private parseAssignment(): AssignmentNode {
@@ -304,7 +381,23 @@ export class Parser {
   }
 
   private parseExpression(): ExpressionNode {
-    return this.parseLogicalOrExpression();
+    return this.parseTernaryExpression();
+  }
+
+  private parseTernaryExpression(): ExpressionNode {
+    let test = this.parseLogicalOrExpression();
+    this.stream.skipWhitespace();
+    if (this.stream.peek()?.type !== TokenType.Question) {
+      return test;
+    }
+    this.stream.next();
+    this.stream.skipWhitespace();
+    const consequent = this.parseExpression();
+    this.stream.skipWhitespace();
+    this.stream.expect(TokenType.Colon);
+    this.stream.skipWhitespace();
+    const alternate = this.parseExpression();
+    return new TernaryExpression(test, consequent, alternate);
   }
 
   private parseLogicalOrExpression(): ExpressionNode {
@@ -503,6 +596,9 @@ export class Parser {
     }
 
     if (token.type === TokenType.LParen) {
+      if (this.isArrowFunctionStart()) {
+        return this.parseArrowFunctionExpression();
+      }
       this.stream.next();
       const value = this.parseExpression();
       this.stream.skipWhitespace();
@@ -669,12 +765,45 @@ export class Parser {
         } else {
           flagArgs.debounce = 200;
         }
+      } else if (this.customFlags.has(name)) {
+        (flags as Record<string, boolean>)[name] = true;
+        const customArg = this.parseCustomFlagArg();
+        if (customArg !== undefined) {
+          (flagArgs as Record<string, any>)[name] = customArg;
+        }
       } else {
         throw new Error(`Unknown flag ${name}`);
       }
     }
 
     return { flags, flagArgs };
+  }
+
+  private parseCustomFlagArg(): any {
+    if (this.stream.peek()?.type !== TokenType.LParen) {
+      return undefined;
+    }
+    this.stream.next();
+    this.stream.skipWhitespace();
+    const token = this.stream.peek();
+    if (!token) {
+      throw new Error("Unterminated flag arguments");
+    }
+    let value: any;
+    if (token.type === TokenType.Number) {
+      value = Number(this.stream.next().value);
+    } else if (token.type === TokenType.String) {
+      value = this.stream.next().value;
+    } else if (token.type === TokenType.Boolean) {
+      value = this.stream.next().value === "true";
+    } else if (token.type === TokenType.Identifier) {
+      value = this.stream.next().value;
+    } else {
+      throw new Error(`Unsupported flag argument ${token.type}`);
+    }
+    this.stream.skipWhitespace();
+    this.stream.expect(TokenType.RParen);
+    return value;
   }
 
   private isDeclarationStart(): boolean {
@@ -766,6 +895,65 @@ export class Parser {
       index += 1;
     }
     return this.stream.peekNonWhitespace(index)?.type === TokenType.LBrace;
+  }
+
+  private isArrowFunctionStart(): boolean {
+    const first = this.stream.peekNonWhitespace(0);
+    if (!first || first.type !== TokenType.LParen) {
+      return false;
+    }
+    let index = 1;
+    let depth = 1;
+    while (true) {
+      const token = this.stream.peekNonWhitespace(index);
+      if (!token) {
+        return false;
+      }
+      if (token.type === TokenType.LParen) {
+        depth += 1;
+      } else if (token.type === TokenType.RParen) {
+        depth -= 1;
+        if (depth === 0) {
+          index += 1;
+          break;
+        }
+      }
+      index += 1;
+    }
+    return this.stream.peekNonWhitespace(index)?.type === TokenType.Arrow;
+  }
+
+  private isFunctionExpressionAssignmentStart(): boolean {
+    const first = this.stream.peekNonWhitespace(0);
+    if (!first || first.type !== TokenType.Identifier) {
+      return false;
+    }
+    if (this.stream.peekNonWhitespace(1)?.type !== TokenType.Equals) {
+      return false;
+    }
+    let index = 2;
+    if (this.stream.peekNonWhitespace(index)?.type !== TokenType.LParen) {
+      return false;
+    }
+    index += 1;
+    let depth = 1;
+    while (true) {
+      const token = this.stream.peekNonWhitespace(index);
+      if (!token) {
+        return false;
+      }
+      if (token.type === TokenType.LParen) {
+        depth += 1;
+      } else if (token.type === TokenType.RParen) {
+        depth -= 1;
+        if (depth === 0) {
+          index += 1;
+          break;
+        }
+      }
+      index += 1;
+    }
+    return this.stream.peekNonWhitespace(index)?.type === TokenType.Arrow;
   }
 
   private parseExpressionStatement(): ExpressionNode {
@@ -869,6 +1057,39 @@ export class Parser {
     this.stream.skipWhitespace();
     this.stream.expect(TokenType.Semicolon);
     return new ReturnNode(value);
+  }
+
+  private parseArrowFunctionExpression(): FunctionExpression {
+    this.stream.expect(TokenType.LParen);
+    const params: string[] = [];
+    while (true) {
+      this.stream.skipWhitespace();
+      const next = this.stream.peek();
+      if (!next) {
+        throw new Error("Unterminated function parameters");
+      }
+      if (next.type === TokenType.RParen) {
+        this.stream.next();
+        break;
+      }
+      const param = this.stream.expect(TokenType.Identifier).value;
+      params.push(param);
+      this.stream.skipWhitespace();
+      if (this.stream.peek()?.type === TokenType.Comma) {
+        this.stream.next();
+        continue;
+      }
+      if (this.stream.peek()?.type === TokenType.RParen) {
+        this.stream.next();
+        break;
+      }
+      throw new Error("Expected ',' or ')' in function parameters");
+    }
+    this.stream.skipWhitespace();
+    this.stream.expect(TokenType.Arrow);
+    this.stream.skipWhitespace();
+    const body = this.parseFunctionBlock();
+    return new FunctionExpression(params, body);
   }
 
   private readSelectorUntil(terminator: TokenType): string {

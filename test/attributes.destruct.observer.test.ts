@@ -15,11 +15,11 @@ describe("destruct observer", () => {
     const element = document.getElementById("box") as HTMLDivElement;
     const scope = engine.getScope(element);
 
-    await new Promise((resolve) => setTimeout(resolve, 0));
+    await new Promise((resolve) => setTimeout(resolve, 20));
     expect(scope.get("ready")).toBe(true);
 
     element.remove();
-    await new Promise((resolve) => setTimeout(resolve, 0));
+    await new Promise((resolve) => setTimeout(resolve, 20));
 
     expect(scope.get("ready")).toBe(false);
   });

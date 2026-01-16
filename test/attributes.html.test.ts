@@ -43,4 +43,31 @@ describe("vsn-html", () => {
     expect(safe.innerHTML).toBe("<span>Ok</span>");
     expect(trusted.innerHTML).toBe("<script>bad()</script><span>Ok</span>");
   });
+
+  it("parses behaviors in trusted html", async () => {
+    document.body.innerHTML = `
+      <div id="host" vsn-html!trusted="content"></div>
+    `;
+
+    const engine = new Engine();
+    await engine.mount(document.body);
+
+    const host = document.getElementById("host") as HTMLDivElement;
+    const scope = engine.getScope(host);
+    scope.set("content", `
+      <div class="card"></div>
+      <script type="text/vsn">
+        behavior .card {
+          construct { ready = true; }
+        }
+      </script>
+    `);
+
+    engine.evaluate(host);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    const card = host.querySelector(".card") as HTMLDivElement;
+    const cardScope = engine.getScope(card);
+    expect(cardScope.get("ready")).toBe(true);
+  });
 });

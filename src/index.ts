@@ -18,6 +18,7 @@ export function autoMount(root: HTMLElement | Document = document): Engine | nul
     return null;
   }
   const engine = new Engine();
+  const startTime = typeof performance !== "undefined" && performance.now ? performance.now() : Date.now();
   const mount = () => {
     const target = root instanceof Document ? root.body : root;
     if (target) {
@@ -28,6 +29,9 @@ export function autoMount(root: HTMLElement | Document = document): Engine | nul
         engine.registerBehaviors(sources);
       }
       engine.mount(target);
+      const endTime = typeof performance !== "undefined" && performance.now ? performance.now() : Date.now();
+      const elapsedMs = Math.round(endTime - startTime);
+      console.log(`Took ${elapsedMs}ms to start up VSN.js. https://www.vsnjs.com/ v${VERSION}`);
     }
   };
   if (document.readyState === "loading") {

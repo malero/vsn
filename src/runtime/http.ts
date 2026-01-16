@@ -11,7 +11,8 @@ export interface GetConfig {
 export async function applyGet(
   element: Element,
   config: GetConfig,
-  scope: Scope
+  scope: Scope,
+  onHtmlApplied?: (target: Element) => void
 ): Promise<void> {
   if (!globalThis.fetch) {
     throw new Error("fetch is not available");
@@ -35,11 +36,13 @@ export async function applyGet(
     const replacement = wrapper.firstElementChild;
     if (replacement && target.parentNode) {
       target.parentNode.replaceChild(replacement, target);
+      onHtmlApplied?.(replacement);
     }
     return;
   }
 
   applyHtml(target as HTMLElement, "__html", { get: () => html } as Scope, config.trusted);
+  onHtmlApplied?.(target);
 }
 
 function resolveTarget(element: Element, selector?: string): Element | null {

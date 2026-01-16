@@ -21,11 +21,11 @@ describe("behavior lifecycle blocks", () => {
     const element = document.querySelector(".card") as HTMLDivElement;
     const scope = engine.getScope(element);
 
-    await new Promise((resolve) => setTimeout(resolve, 0));
+    await new Promise((resolve) => setTimeout(resolve, 50));
     expect(scope.get("ready")).toBe(true);
 
     element.remove();
-    await new Promise((resolve) => setTimeout(resolve, 0));
+    await new Promise((resolve) => setTimeout(resolve, 50));
 
     expect(scope.get("ready")).toBe(false);
   });

@@ -12,6 +12,7 @@ var TokenType = /* @__PURE__ */ ((TokenType2) => {
   TokenType2["On"] = "On";
   TokenType2["Construct"] = "Construct";
   TokenType2["Destruct"] = "Destruct";
+  TokenType2["Return"] = "Return";
   TokenType2["LBrace"] = "LBrace";
   TokenType2["RBrace"] = "RBrace";
   TokenType2["LParen"] = "LParen";
@@ -30,6 +31,7 @@ var TokenType = /* @__PURE__ */ ((TokenType2) => {
   TokenType2["Tilde"] = "Tilde";
   TokenType2["Star"] = "Star";
   TokenType2["Equals"] = "Equals";
+  TokenType2["Arrow"] = "Arrow";
   TokenType2["DoubleEquals"] = "DoubleEquals";
   TokenType2["NotEquals"] = "NotEquals";
   TokenType2["LessEqual"] = "LessEqual";
@@ -51,6 +53,7 @@ var KEYWORDS = {
   on: "On" /* On */,
   construct: "Construct" /* Construct */,
   destruct: "Destruct" /* Destruct */,
+  return: "Return" /* Return */,
   true: "Boolean" /* Boolean */,
   false: "Boolean" /* Boolean */,
   null: "Null" /* Null */
@@ -182,6 +185,11 @@ var Lexer = class {
       this.next();
       return this.token("DoubleEquals" /* DoubleEquals */, "==", start);
     }
+    if (ch === "=" && next === ">") {
+      this.next();
+      this.next();
+      return this.token("Arrow" /* Arrow */, "=>", start);
+    }
     if (ch === "!" && next === "=") {
       this.next();
       this.next();
@@ -312,6 +320,9 @@ var BlockNode = class extends BaseNode {
   }
   async evaluate(context) {
     for (const statement of this.statements) {
+      if (context.returning) {
+        break;
+      }
       if (statement && typeof statement.evaluate === "function") {
         await statement.evaluate(context);
       }
@@ -346,11 +357,12 @@ var StateBlockNode = class extends BaseNode {
   }
 };
 var OnBlockNode = class extends BaseNode {
-  constructor(eventName, args, body) {
+  constructor(eventName, args, body, modifiers = []) {
     super("OnBlock");
     this.eventName = eventName;
     this.args = args;
     this.body = body;
+    this.modifiers = modifiers;
   }
 };
 var AssignmentNode = class extends BaseNode {
@@ -373,6 +385,72 @@ var AssignmentNode = class extends BaseNode {
     const value = await this.value.evaluate(context);
     context.scope.setPath(targetPath, value);
     return value;
+  }
+};
+var ReturnNode = class extends BaseNode {
+  constructor(value) {
+    super("Return");
+    this.value = value;
+  }
+  async evaluate(context) {
+    if (context.returning) {
+      return context.returnValue;
+    }
+    context.returnValue = this.value ? await this.value.evaluate(context) : void 0;
+    context.returning = true;
+    return context.returnValue;
+  }
+};
+var FunctionDeclarationNode = class extends BaseNode {
+  constructor(name, params, body) {
+    super("FunctionDeclaration");
+    this.name = name;
+    this.params = params;
+    this.body = body;
+  }
+};
+var FunctionExpression = class extends BaseNode {
+  constructor(params, body) {
+    super("FunctionExpression");
+    this.params = params;
+    this.body = body;
+  }
+  async evaluate(context) {
+    const scope = context.scope;
+    const globals = context.globals;
+    const element = context.element;
+    return async (...args) => {
+      const inner = {
+        ...scope ? { scope } : {},
+        ...globals ? { globals } : {},
+        ...element ? { element } : {},
+        returnValue: void 0,
+        returning: false
+      };
+      if (scope) {
+        const previousValues = /* @__PURE__ */ new Map();
+        for (let i = 0; i < this.params.length; i += 1) {
+          const name = this.params[i];
+          if (!name) {
+            continue;
+          }
+          previousValues.set(name, scope.getPath(name));
+          if (scope.setPath) {
+            scope.setPath(name, args[i]);
+          }
+        }
+        await this.body.evaluate(inner);
+        for (const name of this.params) {
+          if (!name || !scope.setPath) {
+            continue;
+          }
+          scope.setPath(name, previousValues.get(name));
+        }
+      } else {
+        await this.body.evaluate(inner);
+      }
+      return inner.returnValue;
+    };
   }
 };
 var DeclarationNode = class extends BaseNode {
@@ -466,6 +544,21 @@ var BinaryExpression = class extends BaseNode {
       return left >= right;
     }
     return void 0;
+  }
+};
+var TernaryExpression = class extends BaseNode {
+  constructor(test, consequent, alternate) {
+    super("TernaryExpression");
+    this.test = test;
+    this.consequent = consequent;
+    this.alternate = alternate;
+  }
+  async evaluate(context) {
+    const condition = await this.test.evaluate(context);
+    if (condition) {
+      return this.consequent.evaluate(context);
+    }
+    return this.alternate.evaluate(context);
   }
 };
 var CallExpression = class extends BaseNode {
@@ -638,7 +731,11 @@ var TokenStream = class {
 // src/parser/parser.ts
 var Parser = class _Parser {
   stream;
-  constructor(input) {
+  source;
+  customFlags;
+  constructor(input, options) {
+    this.source = input;
+    this.customFlags = options?.customFlags ?? /* @__PURE__ */ new Set();
     const lexer = new Lexer(input);
     this.stream = new TokenStream(lexer.tokenize());
   }
@@ -647,33 +744,39 @@ var Parser = class _Parser {
     return parser.parseInlineBlock();
   }
   parseProgram() {
-    const behaviors = [];
-    const uses = [];
-    this.stream.skipWhitespace();
-    while (!this.stream.eof()) {
-      const next = this.stream.peek();
-      if (!next) {
-        break;
-      }
-      if (next.type === "Use" /* Use */) {
-        uses.push(this.parseUseStatement());
-      } else {
-        behaviors.push(this.parseBehavior());
-      }
+    return this.wrapErrors(() => {
+      const behaviors = [];
+      const uses = [];
       this.stream.skipWhitespace();
-    }
-    return new ProgramNode(behaviors, uses);
+      while (!this.stream.eof()) {
+        const next = this.stream.peek();
+        if (!next) {
+          break;
+        }
+        if (next.type === "Use" /* Use */) {
+          uses.push(this.parseUseStatement());
+        } else {
+          behaviors.push(this.parseBehavior());
+        }
+        this.stream.skipWhitespace();
+      }
+      return new ProgramNode(behaviors, uses);
+    });
   }
   parseInlineBlock() {
-    this.stream.skipWhitespace();
-    return this.parseBlock({ allowDeclarations: false });
+    return this.wrapErrors(() => {
+      this.stream.skipWhitespace();
+      return this.parseBlock({ allowDeclarations: false });
+    });
   }
   parseBehavior() {
-    this.stream.skipWhitespace();
-    this.stream.expect("Behavior" /* Behavior */);
-    const selector = this.parseSelector();
-    const body = this.parseBlock({ allowDeclarations: true });
-    return new BehaviorNode(selector, body);
+    return this.wrapErrors(() => {
+      this.stream.skipWhitespace();
+      this.stream.expect("Behavior" /* Behavior */);
+      const selector = this.parseSelector();
+      const body = this.parseBlock({ allowDeclarations: true });
+      return new BehaviorNode(selector, body);
+    });
   }
   parseSelector() {
     let selectorText = "";
@@ -702,20 +805,50 @@ var Parser = class _Parser {
     return new SelectorNode(selectorText.trim());
   }
   parseUseStatement() {
-    this.stream.expect("Use" /* Use */);
-    this.stream.skipWhitespace();
-    const name = this.parseIdentifierPath();
-    this.stream.skipWhitespace();
-    let alias = name;
-    const next = this.stream.peek();
-    if (next?.type === "Identifier" /* Identifier */ && next.value === "as") {
-      this.stream.next();
+    return this.wrapErrors(() => {
+      this.stream.expect("Use" /* Use */);
       this.stream.skipWhitespace();
-      alias = this.stream.expect("Identifier" /* Identifier */).value;
+      const name = this.parseIdentifierPath();
+      this.stream.skipWhitespace();
+      let alias = name;
+      const next = this.stream.peek();
+      if (next?.type === "Identifier" /* Identifier */ && next.value === "as") {
+        this.stream.next();
+        this.stream.skipWhitespace();
+        alias = this.stream.expect("Identifier" /* Identifier */).value;
+      }
+      this.stream.skipWhitespace();
+      this.stream.expect("Semicolon" /* Semicolon */);
+      return new UseNode(name, alias);
+    });
+  }
+  wrapErrors(fn) {
+    try {
+      return fn();
+    } catch (error) {
+      if (error instanceof Error && !/\(line\s+\d+, column\s+\d+\)/i.test(error.message)) {
+        throw new Error(this.formatError(error.message));
+      }
+      throw error;
     }
-    this.stream.skipWhitespace();
-    this.stream.expect("Semicolon" /* Semicolon */);
-    return new UseNode(name, alias);
+  }
+  formatError(message) {
+    const token = this.stream.peek() ?? this.stream.peekNonWhitespace(0);
+    if (!token) {
+      return `Parse error: ${message}`;
+    }
+    const line = token.start.line;
+    const column = token.start.column;
+    const snippet = this.getLineSnippet(line, column);
+    return `Parse error (line ${line}, column ${column}): ${message}
+${snippet}`;
+  }
+  getLineSnippet(line, column) {
+    const lines = this.source.split(/\r?\n/);
+    const content = lines[line - 1] ?? "";
+    const caret = `${" ".repeat(Math.max(column - 1, 0))}^`;
+    return `${content}
+${caret}`;
   }
   parseBlock(options) {
     const allowDeclarations = options?.allowDeclarations ?? false;
@@ -723,6 +856,8 @@ var Parser = class _Parser {
     this.stream.expect("LBrace" /* LBrace */);
     const statements = [];
     let declarationsOpen = allowDeclarations;
+    let sawConstruct = false;
+    let sawFunctionOrOn = false;
     while (true) {
       this.stream.skipWhitespace();
       const next = this.stream.peek();
@@ -732,6 +867,22 @@ var Parser = class _Parser {
       if (next.type === "RBrace" /* RBrace */) {
         this.stream.next();
         break;
+      }
+      const isFunctionDeclaration = allowDeclarations && this.isFunctionDeclarationStart();
+      if (isFunctionDeclaration) {
+        if (!sawConstruct) {
+          sawFunctionOrOn = true;
+        }
+        statements.push(this.parseFunctionDeclaration());
+        continue;
+      }
+      const isFunctionExpressionAssignment = allowDeclarations && this.isFunctionExpressionAssignmentStart();
+      if (isFunctionExpressionAssignment) {
+        if (!declarationsOpen) {
+          throw new Error("Declarations must appear before blocks");
+        }
+        statements.push(this.parseAssignment());
+        continue;
       }
       const isDeclaration = this.isDeclarationStart();
       if (isDeclaration) {
@@ -746,27 +897,44 @@ var Parser = class _Parser {
         if (declarationsOpen) {
           declarationsOpen = false;
         }
+        if (allowDeclarations && next.type === "On" /* On */ && !sawConstruct) {
+          sawFunctionOrOn = true;
+        }
+        if (allowDeclarations && next.type === "Construct" /* Construct */) {
+          if (sawFunctionOrOn) {
+            throw new Error("Construct blocks must appear before functions and on blocks");
+          }
+          sawConstruct = true;
+        }
         statements.push(this.parseStatement());
       }
     }
     return new BlockNode(statements);
   }
-  parseStatement() {
+  parseStatement(options) {
     this.stream.skipWhitespace();
     const next = this.stream.peek();
     if (!next) {
       throw new Error("Unexpected end of input");
     }
-    if (next.type === "On" /* On */) {
+    const allowBlocks = options?.allowBlocks ?? true;
+    const allowReturn = options?.allowReturn ?? false;
+    if (next.type === "Return" /* Return */) {
+      if (!allowReturn) {
+        throw new Error("Return is only allowed inside functions");
+      }
+      return this.parseReturnStatement();
+    }
+    if (allowBlocks && next.type === "On" /* On */) {
       return this.parseOnBlock();
     }
-    if (next.type === "Construct" /* Construct */) {
+    if (allowBlocks && next.type === "Construct" /* Construct */) {
       return this.parseConstructBlock();
     }
-    if (next.type === "Destruct" /* Destruct */) {
+    if (allowBlocks && next.type === "Destruct" /* Destruct */) {
       return this.parseDestructBlock();
     }
-    if (next.type === "Behavior" /* Behavior */) {
+    if (allowBlocks && next.type === "Behavior" /* Behavior */) {
       return this.parseBehavior();
     }
     if (this.isCallStart()) {
@@ -842,8 +1010,22 @@ var Parser = class _Parser {
       }
       throw new Error(`Unexpected token in on() args: ${next.type}`);
     }
+    const modifiers = this.parseOnModifiers();
     const body = this.parseBlock({ allowDeclarations: false });
-    return new OnBlockNode(event.value, args, body);
+    return new OnBlockNode(event.value, args, body, modifiers);
+  }
+  parseOnModifiers() {
+    const modifiers = [];
+    while (true) {
+      this.stream.skipWhitespace();
+      if (this.stream.peek()?.type !== "Bang" /* Bang */) {
+        break;
+      }
+      this.stream.next();
+      const name = this.stream.expect("Identifier" /* Identifier */).value;
+      modifiers.push(name);
+    }
+    return modifiers;
   }
   parseAssignment() {
     const target = this.parseAssignmentTarget();
@@ -856,7 +1038,22 @@ var Parser = class _Parser {
     return new AssignmentNode(target, value);
   }
   parseExpression() {
-    return this.parseLogicalOrExpression();
+    return this.parseTernaryExpression();
+  }
+  parseTernaryExpression() {
+    let test = this.parseLogicalOrExpression();
+    this.stream.skipWhitespace();
+    if (this.stream.peek()?.type !== "Question" /* Question */) {
+      return test;
+    }
+    this.stream.next();
+    this.stream.skipWhitespace();
+    const consequent = this.parseExpression();
+    this.stream.skipWhitespace();
+    this.stream.expect("Colon" /* Colon */);
+    this.stream.skipWhitespace();
+    const alternate = this.parseExpression();
+    return new TernaryExpression(test, consequent, alternate);
   }
   parseLogicalOrExpression() {
     let left = this.parseLogicalAndExpression();
@@ -1040,6 +1237,9 @@ var Parser = class _Parser {
       return this.parseArrayExpression();
     }
     if (token.type === "LParen" /* LParen */) {
+      if (this.isArrowFunctionStart()) {
+        return this.parseArrowFunctionExpression();
+      }
       this.stream.next();
       const value = this.parseExpression();
       this.stream.skipWhitespace();
@@ -1186,11 +1386,43 @@ var Parser = class _Parser {
         } else {
           flagArgs.debounce = 200;
         }
+      } else if (this.customFlags.has(name)) {
+        flags[name] = true;
+        const customArg = this.parseCustomFlagArg();
+        if (customArg !== void 0) {
+          flagArgs[name] = customArg;
+        }
       } else {
         throw new Error(`Unknown flag ${name}`);
       }
     }
     return { flags, flagArgs };
+  }
+  parseCustomFlagArg() {
+    if (this.stream.peek()?.type !== "LParen" /* LParen */) {
+      return void 0;
+    }
+    this.stream.next();
+    this.stream.skipWhitespace();
+    const token = this.stream.peek();
+    if (!token) {
+      throw new Error("Unterminated flag arguments");
+    }
+    let value;
+    if (token.type === "Number" /* Number */) {
+      value = Number(this.stream.next().value);
+    } else if (token.type === "String" /* String */) {
+      value = this.stream.next().value;
+    } else if (token.type === "Boolean" /* Boolean */) {
+      value = this.stream.next().value === "true";
+    } else if (token.type === "Identifier" /* Identifier */) {
+      value = this.stream.next().value;
+    } else {
+      throw new Error(`Unsupported flag argument ${token.type}`);
+    }
+    this.stream.skipWhitespace();
+    this.stream.expect("RParen" /* RParen */);
+    return value;
   }
   isDeclarationStart() {
     const first = this.stream.peekNonWhitespace(0);
@@ -1238,6 +1470,92 @@ var Parser = class _Parser {
     }
     return this.stream.peekNonWhitespace(index)?.type === "LParen" /* LParen */;
   }
+  isFunctionDeclarationStart() {
+    const first = this.stream.peekNonWhitespace(0);
+    if (!first || first.type !== "Identifier" /* Identifier */) {
+      return false;
+    }
+    let index = 1;
+    if (this.stream.peekNonWhitespace(index)?.type !== "LParen" /* LParen */) {
+      return false;
+    }
+    index += 1;
+    let depth = 1;
+    while (true) {
+      const token = this.stream.peekNonWhitespace(index);
+      if (!token) {
+        return false;
+      }
+      if (token.type === "LParen" /* LParen */) {
+        depth += 1;
+      } else if (token.type === "RParen" /* RParen */) {
+        depth -= 1;
+        if (depth === 0) {
+          index += 1;
+          break;
+        }
+      }
+      index += 1;
+    }
+    return this.stream.peekNonWhitespace(index)?.type === "LBrace" /* LBrace */;
+  }
+  isArrowFunctionStart() {
+    const first = this.stream.peekNonWhitespace(0);
+    if (!first || first.type !== "LParen" /* LParen */) {
+      return false;
+    }
+    let index = 1;
+    let depth = 1;
+    while (true) {
+      const token = this.stream.peekNonWhitespace(index);
+      if (!token) {
+        return false;
+      }
+      if (token.type === "LParen" /* LParen */) {
+        depth += 1;
+      } else if (token.type === "RParen" /* RParen */) {
+        depth -= 1;
+        if (depth === 0) {
+          index += 1;
+          break;
+        }
+      }
+      index += 1;
+    }
+    return this.stream.peekNonWhitespace(index)?.type === "Arrow" /* Arrow */;
+  }
+  isFunctionExpressionAssignmentStart() {
+    const first = this.stream.peekNonWhitespace(0);
+    if (!first || first.type !== "Identifier" /* Identifier */) {
+      return false;
+    }
+    if (this.stream.peekNonWhitespace(1)?.type !== "Equals" /* Equals */) {
+      return false;
+    }
+    let index = 2;
+    if (this.stream.peekNonWhitespace(index)?.type !== "LParen" /* LParen */) {
+      return false;
+    }
+    index += 1;
+    let depth = 1;
+    while (true) {
+      const token = this.stream.peekNonWhitespace(index);
+      if (!token) {
+        return false;
+      }
+      if (token.type === "LParen" /* LParen */) {
+        depth += 1;
+      } else if (token.type === "RParen" /* RParen */) {
+        depth -= 1;
+        if (depth === 0) {
+          index += 1;
+          break;
+        }
+      }
+      index += 1;
+    }
+    return this.stream.peekNonWhitespace(index)?.type === "Arrow" /* Arrow */;
+  }
   parseExpressionStatement() {
     const expr = this.parseExpression();
     this.stream.skipWhitespace();
@@ -1270,6 +1588,99 @@ var Parser = class _Parser {
     this.stream.expect("LParen" /* LParen */);
     const selector = this.readSelectorUntil("RParen" /* RParen */);
     return new QueryExpression(direction, selector);
+  }
+  parseFunctionDeclaration() {
+    const name = this.stream.expect("Identifier" /* Identifier */).value;
+    this.stream.skipWhitespace();
+    this.stream.expect("LParen" /* LParen */);
+    const params = [];
+    while (true) {
+      this.stream.skipWhitespace();
+      const next = this.stream.peek();
+      if (!next) {
+        throw new Error("Unterminated function parameters");
+      }
+      if (next.type === "RParen" /* RParen */) {
+        this.stream.next();
+        break;
+      }
+      const param = this.stream.expect("Identifier" /* Identifier */).value;
+      params.push(param);
+      this.stream.skipWhitespace();
+      if (this.stream.peek()?.type === "Comma" /* Comma */) {
+        this.stream.next();
+        continue;
+      }
+      if (this.stream.peek()?.type === "RParen" /* RParen */) {
+        this.stream.next();
+        break;
+      }
+      throw new Error("Expected ',' or ')' in function parameters");
+    }
+    this.stream.skipWhitespace();
+    const body = this.parseFunctionBlock();
+    return new FunctionDeclarationNode(name, params, body);
+  }
+  parseFunctionBlock() {
+    this.stream.expect("LBrace" /* LBrace */);
+    const statements = [];
+    while (true) {
+      this.stream.skipWhitespace();
+      const next = this.stream.peek();
+      if (!next) {
+        throw new Error("Unterminated function block");
+      }
+      if (next.type === "RBrace" /* RBrace */) {
+        this.stream.next();
+        break;
+      }
+      statements.push(this.parseStatement({ allowBlocks: false, allowReturn: true }));
+    }
+    return new BlockNode(statements);
+  }
+  parseReturnStatement() {
+    this.stream.expect("Return" /* Return */);
+    this.stream.skipWhitespace();
+    if (this.stream.peek()?.type === "Semicolon" /* Semicolon */) {
+      this.stream.next();
+      return new ReturnNode();
+    }
+    const value = this.parseExpression();
+    this.stream.skipWhitespace();
+    this.stream.expect("Semicolon" /* Semicolon */);
+    return new ReturnNode(value);
+  }
+  parseArrowFunctionExpression() {
+    this.stream.expect("LParen" /* LParen */);
+    const params = [];
+    while (true) {
+      this.stream.skipWhitespace();
+      const next = this.stream.peek();
+      if (!next) {
+        throw new Error("Unterminated function parameters");
+      }
+      if (next.type === "RParen" /* RParen */) {
+        this.stream.next();
+        break;
+      }
+      const param = this.stream.expect("Identifier" /* Identifier */).value;
+      params.push(param);
+      this.stream.skipWhitespace();
+      if (this.stream.peek()?.type === "Comma" /* Comma */) {
+        this.stream.next();
+        continue;
+      }
+      if (this.stream.peek()?.type === "RParen" /* RParen */) {
+        this.stream.next();
+        break;
+      }
+      throw new Error("Expected ',' or ')' in function parameters");
+    }
+    this.stream.skipWhitespace();
+    this.stream.expect("Arrow" /* Arrow */);
+    this.stream.skipWhitespace();
+    const body = this.parseFunctionBlock();
+    return new FunctionExpression(params, body);
   }
   readSelectorUntil(terminator) {
     let selectorText = "";
@@ -1315,54 +1726,62 @@ var Scope = class {
   data = /* @__PURE__ */ new Map();
   root;
   listeners = /* @__PURE__ */ new Map();
+  anyListeners = /* @__PURE__ */ new Set();
   get(key) {
     return this.getPath(key);
   }
   set(key, value) {
     this.setPath(key, value);
   }
+  hasKey(path) {
+    const parts = path.split(".");
+    const root = parts[0];
+    if (!root) {
+      return false;
+    }
+    return this.data.has(root);
+  }
   getPath(path) {
+    const explicit = path.startsWith("parent.") || path.startsWith("root.") || path.startsWith("self.");
     const { targetScope, targetPath } = this.resolveScope(path);
     if (!targetScope || !targetPath) {
       return void 0;
     }
-    const parts = targetPath.split(".");
-    const root = parts[0];
-    if (!root) {
-      return void 0;
+    const localValue = this.getLocalPathValue(targetScope, targetPath);
+    if (explicit || localValue !== void 0) {
+      return localValue;
     }
-    let value = targetScope.data.get(root);
-    for (let i = 1; i < parts.length; i += 1) {
-      if (value == null) {
-        return void 0;
+    let cursor = targetScope.parent;
+    while (cursor) {
+      const value = this.getLocalPathValue(cursor, targetPath);
+      if (value !== void 0) {
+        return value;
       }
-      const key = parts[i];
-      if (!key) {
-        return void 0;
-      }
-      value = value[key];
+      cursor = cursor.parent;
     }
-    return value;
+    return void 0;
   }
   setPath(path, value) {
+    const explicit = path.startsWith("parent.") || path.startsWith("root.") || path.startsWith("self.");
     const { targetScope, targetPath } = this.resolveScope(path);
     if (!targetScope || !targetPath) {
       return;
     }
+    const scopeForSet = explicit ? targetScope : this.findNearestScopeWithKey(targetScope, targetPath) ?? targetScope;
     const parts = targetPath.split(".");
     const root = parts[0];
     if (!root) {
       return;
     }
     if (parts.length === 1) {
-      targetScope.data.set(root, value);
-      targetScope.emitChange(targetPath);
+      scopeForSet.data.set(root, value);
+      scopeForSet.emitChange(targetPath);
       return;
     }
-    let obj = targetScope.data.get(root);
+    let obj = scopeForSet.data.get(root);
     if (obj == null || typeof obj !== "object") {
       obj = {};
-      targetScope.data.set(root, obj);
+      scopeForSet.data.set(root, obj);
     }
     let cursor = obj;
     for (let i = 1; i < parts.length - 1; i += 1) {
@@ -1380,7 +1799,7 @@ var Scope = class {
       return;
     }
     cursor[lastKey] = value;
-    this.emitChange(path);
+    scopeForSet.emitChange(targetPath);
   }
   on(path, handler) {
     const key = path.trim();
@@ -1402,6 +1821,12 @@ var Scope = class {
       this.listeners.delete(key);
     }
   }
+  onAny(handler) {
+    this.anyListeners.add(handler);
+  }
+  offAny(handler) {
+    this.anyListeners.delete(handler);
+  }
   emitChange(path) {
     const key = path.trim();
     if (!key) {
@@ -1412,18 +1837,57 @@ var Scope = class {
     if (rootKey && rootKey !== key) {
       this.listeners.get(rootKey)?.forEach((fn) => fn());
     }
+    this.anyListeners.forEach((fn) => fn());
   }
   resolveScope(path) {
-    if (path.startsWith("parent.")) {
-      return { targetScope: this.parent, targetPath: path.slice("parent.".length) };
+    let targetScope = this;
+    let targetPath = path;
+    while (targetPath.startsWith("parent.")) {
+      targetScope = targetScope?.parent;
+      targetPath = targetPath.slice("parent.".length);
     }
-    if (path.startsWith("root.")) {
-      return { targetScope: this.root, targetPath: path.slice("root.".length) };
+    if (targetPath.startsWith("root.")) {
+      targetScope = targetScope?.root;
+      targetPath = targetPath.slice("root.".length);
     }
-    if (path.startsWith("self.")) {
-      return { targetScope: this, targetPath: path.slice("self.".length) };
+    while (targetPath.startsWith("self.")) {
+      targetScope = targetScope ?? this;
+      targetPath = targetPath.slice("self.".length);
     }
-    return { targetScope: this, targetPath: path };
+    return { targetScope, targetPath };
+  }
+  getLocalPathValue(scope, path) {
+    const parts = path.split(".");
+    const root = parts[0];
+    if (!root) {
+      return void 0;
+    }
+    let value = scope.data.get(root);
+    for (let i = 1; i < parts.length; i += 1) {
+      if (value == null) {
+        return void 0;
+      }
+      const key = parts[i];
+      if (!key) {
+        return void 0;
+      }
+      value = value[key];
+    }
+    return value;
+  }
+  findNearestScopeWithKey(start, path) {
+    const root = path.split(".")[0];
+    if (!root) {
+      return void 0;
+    }
+    let cursor = start;
+    while (cursor) {
+      if (cursor.data.has(root)) {
+        return cursor;
+      }
+      cursor = cursor.parent;
+    }
+    return void 0;
   }
 };
 
@@ -1494,7 +1958,7 @@ function applyHtml(element, expression, scope, trusted) {
 }
 
 // src/runtime/http.ts
-async function applyGet(element, config, scope) {
+async function applyGet(element, config, scope, onHtmlApplied) {
   if (!globalThis.fetch) {
     throw new Error("fetch is not available");
   }
@@ -1514,10 +1978,12 @@ async function applyGet(element, config, scope) {
     const replacement = wrapper.firstElementChild;
     if (replacement && target.parentNode) {
       target.parentNode.replaceChild(replacement, target);
+      onHtmlApplied?.(replacement);
     }
     return;
   }
   applyHtml(target, "__html", { get: () => html }, config.trusted);
+  onHtmlApplied?.(target);
 }
 function resolveTarget(element, selector) {
   if (!selector) {
@@ -1553,13 +2019,18 @@ var Engine = class {
   behaviorBindings = /* @__PURE__ */ new WeakMap();
   behaviorId = 0;
   codeCache = /* @__PURE__ */ new Map();
+  behaviorCache = /* @__PURE__ */ new Map();
   observer;
   attributeHandlers = [];
   globals = {};
   importantFlags = /* @__PURE__ */ new WeakMap();
+  inlineDeclarations = /* @__PURE__ */ new WeakMap();
+  flagHandlers = /* @__PURE__ */ new Map();
+  pendingAdded = /* @__PURE__ */ new Set();
+  pendingRemoved = /* @__PURE__ */ new Set();
+  observerFlush;
   constructor() {
     this.registerGlobal("console", console);
-    this.registerQueryHelpers();
     this.registerDefaultAttributeHandlers();
   }
   async mount(root) {
@@ -1580,7 +2051,7 @@ var Engine = class {
     this.runDestruct(element);
   }
   registerBehaviors(source) {
-    const program = new Parser(source).parseProgram();
+    const program = new Parser(source, { customFlags: new Set(this.flagHandlers.keys()) }).parseProgram();
     for (const use of program.uses) {
       const value = this.resolveGlobalPath(use.name);
       if (value === void 0) {
@@ -1598,6 +2069,19 @@ var Engine = class {
   }
   registerGlobals(values) {
     Object.assign(this.globals, values);
+  }
+  registerFlag(name, handler = {}) {
+    const reserved = /* @__PURE__ */ new Set(["important", "trusted", "debounce"]);
+    if (reserved.has(name)) {
+      throw new Error(`Flag '${name}' is reserved`);
+    }
+    this.flagHandlers.set(name, handler);
+  }
+  getRegistryStats() {
+    return {
+      behaviorCount: this.behaviorRegistry.length,
+      behaviorCacheSize: this.behaviorCache.size
+    };
   }
   registerAttributeHandler(handler) {
     this.attributeHandlers.push(handler);
@@ -1644,27 +2128,44 @@ var Engine = class {
     const htmlBinding = this.htmlBindings.get(element);
     if (htmlBinding && element instanceof HTMLElement) {
       applyHtml(element, htmlBinding.expr, scope, htmlBinding.trusted);
+      if (htmlBinding.trusted) {
+        this.handleTrustedHtml(element);
+      }
     }
   }
   attachObserver(root) {
     if (this.observer) {
       return;
     }
+    this.observerFlush = debounce(() => this.flushObserverQueue(), 10);
     this.observer = new MutationObserver((mutations) => {
       for (const mutation of mutations) {
         for (const node of Array.from(mutation.addedNodes)) {
           if (node && node.nodeType === 1) {
-            this.handleAddedNode(node);
+            this.pendingAdded.add(node);
           }
         }
         for (const node of Array.from(mutation.removedNodes)) {
           if (node && node.nodeType === 1) {
-            this.handleRemovedNode(node);
+            this.pendingRemoved.add(node);
           }
         }
       }
+      this.observerFlush?.();
     });
     this.observer.observe(root, { childList: true, subtree: true });
+  }
+  flushObserverQueue() {
+    const removed = Array.from(this.pendingRemoved);
+    this.pendingRemoved.clear();
+    for (const node of removed) {
+      this.handleRemovedNode(node);
+    }
+    const added = Array.from(this.pendingAdded);
+    this.pendingAdded.clear();
+    for (const node of added) {
+      this.handleAddedNode(node);
+    }
   }
   handleRemovedNode(node) {
     if (this.lifecycleBindings.has(node)) {
@@ -1720,12 +2221,13 @@ var Engine = class {
       const scope = this.getScope(element);
       for (const behavior of matches) {
         bound.add(behavior.id);
+        this.applyBehaviorFunctions(element, scope, behavior.functions);
         await this.applyBehaviorDeclarations(element, scope, behavior.declarations);
         if (behavior.construct) {
           await this.executeBlock(behavior.construct, scope, element);
         }
         for (const onBlock of behavior.onBlocks) {
-          this.attachBehaviorOnHandler(element, onBlock.event, onBlock.body);
+          this.attachBehaviorOnHandler(element, onBlock.event, onBlock.body, onBlock.modifiers);
         }
       }
       this.behaviorBindings.set(element, bound);
@@ -1805,6 +2307,15 @@ var Engine = class {
   hasVsnAttributes(element) {
     return element.getAttributeNames().some((name) => name.startsWith("vsn-"));
   }
+  markInlineDeclaration(element, key) {
+    const set = this.inlineDeclarations.get(element) ?? /* @__PURE__ */ new Set();
+    set.add(key);
+    this.inlineDeclarations.set(element, set);
+  }
+  isInlineDeclaration(element, key) {
+    const set = this.inlineDeclarations.get(element);
+    return set ? set.has(key) : false;
+  }
   findParentScope(element) {
     let parent = element.parentElement;
     while (parent) {
@@ -1821,13 +2332,37 @@ var Engine = class {
     if (!key) {
       return;
     }
-    scope.on(key, handler);
+    const root = key.split(".")[0];
+    if (!root) {
+      return;
+    }
+    let target = scope;
+    while (target && !target.hasKey(root)) {
+      target = target.parent;
+    }
+    if (target) {
+      target.on(key, handler);
+      return;
+    }
+    let cursor = scope;
+    while (cursor) {
+      cursor.on(key, handler);
+      cursor = cursor.parent;
+    }
   }
   watchWithDebounce(scope, expr, handler, debounceMs) {
     if (debounceMs) {
       this.watch(scope, expr, debounce(handler, debounceMs));
     } else {
       this.watch(scope, expr, handler);
+    }
+  }
+  watchAllScopes(scope, handler, debounceMs) {
+    const effectiveHandler = debounceMs ? debounce(handler, debounceMs) : handler;
+    let cursor = scope;
+    while (cursor) {
+      cursor.onAny(effectiveHandler);
+      cursor = cursor.parent;
     }
   }
   parseOnAttribute(name, value) {
@@ -1840,45 +2375,91 @@ var Engine = class {
       return null;
     }
     let debounceMs;
+    const modifiers = [];
     for (const flag of flags) {
-      if (!flag.startsWith("debounce")) {
+      if (flag.startsWith("debounce")) {
+        const match = flag.match(/debounce\((\d+)\)/);
+        debounceMs = match ? Number(match[1]) : 200;
         continue;
       }
-      const match = flag.match(/debounce\((\d+)\)/);
-      debounceMs = match ? Number(match[1]) : 200;
+      modifiers.push(flag);
     }
     const config = {
       event,
       code: value,
-      ...debounceMs !== void 0 ? { debounceMs } : {}
+      ...debounceMs !== void 0 ? { debounceMs } : {},
+      ...modifiers.length > 0 ? { modifiers } : {}
     };
     return config;
   }
   attachOnHandler(element, config) {
-    const handler = async () => {
+    const handler = async (event) => {
+      this.applyEventModifiers(event, config.modifiers);
       const scope = this.getScope(element);
       await this.execute(config.code, scope, element);
       this.evaluate(element);
     };
     const effectiveHandler = config.debounceMs ? debounce(handler, config.debounceMs) : handler;
-    element.addEventListener(config.event, effectiveHandler);
+    element.addEventListener(config.event, effectiveHandler, this.getListenerOptions(config.modifiers));
   }
-  attachBehaviorOnHandler(element, event, body) {
-    const handler = async () => {
+  attachBehaviorOnHandler(element, event, body, modifiers) {
+    const handler = async (evt) => {
+      this.applyEventModifiers(evt, modifiers);
       const scope = this.getScope(element);
       await this.executeBlock(body, scope, element);
       this.evaluate(element);
     };
-    element.addEventListener(event, handler);
+    element.addEventListener(event, handler, this.getListenerOptions(modifiers));
   }
-  attachGetHandler(element) {
-    element.addEventListener("click", async () => {
+  attachGetHandler(element, autoLoad = false) {
+    const handler = async () => {
       const config = this.getBindings.get(element);
       if (!config) {
         return;
       }
-      await applyGet(element, config, this.getScope(element));
+      await applyGet(element, config, this.getScope(element), (target) => {
+        if (config.trusted) {
+          this.handleTrustedHtml(target);
+        }
+      });
+    };
+    element.addEventListener("click", (event) => {
+      if (event.target !== element) {
+        return;
+      }
+      void handler();
     });
+    if (autoLoad) {
+      Promise.resolve().then(handler);
+    }
+  }
+  applyEventModifiers(event, modifiers) {
+    if (!event || !modifiers || modifiers.length === 0) {
+      return;
+    }
+    for (const modifier of modifiers) {
+      if (modifier === "prevent") {
+        event.preventDefault();
+      } else if (modifier === "stop") {
+        event.stopPropagation();
+      }
+    }
+  }
+  getListenerOptions(modifiers) {
+    if (!modifiers || modifiers.length === 0) {
+      return void 0;
+    }
+    const options = {};
+    if (modifiers.includes("once")) {
+      options.once = true;
+    }
+    if (modifiers.includes("passive")) {
+      options.passive = true;
+    }
+    if (modifiers.includes("capture")) {
+      options.capture = true;
+    }
+    return Object.keys(options).length > 0 ? options : void 0;
   }
   async execute(code, scope, element) {
     let block = this.codeCache.get(code);
@@ -1903,15 +2484,13 @@ var Engine = class {
   }
   collectBehavior(behavior, parentSelector) {
     const selector = parentSelector ? `${parentSelector} ${behavior.selector.selectorText}` : behavior.selector.selectorText;
-    const lifecycle = this.extractLifecycle(behavior.body);
+    const cached = this.getCachedBehavior(behavior);
     this.behaviorRegistry.push({
       id: this.behaviorId += 1,
       selector,
       specificity: this.computeSpecificity(selector),
       order: this.behaviorRegistry.length,
-      onBlocks: this.extractOnBlocks(behavior.body),
-      declarations: this.extractDeclarations(behavior.body),
-      ...lifecycle
+      ...cached
     });
     for (const statement of behavior.body.statements) {
       if (statement instanceof BehaviorNode) {
@@ -1926,38 +2505,6 @@ var Engine = class {
     const pseudoMatches = selector.match(/:[\w-]+/g)?.length ?? 0;
     const elementMatches = selector.match(/(^|[\s>+~])([a-zA-Z][\w-]*)/g)?.length ?? 0;
     return idMatches * 100 + (classMatches + attrMatches + pseudoMatches) * 10 + elementMatches;
-  }
-  registerQueryHelpers() {
-    const queryDoc = (selector) => {
-      if (typeof document === "undefined") {
-        return [];
-      }
-      return Array.from(document.querySelectorAll(selector));
-    };
-    const queryWithin = (element, selector) => {
-      if (!element) {
-        return [];
-      }
-      return Array.from(element.querySelectorAll(selector));
-    };
-    const queryAncestors = (element, selector) => {
-      const results = [];
-      let cursor = element?.parentElement;
-      while (cursor) {
-        if (cursor.matches(selector)) {
-          results.push(cursor);
-        }
-        cursor = cursor.parentElement;
-      }
-      return results;
-    };
-    this.registerGlobal("?", (selector) => queryDoc(selector));
-    this.registerGlobal("?>", (selector, element) => {
-      return queryWithin(element, selector);
-    });
-    this.registerGlobal("?<", (selector, element) => {
-      return queryAncestors(element, selector);
-    });
   }
   getImportantKey(declaration) {
     if (declaration.target instanceof IdentifierExpression) {
@@ -1999,7 +2546,7 @@ var Engine = class {
     const blocks = [];
     for (const statement of body.statements) {
       if (statement instanceof OnBlockNode) {
-        blocks.push({ event: statement.eventName, body: statement.body });
+        blocks.push({ event: statement.eventName, body: statement.body, modifiers: statement.modifiers });
       }
     }
     return blocks;
@@ -2012,6 +2559,230 @@ var Engine = class {
       }
     }
     return declarations;
+  }
+  extractFunctionDeclarations(body) {
+    const functions = [];
+    for (const statement of body.statements) {
+      if (statement instanceof FunctionDeclarationNode) {
+        functions.push({ name: statement.name, params: statement.params, body: statement.body });
+        continue;
+      }
+      if (statement instanceof AssignmentNode) {
+        if (statement.target instanceof IdentifierExpression && statement.value instanceof FunctionExpression) {
+          functions.push({
+            name: statement.target.name,
+            params: statement.value.params,
+            body: statement.value.body
+          });
+        }
+      }
+    }
+    return functions;
+  }
+  getCachedBehavior(behavior) {
+    const hash = this.hashBehavior(behavior);
+    const cached = this.behaviorCache.get(hash);
+    if (cached) {
+      return cached;
+    }
+    const lifecycle = this.extractLifecycle(behavior.body);
+    const fresh = {
+      onBlocks: this.extractOnBlocks(behavior.body),
+      declarations: this.extractDeclarations(behavior.body),
+      functions: this.extractFunctionDeclarations(behavior.body),
+      ...lifecycle
+    };
+    this.behaviorCache.set(hash, fresh);
+    return fresh;
+  }
+  hashBehavior(behavior) {
+    const normalized = this.normalizeNode(behavior);
+    const json = JSON.stringify(normalized);
+    return this.hashString(json);
+  }
+  normalizeNode(node) {
+    if (!node || typeof node !== "object") {
+      return node;
+    }
+    const type = node.type ?? "Unknown";
+    if (type === "Behavior") {
+      return {
+        type,
+        selector: node.selector?.selectorText ?? "",
+        body: this.normalizeNode(node.body)
+      };
+    }
+    if (type === "Selector") {
+      return { type, selectorText: node.selectorText ?? "" };
+    }
+    if (type === "Block" || type === "Construct" || type === "Destruct") {
+      return {
+        type,
+        statements: Array.isArray(node.statements) ? node.statements.map((statement) => this.normalizeNode(statement)) : []
+      };
+    }
+    if (type === "OnBlock") {
+      return {
+        type,
+        eventName: node.eventName ?? "",
+        args: Array.isArray(node.args) ? node.args : [],
+        body: this.normalizeNode(node.body)
+      };
+    }
+    if (type === "Declaration") {
+      return {
+        type,
+        target: this.normalizeNode(node.target),
+        operator: node.operator ?? "",
+        value: this.normalizeNode(node.value),
+        flags: node.flags ?? {},
+        flagArgs: node.flagArgs ?? {}
+      };
+    }
+    if (type === "Assignment") {
+      return {
+        type,
+        target: this.normalizeNode(node.target),
+        value: this.normalizeNode(node.value)
+      };
+    }
+    if (type === "StateBlock") {
+      return {
+        type,
+        entries: Array.isArray(node.entries) ? node.entries.map((entry) => this.normalizeNode(entry)) : []
+      };
+    }
+    if (type === "StateEntry") {
+      return {
+        type,
+        name: node.name ?? "",
+        value: this.normalizeNode(node.value),
+        important: Boolean(node.important)
+      };
+    }
+    if (type === "FunctionDeclaration") {
+      return {
+        type,
+        name: node.name ?? "",
+        params: Array.isArray(node.params) ? node.params : [],
+        body: this.normalizeNode(node.body)
+      };
+    }
+    if (type === "FunctionExpression") {
+      return {
+        type,
+        params: Array.isArray(node.params) ? node.params : [],
+        body: this.normalizeNode(node.body)
+      };
+    }
+    if (type === "Return") {
+      return {
+        type,
+        value: this.normalizeNode(node.value ?? null)
+      };
+    }
+    if (type === "Identifier") {
+      return { type, name: node.name ?? "" };
+    }
+    if (type === "Literal") {
+      return { type, value: node.value };
+    }
+    if (type === "UnaryExpression") {
+      return {
+        type,
+        operator: node.operator ?? "",
+        argument: this.normalizeNode(node.argument)
+      };
+    }
+    if (type === "BinaryExpression") {
+      return {
+        type,
+        operator: node.operator ?? "",
+        left: this.normalizeNode(node.left),
+        right: this.normalizeNode(node.right)
+      };
+    }
+    if (type === "TernaryExpression") {
+      return {
+        type,
+        test: this.normalizeNode(node.test),
+        consequent: this.normalizeNode(node.consequent),
+        alternate: this.normalizeNode(node.alternate)
+      };
+    }
+    if (type === "CallExpression") {
+      return {
+        type,
+        callee: this.normalizeNode(node.callee),
+        args: Array.isArray(node.args) ? node.args.map((arg) => this.normalizeNode(arg)) : []
+      };
+    }
+    if (type === "Directive") {
+      return { type, kind: node.kind ?? "", name: node.name ?? "" };
+    }
+    if (type === "Query") {
+      return { type, direction: node.direction ?? "", selector: node.selector ?? "" };
+    }
+    if (type === "ArrayExpression") {
+      return {
+        type,
+        elements: Array.isArray(node.elements) ? node.elements.map((element) => this.normalizeNode(element)) : []
+      };
+    }
+    if (type === "IndexExpression") {
+      return {
+        type,
+        target: this.normalizeNode(node.target),
+        index: this.normalizeNode(node.index)
+      };
+    }
+    return { type };
+  }
+  hashString(value) {
+    let hash = 5381;
+    for (let i = 0; i < value.length; i += 1) {
+      hash = (hash << 5) + hash + value.charCodeAt(i);
+      hash |= 0;
+    }
+    return (hash >>> 0).toString(16);
+  }
+  applyBehaviorFunctions(element, scope, functions) {
+    for (const declaration of functions) {
+      this.applyBehaviorFunction(element, scope, declaration);
+    }
+  }
+  applyBehaviorFunction(element, scope, declaration) {
+    const existing = scope.getPath(declaration.name);
+    if (existing !== void 0 && typeof existing !== "function") {
+      throw new Error(`Cannot override non-function '${declaration.name}' with a function`);
+    }
+    const fn = async (...args) => {
+      const context = {
+        scope,
+        globals: this.globals,
+        element,
+        returnValue: void 0,
+        returning: false
+      };
+      const previousValues = /* @__PURE__ */ new Map();
+      for (let i = 0; i < declaration.params.length; i += 1) {
+        const name = declaration.params[i];
+        if (!name) {
+          continue;
+        }
+        previousValues.set(name, scope.getPath(name));
+        scope.setPath(name, args[i]);
+      }
+      await declaration.body.evaluate(context);
+      for (const name of declaration.params) {
+        if (!name) {
+          continue;
+        }
+        scope.setPath(name, previousValues.get(name));
+      }
+      return context.returnValue;
+    };
+    scope.setPath(declaration.name, fn);
   }
   async applyBehaviorDeclarations(element, scope, declarations) {
     for (const declaration of declarations) {
@@ -2026,6 +2797,10 @@ var Engine = class {
     if (!declaration.flags.important && importantKey && this.isImportant(element, importantKey)) {
       return;
     }
+    if (importantKey && this.isInlineDeclaration(element, importantKey)) {
+      return;
+    }
+    this.applyCustomFlags(element, scope, declaration);
     if (declaration.target instanceof IdentifierExpression) {
       const value = await declaration.value.evaluate(context);
       scope.setPath(declaration.target.name, value);
@@ -2054,6 +2829,17 @@ var Engine = class {
     if (!exprIdentifier) {
       const value = await declaration.value.evaluate(context);
       this.setDirectiveValue(element, target, value, declaration.flags.trusted);
+      const shouldWatch2 = operator === ":<" || operator === ":=";
+      if (shouldWatch2) {
+        this.applyDirectiveFromExpression(
+          element,
+          target,
+          declaration.value,
+          scope,
+          declaration.flags.trusted,
+          debounceMs
+        );
+      }
       if (declaration.flags.important && importantKey) {
         this.markImportant(element, importantKey);
       }
@@ -2073,10 +2859,30 @@ var Engine = class {
       this.markImportant(element, importantKey);
     }
   }
+  applyCustomFlags(element, scope, declaration) {
+    if (this.flagHandlers.size === 0) {
+      return;
+    }
+    for (const [name, handler] of this.flagHandlers) {
+      if (!declaration.flags[name]) {
+        continue;
+      }
+      handler.onApply?.({
+        name,
+        args: declaration.flagArgs[name],
+        element,
+        scope,
+        declaration
+      });
+    }
+  }
   applyDirectiveFromScope(element, target, expr, scope, trusted, debounceMs, watch = true) {
     if (target.kind === "attr" && target.name === "html" && element instanceof HTMLElement) {
       const handler2 = () => applyHtml(element, expr, scope, Boolean(trusted));
       handler2();
+      if (trusted) {
+        this.handleTrustedHtml(element);
+      }
       if (watch) {
         this.watchWithDebounce(scope, expr, handler2, debounceMs);
       }
@@ -2093,6 +2899,17 @@ var Engine = class {
     if (watch) {
       this.watchWithDebounce(scope, expr, handler, debounceMs);
     }
+  }
+  applyDirectiveFromExpression(element, target, expr, scope, trusted, debounceMs) {
+    const handler = async () => {
+      const context = { scope, element };
+      const value = await expr.evaluate(context);
+      this.setDirectiveValue(element, target, value, trusted);
+    };
+    void handler();
+    this.watchAllScopes(scope, () => {
+      void handler();
+    }, debounceMs);
   }
   applyDirectiveToScope(element, target, expr, scope, debounceMs) {
     if (target.kind === "attr" && target.name === "value") {
@@ -2141,6 +2958,9 @@ var Engine = class {
     if (target.kind === "attr" && target.name === "html" && element instanceof HTMLElement) {
       const html = value == null ? "" : String(value);
       element.innerHTML = trusted ? html : html.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, "");
+      if (trusted) {
+        this.handleTrustedHtml(element);
+      }
       return;
     }
     if (target.kind === "attr") {
@@ -2192,6 +3012,18 @@ var Engine = class {
     }
     return void 0;
   }
+  handleTrustedHtml(root) {
+    const scripts = Array.from(root.querySelectorAll('script[type="text/vsn"]'));
+    if (scripts.length === 0) {
+      return;
+    }
+    const source = scripts.map((script) => script.textContent ?? "").join("\n");
+    if (!source.trim()) {
+      return;
+    }
+    this.registerBehaviors(source);
+    void this.applyBehaviors(root);
+  }
   registerDefaultAttributeHandlers() {
     this.registerAttributeHandler({
       id: "vsn-bind",
@@ -2199,6 +3031,9 @@ var Engine = class {
       handle: (element, name, value, scope) => {
         const direction = this.parseBindDirection(name);
         this.bindBindings.set(element, { expr: value, direction });
+        if (direction === "to" || direction === "both") {
+          this.markInlineDeclaration(element, `state:${value}`);
+        }
         if (direction === "to" || direction === "both") {
           applyBindToScope(element, value, scope);
           this.attachBindInputHandler(element, value);
@@ -2236,8 +3071,12 @@ var Engine = class {
       handle: (element, name, value, scope) => {
         const trusted = name.includes("!trusted");
         this.htmlBindings.set(element, { expr: value, trusted });
+        this.markInlineDeclaration(element, "attr:html");
         if (element instanceof HTMLElement) {
           applyHtml(element, value, scope, trusted);
+          if (trusted) {
+            this.handleTrustedHtml(element);
+          }
         }
         this.watch(scope, value, () => this.evaluate(element));
       }
@@ -2247,6 +3086,7 @@ var Engine = class {
       match: (name) => name.startsWith("vsn-get"),
       handle: (element, name) => {
         const trusted = name.includes("!trusted");
+        const autoLoad = name.includes("!load");
         const url = element.getAttribute(name) ?? "";
         const target = element.getAttribute("vsn-target") ?? void 0;
         const swap = element.getAttribute("vsn-swap") ?? "inner";
@@ -2257,7 +3097,7 @@ var Engine = class {
           ...target ? { targetSelector: target } : {}
         };
         this.getBindings.set(element, config);
-        this.attachGetHandler(element);
+        this.attachGetHandler(element, autoLoad);
       }
     });
     this.registerAttributeHandler({
@@ -2298,6 +3138,7 @@ function autoMount(root = document) {
     return null;
   }
   const engine = new Engine();
+  const startTime = typeof performance !== "undefined" && performance.now ? performance.now() : Date.now();
   const mount = () => {
     const target = root instanceof Document ? root.body : root;
     if (target) {
@@ -2306,6 +3147,9 @@ function autoMount(root = document) {
         engine.registerBehaviors(sources);
       }
       engine.mount(target);
+      const endTime = typeof performance !== "undefined" && performance.now ? performance.now() : Date.now();
+      const elapsedMs = Math.round(endTime - startTime);
+      console.log(`Took ${elapsedMs}ms to start up VSN.js. https://www.vsnjs.com/ v${VERSION}`);
     }
   };
   if (document.readyState === "loading") {
@@ -2332,6 +3176,8 @@ export {
   DeclarationNode,
   DirectiveExpression,
   Engine,
+  FunctionDeclarationNode,
+  FunctionExpression,
   IdentifierExpression,
   IndexExpression,
   Lexer,
@@ -2340,9 +3186,11 @@ export {
   Parser,
   ProgramNode,
   QueryExpression,
+  ReturnNode,
   SelectorNode,
   StateBlockNode,
   StateEntryNode,
+  TernaryExpression,
   TokenType,
   UnaryExpression,
   UseNode,

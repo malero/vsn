@@ -88,7 +88,8 @@ export class OnBlockNode extends BaseNode {
   constructor(
     public eventName: string,
     public args: string[],
-    public body: BlockNode
+    public body: BlockNode,
+    public modifiers: string[] = []
   ) {
     super("OnBlock");
   }
@@ -137,14 +138,60 @@ export class FunctionDeclarationNode extends BaseNode {
   }
 }
 
+export class FunctionExpression extends BaseNode {
+  constructor(public params: string[], public body: BlockNode) {
+    super("FunctionExpression");
+  }
+
+  async evaluate(context: ExecutionContext): Promise<any> {
+    const scope = context.scope;
+    const globals = context.globals;
+    const element = context.element;
+    return async (...args: any[]) => {
+      const inner: ExecutionContext = {
+        ...(scope ? { scope } : {}),
+        ...(globals ? { globals } : {}),
+        ...(element ? { element } : {}),
+        returnValue: undefined,
+        returning: false
+      };
+      if (scope) {
+        const previousValues = new Map<string, any>();
+        for (let i = 0; i < this.params.length; i += 1) {
+          const name = this.params[i];
+          if (!name) {
+            continue;
+          }
+          previousValues.set(name, scope.getPath(name));
+          if (scope.setPath) {
+            scope.setPath(name, args[i]);
+          }
+        }
+        await this.body.evaluate(inner);
+        for (const name of this.params) {
+          if (!name || !scope.setPath) {
+            continue;
+          }
+          scope.setPath(name, previousValues.get(name));
+        }
+      } else {
+        await this.body.evaluate(inner);
+      }
+      return inner.returnValue;
+    };
+  }
+}
+
 export interface DeclarationFlags {
   important?: boolean;
   trusted?: boolean;
   debounce?: boolean;
+  [key: string]: boolean | undefined;
 }
 
 export interface DeclarationFlagArgs {
   debounce?: number;
+  [key: string]: any;
 }
 
 export class DeclarationNode extends BaseNode {
@@ -167,6 +214,8 @@ export type ExpressionNode =
   | CallExpression
   | ArrayExpression
   | IndexExpression
+  | FunctionExpression
+  | TernaryExpression
   | DirectiveExpression
   | QueryExpression;
 
@@ -258,6 +307,24 @@ export class BinaryExpression extends BaseNode {
       return (left as any) >= (right as any);
     }
     return undefined;
+  }
+}
+
+export class TernaryExpression extends BaseNode {
+  constructor(
+    public test: ExpressionNode,
+    public consequent: ExpressionNode,
+    public alternate: ExpressionNode
+  ) {
+    super("TernaryExpression");
+  }
+
+  async evaluate(context: ExecutionContext): Promise<any> {
+    const condition = await this.test.evaluate(context);
+    if (condition) {
+      return this.consequent.evaluate(context);
+    }
+    return this.alternate.evaluate(context);
   }
 }
 

@@ -6,12 +6,15 @@ import { applyGet, GetConfig } from "./http";
 import { debounce } from "./debounce";
 import { Parser } from "../parser/parser";
 import {
+  AssignmentNode,
   BehaviorNode,
   BlockNode,
   DeclarationNode,
   DirectiveExpression,
   ExecutionContext,
+  ExpressionNode,
   FunctionDeclarationNode,
+  FunctionExpression,
   IdentifierExpression,
   OnBlockNode
 } from "../ast/nodes";
@@ -20,6 +23,7 @@ interface OnConfig {
   event: string;
   code: string;
   debounceMs?: number;
+  modifiers?: string[];
 }
 
 interface BindConfig {
@@ -39,15 +43,41 @@ interface RegisteredBehavior {
   order: number;
   construct?: BlockNode;
   destruct?: BlockNode;
-  onBlocks: { event: string; body: BlockNode }[];
+  onBlocks: { event: string; body: BlockNode; modifiers: string[] }[];
   declarations: DeclarationNode[];
-  functions: FunctionDeclarationNode[];
+  functions: FunctionBinding[];
 }
+
+type FunctionBinding = {
+  name: string;
+  params: string[];
+  body: BlockNode;
+};
 
 type AttributeHandler = {
   id: string;
   match: (name: string) => boolean;
   handle: (element: Element, name: string, value: string, scope: Scope) => boolean | void;
+};
+
+type CachedBehavior = {
+  construct?: BlockNode;
+  destruct?: BlockNode;
+  onBlocks: { event: string; body: BlockNode; modifiers: string[] }[];
+  declarations: DeclarationNode[];
+  functions: FunctionBinding[];
+};
+
+type FlagApplyContext = {
+  name: string;
+  args: any;
+  element: Element;
+  scope: Scope;
+  declaration: DeclarationNode;
+};
+
+type FlagHandler = {
+  onApply?: (context: FlagApplyContext) => void;
 };
 
 export class Engine {
@@ -62,10 +92,16 @@ export class Engine {
   private behaviorBindings = new WeakMap<Element, Set<number>>();
   private behaviorId = 0;
   private codeCache = new Map<string, BlockNode>();
+  private behaviorCache = new Map<string, CachedBehavior>();
   private observer?: MutationObserver;
   private attributeHandlers: AttributeHandler[] = [];
   private globals: Record<string, any> = {};
   private importantFlags = new WeakMap<Element, Set<string>>();
+  private inlineDeclarations = new WeakMap<Element, Set<string>>();
+  private flagHandlers = new Map<string, FlagHandler>();
+  private pendingAdded = new Set<Element>();
+  private pendingRemoved = new Set<Element>();
+  private observerFlush?: () => void;
 
   constructor() {
     this.registerGlobal("console", console);
@@ -92,7 +128,7 @@ export class Engine {
   }
 
   registerBehaviors(source: string): void {
-    const program = new Parser(source).parseProgram();
+    const program = new Parser(source, { customFlags: new Set(this.flagHandlers.keys()) }).parseProgram();
     for (const use of program.uses) {
       const value = this.resolveGlobalPath(use.name);
       if (value === undefined) {
@@ -112,6 +148,21 @@ export class Engine {
 
   registerGlobals(values: Record<string, any>): void {
     Object.assign(this.globals, values);
+  }
+
+  registerFlag(name: string, handler: FlagHandler = {}): void {
+    const reserved = new Set(["important", "trusted", "debounce"]);
+    if (reserved.has(name)) {
+      throw new Error(`Flag '${name}' is reserved`);
+    }
+    this.flagHandlers.set(name, handler);
+  }
+
+  getRegistryStats(): { behaviorCount: number; behaviorCacheSize: number } {
+    return {
+      behaviorCount: this.behaviorRegistry.length,
+      behaviorCacheSize: this.behaviorCache.size
+    };
   }
 
   registerAttributeHandler(handler: AttributeHandler): void {
@@ -162,6 +213,9 @@ export class Engine {
     const htmlBinding = this.htmlBindings.get(element);
     if (htmlBinding && element instanceof HTMLElement) {
       applyHtml(element, htmlBinding.expr, scope, htmlBinding.trusted);
+      if (htmlBinding.trusted) {
+        this.handleTrustedHtml(element);
+      }
     }
   }
 
@@ -169,21 +223,36 @@ export class Engine {
     if (this.observer) {
       return;
     }
+    this.observerFlush = debounce(() => this.flushObserverQueue(), 10);
     this.observer = new MutationObserver((mutations) => {
       for (const mutation of mutations) {
         for (const node of Array.from(mutation.addedNodes)) {
           if (node && node.nodeType === 1) {
-            this.handleAddedNode(node as Element);
+            this.pendingAdded.add(node as Element);
           }
         }
         for (const node of Array.from(mutation.removedNodes)) {
           if (node && node.nodeType === 1) {
-            this.handleRemovedNode(node as Element);
+            this.pendingRemoved.add(node as Element);
           }
         }
       }
+      this.observerFlush?.();
     });
     this.observer.observe(root, { childList: true, subtree: true });
+  }
+
+  private flushObserverQueue(): void {
+    const removed = Array.from(this.pendingRemoved);
+    this.pendingRemoved.clear();
+    for (const node of removed) {
+      this.handleRemovedNode(node);
+    }
+    const added = Array.from(this.pendingAdded);
+    this.pendingAdded.clear();
+    for (const node of added) {
+      this.handleAddedNode(node);
+    }
   }
 
   private handleRemovedNode(node: Element): void {
@@ -248,7 +317,7 @@ export class Engine {
           await this.executeBlock(behavior.construct, scope, element);
         }
         for (const onBlock of behavior.onBlocks) {
-          this.attachBehaviorOnHandler(element, onBlock.event, onBlock.body);
+          this.attachBehaviorOnHandler(element, onBlock.event, onBlock.body, onBlock.modifiers);
         }
       }
       this.behaviorBindings.set(element, bound);
@@ -337,6 +406,17 @@ export class Engine {
     return element.getAttributeNames().some((name) => name.startsWith("vsn-"));
   }
 
+  private markInlineDeclaration(element: Element, key: string): void {
+    const set = this.inlineDeclarations.get(element) ?? new Set<string>();
+    set.add(key);
+    this.inlineDeclarations.set(element, set);
+  }
+
+  private isInlineDeclaration(element: Element, key: string): boolean {
+    const set = this.inlineDeclarations.get(element);
+    return set ? set.has(key) : false;
+  }
+
   private findParentScope(element: Element): Scope | undefined {
     let parent = element.parentElement;
     while (parent) {
@@ -354,7 +434,23 @@ export class Engine {
     if (!key) {
       return;
     }
-    scope.on(key, handler);
+    const root = key.split(".")[0];
+    if (!root) {
+      return;
+    }
+    let target: Scope | undefined = scope;
+    while (target && !target.hasKey(root)) {
+      target = target.parent;
+    }
+    if (target) {
+      target.on(key, handler);
+      return;
+    }
+    let cursor: Scope | undefined = scope;
+    while (cursor) {
+      cursor.on(key, handler);
+      cursor = cursor.parent;
+    }
   }
 
   private watchWithDebounce(scope: Scope, expr: string, handler: () => void, debounceMs?: number): void {
@@ -362,6 +458,15 @@ export class Engine {
       this.watch(scope, expr, debounce(handler, debounceMs));
     } else {
       this.watch(scope, expr, handler);
+    }
+  }
+
+  private watchAllScopes(scope: Scope, handler: () => void, debounceMs?: number): void {
+    const effectiveHandler = debounceMs ? debounce(handler, debounceMs) : handler;
+    let cursor: Scope | undefined = scope;
+    while (cursor) {
+      cursor.onAny(effectiveHandler);
+      cursor = cursor.parent;
     }
   }
 
@@ -377,49 +482,98 @@ export class Engine {
     }
 
     let debounceMs: number | undefined;
+    const modifiers: string[] = [];
     for (const flag of flags) {
-      if (!flag.startsWith("debounce")) {
+      if (flag.startsWith("debounce")) {
+        const match = flag.match(/debounce\((\d+)\)/);
+        debounceMs = match ? Number(match[1]) : 200;
         continue;
       }
-      const match = flag.match(/debounce\((\d+)\)/);
-      debounceMs = match ? Number(match[1]) : 200;
+      modifiers.push(flag);
     }
 
     const config: OnConfig = {
       event,
       code: value,
-      ...(debounceMs !== undefined ? { debounceMs } : {})
+      ...(debounceMs !== undefined ? { debounceMs } : {}),
+      ...(modifiers.length > 0 ? { modifiers } : {})
     };
     return config;
   }
 
   private attachOnHandler(element: Element, config: OnConfig): void {
-    const handler = async () => {
+    const handler = async (event?: Event) => {
+      this.applyEventModifiers(event, config.modifiers);
       const scope = this.getScope(element);
       await this.execute(config.code, scope, element);
       this.evaluate(element);
     };
     const effectiveHandler = config.debounceMs ? debounce(handler, config.debounceMs) : handler;
-    element.addEventListener(config.event, effectiveHandler);
+    element.addEventListener(config.event, effectiveHandler, this.getListenerOptions(config.modifiers));
   }
 
-  private attachBehaviorOnHandler(element: Element, event: string, body: BlockNode): void {
-    const handler = async () => {
+  private attachBehaviorOnHandler(element: Element, event: string, body: BlockNode, modifiers?: string[]): void {
+    const handler = async (evt?: Event) => {
+      this.applyEventModifiers(evt, modifiers);
       const scope = this.getScope(element);
       await this.executeBlock(body, scope, element);
       this.evaluate(element);
     };
-    element.addEventListener(event, handler);
+    element.addEventListener(event, handler, this.getListenerOptions(modifiers));
   }
 
-  private attachGetHandler(element: Element): void {
-    element.addEventListener("click", async () => {
+  private attachGetHandler(element: Element, autoLoad = false): void {
+    const handler = async () => {
       const config = this.getBindings.get(element);
       if (!config) {
         return;
       }
-      await applyGet(element, config, this.getScope(element));
+      await applyGet(element, config, this.getScope(element), (target) => {
+        if (config.trusted) {
+          this.handleTrustedHtml(target);
+        }
+      });
+    };
+
+    element.addEventListener("click", (event) => {
+      if (event.target !== element) {
+        return;
+      }
+      void handler();
     });
+    if (autoLoad) {
+      Promise.resolve().then(handler);
+    }
+  }
+
+  private applyEventModifiers(event: Event | undefined, modifiers?: string[]): void {
+    if (!event || !modifiers || modifiers.length === 0) {
+      return;
+    }
+    for (const modifier of modifiers) {
+      if (modifier === "prevent") {
+        event.preventDefault();
+      } else if (modifier === "stop") {
+        event.stopPropagation();
+      }
+    }
+  }
+
+  private getListenerOptions(modifiers?: string[]): AddEventListenerOptions | undefined {
+    if (!modifiers || modifiers.length === 0) {
+      return undefined;
+    }
+    const options: AddEventListenerOptions = {};
+    if (modifiers.includes("once")) {
+      options.once = true;
+    }
+    if (modifiers.includes("passive")) {
+      options.passive = true;
+    }
+    if (modifiers.includes("capture")) {
+      options.capture = true;
+    }
+    return Object.keys(options).length > 0 ? options : undefined;
   }
 
   private async execute(code: string, scope: Scope, element?: Element): Promise<void> {
@@ -449,16 +603,13 @@ export class Engine {
     const selector = parentSelector
       ? `${parentSelector} ${behavior.selector.selectorText}`
       : behavior.selector.selectorText;
-    const lifecycle = this.extractLifecycle(behavior.body);
+    const cached = this.getCachedBehavior(behavior);
     this.behaviorRegistry.push({
       id: this.behaviorId += 1,
       selector,
       specificity: this.computeSpecificity(selector),
       order: this.behaviorRegistry.length,
-      onBlocks: this.extractOnBlocks(behavior.body),
-      declarations: this.extractDeclarations(behavior.body),
-      functions: this.extractFunctionDeclarations(behavior.body),
-      ...lifecycle
+      ...cached
     });
     for (const statement of behavior.body.statements) {
       if (statement instanceof BehaviorNode) {
@@ -517,11 +668,11 @@ export class Engine {
     };
   }
 
-  private extractOnBlocks(body: BlockNode): { event: string; body: BlockNode }[] {
-    const blocks: { event: string; body: BlockNode }[] = [];
+  private extractOnBlocks(body: BlockNode): { event: string; body: BlockNode; modifiers: string[] }[] {
+    const blocks: { event: string; body: BlockNode; modifiers: string[] }[] = [];
     for (const statement of body.statements) {
       if (statement instanceof OnBlockNode) {
-        blocks.push({ event: statement.eventName, body: statement.body });
+        blocks.push({ event: statement.eventName, body: statement.body, modifiers: statement.modifiers });
       }
     }
     return blocks;
@@ -537,20 +688,207 @@ export class Engine {
     return declarations;
   }
 
-  private extractFunctionDeclarations(body: BlockNode): FunctionDeclarationNode[] {
-    const functions: FunctionDeclarationNode[] = [];
+  private extractFunctionDeclarations(body: BlockNode): FunctionBinding[] {
+    const functions: FunctionBinding[] = [];
     for (const statement of body.statements) {
       if (statement instanceof FunctionDeclarationNode) {
-        functions.push(statement);
+        functions.push({ name: statement.name, params: statement.params, body: statement.body });
+        continue;
+      }
+      if (statement instanceof AssignmentNode) {
+        if (statement.target instanceof IdentifierExpression && statement.value instanceof FunctionExpression) {
+          functions.push({
+            name: statement.target.name,
+            params: statement.value.params,
+            body: statement.value.body
+          });
+        }
       }
     }
     return functions;
   }
 
+  private getCachedBehavior(behavior: BehaviorNode): CachedBehavior {
+    const hash = this.hashBehavior(behavior);
+    const cached = this.behaviorCache.get(hash);
+    if (cached) {
+      return cached;
+    }
+    const lifecycle = this.extractLifecycle(behavior.body);
+    const fresh: CachedBehavior = {
+      onBlocks: this.extractOnBlocks(behavior.body),
+      declarations: this.extractDeclarations(behavior.body),
+      functions: this.extractFunctionDeclarations(behavior.body),
+      ...lifecycle
+    };
+    this.behaviorCache.set(hash, fresh);
+    return fresh;
+  }
+
+  private hashBehavior(behavior: BehaviorNode): string {
+    const normalized = this.normalizeNode(behavior);
+    const json = JSON.stringify(normalized);
+    return this.hashString(json);
+  }
+
+  private normalizeNode(node: any): any {
+    if (!node || typeof node !== "object") {
+      return node;
+    }
+    const type = node.type ?? "Unknown";
+    if (type === "Behavior") {
+      return {
+        type,
+        selector: node.selector?.selectorText ?? "",
+        body: this.normalizeNode(node.body)
+      };
+    }
+    if (type === "Selector") {
+      return { type, selectorText: node.selectorText ?? "" };
+    }
+    if (type === "Block" || type === "Construct" || type === "Destruct") {
+      return {
+        type,
+        statements: Array.isArray(node.statements)
+          ? node.statements.map((statement: any) => this.normalizeNode(statement))
+          : []
+      };
+    }
+    if (type === "OnBlock") {
+      return {
+        type,
+        eventName: node.eventName ?? "",
+        args: Array.isArray(node.args) ? node.args : [],
+        body: this.normalizeNode(node.body)
+      };
+    }
+    if (type === "Declaration") {
+      return {
+        type,
+        target: this.normalizeNode(node.target),
+        operator: node.operator ?? "",
+        value: this.normalizeNode(node.value),
+        flags: node.flags ?? {},
+        flagArgs: node.flagArgs ?? {}
+      };
+    }
+    if (type === "Assignment") {
+      return {
+        type,
+        target: this.normalizeNode(node.target),
+        value: this.normalizeNode(node.value)
+      };
+    }
+    if (type === "StateBlock") {
+      return {
+        type,
+        entries: Array.isArray(node.entries)
+          ? node.entries.map((entry: any) => this.normalizeNode(entry))
+          : []
+      };
+    }
+    if (type === "StateEntry") {
+      return {
+        type,
+        name: node.name ?? "",
+        value: this.normalizeNode(node.value),
+        important: Boolean(node.important)
+      };
+    }
+    if (type === "FunctionDeclaration") {
+      return {
+        type,
+        name: node.name ?? "",
+        params: Array.isArray(node.params) ? node.params : [],
+        body: this.normalizeNode(node.body)
+      };
+    }
+    if (type === "FunctionExpression") {
+      return {
+        type,
+        params: Array.isArray(node.params) ? node.params : [],
+        body: this.normalizeNode(node.body)
+      };
+    }
+    if (type === "Return") {
+      return {
+        type,
+        value: this.normalizeNode(node.value ?? null)
+      };
+    }
+    if (type === "Identifier") {
+      return { type, name: node.name ?? "" };
+    }
+    if (type === "Literal") {
+      return { type, value: node.value };
+    }
+    if (type === "UnaryExpression") {
+      return {
+        type,
+        operator: node.operator ?? "",
+        argument: this.normalizeNode(node.argument)
+      };
+    }
+    if (type === "BinaryExpression") {
+      return {
+        type,
+        operator: node.operator ?? "",
+        left: this.normalizeNode(node.left),
+        right: this.normalizeNode(node.right)
+      };
+    }
+    if (type === "TernaryExpression") {
+      return {
+        type,
+        test: this.normalizeNode(node.test),
+        consequent: this.normalizeNode(node.consequent),
+        alternate: this.normalizeNode(node.alternate)
+      };
+    }
+    if (type === "CallExpression") {
+      return {
+        type,
+        callee: this.normalizeNode(node.callee),
+        args: Array.isArray(node.args) ? node.args.map((arg: any) => this.normalizeNode(arg)) : []
+      };
+    }
+    if (type === "Directive") {
+      return { type, kind: node.kind ?? "", name: node.name ?? "" };
+    }
+    if (type === "Query") {
+      return { type, direction: node.direction ?? "", selector: node.selector ?? "" };
+    }
+    if (type === "ArrayExpression") {
+      return {
+        type,
+        elements: Array.isArray(node.elements)
+          ? node.elements.map((element: any) => this.normalizeNode(element))
+          : []
+      };
+    }
+    if (type === "IndexExpression") {
+      return {
+        type,
+        target: this.normalizeNode(node.target),
+        index: this.normalizeNode(node.index)
+      };
+    }
+    return { type };
+  }
+
+  private hashString(value: string): string {
+    let hash = 5381;
+    for (let i = 0; i < value.length; i += 1) {
+      hash = ((hash << 5) + hash) + value.charCodeAt(i);
+      hash |= 0;
+    }
+    return (hash >>> 0).toString(16);
+  }
+
   private applyBehaviorFunctions(
     element: Element,
     scope: Scope,
-    functions: FunctionDeclarationNode[]
+    functions: FunctionBinding[]
   ): void {
     for (const declaration of functions) {
       this.applyBehaviorFunction(element, scope, declaration);
@@ -560,7 +898,7 @@ export class Engine {
   private applyBehaviorFunction(
     element: Element,
     scope: Scope,
-    declaration: FunctionDeclarationNode
+    declaration: FunctionBinding
   ): void {
     const existing = scope.getPath(declaration.name);
     if (existing !== undefined && typeof existing !== "function") {
@@ -577,11 +915,17 @@ export class Engine {
       const previousValues = new Map<string, any>();
       for (let i = 0; i < declaration.params.length; i += 1) {
         const name = declaration.params[i];
+        if (!name) {
+          continue;
+        }
         previousValues.set(name, scope.getPath(name));
         scope.setPath(name, args[i]);
       }
       await declaration.body.evaluate(context);
       for (const name of declaration.params) {
+        if (!name) {
+          continue;
+        }
         scope.setPath(name, previousValues.get(name));
       }
       return context.returnValue;
@@ -613,6 +957,10 @@ export class Engine {
     if (!declaration.flags.important && importantKey && this.isImportant(element, importantKey)) {
       return;
     }
+    if (importantKey && this.isInlineDeclaration(element, importantKey)) {
+      return;
+    }
+    this.applyCustomFlags(element, scope, declaration);
 
     if (declaration.target instanceof IdentifierExpression) {
       const value = await declaration.value.evaluate(context);
@@ -648,6 +996,17 @@ export class Engine {
     if (!exprIdentifier) {
       const value = await declaration.value.evaluate(context);
       this.setDirectiveValue(element, target, value, declaration.flags.trusted);
+      const shouldWatch = operator === ":<" || operator === ":=";
+      if (shouldWatch) {
+        this.applyDirectiveFromExpression(
+          element,
+          target,
+          declaration.value,
+          scope,
+          declaration.flags.trusted,
+          debounceMs
+        );
+      }
       if (declaration.flags.important && importantKey) {
         this.markImportant(element, importantKey);
       }
@@ -669,6 +1028,24 @@ export class Engine {
     }
   }
 
+  private applyCustomFlags(element: Element, scope: Scope, declaration: DeclarationNode): void {
+    if (this.flagHandlers.size === 0) {
+      return;
+    }
+    for (const [name, handler] of this.flagHandlers) {
+      if (!declaration.flags[name]) {
+        continue;
+      }
+      handler.onApply?.({
+        name,
+        args: declaration.flagArgs[name],
+        element,
+        scope,
+        declaration
+      });
+    }
+  }
+
   private applyDirectiveFromScope(
     element: Element,
     target: DirectiveExpression,
@@ -681,6 +1058,9 @@ export class Engine {
     if (target.kind === "attr" && target.name === "html" && element instanceof HTMLElement) {
       const handler = () => applyHtml(element, expr, scope, Boolean(trusted));
       handler();
+      if (trusted) {
+        this.handleTrustedHtml(element);
+      }
       if (watch) {
         this.watchWithDebounce(scope, expr, handler, debounceMs);
       }
@@ -697,6 +1077,25 @@ export class Engine {
     if (watch) {
       this.watchWithDebounce(scope, expr, handler, debounceMs);
     }
+  }
+
+  private applyDirectiveFromExpression(
+    element: Element,
+    target: DirectiveExpression,
+    expr: ExpressionNode,
+    scope: Scope,
+    trusted: boolean | undefined,
+    debounceMs?: number
+  ): void {
+    const handler = async () => {
+      const context: ExecutionContext = { scope, element };
+      const value = await expr.evaluate(context);
+      this.setDirectiveValue(element, target, value, trusted);
+    };
+    void handler();
+    this.watchAllScopes(scope, () => {
+      void handler();
+    }, debounceMs);
   }
 
   private applyDirectiveToScope(
@@ -760,6 +1159,9 @@ export class Engine {
     if (target.kind === "attr" && target.name === "html" && element instanceof HTMLElement) {
       const html = value == null ? "" : String(value);
       element.innerHTML = trusted ? html : html.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, "");
+      if (trusted) {
+        this.handleTrustedHtml(element);
+      }
       return;
     }
     if (target.kind === "attr") {
@@ -813,6 +1215,19 @@ export class Engine {
     return undefined;
   }
 
+  private handleTrustedHtml(root: Element): void {
+    const scripts = Array.from(root.querySelectorAll('script[type="text/vsn"]'));
+    if (scripts.length === 0) {
+      return;
+    }
+    const source = scripts.map((script) => script.textContent ?? "").join("\n");
+    if (!source.trim()) {
+      return;
+    }
+    this.registerBehaviors(source);
+    void this.applyBehaviors(root);
+  }
+
   private registerDefaultAttributeHandlers(): void {
     this.registerAttributeHandler({
       id: "vsn-bind",
@@ -820,6 +1235,9 @@ export class Engine {
       handle: (element, name, value, scope) => {
         const direction = this.parseBindDirection(name);
         this.bindBindings.set(element, { expr: value, direction });
+        if (direction === "to" || direction === "both") {
+          this.markInlineDeclaration(element, `state:${value}`);
+        }
         if (direction === "to" || direction === "both") {
           applyBindToScope(element, value, scope);
           this.attachBindInputHandler(element, value);
@@ -860,8 +1278,12 @@ export class Engine {
       handle: (element, name, value, scope) => {
         const trusted = name.includes("!trusted");
         this.htmlBindings.set(element, { expr: value, trusted });
+        this.markInlineDeclaration(element, "attr:html");
         if (element instanceof HTMLElement) {
           applyHtml(element, value, scope, trusted);
+          if (trusted) {
+            this.handleTrustedHtml(element);
+          }
         }
         this.watch(scope, value, () => this.evaluate(element));
       }
@@ -872,6 +1294,7 @@ export class Engine {
       match: (name) => name.startsWith("vsn-get"),
       handle: (element, name) => {
         const trusted = name.includes("!trusted");
+        const autoLoad = name.includes("!load");
         const url = element.getAttribute(name) ?? "";
         const target = element.getAttribute("vsn-target") ?? undefined;
         const swap = (element.getAttribute("vsn-swap") as "inner" | "outer" | null) ?? "inner";
@@ -882,7 +1305,7 @@ export class Engine {
           ...(target ? { targetSelector: target } : {})
         };
         this.getBindings.set(element, config);
-        this.attachGetHandler(element);
+        this.attachGetHandler(element, autoLoad);
       }
     });
 
