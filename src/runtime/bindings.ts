@@ -15,6 +15,9 @@ function setElementValue(element: Element, value: string): void {
     element.setAttribute("value", value);
     return;
   }
+  if (element instanceof HTMLElement && element.querySelector("*")) {
+    return;
+  }
   element.textContent = value;
 }
 

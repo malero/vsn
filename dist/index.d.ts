@@ -292,6 +292,7 @@ declare class Parser {
     private parseFunctionBlockWithAwait;
     private isAsyncToken;
     private isAwaitAllowed;
+    private parseArrowExpressionBody;
     private parseAssignmentTarget;
     private parseDeclaration;
     private parseDeclarationTarget;
@@ -361,9 +362,11 @@ declare class Engine {
     private showBindings;
     private htmlBindings;
     private getBindings;
+    private eachBindings;
     private lifecycleBindings;
     private behaviorRegistry;
     private behaviorBindings;
+    private behaviorListeners;
     private behaviorId;
     private codeCache;
     private behaviorCache;
@@ -375,6 +378,7 @@ declare class Engine {
     private flagHandlers;
     private pendingAdded;
     private pendingRemoved;
+    private pendingUpdated;
     private observerFlush?;
     constructor();
     mount(root: HTMLElement): Promise<void>;
@@ -395,12 +399,18 @@ declare class Engine {
     private flushObserverQueue;
     private handleRemovedNode;
     private handleAddedNode;
+    private handleUpdatedNode;
     private applyBehaviors;
+    private reapplyBehaviorsForElement;
+    private applyBehaviorForElement;
+    private unbindBehaviorForElement;
     private runBehaviorDestruct;
     private attachAttributes;
     private setLifecycle;
     private runConstruct;
     private runDestruct;
+    private parseEachExpression;
+    private renderEach;
     private attachBindInputHandler;
     private parseBindDirection;
     private hasVsnAttributes;
@@ -411,6 +421,8 @@ declare class Engine {
     private watchWithDebounce;
     private watchAllScopes;
     private parseOnAttribute;
+    private parseEventDescriptor;
+    private matchesKeyModifiers;
     private attachOnHandler;
     private attachBehaviorOnHandler;
     private attachGetHandler;

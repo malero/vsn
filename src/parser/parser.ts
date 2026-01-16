@@ -328,7 +328,7 @@ export class Parser {
   private parseOnBlock(): OnBlockNode {
     this.stream.expect(TokenType.On);
     this.stream.skipWhitespace();
-    const event = this.stream.expect(TokenType.Identifier);
+    const event = this.parseIdentifierPath();
     this.stream.skipWhitespace();
     this.stream.expect(TokenType.LParen);
     const args: string[] = [];
@@ -356,7 +356,7 @@ export class Parser {
 
     const modifiers = this.parseOnModifiers();
     const body = this.parseBlock({ allowDeclarations: false });
-    return new OnBlockNode(event.value, args, body, modifiers);
+    return new OnBlockNode(event, args, body, modifiers);
   }
 
   private parseOnModifiers(): string[] {
@@ -722,6 +722,16 @@ export class Parser {
       return false;
     }
     return this.awaitStack[this.awaitStack.length - 1] === true;
+  }
+
+  private parseArrowExpressionBody(allowAwait: boolean): BlockNode {
+    this.awaitStack.push(allowAwait);
+    try {
+      const expression = this.parseExpression();
+      return new BlockNode([new ReturnNode(expression)]);
+    } finally {
+      this.awaitStack.pop();
+    }
   }
 
   private parseAssignmentTarget(): AssignmentTarget {
@@ -1182,7 +1192,11 @@ export class Parser {
     this.stream.skipWhitespace();
     this.stream.expect(TokenType.Arrow);
     this.stream.skipWhitespace();
-    const body = this.parseFunctionBlockWithAwait(isAsync);
+    if (this.stream.peek()?.type === TokenType.LBrace) {
+      const body = this.parseFunctionBlockWithAwait(isAsync);
+      return new FunctionExpression(params, body, isAsync);
+    }
+    const body = this.parseArrowExpressionBody(isAsync);
     return new FunctionExpression(params, body, isAsync);
   }
 

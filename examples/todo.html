@@ -1,80 +1,4 @@
 <section id="todo-app" class="example-card">
-  <script type="text/vsn">
-    use localStorage as storage;
-    use JSON as json;
-    use todoOps;
-
-    behavior #todo-app {
-      key: "vsn:todos";
-      newTitle: "";
-      filter: "all";
-      todos: [];
-      listHtml: "";
-      remaining: 0;
-      total: 0;
-
-      construct {
-        load();
-      }
-
-      load() {
-        raw = storage.getItem(key);
-        todos = raw ? json.parse(raw) : [];
-        sync();
-      }
-
-      save() {
-        storage.setItem(key, json.stringify(todos));
-      }
-
-      sync() {
-        total = todos.length;
-        remaining = todoOps.remaining(todos);
-        listHtml = todoOps.listHtml(todoOps.visible(todos, filter));
-        save();
-      }
-
-      addTodo() {
-        title = newTitle.trim();
-        return title == "" ? null : addTodoCore(title);
-      }
-
-      addTodoCore(title) {
-        todos = todoOps.add(todos, title);
-        newTitle = "";
-        sync();
-      }
-
-      toggleTodo(id) {
-        todos = todoOps.toggle(todos, id);
-        sync();
-      }
-
-      removeTodo(id) {
-        todos = todoOps.remove(todos, id);
-        sync();
-      }
-
-      setFilter(value) {
-        filter = value;
-        listHtml = todoOps.listHtml(todoOps.visible(todos, filter));
-      }
-
-      clearCompleted() {
-        todos = todoOps.clearCompleted(todos);
-        sync();
-      }
-
-      behavior .chip {
-        @data-filter :> value;
-        @aria-pressed :< (root.filter == value);
-        on click() {
-          root.setFilter(value);
-        }
-      }
-    }
-  </script>
-
   <header class="todo-header">
     <div>
       <h1>Todo List</h1>
@@ -86,12 +10,13 @@
     </div>
   </header>
 
-  <form class="todo-form" vsn-on:submit!prevent="addTodo();">
+  <form class="todo-form" vsn-on:submit!prevent="submit();">
     <input
       class="todo-input"
       placeholder="Add a new task"
       autocomplete="off"
       vsn-bind:to="newTitle"
+      vsn-on:keyup.enter="console.log('enter');submit();"
     />
     <button class="btn" type="submit">Add</button>
   </form>
@@ -111,5 +36,113 @@
     <button class="btn secondary" vsn-on:click="clearCompleted();">Clear done</button>
   </div>
 
-  <ul class="todo-list" vsn-html!trusted="listHtml"></ul>
+  <ul class="todo-list">
+    <template vsn-each="todos as todo, index">
+      <li class="todo-item">
+        <button class="todo-check" vsn-on:click="toggleTodo(index);"></button>
+        <span class="todo-title"></span>
+        <button class="todo-delete" vsn-on:click="removeTodo(index);">Remove</button>
+      </li>
+    </template>
+  </ul>
 </section>
+
+<script type="text/vsn">
+  use localStorage as storage;
+  use JSON as json;
+  use Date as date;
+
+  behavior #todo-app {
+    key: "vsn:todos";
+    newTitle: "";
+    filter: "all";
+    todos: [];
+    remaining: 0;
+    total: 0;
+
+    construct {
+      console.log("construct");
+      load();
+    }
+
+    async load() {
+      raw = storage.getItem(key);
+      todos = raw ? json.parse(raw) : [];
+      await sync();
+    }
+
+    async save() {
+      storage.setItem(key, json.stringify(todos));
+    }
+
+    async sync() {
+      total = todos.length;
+      remainingList = await list.filter(todos, (todo) => !todo[2]);
+      remaining = remainingList.length;
+      await save();
+    }
+
+    submit() {
+      console.log("addTodo", newTitle);
+      title = newTitle.trim();
+      return title == "" ? null : addTodo(title);
+    }
+
+    async addTodo(title) {
+      id = "" + date.now();
+      todos = todos.concat([[id, title, false]]);
+      newTitle = "";
+      await sync();
+    }
+
+    async toggleTodo(index) {
+      todo = todos[index];
+      return !todo ? null : toggleTodoCore(todo, index);
+    }
+
+    async toggleTodoCore(todo, index) {
+      updated = [todo[0], todo[1], !todo[2]];
+      todos = todos.slice(0, index).concat([updated]).concat(todos.slice(index + 1));
+      await sync();
+    }
+
+    async removeTodo(index) {
+      todos = todos.slice(0, index).concat(todos.slice(index + 1));
+      await sync();
+    }
+
+    setFilter(value) {
+      filter = value;
+    }
+
+    async clearCompleted() {
+      todos = await list.filter(todos, (todo) => !todo[2]);
+      await sync();
+    }
+
+    behavior .chip {
+      @data-filter :> value;
+      @aria-pressed :< (root.filter == value);
+      on click() {
+        root.setFilter(value);
+      }
+    }
+
+    behavior .todo-item {
+      @class :< (todo[2] ? "todo-item done" : "todo-item");
+      $display :< (
+        filter == "all" ||
+        (filter == "active" && !todo[2]) ||
+        (filter == "done" && todo[2])
+      ? "grid" : "none");
+    }
+
+    behavior .todo-title {
+      @html :< todo[1];
+    }
+
+    behavior .todo-check {
+      @html :< (todo[2] ? "Undo" : "Done");
+    }
+  }
+</script>
