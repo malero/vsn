@@ -792,7 +792,8 @@ export class Engine {
           }
         });
       } catch (error) {
-        element.dispatchEvent(new CustomEvent("vsn:getError", { detail: { error } }));
+        console.warn("vsn:getError", error);
+        element.dispatchEvent(new CustomEvent("vsn:getError", { detail: { error }, bubbles: true }));
       }
     };
 

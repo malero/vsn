@@ -102,4 +102,36 @@ describe("vsn-get", () => {
     const scope = engine.getScope(card);
     expect(scope.get("ready")).toBe(true);
   });
+
+  it("emits vsn:getError when trusted HTML contains invalid CFS", async () => {
+    document.body.innerHTML = `
+      <div id="panel" vsn-get!trusted="/bad"></div>
+    `;
+
+    const engine = new Engine();
+    await engine.mount(document.body);
+
+    let errorEvent: CustomEvent | null = null;
+    document.addEventListener("vsn:getError", (event) => {
+      errorEvent = event as CustomEvent;
+    });
+
+    (globalThis.fetch as any) = vi.fn(async () => ({
+      ok: true,
+      text: async () => `
+        <script type="text/vsn">
+          behavior .card {
+            async load( { }
+          }
+        </script>
+      `
+    }));
+
+    const panel = document.getElementById("panel") as HTMLDivElement;
+    panel.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(errorEvent).toBeTruthy();
+  });
 });

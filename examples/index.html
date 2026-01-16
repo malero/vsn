@@ -22,7 +22,10 @@
         <div class="placeholder">Select an example to load it.</div>
       </main>
     </div>
-
+  <script>
+    document.addEventListener("vsn:getError", (e) => console.error("vsn:getError", e.detail?.error));
+  </script>
     <script type="module" src="../dist/index.min.js" auto-mount></script>
+
   </body>
 </html>

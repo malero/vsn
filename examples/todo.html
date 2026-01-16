@@ -102,12 +102,17 @@
 
     async toggleTodoCore(todo, index) {
       updated = [todo[0], todo[1], !todo[2]];
-      todos = todos.slice(0, index).concat([updated]).concat(todos.slice(index + 1));
+      before = todos.slice(0, index);
+      after = todos.slice(index + 1);
+      before = before.concat([updated]);
+      todos = before.concat(after);
       await sync();
     }
 
     async removeTodo(index) {
-      todos = todos.slice(0, index).concat(todos.slice(index + 1));
+      before = todos.slice(0, index);
+      after = todos.slice(index + 1);
+      todos = before.concat(after);
       await sync();
     }
 

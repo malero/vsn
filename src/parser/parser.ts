@@ -270,6 +270,10 @@ export class Parser {
       return this.parseBehavior();
     }
 
+    if (this.isAwaitAllowed() && next.type === TokenType.Identifier && next.value === "await") {
+      return this.parseExpressionStatement();
+    }
+
     if (this.isCallStart()) {
       return this.parseExpressionStatement();
     }

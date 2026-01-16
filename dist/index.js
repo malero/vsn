@@ -988,6 +988,9 @@ ${caret}`;
     if (allowBlocks && next.type === "Behavior" /* Behavior */) {
       return this.parseBehavior();
     }
+    if (this.isAwaitAllowed() && next.type === "Identifier" /* Identifier */ && next.value === "await") {
+      return this.parseExpressionStatement();
+    }
     if (this.isCallStart()) {
       return this.parseExpressionStatement();
     }
@@ -2787,7 +2790,8 @@ var Engine = class {
           }
         });
       } catch (error) {
-        element.dispatchEvent(new CustomEvent("vsn:getError", { detail: { error } }));
+        console.warn("vsn:getError", error);
+        element.dispatchEvent(new CustomEvent("vsn:getError", { detail: { error }, bubbles: true }));
       }
     };
     element.addEventListener("click", (event) => {
