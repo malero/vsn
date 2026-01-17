@@ -1,0 +1,49 @@
+<section class="example-card" id="tabs">
+  <h1>Tabs</h1>
+  <p>
+    A CFS-driven tab set with stateful selection and keyboard focus.
+  </p>
+
+  <div class="tabs">
+    <div class="tablist" role="tablist">
+      <button class="tab" data-id="overview" role="tab">Overview</button>
+      <button class="tab" data-id="details" role="tab">Details</button>
+      <button class="tab" data-id="usage" role="tab">Usage</button>
+    </div>
+
+    <div class="panels">
+      <article class="panel" data-id="overview" role="tabpanel">
+        <h2>Overview</h2>
+        <p>Use CFS to keep state close to your markup.</p>
+      </article>
+      <article class="panel" data-id="details" role="tabpanel">
+        <h2>Details</h2>
+        <p>Tabs demonstrate binding, selectors, and conditional rendering.</p>
+      </article>
+      <article class="panel" data-id="usage" role="tabpanel">
+        <h2>Usage</h2>
+        <p>Wire up events and keep UI logic declarative.</p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<script type="text/vsn">
+behavior #tabs {
+  active: "overview";
+
+  behavior .tab {
+    @data-id :> id;
+    @aria-selected :< (active == id);
+    on click() {
+      active = id;
+    }
+  }
+
+  behavior .panel {
+    @data-id :> id;
+    @aria-hidden :< (active != id);
+    $display :< (active == id ? "block" : "none");
+  }
+}
+</script>

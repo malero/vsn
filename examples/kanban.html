@@ -1,0 +1,219 @@
+<section id="kanban-app" class="example-card kanban">
+  <header class="kanban-header">
+    <div>
+      <h1>Kanban Board</h1>
+      <p class="kanban-subtitle">Plan, move, and finish work with a lightweight board.</p>
+    </div>
+    <div class="kanban-summary">
+      <div class="summary-block">
+        <span class="summary-label">Total</span>
+        <strong vsn-bind:from="total">0</strong>
+      </div>
+      <div class="summary-block">
+        <span class="summary-label">In Progress</span>
+        <strong vsn-bind:from="progressCount">0</strong>
+      </div>
+      <div class="summary-block">
+        <span class="summary-label">Done</span>
+        <strong vsn-bind:from="doneCount">0</strong>
+      </div>
+    </div>
+  </header>
+
+  <form class="kanban-form" vsn-on:submit!prevent="submit();">
+    <input
+      class="kanban-input"
+      placeholder="Add a new card to backlog"
+      autocomplete="off"
+      vsn-bind="newTitle"
+      vsn-on:keyup.enter="submit();"
+    />
+    <select class="kanban-select" vsn-bind="newPriority">
+      <option value="low">Low</option>
+      <option value="medium">Medium</option>
+      <option value="high">High</option>
+    </select>
+    <button class="btn" type="submit">Add Card</button>
+  </form>
+
+  <div class="kanban-board">
+    <section class="kanban-column" data-status="backlog">
+      <header>
+        <h2>Backlog</h2>
+        <span class="pill" vsn-bind:from="backlogCount">0</span>
+      </header>
+      <ul class="kanban-list">
+        <template vsn-each="backlog as task">
+          <li class="kanban-card">
+            <div class="card-head">
+              <span class="card-title"></span>
+              <span class="priority"></span>
+            </div>
+            <div class="card-actions">
+              <button class="btn secondary" vsn-on:click="moveTask(task[0], 'progress');">Start</button>
+              <button class="ghost" vsn-on:click="removeTask(task[0]);">Remove</button>
+            </div>
+          </li>
+        </template>
+      </ul>
+    </section>
+
+    <section class="kanban-column" data-status="progress">
+      <header>
+        <h2>In Progress</h2>
+        <span class="pill" vsn-bind:from="progressCount">0</span>
+      </header>
+      <ul class="kanban-list">
+        <template vsn-each="progress as task">
+          <li class="kanban-card">
+            <div class="card-head">
+              <span class="card-title"></span>
+              <span class="priority"></span>
+            </div>
+            <div class="card-actions">
+              <button class="btn secondary" vsn-on:click="moveTask(task[0], 'backlog');">Back</button>
+              <button class="btn" vsn-on:click="moveTask(task[0], 'done');">Finish</button>
+            </div>
+          </li>
+        </template>
+      </ul>
+    </section>
+
+    <section class="kanban-column" data-status="done">
+      <header>
+        <h2>Done</h2>
+        <span class="pill" vsn-bind:from="doneCount">0</span>
+      </header>
+      <ul class="kanban-list">
+        <template vsn-each="done as task">
+          <li class="kanban-card">
+            <div class="card-head">
+              <span class="card-title"></span>
+              <span class="priority"></span>
+            </div>
+            <div class="card-actions">
+              <button class="btn secondary" vsn-on:click="moveTask(task[0], 'progress');">Reopen</button>
+              <button class="ghost" vsn-on:click="removeTask(task[0]);">Remove</button>
+            </div>
+          </li>
+        </template>
+      </ul>
+    </section>
+  </div>
+</section>
+
+<script type="text/vsn">
+  use localStorage as storage;
+  use JSON as json;
+  use Date as date;
+
+  behavior #kanban-app {
+    key: "vsn:kanban";
+    newTitle: "";
+    newPriority: "medium";
+    dragId: "";
+    dragFrom: "";
+    dropStatus: "";
+    tasks: [];
+    backlog: [];
+    progress: [];
+    done: [];
+    total: 0;
+    backlogCount: 0;
+    progressCount: 0;
+    doneCount: 0;
+
+    construct {
+      load();
+    }
+
+    async load() {
+      raw = storage.getItem(key);
+      tasks = raw ? json.parse(raw) : [];
+      await sync();
+    }
+
+    async save() {
+      storage.setItem(key, json.stringify(tasks));
+    }
+
+    async sync() {
+      backlog = await list.filter(tasks, (task) => task[2] == "backlog");
+      progress = await list.filter(tasks, (task) => task[2] == "progress");
+      done = await list.filter(tasks, (task) => task[2] == "done");
+      backlogCount = backlog.length;
+      progressCount = progress.length;
+      doneCount = done.length;
+      total = tasks.length;
+      await save();
+    }
+
+    submit() {
+      title = newTitle.trim();
+      return title == "" ? null : addTask(title);
+    }
+
+    async addTask(title) {
+      id = "" + date.now();
+      tasks = tasks.concat([[id, title, "backlog", newPriority]]);
+      newTitle = "";
+      newPriority = "medium";
+      await sync();
+    }
+
+    async moveTask(id, status) {
+      updated = await list.map(tasks, (task) => {
+        return task[0] == id ? [task[0], task[1], status, task[3]] : task;
+      });
+      tasks = updated;
+      await sync();
+    }
+
+    async removeTask(id) {
+      tasks = await list.filter(tasks, (task) => task[0] != id);
+      await sync();
+    }
+
+    behavior .kanban-card {
+      @data-id :< task[0];
+      @data-priority :< task[3];
+      @draggable :< "true";
+
+      on dragstart(event) {
+        root.dragId = task[0];
+        root.dragFrom = task[2];
+        event.dataTransfer && event.dataTransfer.setData("text/plain", root.dragId);
+      }
+
+      on dragend() {
+        root.dragId = "";
+        root.dragFrom = "";
+        root.dropStatus = "";
+      }
+    }
+
+    behavior .card-title {
+      @html :< task[1];
+    }
+
+    behavior .priority {
+      @html :< task[3];
+    }
+
+    behavior .kanban-column {
+      @data-status :> status;
+      @class :< (root.dropStatus == status ? "kanban-column is-drop" : "kanban-column");
+
+      on dragover(event) {
+        event.preventDefault();
+        root.dropStatus = status;
+      }
+
+      on drop(event) {
+        event.preventDefault();
+        root.dropStatus = "";
+        root.dragId == "" ? null : moveTask(root.dragId, status);
+      }
+    }
+  }
+</script>

@@ -1,0 +1,20 @@
+<section class="example-card" vsn-construct="count = 0; active = false;">
+  <h1>Counter + Toggle</h1>
+  <p>
+    A tiny example showing state, event handlers, bindings, and conditional
+    display.
+  </p>
+
+  <div class="meter">
+    <span>Count</span>
+    <strong class="count" vsn-bind:from="count">0</strong>
+  </div>
+
+  <div class="controls">
+    <button class="btn" vsn-on:click="count = count + 1;">+1</button>
+    <button class="btn secondary" vsn-on:click="count = count - 1;">-1</button>
+    <button class="btn toggle" vsn-on:click="active = !active;">Toggle</button>
+  </div>
+
+  <div class="status" vsn-show="active">Active</div>
+</section>

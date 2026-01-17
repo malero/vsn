@@ -1,0 +1,55 @@
+<nav class="nav-list">
+  <script type="text/vsn">
+    behavior #nav {
+      active: "counter-toggle";
+
+      behavior a {
+        @data-id :> id;
+        @aria-current :< (root.active == id);
+        on click() {
+          root.active = id;
+        }
+      }
+    }
+  </script>
+  <a
+    class="nav-link"
+    href="#counter-toggle"
+    data-id="counter-toggle"
+    vsn-get!trusted!load="counter-toggle.html"
+    vsn-target="#example"
+    vsn-swap="inner"
+  >
+    Counter + Toggle
+  </a>
+  <a
+    class="nav-link"
+    href="#tabs"
+    data-id="tabs"
+    vsn-get!trusted="tabs.html"
+    vsn-target="#example"
+    vsn-swap="inner"
+  >
+    Tabs
+  </a>
+  <a
+    class="nav-link"
+    href="#todo"
+    data-id="todo"
+    vsn-get!trusted="todo.html"
+    vsn-target="#example"
+    vsn-swap="inner"
+  >
+    Todo List
+  </a>
+  <a
+    class="nav-link"
+    href="#kanban"
+    data-id="kanban"
+    vsn-get!trusted="kanban.html"
+    vsn-target="#example"
+    vsn-swap="inner"
+  >
+    Kanban Board
+  </a>
+</nav>

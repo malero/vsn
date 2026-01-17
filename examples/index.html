@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>VSN.js Examples</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="app" id="examples">
+      <aside class="nav">
+        <h2 class="nav-title">Examples</h2>
+        <div
+          id="nav"
+          class="nav-inner"
+          vsn-get!trusted!load="navigation.html"
+          vsn-swap="inner"
+        ></div>
+      </aside>
+
+      <main id="example" class="example">
+        <div class="placeholder">Select an example to load it.</div>
+      </main>
+    </div>
+  <script>
+    document.addEventListener("vsn:getError", (e) => console.error("vsn:getError", e.detail?.error));
+  </script>
+    <script type="module" src="../dist/index.min.js" auto-mount></script>
+
+  </body>
+</html>
