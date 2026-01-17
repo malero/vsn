@@ -190,6 +190,11 @@ export class Lexer {
       this.next();
       return this.token(TokenType.Or, "||", start);
     }
+    if (ch === "?" && next === "?") {
+      this.next();
+      this.next();
+      return this.token(TokenType.NullishCoalesce, "??", start);
+    }
     if (ch === "|" && next === ">") {
       this.next();
       this.next();

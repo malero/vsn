@@ -435,7 +435,7 @@ export class Parser {
   }
 
   private parseTernaryExpression(): ExpressionNode {
-    let test = this.parseLogicalOrExpression();
+    let test = this.parseNullishExpression();
     this.stream.skipWhitespace();
     if (this.stream.peek()?.type !== TokenType.Question) {
       return test;
@@ -448,6 +448,21 @@ export class Parser {
     this.stream.skipWhitespace();
     const alternate = this.parseExpression();
     return new TernaryExpression(test, consequent, alternate);
+  }
+
+  private parseNullishExpression(): ExpressionNode {
+    let expr = this.parseLogicalOrExpression();
+    while (true) {
+      this.stream.skipWhitespace();
+      if (this.stream.peek()?.type !== TokenType.NullishCoalesce) {
+        break;
+      }
+      this.stream.next();
+      this.stream.skipWhitespace();
+      const right = this.parseLogicalOrExpression();
+      expr = new BinaryExpression("??", expr, right);
+    }
+    return expr;
   }
 
   private parseLogicalOrExpression(): ExpressionNode {

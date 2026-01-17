@@ -299,6 +299,10 @@ export class BinaryExpression extends BaseNode {
       const leftValue = await this.left.evaluate(context);
       return leftValue || (await this.right.evaluate(context));
     }
+    if (this.operator === "??") {
+      const leftValue = await this.left.evaluate(context);
+      return leftValue ?? (await this.right.evaluate(context));
+    }
     const left = await this.left.evaluate(context);
     const right = await this.right.evaluate(context);
     if (this.operator === "+") {

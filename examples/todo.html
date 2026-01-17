@@ -120,7 +120,7 @@
 
     behavior .chip {
       @data-filter :> value;
-      @aria-pressed :< (root.filter == value);
+      @aria-pressed :< (filter == value);
 
       on click() {
         setFilter(value);

@@ -38,7 +38,7 @@ Cascade: If a variable is not found in the local scope, it lookups the DOM tree 
 Behaviors
 Replaces class. Supports nested selectors (similar to SCSS).
 
-CSS
+CFS / Cascade Functioning Sheets
 
 <script type="text/vsn">
 behavior .card {
@@ -222,3 +222,15 @@ Conditional Blocks (Future-Proofing)
 
 22. Implementation TODOs
 - DOM helpers for refs/queries and event modifiers (Alpine-style ergonomics).
+- CFS language parity essentials:
+  - Nullish coalescing `??`.
+  - Strict equality `===` / `!==`.
+  - Multiplication/division/modulo operators.
+  - Optional chaining `?.`.
+  - Object literals and property access improvements.
+  - `let` / `const` declarations for local scope control.
+  - `if/else` and `for/while` blocks.
+  - `try/catch` for error handling.
+  - Destructuring and spread (`...`).
+  - Default/rest function params.
+  - Template literals.

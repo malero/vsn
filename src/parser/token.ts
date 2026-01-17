@@ -43,6 +43,7 @@ export enum TokenType {
   And = "And",
   Or = "Or",
   Pipe = "Pipe",
+  NullishCoalesce = "NullishCoalesce",
   Bang = "Bang",
 
   At = "At",
