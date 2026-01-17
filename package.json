@@ -1,6 +1,6 @@
 {
   "name": "vsn",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "SEO Friendly Javascript/Typescript Framework",
   "keywords": [
     "framework",
@@ -14,7 +14,7 @@
     "component",
     "web component",
     "web components",
-    "web component framework",
+    "web component framework"
   ],
   "license": "MIT",
   "type": "module",

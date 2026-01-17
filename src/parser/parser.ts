@@ -41,7 +41,9 @@ import {
   UseNode,
   IndexExpression,
   ExpressionNode,
-  AwaitExpression
+  AwaitExpression,
+  UseFlags,
+  UseFlagArgs
 } from "../ast/nodes";
 import { Lexer } from "./lexer";
 import { TokenStream } from "./token-stream";
@@ -151,10 +153,48 @@ export class Parser {
         this.stream.skipWhitespace();
         alias = this.stream.expect(TokenType.Identifier).value;
       }
+      const { flags, flagArgs } = this.parseUseFlags();
       this.stream.skipWhitespace();
       this.stream.expect(TokenType.Semicolon);
-      return new UseNode(name, alias);
+      return new UseNode(name, alias, flags, flagArgs);
     });
+  }
+
+  private parseUseFlags(): { flags: UseFlags; flagArgs: UseFlagArgs } {
+    const flags: UseFlags = {};
+    const flagArgs: UseFlagArgs = {};
+
+    while (true) {
+      this.stream.skipWhitespace();
+      if (this.stream.peek()?.type !== TokenType.Bang) {
+        break;
+      }
+      this.stream.next();
+      const name = this.stream.expect(TokenType.Identifier).value;
+      if (name !== "wait") {
+        throw new Error(`Unknown flag ${name}`);
+      }
+      flags.wait = true;
+      if (this.stream.peek()?.type === TokenType.LParen) {
+        this.stream.next();
+        this.stream.skipWhitespace();
+        const timeoutToken = this.stream.expect(TokenType.Number);
+        const timeoutMs = Number(timeoutToken.value);
+        let intervalMs: number | undefined;
+        this.stream.skipWhitespace();
+        if (this.stream.peek()?.type === TokenType.Comma) {
+          this.stream.next();
+          this.stream.skipWhitespace();
+          const intervalToken = this.stream.expect(TokenType.Number);
+          intervalMs = Number(intervalToken.value);
+          this.stream.skipWhitespace();
+        }
+        this.stream.expect(TokenType.RParen);
+        flagArgs.wait = { timeoutMs, ...(intervalMs !== undefined ? { intervalMs } : {}) };
+      }
+    }
+
+    return { flags, flagArgs };
   }
 
   private wrapErrors<T>(fn: () => T): T {

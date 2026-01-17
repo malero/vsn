@@ -129,10 +129,21 @@ declare class ProgramNode extends BaseNode {
     uses: UseNode[];
     constructor(behaviors: BehaviorNode[], uses?: UseNode[]);
 }
+interface UseFlags {
+    wait?: boolean;
+}
+interface UseFlagArgs {
+    wait?: {
+        timeoutMs?: number;
+        intervalMs?: number;
+    };
+}
 declare class UseNode extends BaseNode {
     name: string;
     alias: string;
-    constructor(name: string, alias: string);
+    flags: UseFlags;
+    flagArgs: UseFlagArgs;
+    constructor(name: string, alias: string, flags?: UseFlags, flagArgs?: UseFlagArgs);
 }
 declare class BlockNode extends BaseNode {
     statements: CFSNode[];
@@ -394,6 +405,7 @@ declare class Parser {
     private parseBehavior;
     private parseSelector;
     private parseUseStatement;
+    private parseUseFlags;
     private wrapErrors;
     private formatError;
     private getLineSnippet;
@@ -532,6 +544,7 @@ declare class Engine {
     private ignoredAdded;
     private diagnostics;
     private logger;
+    private pendingUses;
     constructor(options?: EngineOptions);
     mount(root: HTMLElement): Promise<void>;
     unmount(element: Element): void;
@@ -545,6 +558,8 @@ declare class Engine {
     };
     registerAttributeHandler(handler: AttributeHandler): void;
     private resolveGlobalPath;
+    private waitForUses;
+    private waitForUseGlobal;
     getScope(element: Element, parentScope?: Scope): Scope;
     evaluate(element: Element): void;
     private attachObserver;
@@ -580,6 +595,7 @@ declare class Engine {
     private describeElement;
     private logDiagnostic;
     private emitError;
+    private emitUseError;
     private attachOnHandler;
     private attachBehaviorOnHandler;
     private attachGetHandler;
@@ -627,4 +643,4 @@ declare const VERSION = "0.1.0";
 declare function parseCFS(source: string): ProgramNode;
 declare function autoMount(root?: HTMLElement | Document): Engine | null;
 
-export { type ArrayElement, ArrayExpression, ArrayPattern, type ArrayPatternElement, AssignmentNode, type AssignmentTarget, AwaitExpression, BaseNode, BehaviorNode, BinaryExpression, BlockNode, type CFSNode, CallExpression, type DeclarationFlagArgs, type DeclarationFlags, DeclarationNode, type DeclarationTarget, DirectiveExpression, Engine, type ExecutionContext, type ExpressionNode, ForNode, FunctionDeclarationNode, FunctionExpression, type FunctionParam, IdentifierExpression, IfNode, IndexExpression, Lexer, LiteralExpression, MemberExpression, type ObjectEntry, ObjectExpression, ObjectPattern, type ObjectPatternEntry, OnBlockNode, Parser, type PatternNode, ProgramNode, QueryExpression, RestElement, ReturnNode, SelectorNode, SpreadElement, StateBlockNode, StateEntryNode, TemplateExpression, TernaryExpression, TokenType, TryNode, UnaryExpression, UseNode, VERSION, WhileNode, autoMount, parseCFS };
+export { type ArrayElement, ArrayExpression, ArrayPattern, type ArrayPatternElement, AssignmentNode, type AssignmentTarget, AwaitExpression, BaseNode, BehaviorNode, BinaryExpression, BlockNode, type CFSNode, CallExpression, type DeclarationFlagArgs, type DeclarationFlags, DeclarationNode, type DeclarationTarget, DirectiveExpression, Engine, type ExecutionContext, type ExpressionNode, ForNode, FunctionDeclarationNode, FunctionExpression, type FunctionParam, IdentifierExpression, IfNode, IndexExpression, Lexer, LiteralExpression, MemberExpression, type ObjectEntry, ObjectExpression, ObjectPattern, type ObjectPatternEntry, OnBlockNode, Parser, type PatternNode, ProgramNode, QueryExpression, RestElement, ReturnNode, SelectorNode, SpreadElement, StateBlockNode, StateEntryNode, TemplateExpression, TernaryExpression, TokenType, TryNode, UnaryExpression, type UseFlagArgs, type UseFlags, UseNode, VERSION, WhileNode, autoMount, parseCFS };

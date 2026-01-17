@@ -513,10 +513,12 @@ var ProgramNode = class extends BaseNode {
   }
 };
 var UseNode = class extends BaseNode {
-  constructor(name, alias) {
+  constructor(name, alias, flags = {}, flagArgs = {}) {
     super("Use");
     this.name = name;
     this.alias = alias;
+    this.flags = flags;
+    this.flagArgs = flagArgs;
   }
 };
 var BlockNode = class extends BaseNode {
@@ -1460,10 +1462,45 @@ var Parser = class _Parser {
         this.stream.skipWhitespace();
         alias = this.stream.expect("Identifier" /* Identifier */).value;
       }
+      const { flags, flagArgs } = this.parseUseFlags();
       this.stream.skipWhitespace();
       this.stream.expect("Semicolon" /* Semicolon */);
-      return new UseNode(name, alias);
+      return new UseNode(name, alias, flags, flagArgs);
     });
+  }
+  parseUseFlags() {
+    const flags = {};
+    const flagArgs = {};
+    while (true) {
+      this.stream.skipWhitespace();
+      if (this.stream.peek()?.type !== "Bang" /* Bang */) {
+        break;
+      }
+      this.stream.next();
+      const name = this.stream.expect("Identifier" /* Identifier */).value;
+      if (name !== "wait") {
+        throw new Error(`Unknown flag ${name}`);
+      }
+      flags.wait = true;
+      if (this.stream.peek()?.type === "LParen" /* LParen */) {
+        this.stream.next();
+        this.stream.skipWhitespace();
+        const timeoutToken = this.stream.expect("Number" /* Number */);
+        const timeoutMs = Number(timeoutToken.value);
+        let intervalMs;
+        this.stream.skipWhitespace();
+        if (this.stream.peek()?.type === "Comma" /* Comma */) {
+          this.stream.next();
+          this.stream.skipWhitespace();
+          const intervalToken = this.stream.expect("Number" /* Number */);
+          intervalMs = Number(intervalToken.value);
+          this.stream.skipWhitespace();
+        }
+        this.stream.expect("RParen" /* RParen */);
+        flagArgs.wait = { timeoutMs, ...intervalMs !== void 0 ? { intervalMs } : {} };
+      }
+    }
+    return { flags, flagArgs };
   }
   wrapErrors(fn) {
     try {
@@ -3318,6 +3355,7 @@ var Engine = class _Engine {
   ignoredAdded = /* @__PURE__ */ new WeakMap();
   diagnostics;
   logger;
+  pendingUses = [];
   constructor(options = {}) {
     this.diagnostics = options.diagnostics ?? false;
     this.logger = options.logger ?? console;
@@ -3387,6 +3425,10 @@ var Engine = class _Engine {
   registerBehaviors(source) {
     const program = new Parser(source, { customFlags: new Set(this.flagHandlers.keys()) }).parseProgram();
     for (const use of program.uses) {
+      if (use.flags?.wait) {
+        this.pendingUses.push(this.waitForUseGlobal(use));
+        continue;
+      }
       const value = this.resolveGlobalPath(use.name);
       if (value === void 0) {
         console.warn(`vsn: global '${use.name}' not found`);
@@ -3435,6 +3477,52 @@ var Engine = class _Engine {
       value = value?.[part];
     }
     return value;
+  }
+  async waitForUses() {
+    while (this.pendingUses.length > 0) {
+      const pending = this.pendingUses;
+      this.pendingUses = [];
+      await Promise.all(pending);
+    }
+  }
+  waitForUseGlobal(use) {
+    const config = use.flagArgs?.wait ?? {};
+    const timeoutMs = config.timeoutMs ?? 1e4;
+    const initialDelayMs = config.intervalMs ?? 100;
+    const maxDelayMs = 1e3;
+    const existing = this.resolveGlobalPath(use.name);
+    if (existing !== void 0) {
+      this.registerGlobal(use.alias, existing);
+      return Promise.resolve();
+    }
+    if (timeoutMs <= 0) {
+      this.emitUseError(use.name, new Error(`vsn: global '${use.name}' not found`));
+      return Promise.resolve();
+    }
+    return new Promise((resolve) => {
+      let elapsedMs = 0;
+      let delayMs = initialDelayMs;
+      const check = () => {
+        const value = this.resolveGlobalPath(use.name);
+        if (value !== void 0) {
+          this.registerGlobal(use.alias, value);
+          resolve();
+          return;
+        }
+        if (elapsedMs >= timeoutMs) {
+          this.emitUseError(use.name, new Error(`vsn: global '${use.name}' not found`));
+          resolve();
+          return;
+        }
+        const scheduledDelay = Math.min(delayMs, timeoutMs - elapsedMs);
+        setTimeout(() => {
+          elapsedMs += scheduledDelay;
+          delayMs = Math.min(delayMs * 2, maxDelayMs);
+          check();
+        }, scheduledDelay);
+      };
+      check();
+    });
   }
   getScope(element, parentScope) {
     const existing = this.scopes.get(element);
@@ -3559,6 +3647,7 @@ var Engine = class _Engine {
     }
   }
   async applyBehaviors(root) {
+    await this.waitForUses();
     if (this.behaviorRegistry.length === 0) {
       return;
     }
@@ -3965,6 +4054,19 @@ var Engine = class _Engine {
         bubbles: true
       })
     );
+  }
+  emitUseError(name, error) {
+    const selector = `use:${name}`;
+    this.logger.warn?.("vsn:error", { error, selector });
+    const target = globalThis.document;
+    if (target && typeof target.dispatchEvent === "function") {
+      target.dispatchEvent(
+        new CustomEvent("vsn:error", {
+          detail: { error, selector },
+          bubbles: true
+        })
+      );
+    }
   }
   attachOnHandler(element, config) {
     const options = this.getListenerOptions(config.modifiers);

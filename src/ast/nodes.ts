@@ -50,8 +50,21 @@ export class ProgramNode extends BaseNode {
   }
 }
 
+export interface UseFlags {
+  wait?: boolean;
+}
+
+export interface UseFlagArgs {
+  wait?: { timeoutMs?: number; intervalMs?: number };
+}
+
 export class UseNode extends BaseNode {
-  constructor(public name: string, public alias: string) {
+  constructor(
+    public name: string,
+    public alias: string,
+    public flags: UseFlags = {},
+    public flagArgs: UseFlagArgs = {}
+  ) {
     super("Use");
   }
 }

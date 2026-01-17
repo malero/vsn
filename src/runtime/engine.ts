@@ -20,7 +20,8 @@ import {
   IfNode,
   TryNode,
   IdentifierExpression,
-  OnBlockNode
+  OnBlockNode,
+  UseNode
 } from "../ast/nodes";
 
 interface OnConfig {
@@ -135,6 +136,7 @@ export class Engine {
   private ignoredAdded = new WeakMap<Element, boolean>();
   private diagnostics: boolean;
   private logger: Partial<Pick<Console, "info" | "warn">>;
+  private pendingUses: Promise<void>[] = [];
 
   constructor(options: EngineOptions = {}) {
     this.diagnostics = options.diagnostics ?? false;
@@ -208,6 +210,10 @@ export class Engine {
   registerBehaviors(source: string): void {
     const program = new Parser(source, { customFlags: new Set(this.flagHandlers.keys()) }).parseProgram();
     for (const use of program.uses) {
+      if (use.flags?.wait) {
+        this.pendingUses.push(this.waitForUseGlobal(use));
+        continue;
+      }
       const value = this.resolveGlobalPath(use.name);
       if (value === undefined) {
         console.warn(`vsn: global '${use.name}' not found`);
@@ -262,6 +268,55 @@ export class Engine {
       value = value?.[part];
     }
     return value;
+  }
+
+  private async waitForUses(): Promise<void> {
+    while (this.pendingUses.length > 0) {
+      const pending = this.pendingUses;
+      this.pendingUses = [];
+      await Promise.all(pending);
+    }
+  }
+
+  private waitForUseGlobal(use: UseNode): Promise<void> {
+    const config = use.flagArgs?.wait ?? {};
+    const timeoutMs = config.timeoutMs ?? 10000;
+    const initialDelayMs = config.intervalMs ?? 100;
+    const maxDelayMs = 1000;
+    const existing = this.resolveGlobalPath(use.name);
+    if (existing !== undefined) {
+      this.registerGlobal(use.alias, existing);
+      return Promise.resolve();
+    }
+    if (timeoutMs <= 0) {
+      this.emitUseError(use.name, new Error(`vsn: global '${use.name}' not found`));
+      return Promise.resolve();
+    }
+
+    return new Promise((resolve) => {
+      let elapsedMs = 0;
+      let delayMs = initialDelayMs;
+      const check = () => {
+        const value = this.resolveGlobalPath(use.name);
+        if (value !== undefined) {
+          this.registerGlobal(use.alias, value);
+          resolve();
+          return;
+        }
+        if (elapsedMs >= timeoutMs) {
+          this.emitUseError(use.name, new Error(`vsn: global '${use.name}' not found`));
+          resolve();
+          return;
+        }
+        const scheduledDelay = Math.min(delayMs, timeoutMs - elapsedMs);
+        setTimeout(() => {
+          elapsedMs += scheduledDelay;
+          delayMs = Math.min(delayMs * 2, maxDelayMs);
+          check();
+        }, scheduledDelay);
+      };
+      check();
+    });
   }
 
   getScope(element: Element, parentScope?: Scope): Scope {
@@ -395,6 +450,7 @@ export class Engine {
   }
 
   private async applyBehaviors(root: Element): Promise<void> {
+    await this.waitForUses();
     if (this.behaviorRegistry.length === 0) {
       return;
     }
@@ -848,6 +904,20 @@ export class Engine {
         bubbles: true
       })
     );
+  }
+
+  private emitUseError(name: string, error: unknown): void {
+    const selector = `use:${name}`;
+    this.logger.warn?.("vsn:error", { error, selector });
+    const target = (globalThis as any).document;
+    if (target && typeof target.dispatchEvent === "function") {
+      target.dispatchEvent(
+        new CustomEvent("vsn:error", {
+          detail: { error, selector },
+          bubbles: true
+        })
+      );
+    }
   }
 
   private attachOnHandler(element: Element, config: OnConfig): void {
