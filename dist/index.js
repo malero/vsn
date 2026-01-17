@@ -4,6 +4,7 @@ var TokenType = /* @__PURE__ */ ((TokenType2) => {
   TokenType2["Identifier"] = "Identifier";
   TokenType2["Number"] = "Number";
   TokenType2["String"] = "String";
+  TokenType2["Template"] = "Template";
   TokenType2["Boolean"] = "Boolean";
   TokenType2["Null"] = "Null";
   TokenType2["Behavior"] = "Behavior";
@@ -13,6 +14,12 @@ var TokenType = /* @__PURE__ */ ((TokenType2) => {
   TokenType2["Construct"] = "Construct";
   TokenType2["Destruct"] = "Destruct";
   TokenType2["Return"] = "Return";
+  TokenType2["If"] = "If";
+  TokenType2["Else"] = "Else";
+  TokenType2["For"] = "For";
+  TokenType2["While"] = "While";
+  TokenType2["Try"] = "Try";
+  TokenType2["Catch"] = "Catch";
   TokenType2["LBrace"] = "LBrace";
   TokenType2["RBrace"] = "RBrace";
   TokenType2["LParen"] = "LParen";
@@ -22,6 +29,7 @@ var TokenType = /* @__PURE__ */ ((TokenType2) => {
   TokenType2["Colon"] = "Colon";
   TokenType2["Semicolon"] = "Semicolon";
   TokenType2["Comma"] = "Comma";
+  TokenType2["Ellipsis"] = "Ellipsis";
   TokenType2["Dot"] = "Dot";
   TokenType2["Hash"] = "Hash";
   TokenType2["Greater"] = "Greater";
@@ -30,15 +38,21 @@ var TokenType = /* @__PURE__ */ ((TokenType2) => {
   TokenType2["Minus"] = "Minus";
   TokenType2["Tilde"] = "Tilde";
   TokenType2["Star"] = "Star";
+  TokenType2["Slash"] = "Slash";
+  TokenType2["Percent"] = "Percent";
   TokenType2["Equals"] = "Equals";
   TokenType2["Arrow"] = "Arrow";
   TokenType2["DoubleEquals"] = "DoubleEquals";
+  TokenType2["TripleEquals"] = "TripleEquals";
   TokenType2["NotEquals"] = "NotEquals";
+  TokenType2["StrictNotEquals"] = "StrictNotEquals";
   TokenType2["LessEqual"] = "LessEqual";
   TokenType2["GreaterEqual"] = "GreaterEqual";
   TokenType2["And"] = "And";
   TokenType2["Or"] = "Or";
   TokenType2["Pipe"] = "Pipe";
+  TokenType2["NullishCoalesce"] = "NullishCoalesce";
+  TokenType2["OptionalChain"] = "OptionalChain";
   TokenType2["Bang"] = "Bang";
   TokenType2["At"] = "At";
   TokenType2["Dollar"] = "Dollar";
@@ -55,6 +69,12 @@ var KEYWORDS = {
   construct: "Construct" /* Construct */,
   destruct: "Destruct" /* Destruct */,
   return: "Return" /* Return */,
+  if: "If" /* If */,
+  else: "Else" /* Else */,
+  for: "For" /* For */,
+  while: "While" /* While */,
+  try: "Try" /* Try */,
+  catch: "Catch" /* Catch */,
   true: "Boolean" /* Boolean */,
   false: "Boolean" /* Boolean */,
   null: "Null" /* Null */
@@ -66,12 +86,34 @@ var Lexer = class {
   index = 0;
   line = 1;
   column = 1;
+  pendingTokens = [];
+  templateMode = false;
+  templateExpressionMode = false;
+  templateBraceDepth = 0;
   tokenize() {
     const tokens = [];
     while (!this.eof()) {
+      if (this.pendingTokens.length > 0) {
+        const pending = this.pendingTokens.shift();
+        if (pending) {
+          tokens.push(pending);
+          this.trackTemplateBrace(pending);
+          continue;
+        }
+      }
+      if (this.templateMode) {
+        const chunk = this.readTemplateChunk();
+        tokens.push(chunk);
+        continue;
+      }
       const ch = this.peek();
       if (this.isWhitespace(ch)) {
         tokens.push(this.readWhitespace());
+        continue;
+      }
+      if (ch === "`") {
+        this.next();
+        this.templateMode = true;
         continue;
       }
       if (ch === "/" && this.peek(1) === "/") {
@@ -97,6 +139,7 @@ var Lexer = class {
       const punct = this.readPunctuator();
       if (punct) {
         tokens.push(punct);
+        this.trackTemplateBrace(punct);
         continue;
       }
       throw new Error(`Unexpected character '${ch}' at ${this.line}:${this.column}`);
@@ -177,10 +220,48 @@ var Lexer = class {
     }
     throw new Error(`Unterminated string at ${start.line}:${start.column}`);
   }
+  readTemplateChunk() {
+    const start = this.position();
+    let value = "";
+    while (!this.eof()) {
+      const ch = this.peek();
+      if (ch === "`") {
+        this.next();
+        this.templateMode = false;
+        return this.token("Template" /* Template */, value, start);
+      }
+      if (ch === "$" && this.peek(1) === "{") {
+        const dollarStart = this.position();
+        this.next();
+        const braceStart = this.position();
+        this.next();
+        this.templateMode = false;
+        this.templateExpressionMode = true;
+        this.templateBraceDepth = 0;
+        this.pendingTokens.push(this.token("Dollar" /* Dollar */, "$", dollarStart));
+        this.pendingTokens.push(this.token("LBrace" /* LBrace */, "{", braceStart));
+        return this.token("Template" /* Template */, value, start);
+      }
+      if (ch === "\\") {
+        this.next();
+        const escaped = this.next();
+        value += escaped;
+        continue;
+      }
+      value += this.next();
+    }
+    throw new Error(`Unterminated template literal at ${start.line}:${start.column}`);
+  }
   readPunctuator() {
     const start = this.position();
     const ch = this.peek();
     const next = this.peek(1);
+    if (ch === "=" && next === "=" && this.peek(2) === "=") {
+      this.next();
+      this.next();
+      this.next();
+      return this.token("TripleEquals" /* TripleEquals */, "===", start);
+    }
     if (ch === "=" && next === "=") {
       this.next();
       this.next();
@@ -190,6 +271,12 @@ var Lexer = class {
       this.next();
       this.next();
       return this.token("Arrow" /* Arrow */, "=>", start);
+    }
+    if (ch === "!" && next === "=" && this.peek(2) === "=") {
+      this.next();
+      this.next();
+      this.next();
+      return this.token("StrictNotEquals" /* StrictNotEquals */, "!==", start);
     }
     if (ch === "!" && next === "=") {
       this.next();
@@ -216,10 +303,26 @@ var Lexer = class {
       this.next();
       return this.token("Or" /* Or */, "||", start);
     }
+    if (ch === "?" && next === "?") {
+      this.next();
+      this.next();
+      return this.token("NullishCoalesce" /* NullishCoalesce */, "??", start);
+    }
+    if (ch === "?" && next === ".") {
+      this.next();
+      this.next();
+      return this.token("OptionalChain" /* OptionalChain */, "?.", start);
+    }
     if (ch === "|" && next === ">") {
       this.next();
       this.next();
       return this.token("Pipe" /* Pipe */, "|>", start);
+    }
+    if (ch === "." && next === "." && this.peek(2) === ".") {
+      this.next();
+      this.next();
+      this.next();
+      return this.token("Ellipsis" /* Ellipsis */, "...", start);
     }
     const punctMap = {
       "{": "LBrace" /* LBrace */,
@@ -239,6 +342,8 @@ var Lexer = class {
       "-": "Minus" /* Minus */,
       "~": "Tilde" /* Tilde */,
       "*": "Star" /* Star */,
+      "/": "Slash" /* Slash */,
+      "%": "Percent" /* Percent */,
       "=": "Equals" /* Equals */,
       "!": "Bang" /* Bang */,
       "@": "At" /* At */,
@@ -251,6 +356,20 @@ var Lexer = class {
     }
     this.next();
     return this.token(type, ch, start);
+  }
+  trackTemplateBrace(token) {
+    if (!this.templateExpressionMode) {
+      return;
+    }
+    if (token.type === "LBrace" /* LBrace */) {
+      this.templateBraceDepth += 1;
+    } else if (token.type === "RBrace" /* RBrace */) {
+      this.templateBraceDepth -= 1;
+      if (this.templateBraceDepth <= 0) {
+        this.templateExpressionMode = false;
+        this.templateMode = true;
+      }
+    }
   }
   token(type, value, start) {
     return {
@@ -305,6 +424,19 @@ var BaseNode = class {
     return void 0;
   }
 };
+async function evaluateWithChildScope(context, block) {
+  const scope = context.scope;
+  if (!scope || !scope.createChild) {
+    return block.evaluate(context);
+  }
+  const previousScope = context.scope;
+  context.scope = scope.createChild();
+  try {
+    return await block.evaluate(context);
+  } finally {
+    context.scope = previousScope;
+  }
+}
 var ProgramNode = class extends BaseNode {
   constructor(behaviors, uses = []) {
     super("Program");
@@ -381,16 +513,59 @@ var AssignmentNode = class extends BaseNode {
     if (!context.scope || !context.scope.setPath) {
       return void 0;
     }
-    let targetPath;
-    if (this.target instanceof IdentifierExpression) {
-      targetPath = this.target.name;
-    }
-    if (!targetPath) {
-      return void 0;
-    }
     const value = await this.value.evaluate(context);
-    context.scope.setPath(targetPath, value);
+    if (this.target instanceof IdentifierExpression && this.target.name.startsWith("root.") && context.rootScope) {
+      const path = this.target.name.slice("root.".length);
+      context.rootScope.setPath?.(`self.${path}`, value);
+      return value;
+    }
+    this.assignTarget(context, this.target, value);
     return value;
+  }
+  assignTarget(context, target, value) {
+    if (!context.scope || !context.scope.setPath) {
+      return;
+    }
+    if (target instanceof IdentifierExpression) {
+      context.scope.setPath(target.name, value);
+      return;
+    }
+    if (target instanceof ArrayPattern) {
+      const source = Array.isArray(value) ? value : [];
+      let index = 0;
+      for (const element of target.elements) {
+        if (element instanceof RestElement) {
+          context.scope.setPath(element.target.name, source.slice(index));
+          return;
+        }
+        if (element === null) {
+          index += 1;
+          continue;
+        }
+        this.assignTarget(context, element, source[index]);
+        index += 1;
+      }
+      return;
+    }
+    if (target instanceof ObjectPattern) {
+      const source = value && typeof value === "object" ? value : {};
+      const usedKeys = /* @__PURE__ */ new Set();
+      for (const entry of target.entries) {
+        if ("rest" in entry) {
+          const rest = {};
+          for (const key of Object.keys(source)) {
+            if (!usedKeys.has(key)) {
+              rest[key] = source[key];
+            }
+          }
+          context.scope.setPath(entry.rest.name, rest);
+          continue;
+        }
+        usedKeys.add(entry.key);
+        this.assignTarget(context, entry.target, source[entry.key]);
+      }
+      return;
+    }
   }
 };
 var ReturnNode = class extends BaseNode {
@@ -405,6 +580,113 @@ var ReturnNode = class extends BaseNode {
     context.returnValue = this.value ? await this.value.evaluate(context) : void 0;
     context.returning = true;
     return context.returnValue;
+  }
+};
+var IfNode = class extends BaseNode {
+  constructor(test, consequent, alternate) {
+    super("If");
+    this.test = test;
+    this.consequent = consequent;
+    this.alternate = alternate;
+  }
+  async evaluate(context) {
+    const condition = await this.test.evaluate(context);
+    if (condition) {
+      return evaluateWithChildScope(context, this.consequent);
+    }
+    if (this.alternate) {
+      return evaluateWithChildScope(context, this.alternate);
+    }
+  }
+};
+var WhileNode = class extends BaseNode {
+  constructor(test, body) {
+    super("While");
+    this.test = test;
+    this.body = body;
+  }
+  async evaluate(context) {
+    const previousScope = context.scope;
+    if (context.scope?.createChild) {
+      context.scope = context.scope.createChild();
+    }
+    try {
+      while (await this.test.evaluate(context)) {
+        await this.body.evaluate(context);
+        if (context.returning) {
+          break;
+        }
+      }
+    } finally {
+      context.scope = previousScope;
+    }
+  }
+};
+var ForNode = class extends BaseNode {
+  constructor(init, test, update, body) {
+    super("For");
+    this.init = init;
+    this.test = test;
+    this.update = update;
+    this.body = body;
+  }
+  async evaluate(context) {
+    if (this.init) {
+      await this.init.evaluate(context);
+    }
+    const previousScope = context.scope;
+    let bodyScope = context.scope;
+    if (context.scope?.createChild) {
+      bodyScope = context.scope.createChild();
+    }
+    while (this.test ? await this.test.evaluate(context) : true) {
+      context.scope = bodyScope;
+      await this.body.evaluate(context);
+      if (context.returning) {
+        break;
+      }
+      context.scope = previousScope;
+      if (this.update) {
+        await this.update.evaluate(context);
+      }
+    }
+    context.scope = previousScope;
+  }
+};
+var TryNode = class extends BaseNode {
+  constructor(body, errorName, handler) {
+    super("Try");
+    this.body = body;
+    this.errorName = errorName;
+    this.handler = handler;
+  }
+  async evaluate(context) {
+    try {
+      return await evaluateWithChildScope(context, this.body);
+    } catch (error) {
+      if (context.returning) {
+        return context.returnValue;
+      }
+      const previousScope = context.scope;
+      let handlerScope = context.scope;
+      if (context.scope?.createChild) {
+        handlerScope = context.scope.createChild();
+      }
+      context.scope = handlerScope;
+      const scope = context.scope;
+      let previous = void 0;
+      if (scope) {
+        previous = scope.getPath(this.errorName);
+        if (scope.setPath) {
+          scope.setPath(`self.${this.errorName}`, error);
+        }
+      }
+      await this.handler.evaluate(context);
+      if (scope && scope.setPath && handlerScope === previousScope) {
+        scope.setPath(this.errorName, previous);
+      }
+      context.scope = previousScope;
+    }
   }
 };
 var FunctionDeclarationNode = class extends BaseNode {
@@ -428,37 +710,63 @@ var FunctionExpression = class extends BaseNode {
     const globals = context.globals;
     const element = context.element;
     return async (...args) => {
+      const activeScope = scope?.createChild ? scope.createChild() : scope;
       const inner = {
-        ...scope ? { scope } : {},
+        scope: activeScope,
+        rootScope: context.rootScope,
         ...globals ? { globals } : {},
         ...element ? { element } : {},
         returnValue: void 0,
         returning: false
       };
-      if (scope) {
+      if (activeScope) {
         const previousValues = /* @__PURE__ */ new Map();
-        for (let i = 0; i < this.params.length; i += 1) {
-          const name = this.params[i];
-          if (!name) {
-            continue;
-          }
-          previousValues.set(name, scope.getPath(name));
-          if (scope.setPath) {
-            scope.setPath(name, args[i]);
-          }
-        }
+        await this.applyParams(activeScope, previousValues, inner, args);
         await this.body.evaluate(inner);
-        for (const name of this.params) {
-          if (!name || !scope.setPath) {
-            continue;
-          }
-          scope.setPath(name, previousValues.get(name));
+        if (activeScope === scope) {
+          this.restoreParams(activeScope, previousValues);
         }
       } else {
         await this.body.evaluate(inner);
       }
       return inner.returnValue;
     };
+  }
+  async applyParams(scope, previousValues, context, args) {
+    if (!scope || !scope.setPath) {
+      return;
+    }
+    let argIndex = 0;
+    for (const param of this.params) {
+      const name = param.name;
+      if (!name) {
+        continue;
+      }
+      previousValues.set(name, scope.getPath(name));
+      if (param.rest) {
+        scope.setPath(`self.${name}`, args.slice(argIndex));
+        argIndex = args.length;
+        continue;
+      }
+      let value = args[argIndex];
+      if (value === void 0 && param.defaultValue) {
+        value = await param.defaultValue.evaluate(context);
+      }
+      scope.setPath(`self.${name}`, value);
+      argIndex += 1;
+    }
+  }
+  restoreParams(scope, previousValues) {
+    if (!scope || !scope.setPath) {
+      return;
+    }
+    for (const param of this.params) {
+      const name = param.name;
+      if (!name) {
+        continue;
+      }
+      scope.setPath(name, previousValues.get(name));
+    }
   }
 };
 var DeclarationNode = class extends BaseNode {
@@ -477,6 +785,10 @@ var IdentifierExpression = class extends BaseNode {
     this.name = name;
   }
   async evaluate(context) {
+    if (this.name.startsWith("root.") && context.rootScope) {
+      const path = this.name.slice("root.".length);
+      return context.rootScope.getPath(`self.${path}`);
+    }
     if (context.scope) {
       const value = context.scope.getPath(this.name);
       const root = this.name.split(".")[0];
@@ -488,6 +800,30 @@ var IdentifierExpression = class extends BaseNode {
     return context.globals ? context.globals[this.name] : void 0;
   }
 };
+var SpreadElement = class extends BaseNode {
+  constructor(value) {
+    super("SpreadElement");
+    this.value = value;
+  }
+};
+var RestElement = class extends BaseNode {
+  constructor(target) {
+    super("RestElement");
+    this.target = target;
+  }
+};
+var ArrayPattern = class extends BaseNode {
+  constructor(elements) {
+    super("ArrayPattern");
+    this.elements = elements;
+  }
+};
+var ObjectPattern = class extends BaseNode {
+  constructor(entries) {
+    super("ObjectPattern");
+    this.entries = entries;
+  }
+};
 var LiteralExpression = class extends BaseNode {
   constructor(value) {
     super("Literal");
@@ -495,6 +831,20 @@ var LiteralExpression = class extends BaseNode {
   }
   async evaluate() {
     return this.value;
+  }
+};
+var TemplateExpression = class extends BaseNode {
+  constructor(parts) {
+    super("TemplateExpression");
+    this.parts = parts;
+  }
+  async evaluate(context) {
+    let result = "";
+    for (const part of this.parts) {
+      const value = await part.evaluate(context);
+      result += value == null ? "" : String(value);
+    }
+    return result;
   }
 };
 var UnaryExpression = class extends BaseNode {
@@ -530,6 +880,10 @@ var BinaryExpression = class extends BaseNode {
       const leftValue = await this.left.evaluate(context);
       return leftValue || await this.right.evaluate(context);
     }
+    if (this.operator === "??") {
+      const leftValue = await this.left.evaluate(context);
+      return leftValue ?? await this.right.evaluate(context);
+    }
     const left = await this.left.evaluate(context);
     const right = await this.right.evaluate(context);
     if (this.operator === "+") {
@@ -538,11 +892,26 @@ var BinaryExpression = class extends BaseNode {
     if (this.operator === "-") {
       return left - right;
     }
+    if (this.operator === "*") {
+      return left * right;
+    }
+    if (this.operator === "/") {
+      return left / right;
+    }
+    if (this.operator === "%") {
+      return left % right;
+    }
     if (this.operator === "==") {
       return left == right;
     }
     if (this.operator === "!=") {
       return left != right;
+    }
+    if (this.operator === "===") {
+      return left === right;
+    }
+    if (this.operator === "!==") {
+      return left !== right;
     }
     if (this.operator === "<") {
       return left < right;
@@ -575,10 +944,11 @@ var TernaryExpression = class extends BaseNode {
   }
 };
 var MemberExpression = class _MemberExpression extends BaseNode {
-  constructor(target, property) {
+  constructor(target, property, optional = false) {
     super("MemberExpression");
     this.target = target;
     this.property = property;
+    this.optional = optional;
   }
   async evaluate(context) {
     const resolved = await this.resolve(context);
@@ -598,9 +968,9 @@ var MemberExpression = class _MemberExpression extends BaseNode {
     }
     const target = await this.target.evaluate(context);
     if (target == null) {
-      return { value: void 0, target };
+      return { value: void 0, target, optional: this.optional };
     }
-    return { value: target[this.property], target };
+    return { value: target[this.property], target, optional: this.optional };
   }
   getIdentifierPath() {
     const targetPath = this.getTargetIdentifierPath();
@@ -628,6 +998,13 @@ var MemberExpression = class _MemberExpression extends BaseNode {
     if (!context.scope) {
       return void 0;
     }
+    if (path.path.startsWith("root.") && context.rootScope) {
+      const localPath = path.path.slice("root.".length);
+      const value2 = context.rootScope.getPath(`self.${localPath}`);
+      const targetPath2 = localPath.split(".").slice(0, -1).join(".");
+      const target2 = targetPath2 ? context.rootScope.getPath(`self.${targetPath2}`) : context.rootScope;
+      return { value: value2, target: target2, optional: this.optional };
+    }
     const value = context.scope.getPath(path.path);
     const explicit = path.path.startsWith("parent.") || path.path.startsWith("root.") || path.path.startsWith("self.");
     if (!explicit && value === void 0 && !context.scope.hasKey?.(path.root)) {
@@ -635,7 +1012,7 @@ var MemberExpression = class _MemberExpression extends BaseNode {
     }
     const targetPath = this.getTargetPath(path.path);
     const target = targetPath ? context.scope.getPath(targetPath) : void 0;
-    return { value, target };
+    return { value, target, optional: this.optional };
   }
   resolveFromGlobals(context, path) {
     const globals = context.globals ?? {};
@@ -649,11 +1026,11 @@ var MemberExpression = class _MemberExpression extends BaseNode {
       parent = value;
       const part = parts[i];
       if (!part) {
-        return { value: void 0, target: parent };
+        return { value: void 0, target: parent, optional: this.optional };
       }
       value = value?.[part];
     }
-    return { value, target: parent };
+    return { value, target: parent, optional: this.optional };
   }
   getTargetPath(path) {
     const parts = path.split(".");
@@ -732,9 +1109,49 @@ var ArrayExpression = class extends BaseNode {
   async evaluate(context) {
     const values = [];
     for (const element of this.elements) {
+      if (element instanceof SpreadElement) {
+        const spreadValue = await element.value.evaluate(context);
+        if (spreadValue == null) {
+          continue;
+        }
+        const iterator = spreadValue[Symbol.iterator];
+        if (typeof iterator === "function") {
+          for (const entry of spreadValue) {
+            values.push(entry);
+          }
+        } else {
+          values.push(spreadValue);
+        }
+        continue;
+      }
       values.push(await element.evaluate(context));
     }
     return values;
+  }
+};
+var ObjectExpression = class extends BaseNode {
+  constructor(entries) {
+    super("ObjectExpression");
+    this.entries = entries;
+  }
+  async evaluate(context) {
+    const result = {};
+    for (const entry of this.entries) {
+      if ("spread" in entry) {
+        const spreadValue = await entry.spread.evaluate(context);
+        if (spreadValue != null) {
+          Object.assign(result, spreadValue);
+        }
+        continue;
+      }
+      if ("computed" in entry && entry.computed) {
+        const keyValue = await entry.keyExpr.evaluate(context);
+        result[String(keyValue)] = await entry.value.evaluate(context);
+      } else {
+        result[entry.key] = await entry.value.evaluate(context);
+      }
+    }
+    return result;
   }
 };
 var IndexExpression = class extends BaseNode {
@@ -1093,6 +1510,18 @@ ${caret}`;
     if (allowBlocks && next.type === "On" /* On */) {
       return this.parseOnBlock();
     }
+    if (allowBlocks && next.type === "If" /* If */) {
+      return this.parseIfBlock();
+    }
+    if (allowBlocks && next.type === "For" /* For */) {
+      return this.parseForBlock();
+    }
+    if (allowBlocks && next.type === "While" /* While */) {
+      return this.parseWhileBlock();
+    }
+    if (allowBlocks && next.type === "Try" /* Try */) {
+      return this.parseTryBlock();
+    }
     if (allowBlocks && next.type === "Construct" /* Construct */) {
       return this.parseConstructBlock();
     }
@@ -1239,7 +1668,7 @@ ${caret}`;
     throw new Error("Pipe operator requires a function call");
   }
   parseTernaryExpression() {
-    let test = this.parseLogicalOrExpression();
+    let test = this.parseNullishExpression();
     this.stream.skipWhitespace();
     if (this.stream.peek()?.type !== "Question" /* Question */) {
       return test;
@@ -1252,6 +1681,20 @@ ${caret}`;
     this.stream.skipWhitespace();
     const alternate = this.parseExpression();
     return new TernaryExpression(test, consequent, alternate);
+  }
+  parseNullishExpression() {
+    let expr = this.parseLogicalOrExpression();
+    while (true) {
+      this.stream.skipWhitespace();
+      if (this.stream.peek()?.type !== "NullishCoalesce" /* NullishCoalesce */) {
+        break;
+      }
+      this.stream.next();
+      this.stream.skipWhitespace();
+      const right = this.parseLogicalOrExpression();
+      expr = new BinaryExpression("??", expr, right);
+    }
+    return expr;
   }
   parseLogicalOrExpression() {
     let left = this.parseLogicalAndExpression();
@@ -1292,7 +1735,7 @@ ${caret}`;
     this.stream.skipWhitespace();
     while (true) {
       const next = this.stream.peekNonWhitespace(0);
-      if (!next || next.type !== "DoubleEquals" /* DoubleEquals */ && next.type !== "NotEquals" /* NotEquals */) {
+      if (!next || next.type !== "DoubleEquals" /* DoubleEquals */ && next.type !== "NotEquals" /* NotEquals */ && next.type !== "TripleEquals" /* TripleEquals */ && next.type !== "StrictNotEquals" /* StrictNotEquals */) {
         break;
       }
       this.stream.skipWhitespace();
@@ -1300,7 +1743,15 @@ ${caret}`;
       this.stream.skipWhitespace();
       const right = this.parseComparisonExpression();
       this.stream.skipWhitespace();
-      left = new BinaryExpression(op.type === "DoubleEquals" /* DoubleEquals */ ? "==" : "!=", left, right);
+      let operator = "==";
+      if (op.type === "NotEquals" /* NotEquals */) {
+        operator = "!=";
+      } else if (op.type === "TripleEquals" /* TripleEquals */) {
+        operator = "===";
+      } else if (op.type === "StrictNotEquals" /* StrictNotEquals */) {
+        operator = "!==";
+      }
+      left = new BinaryExpression(operator, left, right);
     }
     return left;
   }
@@ -1332,8 +1783,34 @@ ${caret}`;
     }
     return left;
   }
-  parseAdditiveExpression() {
+  parseMultiplicativeExpression() {
     let left = this.parseUnaryExpression();
+    this.stream.skipWhitespace();
+    while (true) {
+      const next = this.stream.peekNonWhitespace(0);
+      if (!next) {
+        break;
+      }
+      if (next.type !== "Star" /* Star */ && next.type !== "Slash" /* Slash */ && next.type !== "Percent" /* Percent */) {
+        break;
+      }
+      this.stream.skipWhitespace();
+      const op = this.stream.next();
+      this.stream.skipWhitespace();
+      const right = this.parseUnaryExpression();
+      this.stream.skipWhitespace();
+      let operator = "*";
+      if (op.type === "Slash" /* Slash */) {
+        operator = "/";
+      } else if (op.type === "Percent" /* Percent */) {
+        operator = "%";
+      }
+      left = new BinaryExpression(operator, left, right);
+    }
+    return left;
+  }
+  parseAdditiveExpression() {
+    let left = this.parseMultiplicativeExpression();
     this.stream.skipWhitespace();
     while (true) {
       const next = this.stream.peekNonWhitespace(0);
@@ -1343,7 +1820,7 @@ ${caret}`;
       this.stream.skipWhitespace();
       const op = this.stream.next();
       this.stream.skipWhitespace();
-      const right = this.parseUnaryExpression();
+      const right = this.parseMultiplicativeExpression();
       this.stream.skipWhitespace();
       left = new BinaryExpression(op.type === "Plus" /* Plus */ ? "+" : "-", left, right);
     }
@@ -1408,6 +1885,48 @@ ${caret}`;
         expr = new CallExpression(expr, args);
         continue;
       }
+      if (next.type === "OptionalChain" /* OptionalChain */) {
+        this.stream.next();
+        this.stream.skipWhitespace();
+        const chained = this.stream.peek();
+        if (!chained) {
+          throw new Error("Expected property or call after ?.");
+        }
+        if (chained.type === "LParen" /* LParen */) {
+          this.stream.next();
+          const args = [];
+          while (true) {
+            this.stream.skipWhitespace();
+            const argToken = this.stream.peek();
+            if (!argToken) {
+              throw new Error("Unterminated call expression");
+            }
+            if (argToken.type === "RParen" /* RParen */) {
+              this.stream.next();
+              break;
+            }
+            args.push(this.parseExpression());
+            this.stream.skipWhitespace();
+            if (this.stream.peek()?.type === "Comma" /* Comma */) {
+              this.stream.next();
+              continue;
+            }
+            if (this.stream.peek()?.type === "RParen" /* RParen */) {
+              this.stream.next();
+              break;
+            }
+            throw new Error("Expected ',' or ')' in call arguments");
+          }
+          expr = new CallExpression(expr, args);
+          continue;
+        }
+        if (chained.type === "Identifier" /* Identifier */) {
+          const name = this.stream.next();
+          expr = new MemberExpression(expr, name.value, true);
+          continue;
+        }
+        throw new Error("Expected property or call after ?.");
+      }
       if (next.type === "Dot" /* Dot */) {
         this.stream.next();
         const name = this.stream.expect("Identifier" /* Identifier */);
@@ -1445,6 +1964,9 @@ ${caret}`;
     if (token.type === "LBracket" /* LBracket */) {
       return this.parseArrayExpression();
     }
+    if (token.type === "LBrace" /* LBrace */) {
+      return this.parseObjectExpression();
+    }
     if (token.type === "LParen" /* LParen */) {
       if (this.isArrowFunctionStart()) {
         return this.parseArrowFunctionExpression();
@@ -1476,6 +1998,9 @@ ${caret}`;
     if (token.type === "String" /* String */) {
       return new LiteralExpression(this.stream.next().value);
     }
+    if (token.type === "Template" /* Template */) {
+      return this.parseTemplateExpression();
+    }
     throw new Error(`Unsupported expression token ${token.type}`);
   }
   parseArrayExpression() {
@@ -1491,7 +2016,14 @@ ${caret}`;
         this.stream.next();
         break;
       }
-      elements.push(this.parseExpression());
+      if (next.type === "Ellipsis" /* Ellipsis */) {
+        this.stream.next();
+        this.stream.skipWhitespace();
+        const value = this.parseExpression();
+        elements.push(new SpreadElement(value));
+      } else {
+        elements.push(this.parseExpression());
+      }
       this.stream.skipWhitespace();
       if (this.stream.peek()?.type === "Comma" /* Comma */) {
         this.stream.next();
@@ -1509,6 +2041,107 @@ ${caret}`;
       throw new Error("Expected ',' or ']' in array literal");
     }
     return new ArrayExpression(elements);
+  }
+  parseTemplateExpression() {
+    const parts = [];
+    while (true) {
+      const token = this.stream.peek();
+      if (!token) {
+        throw new Error("Unterminated template literal");
+      }
+      if (token.type !== "Template" /* Template */) {
+        throw new Error("Expected template literal");
+      }
+      const literal = this.stream.next().value;
+      if (literal) {
+        parts.push(new LiteralExpression(literal));
+      }
+      const next = this.stream.peek();
+      if (!next || next.type !== "Dollar" /* Dollar */) {
+        break;
+      }
+      this.stream.next();
+      this.stream.expect("LBrace" /* LBrace */);
+      this.stream.skipWhitespace();
+      const expr = this.parseExpression();
+      this.stream.skipWhitespace();
+      this.stream.expect("RBrace" /* RBrace */);
+      parts.push(expr);
+    }
+    return new TemplateExpression(parts);
+  }
+  parseObjectExpression() {
+    this.stream.expect("LBrace" /* LBrace */);
+    const entries = [];
+    while (true) {
+      this.stream.skipWhitespace();
+      const next = this.stream.peek();
+      if (!next) {
+        throw new Error("Unterminated object literal");
+      }
+      if (next.type === "RBrace" /* RBrace */) {
+        this.stream.next();
+        break;
+      }
+      let value;
+      let entry;
+      if (next.type === "Ellipsis" /* Ellipsis */) {
+        this.stream.next();
+        this.stream.skipWhitespace();
+        entry = { spread: this.parseExpression() };
+      } else if (next.type === "LBracket" /* LBracket */) {
+        this.stream.next();
+        this.stream.skipWhitespace();
+        const keyExpr = this.parseExpression();
+        this.stream.skipWhitespace();
+        this.stream.expect("RBracket" /* RBracket */);
+        this.stream.skipWhitespace();
+        this.stream.expect("Colon" /* Colon */);
+        this.stream.skipWhitespace();
+        value = this.parseExpression();
+        entry = { keyExpr, value, computed: true };
+      } else if (next.type === "Identifier" /* Identifier */) {
+        const name = this.stream.next().value;
+        this.stream.skipWhitespace();
+        if (this.stream.peek()?.type === "Colon" /* Colon */) {
+          this.stream.next();
+          this.stream.skipWhitespace();
+          value = this.parseExpression();
+        } else {
+          value = new IdentifierExpression(name);
+        }
+        entry = { key: name, value };
+      } else if (next.type === "String" /* String */) {
+        const key = this.stream.next().value;
+        this.stream.skipWhitespace();
+        this.stream.expect("Colon" /* Colon */);
+        this.stream.skipWhitespace();
+        value = this.parseExpression();
+        entry = { key, value };
+      } else {
+        throw new Error(`Unexpected token in object literal: ${next.type}`);
+      }
+      if (!entry) {
+        throw new Error("Invalid object literal entry");
+      }
+      entries.push(entry);
+      this.stream.skipWhitespace();
+      if (this.stream.peek()?.type === "Comma" /* Comma */) {
+        this.stream.next();
+        this.stream.skipWhitespace();
+        if (this.stream.peek()?.type === "RBrace" /* RBrace */) {
+          this.stream.next();
+          break;
+        }
+        continue;
+      }
+      if (this.stream.peek()?.type === "RBrace" /* RBrace */) {
+        this.stream.next();
+        break;
+      }
+      throw new Error("Expected ',' or '}' in object literal");
+    }
+    return new ObjectExpression(entries);
   }
   consumeStatementTerminator() {
     this.stream.skipWhitespace();
@@ -1573,10 +2206,154 @@ ${caret}`;
       const name = this.stream.expect("Identifier" /* Identifier */);
       return new DirectiveExpression(kind, name.value);
     }
+    if (token.type === "LBracket" /* LBracket */) {
+      return this.parseArrayPattern();
+    }
+    if (token.type === "LBrace" /* LBrace */) {
+      return this.parseObjectPattern();
+    }
     if (token.type === "Identifier" /* Identifier */) {
       return new IdentifierExpression(this.parseIdentifierPath());
     }
     throw new Error(`Invalid assignment target ${token.type}`);
+  }
+  parseArrayPattern() {
+    this.stream.expect("LBracket" /* LBracket */);
+    const elements = [];
+    let sawRest = false;
+    while (true) {
+      this.stream.skipWhitespace();
+      const next = this.stream.peek();
+      if (!next) {
+        throw new Error("Unterminated array pattern");
+      }
+      if (next.type === "RBracket" /* RBracket */) {
+        this.stream.next();
+        break;
+      }
+      if (next.type === "Comma" /* Comma */) {
+        this.stream.next();
+        elements.push(null);
+        continue;
+      }
+      if (next.type === "Ellipsis" /* Ellipsis */) {
+        if (sawRest) {
+          throw new Error("Array patterns can only include one rest element");
+        }
+        this.stream.next();
+        this.stream.skipWhitespace();
+        const name = this.stream.expect("Identifier" /* Identifier */);
+        elements.push(new RestElement(new IdentifierExpression(name.value)));
+        sawRest = true;
+      } else if (next.type === "LBracket" /* LBracket */) {
+        elements.push(this.parseArrayPattern());
+      } else if (next.type === "LBrace" /* LBrace */) {
+        elements.push(this.parseObjectPattern());
+      } else if (next.type === "Identifier" /* Identifier */) {
+        elements.push(new IdentifierExpression(this.parseIdentifierPath()));
+      } else {
+        throw new Error(`Unexpected token in array pattern: ${next.type}`);
+      }
+      this.stream.skipWhitespace();
+      if (this.stream.peek()?.type === "Comma" /* Comma */) {
+        this.stream.next();
+        continue;
+      }
+      if (this.stream.peek()?.type === "RBracket" /* RBracket */) {
+        this.stream.next();
+        break;
+      }
+      throw new Error("Expected ',' or ']' in array pattern");
+    }
+    if (sawRest) {
+      const last = elements[elements.length - 1];
+      if (!(last instanceof RestElement)) {
+        throw new Error("Rest element must be last in array pattern");
+      }
+    }
+    return new ArrayPattern(elements);
+  }
+  parseObjectPattern() {
+    this.stream.expect("LBrace" /* LBrace */);
+    const entries = [];
+    let rest;
+    while (true) {
+      this.stream.skipWhitespace();
+      const next = this.stream.peek();
+      if (!next) {
+        throw new Error("Unterminated object pattern");
+      }
+      if (next.type === "RBrace" /* RBrace */) {
+        this.stream.next();
+        break;
+      }
+      if (next.type === "Ellipsis" /* Ellipsis */) {
+        if (rest) {
+          throw new Error("Object patterns can only include one rest element");
+        }
+        this.stream.next();
+        this.stream.skipWhitespace();
+        const name = this.stream.expect("Identifier" /* Identifier */);
+        rest = new IdentifierExpression(name.value);
+        this.stream.skipWhitespace();
+        if (this.stream.peek()?.type === "Comma" /* Comma */) {
+          this.stream.next();
+          this.stream.skipWhitespace();
+        }
+        if (this.stream.peek()?.type !== "RBrace" /* RBrace */) {
+          throw new Error("Rest element must be last in object pattern");
+        }
+        this.stream.next();
+        break;
+      } else if (next.type === "Identifier" /* Identifier */ || next.type === "String" /* String */) {
+        const keyToken = this.stream.next();
+        const key = keyToken.value;
+        this.stream.skipWhitespace();
+        let target;
+        if (this.stream.peek()?.type === "Colon" /* Colon */) {
+          this.stream.next();
+          this.stream.skipWhitespace();
+          const valueToken = this.stream.peek();
+          if (!valueToken) {
+            throw new Error("Expected object pattern target");
+          }
+          if (valueToken.type === "LBracket" /* LBracket */) {
+            target = this.parseArrayPattern();
+          } else if (valueToken.type === "LBrace" /* LBrace */) {
+            target = this.parseObjectPattern();
+          } else if (valueToken.type === "Identifier" /* Identifier */) {
+            target = new IdentifierExpression(this.parseIdentifierPath());
+          } else {
+            throw new Error(`Unexpected token in object pattern: ${valueToken.type}`);
+          }
+        } else {
+          target = new IdentifierExpression(key);
+        }
+        entries.push({ key, target });
+      } else {
+        throw new Error(`Unexpected token in object pattern: ${next.type}`);
+      }
+      this.stream.skipWhitespace();
+      if (this.stream.peek()?.type === "Comma" /* Comma */) {
+        this.stream.next();
+        this.stream.skipWhitespace();
+        if (this.stream.peek()?.type === "RBrace" /* RBrace */) {
+          this.stream.next();
+          break;
+        }
+        continue;
+      }
+      if (this.stream.peek()?.type === "RBrace" /* RBrace */) {
+        this.stream.next();
+        break;
+      }
+      throw new Error("Expected ',' or '}' in object pattern");
+    }
+    const patternEntries = rest ? [...entries, { rest }] : entries;
+    if (rest && entries.length === 0) {
+      return new ObjectPattern([{ rest }]);
+    }
+    return new ObjectPattern(patternEntries);
   }
   parseDeclaration() {
     const target = this.parseDeclarationTarget();
@@ -1722,6 +2499,25 @@ ${caret}`;
       const third = this.stream.peekNonWhitespace(2);
       return second?.type === "Identifier" /* Identifier */ && third?.type === "Equals" /* Equals */;
     }
+    if (first.type === "LBrace" /* LBrace */ || first.type === "LBracket" /* LBracket */) {
+      const stack = [];
+      let index = 0;
+      while (true) {
+        const token = this.stream.peekNonWhitespace(index);
+        if (!token) {
+          return false;
+        }
+        if (token.type === "LBrace" /* LBrace */ || token.type === "LBracket" /* LBracket */) {
+          stack.push(token.type);
+        } else if (token.type === "RBrace" /* RBrace */ || token.type === "RBracket" /* RBracket */) {
+          stack.pop();
+          if (stack.length === 0) {
+            return this.stream.peekNonWhitespace(index + 1)?.type === "Equals" /* Equals */;
+          }
+        }
+        index += 1;
+      }
+    }
     return false;
   }
   isCallStart() {
@@ -1743,7 +2539,7 @@ ${caret}`;
     if (first.type === "Identifier" /* Identifier */) {
       return true;
     }
-    return first.type === "Number" /* Number */ || first.type === "String" /* String */ || first.type === "Boolean" /* Boolean */ || first.type === "Null" /* Null */ || first.type === "LParen" /* LParen */ || first.type === "LBracket" /* LBracket */ || first.type === "At" /* At */ || first.type === "Dollar" /* Dollar */ || first.type === "Question" /* Question */ || first.type === "Bang" /* Bang */ || first.type === "Minus" /* Minus */;
+    return first.type === "Number" /* Number */ || first.type === "String" /* String */ || first.type === "Boolean" /* Boolean */ || first.type === "Null" /* Null */ || first.type === "LParen" /* LParen */ || first.type === "LBracket" /* LBracket */ || first.type === "LBrace" /* LBrace */ || first.type === "At" /* At */ || first.type === "Dollar" /* Dollar */ || first.type === "Question" /* Question */ || first.type === "Bang" /* Bang */ || first.type === "Minus" /* Minus */;
   }
   isFunctionDeclarationStart() {
     const first = this.stream.peekNonWhitespace(0);
@@ -1877,6 +2673,96 @@ ${caret}`;
     this.consumeStatementTerminator();
     return expr;
   }
+  parseIfBlock() {
+    this.stream.expect("If" /* If */);
+    this.stream.skipWhitespace();
+    this.stream.expect("LParen" /* LParen */);
+    this.stream.skipWhitespace();
+    const test = this.parseExpression();
+    this.stream.skipWhitespace();
+    this.stream.expect("RParen" /* RParen */);
+    const consequent = this.parseBlock({ allowDeclarations: false });
+    this.stream.skipWhitespace();
+    let alternate;
+    if (this.stream.peek()?.type === "Else" /* Else */) {
+      this.stream.next();
+      this.stream.skipWhitespace();
+      if (this.stream.peek()?.type === "If" /* If */) {
+        const nested = this.parseIfBlock();
+        alternate = new BlockNode([nested]);
+      } else {
+        alternate = this.parseBlock({ allowDeclarations: false });
+      }
+    }
+    return new IfNode(test, consequent, alternate);
+  }
+  parseWhileBlock() {
+    this.stream.expect("While" /* While */);
+    this.stream.skipWhitespace();
+    this.stream.expect("LParen" /* LParen */);
+    this.stream.skipWhitespace();
+    const test = this.parseExpression();
+    this.stream.skipWhitespace();
+    this.stream.expect("RParen" /* RParen */);
+    const body = this.parseBlock({ allowDeclarations: false });
+    return new WhileNode(test, body);
+  }
+  parseForBlock() {
+    this.stream.expect("For" /* For */);
+    this.stream.skipWhitespace();
+    this.stream.expect("LParen" /* LParen */);
+    this.stream.skipWhitespace();
+    let init;
+    if (this.stream.peek()?.type !== "Semicolon" /* Semicolon */) {
+      init = this.parseForClause();
+    }
+    this.stream.skipWhitespace();
+    this.stream.expect("Semicolon" /* Semicolon */);
+    this.stream.skipWhitespace();
+    let test;
+    if (this.stream.peek()?.type !== "Semicolon" /* Semicolon */) {
+      test = this.parseExpression();
+    }
+    this.stream.skipWhitespace();
+    this.stream.expect("Semicolon" /* Semicolon */);
+    this.stream.skipWhitespace();
+    let update;
+    if (this.stream.peek()?.type !== "RParen" /* RParen */) {
+      update = this.parseForClause();
+    }
+    this.stream.skipWhitespace();
+    this.stream.expect("RParen" /* RParen */);
+    const body = this.parseBlock({ allowDeclarations: false });
+    return new ForNode(init, test, update, body);
+  }
+  parseForClause() {
+    if (this.isAssignmentStart()) {
+      return this.parseAssignmentExpression();
+    }
+    return this.parseExpression();
+  }
+  parseAssignmentExpression() {
+    const target = this.parseAssignmentTarget();
+    this.stream.skipWhitespace();
+    this.stream.expect("Equals" /* Equals */);
+    this.stream.skipWhitespace();
+    const value = this.parseExpression();
+    return new AssignmentNode(target, value);
+  }
+  parseTryBlock() {
+    this.stream.expect("Try" /* Try */);
+    const body = this.parseBlock({ allowDeclarations: false });
+    this.stream.skipWhitespace();
+    this.stream.expect("Catch" /* Catch */);
+    this.stream.skipWhitespace();
+    this.stream.expect("LParen" /* LParen */);
+    this.stream.skipWhitespace();
+    const errorName = this.stream.expect("Identifier" /* Identifier */).value;
+    this.stream.skipWhitespace();
+    this.stream.expect("RParen" /* RParen */);
+    const handler = this.parseBlock({ allowDeclarations: false });
+    return new TryNode(body, errorName, handler);
+  }
   parseConstructBlock() {
     this.stream.expect("Construct" /* Construct */);
     const body = this.parseBlock({ allowDeclarations: false });
@@ -1914,31 +2800,7 @@ ${caret}`;
     }
     const name = this.stream.expect("Identifier" /* Identifier */).value;
     this.stream.skipWhitespace();
-    this.stream.expect("LParen" /* LParen */);
-    const params = [];
-    while (true) {
-      this.stream.skipWhitespace();
-      const next = this.stream.peek();
-      if (!next) {
-        throw new Error("Unterminated function parameters");
-      }
-      if (next.type === "RParen" /* RParen */) {
-        this.stream.next();
-        break;
-      }
-      const param = this.stream.expect("Identifier" /* Identifier */).value;
-      params.push(param);
-      this.stream.skipWhitespace();
-      if (this.stream.peek()?.type === "Comma" /* Comma */) {
-        this.stream.next();
-        continue;
-      }
-      if (this.stream.peek()?.type === "RParen" /* RParen */) {
-        this.stream.next();
-        break;
-      }
-      throw new Error("Expected ',' or ')' in function parameters");
-    }
+    const params = this.parseFunctionParams();
     this.stream.skipWhitespace();
     const body = this.parseFunctionBlockWithAwait(isAsync);
     return new FunctionDeclarationNode(name, params, body, isAsync);
@@ -1959,8 +2821,21 @@ ${caret}`;
     return new ReturnNode(value);
   }
   parseArrowFunctionExpression(isAsync = false) {
+    const params = this.parseFunctionParams();
+    this.stream.skipWhitespace();
+    this.stream.expect("Arrow" /* Arrow */);
+    this.stream.skipWhitespace();
+    if (this.stream.peek()?.type === "LBrace" /* LBrace */) {
+      const body2 = this.parseFunctionBlockWithAwait(isAsync);
+      return new FunctionExpression(params, body2, isAsync);
+    }
+    const body = this.parseArrowExpressionBody(isAsync);
+    return new FunctionExpression(params, body, isAsync);
+  }
+  parseFunctionParams() {
     this.stream.expect("LParen" /* LParen */);
     const params = [];
+    let sawRest = false;
     while (true) {
       this.stream.skipWhitespace();
       const next = this.stream.peek();
@@ -1971,8 +2846,31 @@ ${caret}`;
         this.stream.next();
         break;
       }
-      const param = this.stream.expect("Identifier" /* Identifier */).value;
-      params.push(param);
+      if (next.type === "Ellipsis" /* Ellipsis */) {
+        if (sawRest) {
+          throw new Error("Function parameters can only include one rest parameter");
+        }
+        this.stream.next();
+        this.stream.skipWhitespace();
+        const name2 = this.stream.expect("Identifier" /* Identifier */).value;
+        params.push({ name: name2, rest: true });
+        sawRest = true;
+        this.stream.skipWhitespace();
+        if (this.stream.peek()?.type === "Comma" /* Comma */) {
+          throw new Error("Rest parameter must be last in function parameters");
+        }
+        this.stream.expect("RParen" /* RParen */);
+        break;
+      }
+      const name = this.stream.expect("Identifier" /* Identifier */).value;
+      this.stream.skipWhitespace();
+      let defaultValue;
+      if (this.stream.peek()?.type === "Equals" /* Equals */) {
+        this.stream.next();
+        this.stream.skipWhitespace();
+        defaultValue = this.parseExpression();
+      }
+      params.push(defaultValue ? { name, defaultValue } : { name });
       this.stream.skipWhitespace();
       if (this.stream.peek()?.type === "Comma" /* Comma */) {
         this.stream.next();
@@ -1984,15 +2882,7 @@ ${caret}`;
       }
       throw new Error("Expected ',' or ')' in function parameters");
     }
-    this.stream.skipWhitespace();
-    this.stream.expect("Arrow" /* Arrow */);
-    this.stream.skipWhitespace();
-    if (this.stream.peek()?.type === "LBrace" /* LBrace */) {
-      const body2 = this.parseFunctionBlockWithAwait(isAsync);
-      return new FunctionExpression(params, body2, isAsync);
-    }
-    const body = this.parseArrowExpressionBody(isAsync);
-    return new FunctionExpression(params, body, isAsync);
+    return params;
   }
   readSelectorUntil(terminator) {
     let selectorText = "";
@@ -2030,7 +2920,7 @@ ${caret}`;
 };
 
 // src/runtime/scope.ts
-var Scope = class {
+var Scope = class _Scope {
   constructor(parent) {
     this.parent = parent;
     this.root = parent ? parent.root : this;
@@ -2039,6 +2929,9 @@ var Scope = class {
   root;
   listeners = /* @__PURE__ */ new Map();
   anyListeners = /* @__PURE__ */ new Set();
+  createChild() {
+    return new _Scope(this);
+  }
   get(key) {
     return this.getPath(key);
   }
@@ -2355,7 +3248,11 @@ var Engine = class _Engine {
   pendingUpdated = /* @__PURE__ */ new Set();
   observerFlush;
   ignoredAdded = /* @__PURE__ */ new WeakMap();
-  constructor() {
+  diagnostics;
+  logger;
+  constructor(options = {}) {
+    this.diagnostics = options.diagnostics ?? false;
+    this.logger = options.logger ?? console;
     this.registerGlobal("console", console);
     this.registerGlobal("list", {
       async map(items, fn) {
@@ -2629,10 +3526,11 @@ var Engine = class _Engine {
   }
   async applyBehaviorForElement(behavior, element, scope, bound) {
     bound.add(behavior.id);
-    this.applyBehaviorFunctions(element, scope, behavior.functions);
-    await this.applyBehaviorDeclarations(element, scope, behavior.declarations);
+    const rootScope = this.getBehaviorRootScope(element, behavior);
+    this.applyBehaviorFunctions(element, scope, behavior.functions, rootScope);
+    await this.applyBehaviorDeclarations(element, scope, behavior.declarations, rootScope);
     if (behavior.construct) {
-      await this.executeBlock(behavior.construct, scope, element);
+      await this.safeExecuteBlock(behavior.construct, scope, element, rootScope);
     }
     for (const onBlock of behavior.onBlocks) {
       this.attachBehaviorOnHandler(
@@ -2641,23 +3539,27 @@ var Engine = class _Engine {
         onBlock.body,
         onBlock.modifiers,
         onBlock.args,
-        behavior.id
+        behavior.id,
+        rootScope
       );
     }
+    this.logDiagnostic("bind", element, behavior);
   }
   unbindBehaviorForElement(behavior, element, scope, bound) {
     bound.delete(behavior.id);
     if (behavior.destruct) {
-      void this.executeBlock(behavior.destruct, scope, element);
+      const rootScope = this.getBehaviorRootScope(element, behavior);
+      void this.safeExecuteBlock(behavior.destruct, scope, element, rootScope);
     }
     const listenerMap = this.behaviorListeners.get(element);
     const listeners = listenerMap?.get(behavior.id);
     if (listeners) {
       for (const listener of listeners) {
-        element.removeEventListener(listener.event, listener.handler, listener.options);
+        listener.target.removeEventListener(listener.event, listener.handler, listener.options);
       }
       listenerMap?.delete(behavior.id);
     }
+    this.logDiagnostic("unbind", element, behavior);
   }
   runBehaviorDestruct(element) {
     const bound = this.behaviorBindings.get(element);
@@ -2669,7 +3571,8 @@ var Engine = class _Engine {
       if (!bound.has(behavior.id) || !behavior.destruct) {
         continue;
       }
-      void this.executeBlock(behavior.destruct, scope, element);
+      const rootScope = this.getBehaviorRootScope(element, behavior);
+      void this.safeExecuteBlock(behavior.destruct, scope, element, rootScope);
     }
   }
   attachAttributes(element) {
@@ -2700,7 +3603,7 @@ var Engine = class _Engine {
       return;
     }
     const scope = this.getScope(element);
-    this.execute(config.construct, scope, element);
+    void this.safeExecute(config.construct, scope, element);
   }
   runDestruct(element) {
     const config = this.lifecycleBindings.get(element);
@@ -2708,7 +3611,7 @@ var Engine = class _Engine {
       return;
     }
     const scope = this.getScope(element);
-    this.execute(config.destruct, scope, element);
+    void this.safeExecute(config.destruct, scope, element);
   }
   parseEachExpression(value) {
     const [listPart, rest] = value.split(/\s+as\s+/);
@@ -2877,11 +3780,12 @@ var Engine = class _Engine {
       }
       modifiers.push(flag);
     }
+    const combinedModifiers = [...modifiers, ...descriptor.modifiers];
     const config = {
       event: descriptor.event,
       code: value,
       ...debounceMs !== void 0 ? { debounceMs } : {},
-      ...modifiers.length > 0 ? { modifiers } : {},
+      ...combinedModifiers.length > 0 ? { modifiers: combinedModifiers } : {},
       ...descriptor.keyModifiers.length > 0 ? { keyModifiers: descriptor.keyModifiers } : {}
     };
     return config;
@@ -2889,7 +3793,17 @@ var Engine = class _Engine {
   parseEventDescriptor(raw) {
     const parts = raw.split(".").map((part) => part.trim()).filter(Boolean);
     const event = parts.shift() ?? "";
-    return { event, keyModifiers: parts };
+    const modifiers = [];
+    const keyModifiers = [];
+    const modifierSet = /* @__PURE__ */ new Set(["outside", "self"]);
+    for (const part of parts) {
+      if (modifierSet.has(part)) {
+        modifiers.push(part);
+      } else {
+        keyModifiers.push(part);
+      }
+    }
+    return { event, keyModifiers, modifiers };
   }
   matchesKeyModifiers(event, keyModifiers) {
     if (!keyModifiers || keyModifiers.length === 0) {
@@ -2942,26 +3856,87 @@ var Engine = class _Engine {
     }
     return true;
   }
+  matchesTargetModifiers(element, event, modifiers) {
+    if (!modifiers || modifiers.length === 0) {
+      return true;
+    }
+    const target = event?.target;
+    if (!target || !(target instanceof Node)) {
+      return !modifiers.includes("self") && !modifiers.includes("outside");
+    }
+    if (modifiers.includes("self") && target !== element) {
+      return false;
+    }
+    if (modifiers.includes("outside") && element.contains(target)) {
+      return false;
+    }
+    return true;
+  }
+  describeElement(element) {
+    const tag = element.tagName.toLowerCase();
+    const id = element.id ? `#${element.id}` : "";
+    const classes = element.classList.length > 0 ? `.${Array.from(element.classList).join(".")}` : "";
+    return `${tag}${id}${classes}`;
+  }
+  logDiagnostic(type, element, behavior) {
+    if (!this.diagnostics || !this.logger.info) {
+      return;
+    }
+    this.logger.info(`vsn:${type}`, {
+      element: this.describeElement(element),
+      selector: behavior.selector,
+      behaviorId: behavior.id
+    });
+  }
+  emitError(element, error) {
+    const selector = this.describeElement(element);
+    this.logger.warn?.("vsn:error", { error, selector });
+    element.dispatchEvent(
+      new CustomEvent("vsn:error", {
+        detail: { error, selector },
+        bubbles: true
+      })
+    );
+  }
   attachOnHandler(element, config) {
+    const options = this.getListenerOptions(config.modifiers);
+    const listenerTarget = config.modifiers?.includes("outside") ? element.ownerDocument : element;
+    let effectiveHandler;
     const handler = async (event) => {
+      if (!element.isConnected) {
+        listenerTarget.removeEventListener(config.event, effectiveHandler, options);
+        return;
+      }
       if (!this.matchesKeyModifiers(event, config.keyModifiers)) {
+        return;
+      }
+      if (!this.matchesTargetModifiers(element, event, config.modifiers)) {
         return;
       }
       this.applyEventModifiers(event, config.modifiers);
       const scope = this.getScope(element);
-      await this.execute(config.code, scope, element);
-      this.evaluate(element);
+      try {
+        await this.execute(config.code, scope, element);
+        this.evaluate(element);
+      } catch (error) {
+        this.emitError(element, error);
+      }
     };
-    const effectiveHandler = config.debounceMs ? debounce(handler, config.debounceMs) : handler;
-    element.addEventListener(config.event, effectiveHandler, this.getListenerOptions(config.modifiers));
+    effectiveHandler = config.debounceMs ? debounce(handler, config.debounceMs) : handler;
+    listenerTarget.addEventListener(config.event, effectiveHandler, options);
   }
-  attachBehaviorOnHandler(element, event, body, modifiers, args, behaviorId) {
+  attachBehaviorOnHandler(element, event, body, modifiers, args, behaviorId, rootScope) {
     const descriptor = this.parseEventDescriptor(event);
+    const combinedModifiers = modifiers ? [...modifiers, ...descriptor.modifiers] : descriptor.modifiers.length > 0 ? [...descriptor.modifiers] : void 0;
+    const listenerTarget = combinedModifiers?.includes("outside") ? element.ownerDocument : element;
     const handler = async (evt) => {
       if (!this.matchesKeyModifiers(evt, descriptor.keyModifiers)) {
         return;
       }
-      this.applyEventModifiers(evt, modifiers);
+      if (!this.matchesTargetModifiers(element, evt, combinedModifiers)) {
+        return;
+      }
+      this.applyEventModifiers(evt, combinedModifiers);
       const scope = this.getScope(element);
       const previousValues = /* @__PURE__ */ new Map();
       if (args && args.length > 0) {
@@ -2971,17 +3946,26 @@ var Engine = class _Engine {
           scope.setPath(argName, evt);
         }
       }
-      await this.executeBlock(body, scope, element);
-      for (const [name, value] of previousValues.entries()) {
-        scope.setPath(name, value);
+      let failed = false;
+      try {
+        await this.executeBlock(body, scope, element, rootScope);
+      } catch (error) {
+        failed = true;
+        this.emitError(element, error);
+      } finally {
+        for (const [name, value] of previousValues.entries()) {
+          scope.setPath(name, value);
+        }
       }
-      this.evaluate(element);
+      if (!failed) {
+        this.evaluate(element);
+      }
     };
-    const options = this.getListenerOptions(modifiers);
-    element.addEventListener(descriptor.event, handler, options);
+    const options = this.getListenerOptions(combinedModifiers);
+    listenerTarget.addEventListener(descriptor.event, handler, options);
     const listenerMap = this.behaviorListeners.get(element) ?? /* @__PURE__ */ new Map();
     const listeners = listenerMap.get(behaviorId) ?? [];
-    listeners.push({ event: descriptor.event, handler, options });
+    listeners.push({ target: listenerTarget, event: descriptor.event, handler, options });
     listenerMap.set(behaviorId, listeners);
     this.behaviorListeners.set(element, listenerMap);
   }
@@ -3040,7 +4024,7 @@ var Engine = class _Engine {
     }
     return Object.keys(options).length > 0 ? options : void 0;
   }
-  async execute(code, scope, element) {
+  async execute(code, scope, element, rootScope) {
     let block = this.codeCache.get(code);
     if (!block) {
       block = Parser.parseInline(code);
@@ -3048,43 +4032,65 @@ var Engine = class _Engine {
     }
     const context = {
       scope,
+      rootScope,
       globals: this.globals,
       ...element ? { element } : {}
     };
     await block.evaluate(context);
   }
-  async executeBlock(block, scope, element) {
+  async executeBlock(block, scope, element, rootScope) {
     const context = {
       scope,
+      rootScope,
       globals: this.globals,
       ...element ? { element } : {}
     };
     await block.evaluate(context);
   }
-  collectBehavior(behavior, parentSelector) {
+  async safeExecute(code, scope, element, rootScope) {
+    try {
+      await this.execute(code, scope, element, rootScope);
+    } catch (error) {
+      if (element) {
+        this.emitError(element, error);
+      }
+    }
+  }
+  async safeExecuteBlock(block, scope, element, rootScope) {
+    try {
+      await this.executeBlock(block, scope, element, rootScope);
+    } catch (error) {
+      if (element) {
+        this.emitError(element, error);
+      }
+    }
+  }
+  collectBehavior(behavior, parentSelector, rootSelectorOverride) {
     const selector = parentSelector ? `${parentSelector} ${behavior.selector.selectorText}` : behavior.selector.selectorText;
+    const rootSelector = rootSelectorOverride ?? (parentSelector ?? behavior.selector.selectorText);
     const cached = this.getCachedBehavior(behavior);
     this.behaviorRegistry.push({
       id: this.behaviorId += 1,
       selector,
+      rootSelector,
       specificity: this.computeSpecificity(selector),
       order: this.behaviorRegistry.length,
       ...cached
     });
-    this.collectNestedBehaviors(behavior.body, selector);
+    this.collectNestedBehaviors(behavior.body, selector, rootSelector);
   }
-  collectNestedBehaviors(block, parentSelector) {
+  collectNestedBehaviors(block, parentSelector, rootSelector) {
     for (const statement of block.statements) {
       if (statement instanceof BehaviorNode) {
-        this.collectBehavior(statement, parentSelector);
+        this.collectBehavior(statement, parentSelector, rootSelector);
         continue;
       }
       if (statement instanceof OnBlockNode) {
-        this.collectNestedBehaviors(statement.body, parentSelector);
+        this.collectNestedBehaviors(statement.body, parentSelector, rootSelector);
         continue;
       }
       if (statement instanceof BlockNode) {
-        this.collectNestedBehaviors(statement, parentSelector);
+        this.collectNestedBehaviors(statement, parentSelector, rootSelector);
       }
     }
   }
@@ -3095,6 +4101,10 @@ var Engine = class _Engine {
     const pseudoMatches = selector.match(/:[\w-]+/g)?.length ?? 0;
     const elementMatches = selector.match(/(^|[\s>+~])([a-zA-Z][\w-]*)/g)?.length ?? 0;
     return idMatches * 100 + (classMatches + attrMatches + pseudoMatches) * 10 + elementMatches;
+  }
+  getBehaviorRootScope(element, behavior) {
+    const rootElement = element.closest(behavior.rootSelector) ?? element;
+    return this.getScope(rootElement);
   }
   getImportantKey(declaration) {
     if (declaration.target instanceof IdentifierExpression) {
@@ -3259,7 +4269,11 @@ var Engine = class _Engine {
       return {
         type,
         name: node.name ?? "",
-        params: Array.isArray(node.params) ? node.params : [],
+        params: Array.isArray(node.params) ? node.params.map((param) => ({
+          name: param?.name ?? "",
+          rest: Boolean(param?.rest),
+          defaultValue: this.normalizeNode(param?.defaultValue ?? null)
+        })) : [],
         body: this.normalizeNode(node.body),
         isAsync: Boolean(node.isAsync)
       };
@@ -3267,7 +4281,11 @@ var Engine = class _Engine {
     if (type === "FunctionExpression") {
       return {
         type,
-        params: Array.isArray(node.params) ? node.params : [],
+        params: Array.isArray(node.params) ? node.params.map((param) => ({
+          name: param?.name ?? "",
+          rest: Boolean(param?.rest),
+          defaultValue: this.normalizeNode(param?.defaultValue ?? null)
+        })) : [],
         body: this.normalizeNode(node.body),
         isAsync: Boolean(node.isAsync)
       };
@@ -3278,11 +4296,49 @@ var Engine = class _Engine {
         value: this.normalizeNode(node.value ?? null)
       };
     }
+    if (type === "If") {
+      return {
+        type,
+        test: this.normalizeNode(node.test),
+        consequent: this.normalizeNode(node.consequent),
+        alternate: this.normalizeNode(node.alternate ?? null)
+      };
+    }
+    if (type === "While") {
+      return {
+        type,
+        test: this.normalizeNode(node.test),
+        body: this.normalizeNode(node.body)
+      };
+    }
+    if (type === "For") {
+      return {
+        type,
+        init: this.normalizeNode(node.init ?? null),
+        test: this.normalizeNode(node.test ?? null),
+        update: this.normalizeNode(node.update ?? null),
+        body: this.normalizeNode(node.body)
+      };
+    }
+    if (type === "Try") {
+      return {
+        type,
+        errorName: node.errorName ?? "",
+        body: this.normalizeNode(node.body),
+        handler: this.normalizeNode(node.handler)
+      };
+    }
     if (type === "Identifier") {
       return { type, name: node.name ?? "" };
     }
     if (type === "Literal") {
       return { type, value: node.value };
+    }
+    if (type === "TemplateExpression") {
+      return {
+        type,
+        parts: Array.isArray(node.parts) ? node.parts.map((part) => this.normalizeNode(part)) : []
+      };
     }
     if (type === "UnaryExpression") {
       return {
@@ -3311,7 +4367,8 @@ var Engine = class _Engine {
       return {
         type,
         target: this.normalizeNode(node.target),
-        property: node.property ?? ""
+        property: node.property ?? "",
+        optional: Boolean(node.optional)
       };
     }
     if (type === "CallExpression") {
@@ -3339,6 +4396,17 @@ var Engine = class _Engine {
         elements: Array.isArray(node.elements) ? node.elements.map((element) => this.normalizeNode(element)) : []
       };
     }
+    if (type === "ObjectExpression") {
+      return {
+        type,
+        entries: Array.isArray(node.entries) ? node.entries.map((entry) => ({
+          key: entry?.key ?? "",
+          computed: Boolean(entry?.computed),
+          keyExpr: entry?.keyExpr ? this.normalizeNode(entry.keyExpr) : null,
+          value: this.normalizeNode(entry?.value)
+        })) : []
+      };
+    }
     if (type === "IndexExpression") {
       return {
         type,
@@ -3356,51 +4424,73 @@ var Engine = class _Engine {
     }
     return (hash >>> 0).toString(16);
   }
-  applyBehaviorFunctions(element, scope, functions) {
+  applyBehaviorFunctions(element, scope, functions, rootScope) {
     for (const declaration of functions) {
-      this.applyBehaviorFunction(element, scope, declaration);
+      this.applyBehaviorFunction(element, scope, declaration, rootScope);
     }
   }
-  applyBehaviorFunction(element, scope, declaration) {
+  applyBehaviorFunction(element, scope, declaration, rootScope) {
     const existing = scope.getPath(declaration.name);
     if (existing !== void 0 && typeof existing !== "function") {
       throw new Error(`Cannot override non-function '${declaration.name}' with a function`);
     }
     const fn = async (...args) => {
+      const callScope = scope.createChild ? scope.createChild() : scope;
       const context = {
-        scope,
+        scope: callScope,
+        rootScope: rootScope ?? callScope,
         globals: this.globals,
         element,
         returnValue: void 0,
         returning: false
       };
       const previousValues = /* @__PURE__ */ new Map();
-      for (let i = 0; i < declaration.params.length; i += 1) {
-        const name = declaration.params[i];
-        if (!name) {
-          continue;
-        }
-        previousValues.set(name, scope.getPath(name));
-        scope.setPath(name, args[i]);
-      }
+      await this.applyFunctionParams(callScope, declaration.params, previousValues, context, args);
       await declaration.body.evaluate(context);
-      for (const name of declaration.params) {
-        if (!name) {
-          continue;
-        }
-        scope.setPath(name, previousValues.get(name));
+      if (callScope === scope) {
+        this.restoreFunctionParams(callScope, declaration.params, previousValues);
       }
       return context.returnValue;
     };
     scope.setPath(declaration.name, fn);
   }
-  async applyBehaviorDeclarations(element, scope, declarations) {
-    for (const declaration of declarations) {
-      await this.applyBehaviorDeclaration(element, scope, declaration);
+  async applyFunctionParams(scope, params, previousValues, context, args) {
+    let argIndex = 0;
+    for (const param of params) {
+      const name = param.name;
+      if (!name) {
+        continue;
+      }
+      previousValues.set(name, scope.getPath(name));
+      if (param.rest) {
+        scope.setPath(`self.${name}`, args.slice(argIndex));
+        argIndex = args.length;
+        continue;
+      }
+      let value = args[argIndex];
+      if (value === void 0 && param.defaultValue) {
+        value = await param.defaultValue.evaluate(context);
+      }
+      scope.setPath(`self.${name}`, value);
+      argIndex += 1;
     }
   }
-  async applyBehaviorDeclaration(element, scope, declaration) {
-    const context = { scope, element };
+  restoreFunctionParams(scope, params, previousValues) {
+    for (const param of params) {
+      const name = param.name;
+      if (!name) {
+        continue;
+      }
+      scope.setPath(name, previousValues.get(name));
+    }
+  }
+  async applyBehaviorDeclarations(element, scope, declarations, rootScope) {
+    for (const declaration of declarations) {
+      await this.applyBehaviorDeclaration(element, scope, declaration, rootScope);
+    }
+  }
+  async applyBehaviorDeclaration(element, scope, declaration, rootScope) {
+    const context = { scope, rootScope, element };
     const operator = declaration.operator;
     const debounceMs = declaration.flags.debounce ? declaration.flagArgs.debounce ?? 200 : void 0;
     const importantKey = this.getImportantKey(declaration);
@@ -3426,7 +4516,7 @@ var Engine = class _Engine {
     const exprIdentifier = declaration.value instanceof IdentifierExpression ? declaration.value.name : void 0;
     if (operator === ":>") {
       if (exprIdentifier) {
-        this.applyDirectiveToScope(element, target, exprIdentifier, scope, debounceMs);
+        this.applyDirectiveToScope(element, target, exprIdentifier, scope, debounceMs, rootScope);
       }
       if (declaration.flags.important && importantKey) {
         this.markImportant(element, importantKey);
@@ -3434,7 +4524,7 @@ var Engine = class _Engine {
       return;
     }
     if (operator === ":=" && exprIdentifier) {
-      this.applyDirectiveToScope(element, target, exprIdentifier, scope, debounceMs);
+      this.applyDirectiveToScope(element, target, exprIdentifier, scope, debounceMs, rootScope);
     }
     if (!exprIdentifier) {
       const value = await declaration.value.evaluate(context);
@@ -3447,7 +4537,8 @@ var Engine = class _Engine {
           declaration.value,
           scope,
           declaration.flags.trusted,
-          debounceMs
+          debounceMs,
+          rootScope
         );
       }
       if (declaration.flags.important && importantKey) {
@@ -3463,7 +4554,8 @@ var Engine = class _Engine {
       scope,
       declaration.flags.trusted,
       debounceMs,
-      shouldWatch
+      shouldWatch,
+      rootScope
     );
     if (declaration.flags.important && importantKey) {
       this.markImportant(element, importantKey);
@@ -3486,20 +4578,31 @@ var Engine = class _Engine {
       });
     }
   }
-  applyDirectiveFromScope(element, target, expr, scope, trusted, debounceMs, watch = true) {
+  applyDirectiveFromScope(element, target, expr, scope, trusted, debounceMs, watch = true, rootScope) {
     if (target.kind === "attr" && target.name === "html" && element instanceof HTMLElement) {
-      const handler2 = () => applyHtml(element, expr, scope, Boolean(trusted));
+      const handler2 = () => {
+        const useRoot = expr.startsWith("root.") && rootScope;
+        const sourceScope = useRoot ? rootScope : scope;
+        const localExpr = useRoot ? `self.${expr.slice("root.".length)}` : expr;
+        applyHtml(element, localExpr, sourceScope, Boolean(trusted));
+      };
       handler2();
       if (trusted) {
         this.handleTrustedHtml(element);
       }
       if (watch) {
-        this.watchWithDebounce(scope, expr, handler2, debounceMs);
+        const useRoot = expr.startsWith("root.") && rootScope;
+        const sourceScope = useRoot ? rootScope : scope;
+        const watchExpr = useRoot ? expr.slice("root.".length) : expr;
+        this.watchWithDebounce(sourceScope, watchExpr, handler2, debounceMs);
       }
       return;
     }
     const handler = () => {
-      const value = scope.get(expr);
+      const useRoot = expr.startsWith("root.") && rootScope;
+      const sourceScope = useRoot ? rootScope : scope;
+      const localExpr = useRoot ? `self.${expr.slice("root.".length)}` : expr;
+      const value = sourceScope.get(localExpr);
       if (value == null) {
         return;
       }
@@ -3507,12 +4610,15 @@ var Engine = class _Engine {
     };
     handler();
     if (watch) {
-      this.watchWithDebounce(scope, expr, handler, debounceMs);
+      const useRoot = expr.startsWith("root.") && rootScope;
+      const sourceScope = useRoot ? rootScope : scope;
+      const watchExpr = useRoot ? expr.slice("root.".length) : expr;
+      this.watchWithDebounce(sourceScope, watchExpr, handler, debounceMs);
     }
   }
-  applyDirectiveFromExpression(element, target, expr, scope, trusted, debounceMs) {
+  applyDirectiveFromExpression(element, target, expr, scope, trusted, debounceMs, rootScope) {
     const handler = async () => {
-      const context = { scope, element };
+      const context = { scope, rootScope, element };
       const value = await expr.evaluate(context);
       this.setDirectiveValue(element, target, value, trusted);
     };
@@ -3521,43 +4627,43 @@ var Engine = class _Engine {
       void handler();
     }, debounceMs);
   }
-  applyDirectiveToScope(element, target, expr, scope, debounceMs) {
+  applyDirectiveToScope(element, target, expr, scope, debounceMs, rootScope) {
+    const useRoot = expr.startsWith("root.") && rootScope;
+    const targetScope = useRoot ? rootScope : scope;
+    const targetExpr = useRoot ? `self.${expr.slice("root.".length)}` : expr;
     if (target.kind === "attr" && target.name === "value") {
-      this.applyValueBindingToScope(element, expr, debounceMs);
+      this.applyValueBindingToScope(element, targetExpr, debounceMs, targetScope);
       return;
     }
     if (target.kind === "attr" && target.name === "checked") {
-      this.applyCheckedBindingToScope(element, expr, debounceMs);
+      this.applyCheckedBindingToScope(element, targetExpr, debounceMs, targetScope);
       return;
     }
     const value = this.getDirectiveValue(element, target);
     if (value != null) {
-      scope.set(expr, value);
+      targetScope.set(targetExpr, value);
     }
   }
-  applyCheckedBindingToScope(element, expr, debounceMs) {
+  applyCheckedBindingToScope(element, expr, debounceMs, scope) {
     if (!(element instanceof HTMLInputElement)) {
       return;
     }
     const handler = () => {
-      const scope = this.getScope(element);
-      if (!scope) {
-        return;
-      }
-      scope.set(expr, element.checked);
+      const targetScope = scope ?? this.getScope(element);
+      targetScope.set(expr, element.checked);
     };
     const effectiveHandler = debounceMs ? debounce(handler, debounceMs) : handler;
     effectiveHandler();
     element.addEventListener("change", effectiveHandler);
     element.addEventListener("input", effectiveHandler);
   }
-  applyValueBindingToScope(element, expr, debounceMs) {
+  applyValueBindingToScope(element, expr, debounceMs, scope) {
     if (!(element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement || element instanceof HTMLSelectElement)) {
       return;
     }
     const handler = () => {
-      const scope = this.getScope(element);
-      applyBindToScope(element, expr, scope);
+      const targetScope = scope ?? this.getScope(element);
+      applyBindToScope(element, expr, targetScope);
     };
     const effectiveHandler = debounceMs ? debounce(handler, debounceMs) : handler;
     effectiveHandler();
@@ -3790,6 +4896,7 @@ if (typeof document !== "undefined") {
 }
 export {
   ArrayExpression,
+  ArrayPattern,
   AssignmentNode,
   AwaitExpression,
   BaseNode,
@@ -3800,26 +4907,35 @@ export {
   DeclarationNode,
   DirectiveExpression,
   Engine,
+  ForNode,
   FunctionDeclarationNode,
   FunctionExpression,
   IdentifierExpression,
+  IfNode,
   IndexExpression,
   Lexer,
   LiteralExpression,
   MemberExpression,
+  ObjectExpression,
+  ObjectPattern,
   OnBlockNode,
   Parser,
   ProgramNode,
   QueryExpression,
+  RestElement,
   ReturnNode,
   SelectorNode,
+  SpreadElement,
   StateBlockNode,
   StateEntryNode,
+  TemplateExpression,
   TernaryExpression,
   TokenType,
+  TryNode,
   UnaryExpression,
   UseNode,
   VERSION,
+  WhileNode,
   autoMount,
   parseCFS
 };

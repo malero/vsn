@@ -34,16 +34,16 @@ behavior #tabs {
 
   behavior .tab {
     @data-id :> id;
-    @aria-selected :< (root.active == id);
+    @aria-selected :< (active == id);
     on click() {
-      root.active = id;
+      active = id;
     }
   }
 
   behavior .panel {
     @data-id :> id;
-    @aria-hidden :< (root.active != id);
-    $display :< (root.active == id ? "block" : "none");
+    @aria-hidden :< (active != id);
+    $display :< (active == id ? "block" : "none");
   }
 }
 </script>

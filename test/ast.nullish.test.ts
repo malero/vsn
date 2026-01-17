@@ -13,7 +13,7 @@ describe("nullish coalescing", () => {
     `);
 
     const scope = new Scope();
-    await block.evaluate({ scope });
+    await block.evaluate({ scope, rootScope: scope });
 
     expect(scope.get("a")).toBe("fallback");
     expect(scope.get("b")).toBe("fallback");

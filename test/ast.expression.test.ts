@@ -14,7 +14,7 @@ describe("ast expressions", () => {
       new LiteralExpression(2)
     );
 
-    const value = await expr.evaluate({ scope });
+    const value = await expr.evaluate({ scope, rootScope: scope });
     expect(value).toBe(3);
   });
 
@@ -30,10 +30,39 @@ describe("ast expressions", () => {
 
     const neg = new UnaryExpression("-", new LiteralExpression(3));
 
-    const value = await expr.evaluate({ scope });
-    const negValue = await neg.evaluate({ scope });
+    const value = await expr.evaluate({ scope, rootScope: scope });
+    const negValue = await neg.evaluate({ scope, rootScope: scope });
     expect(value).toBe(3);
     expect(negValue).toBe(-3);
+  });
+
+  it("evaluates multiplication, division, and modulo", async () => {
+    const scope = new Scope();
+    scope.set("count", 6);
+
+    const mul = new BinaryExpression(
+      "*",
+      new IdentifierExpression("count"),
+      new LiteralExpression(2)
+    );
+    const div = new BinaryExpression(
+      "/",
+      new IdentifierExpression("count"),
+      new LiteralExpression(3)
+    );
+    const mod = new BinaryExpression(
+      "%",
+      new IdentifierExpression("count"),
+      new LiteralExpression(4)
+    );
+
+    const mulValue = await mul.evaluate({ scope, rootScope: scope });
+    const divValue = await div.evaluate({ scope, rootScope: scope });
+    const modValue = await mod.evaluate({ scope, rootScope: scope });
+
+    expect(mulValue).toBe(12);
+    expect(divValue).toBe(2);
+    expect(modValue).toBe(2);
   });
 
   it("evaluates comparisons and boolean ops", async () => {
@@ -52,7 +81,7 @@ describe("ast expressions", () => {
     );
     const andExpr = new BinaryExpression("&&", lt, eq);
 
-    const andValue = await andExpr.evaluate({ scope });
+    const andValue = await andExpr.evaluate({ scope, rootScope: scope });
     expect(andValue).toBe(true);
   });
 
@@ -66,7 +95,7 @@ describe("ast expressions", () => {
     `);
     const scope = new Scope();
 
-    await block.evaluate({ scope });
+    await block.evaluate({ scope, rootScope: scope });
 
     expect(scope.get("items")).toEqual([1, 2, 3]);
     expect(scope.get("value")).toBe(2);

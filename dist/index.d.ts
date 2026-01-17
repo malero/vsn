@@ -3,6 +3,7 @@ declare enum TokenType {
     Identifier = "Identifier",
     Number = "Number",
     String = "String",
+    Template = "Template",
     Boolean = "Boolean",
     Null = "Null",
     Behavior = "Behavior",
@@ -12,6 +13,12 @@ declare enum TokenType {
     Construct = "Construct",
     Destruct = "Destruct",
     Return = "Return",
+    If = "If",
+    Else = "Else",
+    For = "For",
+    While = "While",
+    Try = "Try",
+    Catch = "Catch",
     LBrace = "LBrace",
     RBrace = "RBrace",
     LParen = "LParen",
@@ -21,6 +28,7 @@ declare enum TokenType {
     Colon = "Colon",
     Semicolon = "Semicolon",
     Comma = "Comma",
+    Ellipsis = "Ellipsis",
     Dot = "Dot",
     Hash = "Hash",
     Greater = "Greater",
@@ -29,15 +37,21 @@ declare enum TokenType {
     Minus = "Minus",
     Tilde = "Tilde",
     Star = "Star",
+    Slash = "Slash",
+    Percent = "Percent",
     Equals = "Equals",
     Arrow = "Arrow",
     DoubleEquals = "DoubleEquals",
+    TripleEquals = "TripleEquals",
     NotEquals = "NotEquals",
+    StrictNotEquals = "StrictNotEquals",
     LessEqual = "LessEqual",
     GreaterEqual = "GreaterEqual",
     And = "And",
     Or = "Or",
     Pipe = "Pipe",
+    NullishCoalesce = "NullishCoalesce",
+    OptionalChain = "OptionalChain",
     Bang = "Bang",
     At = "At",
     Dollar = "Dollar",
@@ -60,6 +74,10 @@ declare class Lexer {
     private index;
     private line;
     private column;
+    private pendingTokens;
+    private templateMode;
+    private templateExpressionMode;
+    private templateBraceDepth;
     constructor(input: string);
     tokenize(): Token[];
     private readWhitespace;
@@ -68,7 +86,9 @@ declare class Lexer {
     private readIdentifier;
     private readNumber;
     private readString;
+    private readTemplateChunk;
     private readPunctuator;
+    private trackTemplateBrace;
     private token;
     private position;
     private peek;
@@ -81,11 +101,13 @@ declare class Lexer {
 }
 
 interface ExecutionContext {
-    scope?: {
+    scope: {
         getPath(key: string): any;
         setPath?(key: string, value: any): void;
         hasKey?(key: string): boolean;
-    };
+        createChild?(): ExecutionContext["scope"];
+    } | undefined;
+    rootScope: ExecutionContext["scope"];
     globals?: Record<string, any>;
     element?: Element;
     returnValue?: any;
@@ -148,25 +170,56 @@ declare class AssignmentNode extends BaseNode {
     value: ExpressionNode;
     constructor(target: AssignmentTarget, value: ExpressionNode);
     evaluate(context: ExecutionContext): Promise<any>;
+    private assignTarget;
 }
 declare class ReturnNode extends BaseNode {
     value?: ExpressionNode | undefined;
     constructor(value?: ExpressionNode | undefined);
     evaluate(context: ExecutionContext): Promise<any>;
 }
+declare class IfNode extends BaseNode {
+    test: ExpressionNode;
+    consequent: BlockNode;
+    alternate?: BlockNode | undefined;
+    constructor(test: ExpressionNode, consequent: BlockNode, alternate?: BlockNode | undefined);
+    evaluate(context: ExecutionContext): Promise<any>;
+}
+declare class WhileNode extends BaseNode {
+    test: ExpressionNode;
+    body: BlockNode;
+    constructor(test: ExpressionNode, body: BlockNode);
+    evaluate(context: ExecutionContext): Promise<any>;
+}
+declare class ForNode extends BaseNode {
+    init: CFSNode | undefined;
+    test: ExpressionNode | undefined;
+    update: CFSNode | undefined;
+    body: BlockNode;
+    constructor(init: CFSNode | undefined, test: ExpressionNode | undefined, update: CFSNode | undefined, body: BlockNode);
+    evaluate(context: ExecutionContext): Promise<any>;
+}
+declare class TryNode extends BaseNode {
+    body: BlockNode;
+    errorName: string;
+    handler: BlockNode;
+    constructor(body: BlockNode, errorName: string, handler: BlockNode);
+    evaluate(context: ExecutionContext): Promise<any>;
+}
 declare class FunctionDeclarationNode extends BaseNode {
     name: string;
-    params: string[];
+    params: FunctionParam[];
     body: BlockNode;
     isAsync: boolean;
-    constructor(name: string, params: string[], body: BlockNode, isAsync?: boolean);
+    constructor(name: string, params: FunctionParam[], body: BlockNode, isAsync?: boolean);
 }
 declare class FunctionExpression extends BaseNode {
-    params: string[];
+    params: FunctionParam[];
     body: BlockNode;
     isAsync: boolean;
-    constructor(params: string[], body: BlockNode, isAsync?: boolean);
+    constructor(params: FunctionParam[], body: BlockNode, isAsync?: boolean);
     evaluate(context: ExecutionContext): Promise<any>;
+    private applyParams;
+    private restoreParams;
 }
 interface DeclarationFlags {
     important?: boolean;
@@ -186,18 +239,52 @@ declare class DeclarationNode extends BaseNode {
     flagArgs: DeclarationFlagArgs;
     constructor(target: DeclarationTarget, operator: ":" | ":=" | ":<" | ":>", value: ExpressionNode, flags: DeclarationFlags, flagArgs: DeclarationFlagArgs);
 }
-type ExpressionNode = IdentifierExpression | LiteralExpression | UnaryExpression | BinaryExpression | MemberExpression | CallExpression | ArrayExpression | IndexExpression | FunctionExpression | AwaitExpression | TernaryExpression | DirectiveExpression | QueryExpression;
+type ExpressionNode = IdentifierExpression | LiteralExpression | TemplateExpression | UnaryExpression | BinaryExpression | MemberExpression | CallExpression | ArrayExpression | ObjectExpression | IndexExpression | FunctionExpression | AwaitExpression | TernaryExpression | DirectiveExpression | QueryExpression;
 type DeclarationTarget = IdentifierExpression | DirectiveExpression;
-type AssignmentTarget = IdentifierExpression | DirectiveExpression;
+type AssignmentTarget = IdentifierExpression | DirectiveExpression | ArrayPattern | ObjectPattern;
+type FunctionParam = {
+    name: string;
+    defaultValue?: ExpressionNode;
+    rest?: boolean;
+};
+type PatternNode = IdentifierExpression | ArrayPattern | ObjectPattern;
 declare class IdentifierExpression extends BaseNode {
     name: string;
     constructor(name: string);
     evaluate(context: ExecutionContext): Promise<any>;
 }
+declare class SpreadElement extends BaseNode {
+    value: ExpressionNode;
+    constructor(value: ExpressionNode);
+}
+declare class RestElement extends BaseNode {
+    target: IdentifierExpression;
+    constructor(target: IdentifierExpression);
+}
+type ArrayPatternElement = PatternNode | RestElement | null;
+declare class ArrayPattern extends BaseNode {
+    elements: ArrayPatternElement[];
+    constructor(elements: ArrayPatternElement[]);
+}
+type ObjectPatternEntry = {
+    key: string;
+    target: PatternNode;
+} | {
+    rest: IdentifierExpression;
+};
+declare class ObjectPattern extends BaseNode {
+    entries: ObjectPatternEntry[];
+    constructor(entries: ObjectPatternEntry[]);
+}
 declare class LiteralExpression extends BaseNode {
     value: string | number | boolean | null;
     constructor(value: string | number | boolean | null);
     evaluate(): Promise<any>;
+}
+declare class TemplateExpression extends BaseNode {
+    parts: ExpressionNode[];
+    constructor(parts: ExpressionNode[]);
+    evaluate(context: ExecutionContext): Promise<any>;
 }
 declare class UnaryExpression extends BaseNode {
     operator: string;
@@ -222,11 +309,13 @@ declare class TernaryExpression extends BaseNode {
 declare class MemberExpression extends BaseNode {
     target: ExpressionNode;
     property: string;
-    constructor(target: ExpressionNode, property: string);
+    optional: boolean;
+    constructor(target: ExpressionNode, property: string, optional?: boolean);
     evaluate(context: ExecutionContext): Promise<any>;
     resolve(context: ExecutionContext): Promise<{
         value: any;
         target?: any;
+        optional?: boolean;
     } | undefined>;
     getIdentifierPath(): {
         path: string;
@@ -244,9 +333,26 @@ declare class CallExpression extends BaseNode {
     evaluate(context: ExecutionContext): Promise<any>;
     private resolveCallee;
 }
+type ArrayElement = ExpressionNode | SpreadElement;
 declare class ArrayExpression extends BaseNode {
-    elements: ExpressionNode[];
-    constructor(elements: ExpressionNode[]);
+    elements: ArrayElement[];
+    constructor(elements: ArrayElement[]);
+    evaluate(context: ExecutionContext): Promise<any>;
+}
+type ObjectEntry = {
+    key: string;
+    value: ExpressionNode;
+    computed?: false;
+} | {
+    keyExpr: ExpressionNode;
+    value: ExpressionNode;
+    computed: true;
+} | {
+    spread: ExpressionNode;
+};
+declare class ObjectExpression extends BaseNode {
+    entries: ObjectEntry[];
+    constructor(entries: ObjectEntry[]);
     evaluate(context: ExecutionContext): Promise<any>;
 }
 declare class IndexExpression extends BaseNode {
@@ -301,21 +407,27 @@ declare class Parser {
     private parsePipeExpression;
     private buildPipeCall;
     private parseTernaryExpression;
+    private parseNullishExpression;
     private parseLogicalOrExpression;
     private parseLogicalAndExpression;
     private parseEqualityExpression;
     private parseComparisonExpression;
+    private parseMultiplicativeExpression;
     private parseAdditiveExpression;
     private parseUnaryExpression;
     private parseCallExpression;
     private parsePrimaryExpression;
     private parseArrayExpression;
+    private parseTemplateExpression;
+    private parseObjectExpression;
     private consumeStatementTerminator;
     private parseFunctionBlockWithAwait;
     private isAsyncToken;
     private isAwaitAllowed;
     private parseArrowExpressionBody;
     private parseAssignmentTarget;
+    private parseArrayPattern;
+    private parseObjectPattern;
     private parseDeclaration;
     private parseDeclarationTarget;
     private parseDeclarationOperator;
@@ -330,6 +442,12 @@ declare class Parser {
     private isAsyncArrowFunctionStart;
     private isFunctionExpressionAssignmentStart;
     private parseExpressionStatement;
+    private parseIfBlock;
+    private parseWhileBlock;
+    private parseForBlock;
+    private parseForClause;
+    private parseAssignmentExpression;
+    private parseTryBlock;
     private parseConstructBlock;
     private parseDestructBlock;
     private parseQueryExpression;
@@ -337,6 +455,7 @@ declare class Parser {
     private parseFunctionBlock;
     private parseReturnStatement;
     private parseArrowFunctionExpression;
+    private parseFunctionParams;
     private readSelectorUntil;
     private parseIdentifierPath;
 }
@@ -348,6 +467,7 @@ declare class Scope {
     private listeners;
     private anyListeners;
     constructor(parent?: Scope | undefined);
+    createChild(): Scope;
     get(key: string): any;
     set(key: string, value: any): void;
     hasKey(path: string): boolean;
@@ -378,6 +498,10 @@ type FlagApplyContext = {
 type FlagHandler = {
     onApply?: (context: FlagApplyContext) => void;
 };
+type EngineOptions = {
+    diagnostics?: boolean;
+    logger?: Partial<Pick<Console, "info" | "warn">>;
+};
 declare class Engine {
     private static activeEngines;
     private scopes;
@@ -406,7 +530,9 @@ declare class Engine {
     private pendingUpdated;
     private observerFlush?;
     private ignoredAdded;
-    constructor();
+    private diagnostics;
+    private logger;
+    constructor(options?: EngineOptions);
     mount(root: HTMLElement): Promise<void>;
     unmount(element: Element): void;
     registerBehaviors(source: string): void;
@@ -450,6 +576,10 @@ declare class Engine {
     private parseOnAttribute;
     private parseEventDescriptor;
     private matchesKeyModifiers;
+    private matchesTargetModifiers;
+    private describeElement;
+    private logDiagnostic;
+    private emitError;
     private attachOnHandler;
     private attachBehaviorOnHandler;
     private attachGetHandler;
@@ -457,9 +587,12 @@ declare class Engine {
     private getListenerOptions;
     private execute;
     private executeBlock;
+    private safeExecute;
+    private safeExecuteBlock;
     private collectBehavior;
     private collectNestedBehaviors;
     private computeSpecificity;
+    private getBehaviorRootScope;
     private getImportantKey;
     private isImportant;
     private markImportant;
@@ -473,6 +606,8 @@ declare class Engine {
     private hashString;
     private applyBehaviorFunctions;
     private applyBehaviorFunction;
+    private applyFunctionParams;
+    private restoreFunctionParams;
     private applyBehaviorDeclarations;
     private applyBehaviorDeclaration;
     private applyCustomFlags;
@@ -492,4 +627,4 @@ declare const VERSION = "0.1.0";
 declare function parseCFS(source: string): ProgramNode;
 declare function autoMount(root?: HTMLElement | Document): Engine | null;
 
-export { ArrayExpression, AssignmentNode, type AssignmentTarget, AwaitExpression, BaseNode, BehaviorNode, BinaryExpression, BlockNode, type CFSNode, CallExpression, type DeclarationFlagArgs, type DeclarationFlags, DeclarationNode, type DeclarationTarget, DirectiveExpression, Engine, type ExecutionContext, type ExpressionNode, FunctionDeclarationNode, FunctionExpression, IdentifierExpression, IndexExpression, Lexer, LiteralExpression, MemberExpression, OnBlockNode, Parser, ProgramNode, QueryExpression, ReturnNode, SelectorNode, StateBlockNode, StateEntryNode, TernaryExpression, TokenType, UnaryExpression, UseNode, VERSION, autoMount, parseCFS };
+export { type ArrayElement, ArrayExpression, ArrayPattern, type ArrayPatternElement, AssignmentNode, type AssignmentTarget, AwaitExpression, BaseNode, BehaviorNode, BinaryExpression, BlockNode, type CFSNode, CallExpression, type DeclarationFlagArgs, type DeclarationFlags, DeclarationNode, type DeclarationTarget, DirectiveExpression, Engine, type ExecutionContext, type ExpressionNode, ForNode, FunctionDeclarationNode, FunctionExpression, type FunctionParam, IdentifierExpression, IfNode, IndexExpression, Lexer, LiteralExpression, MemberExpression, type ObjectEntry, ObjectExpression, ObjectPattern, type ObjectPatternEntry, OnBlockNode, Parser, type PatternNode, ProgramNode, QueryExpression, RestElement, ReturnNode, SelectorNode, SpreadElement, StateBlockNode, StateEntryNode, TemplateExpression, TernaryExpression, TokenType, TryNode, UnaryExpression, UseNode, VERSION, WhileNode, autoMount, parseCFS };

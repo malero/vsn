@@ -23,4 +23,52 @@ describe("vsn-on modifiers", () => {
     expect(event.defaultPrevented).toBe(true);
     expect(scope.get("count")).toBe(1);
   });
+
+  it("supports click.outside", async () => {
+    document.body.innerHTML = `
+      <div class="panel" vsn-on:click.outside="closed = true;">
+        <button class="inside"></button>
+      </div>
+      <button class="outside"></button>
+    `;
+
+    const engine = new Engine();
+    await engine.mount(document.body);
+
+    const panel = document.querySelector(".panel") as HTMLDivElement;
+    const inside = panel.querySelector(".inside") as HTMLButtonElement;
+    const outside = document.querySelector(".outside") as HTMLButtonElement;
+    const scope = engine.getScope(panel);
+
+    inside.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(scope.get("closed")).toBe(undefined);
+
+    outside.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(scope.get("closed")).toBe(true);
+  });
+
+  it("supports click.self", async () => {
+    document.body.innerHTML = `
+      <div class="panel" vsn-on:click.self="clicked = true;">
+        <button class="inside"></button>
+      </div>
+    `;
+
+    const engine = new Engine();
+    await engine.mount(document.body);
+
+    const panel = document.querySelector(".panel") as HTMLDivElement;
+    const inside = panel.querySelector(".inside") as HTMLButtonElement;
+    const scope = engine.getScope(panel);
+
+    inside.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(scope.get("clicked")).toBe(undefined);
+
+    panel.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(scope.get("clicked")).toBe(true);
+  });
 });

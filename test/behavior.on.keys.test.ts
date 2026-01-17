@@ -29,4 +29,70 @@ describe("behavior on key modifiers", () => {
 
     expect(scope.get("count")).toBe(1);
   });
+
+  it("supports click.outside in CFS on blocks", async () => {
+    document.body.innerHTML = `
+      <div class="panel">
+        <button class="inside"></button>
+      </div>
+      <button class="outside"></button>
+    `;
+
+    const source = `
+      behavior .panel {
+        on click.outside() {
+          closed = true;
+        }
+      }
+    `;
+
+    const engine = new Engine();
+    engine.registerBehaviors(source);
+    await engine.mount(document.body);
+
+    const panel = document.querySelector(".panel") as HTMLDivElement;
+    const inside = panel.querySelector(".inside") as HTMLButtonElement;
+    const outside = document.querySelector(".outside") as HTMLButtonElement;
+    const scope = engine.getScope(panel);
+
+    inside.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(scope.get("closed")).toBe(undefined);
+
+    outside.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(scope.get("closed")).toBe(true);
+  });
+
+  it("supports click.self in CFS on blocks", async () => {
+    document.body.innerHTML = `
+      <div class="panel">
+        <button class="inside"></button>
+      </div>
+    `;
+
+    const source = `
+      behavior .panel {
+        on click.self() {
+          clicked = true;
+        }
+      }
+    `;
+
+    const engine = new Engine();
+    engine.registerBehaviors(source);
+    await engine.mount(document.body);
+
+    const panel = document.querySelector(".panel") as HTMLDivElement;
+    const inside = panel.querySelector(".inside") as HTMLButtonElement;
+    const scope = engine.getScope(panel);
+
+    inside.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(scope.get("clicked")).toBe(undefined);
+
+    panel.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(scope.get("clicked")).toBe(true);
+  });
 });

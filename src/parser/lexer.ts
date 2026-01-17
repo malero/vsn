@@ -8,6 +8,12 @@ const KEYWORDS: Record<string, TokenType> = {
   construct: TokenType.Construct,
   destruct: TokenType.Destruct,
   return: TokenType.Return,
+  if: TokenType.If,
+  else: TokenType.Else,
+  for: TokenType.For,
+  while: TokenType.While,
+  try: TokenType.Try,
+  catch: TokenType.Catch,
   true: TokenType.Boolean,
   false: TokenType.Boolean,
   null: TokenType.Null
@@ -17,6 +23,10 @@ export class Lexer {
   private index = 0;
   private line = 1;
   private column = 1;
+  private pendingTokens: Token[] = [];
+  private templateMode = false;
+  private templateExpressionMode = false;
+  private templateBraceDepth = 0;
 
   constructor(private input: string) {}
 
@@ -24,10 +34,31 @@ export class Lexer {
     const tokens: Token[] = [];
 
     while (!this.eof()) {
+      if (this.pendingTokens.length > 0) {
+        const pending = this.pendingTokens.shift();
+        if (pending) {
+          tokens.push(pending);
+          this.trackTemplateBrace(pending);
+          continue;
+        }
+      }
+
+      if (this.templateMode) {
+        const chunk = this.readTemplateChunk();
+        tokens.push(chunk);
+        continue;
+      }
+
       const ch = this.peek();
 
       if (this.isWhitespace(ch)) {
         tokens.push(this.readWhitespace());
+        continue;
+      }
+
+      if (ch === "`") {
+        this.next();
+        this.templateMode = true;
         continue;
       }
 
@@ -46,19 +77,20 @@ export class Lexer {
         continue;
       }
 
-      if (this.isDigit(ch) || (ch === "-" && this.isDigit(this.peek(1)))) {
-        tokens.push(this.readNumber());
-        continue;
-      }
+    if (this.isDigit(ch) || (ch === "-" && this.isDigit(this.peek(1)))) {
+      tokens.push(this.readNumber());
+      continue;
+    }
 
-      if (ch === "\"" || ch === "'") {
-        tokens.push(this.readString());
-        continue;
-      }
+    if (ch === "\"" || ch === "'") {
+      tokens.push(this.readString());
+      continue;
+    }
 
       const punct = this.readPunctuator();
       if (punct) {
         tokens.push(punct);
+        this.trackTemplateBrace(punct);
         continue;
       }
 
@@ -150,11 +182,50 @@ export class Lexer {
     throw new Error(`Unterminated string at ${start.line}:${start.column}`);
   }
 
+  private readTemplateChunk(): Token {
+    const start = this.position();
+    let value = "";
+    while (!this.eof()) {
+      const ch = this.peek();
+      if (ch === "`") {
+        this.next();
+        this.templateMode = false;
+        return this.token(TokenType.Template, value, start);
+      }
+      if (ch === "$" && this.peek(1) === "{") {
+        const dollarStart = this.position();
+        this.next();
+        const braceStart = this.position();
+        this.next();
+        this.templateMode = false;
+        this.templateExpressionMode = true;
+        this.templateBraceDepth = 0;
+        this.pendingTokens.push(this.token(TokenType.Dollar, "$", dollarStart));
+        this.pendingTokens.push(this.token(TokenType.LBrace, "{", braceStart));
+        return this.token(TokenType.Template, value, start);
+      }
+      if (ch === "\\") {
+        this.next();
+        const escaped = this.next();
+        value += escaped;
+        continue;
+      }
+      value += this.next();
+    }
+    throw new Error(`Unterminated template literal at ${start.line}:${start.column}`);
+  }
+
   private readPunctuator(): Token | null {
     const start = this.position();
     const ch = this.peek();
     const next = this.peek(1);
 
+    if (ch === "=" && next === "=" && this.peek(2) === "=") {
+      this.next();
+      this.next();
+      this.next();
+      return this.token(TokenType.TripleEquals, "===", start);
+    }
     if (ch === "=" && next === "=") {
       this.next();
       this.next();
@@ -164,6 +235,12 @@ export class Lexer {
       this.next();
       this.next();
       return this.token(TokenType.Arrow, "=>", start);
+    }
+    if (ch === "!" && next === "=" && this.peek(2) === "=") {
+      this.next();
+      this.next();
+      this.next();
+      return this.token(TokenType.StrictNotEquals, "!==", start);
     }
     if (ch === "!" && next === "=") {
       this.next();
@@ -195,10 +272,21 @@ export class Lexer {
       this.next();
       return this.token(TokenType.NullishCoalesce, "??", start);
     }
+    if (ch === "?" && next === ".") {
+      this.next();
+      this.next();
+      return this.token(TokenType.OptionalChain, "?.", start);
+    }
     if (ch === "|" && next === ">") {
       this.next();
       this.next();
       return this.token(TokenType.Pipe, "|>", start);
+    }
+    if (ch === "." && next === "." && this.peek(2) === ".") {
+      this.next();
+      this.next();
+      this.next();
+      return this.token(TokenType.Ellipsis, "...", start);
     }
     const punctMap: Record<string, TokenType> = {
       "{": TokenType.LBrace,
@@ -218,6 +306,8 @@ export class Lexer {
       "-": TokenType.Minus,
       "~": TokenType.Tilde,
       "*": TokenType.Star,
+      "/": TokenType.Slash,
+      "%": TokenType.Percent,
       "=": TokenType.Equals,
       "!": TokenType.Bang,
       "@": TokenType.At,
@@ -232,6 +322,21 @@ export class Lexer {
 
     this.next();
     return this.token(type, ch, start);
+  }
+
+  private trackTemplateBrace(token: Token): void {
+    if (!this.templateExpressionMode) {
+      return;
+    }
+    if (token.type === TokenType.LBrace) {
+      this.templateBraceDepth += 1;
+    } else if (token.type === TokenType.RBrace) {
+      this.templateBraceDepth -= 1;
+      if (this.templateBraceDepth <= 0) {
+        this.templateExpressionMode = false;
+        this.templateMode = true;
+      }
+    }
   }
 
   private token(type: TokenType, value: string, start: { index: number; line: number; column: number }): Token {

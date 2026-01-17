@@ -221,16 +221,8 @@ Conditional Blocks (Future-Proofing)
 - Keep core minimal (fast, lightweight); richer features live in extensions.
 
 22. Implementation TODOs
-- DOM helpers for refs/queries and event modifiers (Alpine-style ergonomics).
 - CFS language parity essentials:
-  - Nullish coalescing `??`.
-  - Strict equality `===` / `!==`.
-  - Multiplication/division/modulo operators.
-  - Optional chaining `?.`.
-  - Object literals and property access improvements.
-  - `let` / `const` declarations for local scope control.
-  - `if/else` and `for/while` blocks.
-  - `try/catch` for error handling.
-  - Destructuring and spread (`...`).
-  - Default/rest function params.
-  - Template literals.
+  - None right now (keep scope rules simple).
+
+23. Maybes
+- `#id` selector expression in CFS (resolve element by id, usable in expressions).

@@ -22,7 +22,7 @@ describe("query expression eval", () => {
       c = ?<(#root);
     `);
 
-    await block.evaluate({ scope, element: child });
+    await block.evaluate({ scope, rootScope: scope, element: child });
 
     expect((scope.get("a") as Element[]).length).toBe(1);
     expect((scope.get("b") as Element[]).length).toBe(0);
@@ -46,7 +46,7 @@ describe("query expression eval", () => {
       c = ?<("#root");
     `);
 
-    await block.evaluate({ scope, element: child });
+    await block.evaluate({ scope, rootScope: scope, element: child });
 
     expect((scope.get("a") as Element[]).length).toBe(1);
     expect((scope.get("b") as Element[]).length).toBe(0);

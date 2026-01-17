@@ -1,9 +1,11 @@
 export interface ExecutionContext {
-  scope?: {
+  scope: {
     getPath(key: string): any;
     setPath?(key: string, value: any): void;
     hasKey?(key: string): boolean;
-  };
+    createChild?(): ExecutionContext["scope"];
+  } | undefined;
+  rootScope: ExecutionContext["scope"];
   globals?: Record<string, any>;
   element?: Element;
   returnValue?: any;
@@ -25,6 +27,20 @@ export abstract class BaseNode implements CFSNode {
 
   async evaluate(_context: ExecutionContext): Promise<any> {
     return undefined;
+  }
+}
+
+async function evaluateWithChildScope(context: ExecutionContext, block: BlockNode): Promise<any> {
+  const scope = context.scope;
+  if (!scope || !scope.createChild) {
+    return block.evaluate(context);
+  }
+  const previousScope = context.scope;
+  context.scope = scope.createChild();
+  try {
+    return await block.evaluate(context);
+  } finally {
+    context.scope = previousScope;
   }
 }
 
@@ -105,16 +121,60 @@ export class AssignmentNode extends BaseNode {
     if (!context.scope || !context.scope.setPath) {
       return undefined;
     }
-    let targetPath: string | undefined;
-    if (this.target instanceof IdentifierExpression) {
-      targetPath = this.target.name;
-    }
-    if (!targetPath) {
-      return undefined;
-    }
     const value = await this.value.evaluate(context);
-    context.scope.setPath(targetPath, value);
+    if (this.target instanceof IdentifierExpression && this.target.name.startsWith("root.") && context.rootScope) {
+      const path = this.target.name.slice("root.".length);
+      context.rootScope.setPath?.(`self.${path}`, value);
+      return value;
+    }
+    this.assignTarget(context, this.target, value);
     return value;
+  }
+
+  private assignTarget(context: ExecutionContext, target: AssignmentTarget, value: any): void {
+    if (!context.scope || !context.scope.setPath) {
+      return;
+    }
+    if (target instanceof IdentifierExpression) {
+      context.scope.setPath(target.name, value);
+      return;
+    }
+    if (target instanceof ArrayPattern) {
+      const source = Array.isArray(value) ? value : [];
+      let index = 0;
+      for (const element of target.elements) {
+        if (element instanceof RestElement) {
+          context.scope.setPath(element.target.name, source.slice(index));
+          return;
+        }
+        if (element === null) {
+          index += 1;
+          continue;
+        }
+        this.assignTarget(context, element, source[index]);
+        index += 1;
+      }
+      return;
+    }
+    if (target instanceof ObjectPattern) {
+      const source = value && typeof value === "object" ? value : {};
+      const usedKeys = new Set<string>();
+      for (const entry of target.entries) {
+        if ("rest" in entry) {
+          const rest: Record<string, any> = {};
+          for (const key of Object.keys(source)) {
+            if (!usedKeys.has(key)) {
+              rest[key] = (source as any)[key];
+            }
+          }
+          context.scope.setPath(entry.rest.name, rest);
+          continue;
+        }
+        usedKeys.add(entry.key);
+        this.assignTarget(context, entry.target, (source as any)[entry.key]);
+      }
+      return;
+    }
   }
 }
 
@@ -133,10 +193,126 @@ export class ReturnNode extends BaseNode {
   }
 }
 
+export class IfNode extends BaseNode {
+  constructor(
+    public test: ExpressionNode,
+    public consequent: BlockNode,
+    public alternate?: BlockNode
+  ) {
+    super("If");
+  }
+
+  async evaluate(context: ExecutionContext): Promise<any> {
+    const condition = await this.test.evaluate(context);
+    if (condition) {
+      return evaluateWithChildScope(context, this.consequent);
+    }
+    if (this.alternate) {
+      return evaluateWithChildScope(context, this.alternate);
+    }
+  }
+}
+
+export class WhileNode extends BaseNode {
+  constructor(public test: ExpressionNode, public body: BlockNode) {
+    super("While");
+  }
+
+  async evaluate(context: ExecutionContext): Promise<any> {
+    const previousScope = context.scope;
+    if (context.scope?.createChild) {
+      context.scope = context.scope.createChild();
+    }
+    try {
+      while (await this.test.evaluate(context)) {
+        await this.body.evaluate(context);
+        if (context.returning) {
+          break;
+        }
+      }
+    } finally {
+      context.scope = previousScope;
+    }
+  }
+}
+
+export class ForNode extends BaseNode {
+  constructor(
+    public init: CFSNode | undefined,
+    public test: ExpressionNode | undefined,
+    public update: CFSNode | undefined,
+    public body: BlockNode
+  ) {
+    super("For");
+  }
+
+  async evaluate(context: ExecutionContext): Promise<any> {
+    if (this.init) {
+      await this.init.evaluate(context);
+    }
+    const previousScope = context.scope;
+    let bodyScope = context.scope;
+    if (context.scope?.createChild) {
+      bodyScope = context.scope.createChild();
+    }
+    while (this.test ? await this.test.evaluate(context) : true) {
+      context.scope = bodyScope;
+      await this.body.evaluate(context);
+      if (context.returning) {
+        break;
+      }
+      context.scope = previousScope;
+      if (this.update) {
+        await this.update.evaluate(context);
+      }
+    }
+    context.scope = previousScope;
+  }
+}
+
+export class TryNode extends BaseNode {
+  constructor(
+    public body: BlockNode,
+    public errorName: string,
+    public handler: BlockNode
+  ) {
+    super("Try");
+  }
+
+  async evaluate(context: ExecutionContext): Promise<any> {
+    try {
+      return await evaluateWithChildScope(context, this.body);
+    } catch (error) {
+      if (context.returning) {
+        return context.returnValue;
+      }
+      const previousScope = context.scope;
+      let handlerScope = context.scope;
+      if (context.scope?.createChild) {
+        handlerScope = context.scope.createChild();
+      }
+      context.scope = handlerScope;
+      const scope = context.scope;
+      let previous: any = undefined;
+      if (scope) {
+        previous = scope.getPath(this.errorName);
+        if (scope.setPath) {
+          scope.setPath(`self.${this.errorName}`, error);
+        }
+      }
+      await this.handler.evaluate(context);
+      if (scope && scope.setPath && handlerScope === previousScope) {
+        scope.setPath(this.errorName, previous);
+      }
+      context.scope = previousScope;
+    }
+  }
+}
+
 export class FunctionDeclarationNode extends BaseNode {
   constructor(
     public name: string,
-    public params: string[],
+    public params: FunctionParam[],
     public body: BlockNode,
     public isAsync = false
   ) {
@@ -146,7 +322,7 @@ export class FunctionDeclarationNode extends BaseNode {
 
 export class FunctionExpression extends BaseNode {
   constructor(
-    public params: string[],
+    public params: FunctionParam[],
     public body: BlockNode,
     public isAsync = false
   ) {
@@ -158,37 +334,70 @@ export class FunctionExpression extends BaseNode {
     const globals = context.globals;
     const element = context.element;
     return async (...args: any[]) => {
+      const activeScope = scope?.createChild ? scope.createChild() : scope;
       const inner: ExecutionContext = {
-        ...(scope ? { scope } : {}),
+        scope: activeScope,
+        rootScope: context.rootScope,
         ...(globals ? { globals } : {}),
         ...(element ? { element } : {}),
         returnValue: undefined,
         returning: false
       };
-      if (scope) {
+      if (activeScope) {
         const previousValues = new Map<string, any>();
-        for (let i = 0; i < this.params.length; i += 1) {
-          const name = this.params[i];
-          if (!name) {
-            continue;
-          }
-          previousValues.set(name, scope.getPath(name));
-          if (scope.setPath) {
-            scope.setPath(name, args[i]);
-          }
-        }
+        await this.applyParams(activeScope, previousValues, inner, args);
         await this.body.evaluate(inner);
-        for (const name of this.params) {
-          if (!name || !scope.setPath) {
-            continue;
-          }
-          scope.setPath(name, previousValues.get(name));
+        if (activeScope === scope) {
+          this.restoreParams(activeScope, previousValues);
         }
       } else {
         await this.body.evaluate(inner);
       }
       return inner.returnValue;
     };
+  }
+
+  private async applyParams(
+    scope: ExecutionContext["scope"],
+    previousValues: Map<string, any>,
+    context: ExecutionContext,
+    args: any[]
+  ): Promise<void> {
+    if (!scope || !scope.setPath) {
+      return;
+    }
+    let argIndex = 0;
+    for (const param of this.params) {
+      const name = param.name;
+      if (!name) {
+        continue;
+      }
+      previousValues.set(name, scope.getPath(name));
+      if (param.rest) {
+        scope.setPath(`self.${name}`, args.slice(argIndex));
+        argIndex = args.length;
+        continue;
+      }
+      let value = args[argIndex];
+      if (value === undefined && param.defaultValue) {
+        value = await param.defaultValue.evaluate(context);
+      }
+      scope.setPath(`self.${name}`, value);
+      argIndex += 1;
+    }
+  }
+
+  private restoreParams(scope: ExecutionContext["scope"], previousValues: Map<string, any>): void {
+    if (!scope || !scope.setPath) {
+      return;
+    }
+    for (const param of this.params) {
+      const name = param.name;
+      if (!name) {
+        continue;
+      }
+      scope.setPath(name, previousValues.get(name));
+    }
   }
 }
 
@@ -219,11 +428,13 @@ export class DeclarationNode extends BaseNode {
 export type ExpressionNode =
   | IdentifierExpression
   | LiteralExpression
+  | TemplateExpression
   | UnaryExpression
   | BinaryExpression
   | MemberExpression
   | CallExpression
   | ArrayExpression
+  | ObjectExpression
   | IndexExpression
   | FunctionExpression
   | AwaitExpression
@@ -232,7 +443,15 @@ export type ExpressionNode =
   | QueryExpression;
 
 export type DeclarationTarget = IdentifierExpression | DirectiveExpression;
-export type AssignmentTarget = IdentifierExpression | DirectiveExpression;
+export type AssignmentTarget = IdentifierExpression | DirectiveExpression | ArrayPattern | ObjectPattern;
+
+export type FunctionParam = {
+  name: string;
+  defaultValue?: ExpressionNode;
+  rest?: boolean;
+};
+
+export type PatternNode = IdentifierExpression | ArrayPattern | ObjectPattern;
 
 export class IdentifierExpression extends BaseNode {
   constructor(public name: string) {
@@ -240,6 +459,10 @@ export class IdentifierExpression extends BaseNode {
   }
 
   async evaluate(context: ExecutionContext): Promise<any> {
+    if (this.name.startsWith("root.") && context.rootScope) {
+      const path = this.name.slice("root.".length);
+      return context.rootScope.getPath(`self.${path}`);
+    }
     if (context.scope) {
       const value = context.scope.getPath(this.name);
       const root = this.name.split(".")[0];
@@ -254,6 +477,36 @@ export class IdentifierExpression extends BaseNode {
   }
 }
 
+export class SpreadElement extends BaseNode {
+  constructor(public value: ExpressionNode) {
+    super("SpreadElement");
+  }
+}
+
+export class RestElement extends BaseNode {
+  constructor(public target: IdentifierExpression) {
+    super("RestElement");
+  }
+}
+
+export type ArrayPatternElement = PatternNode | RestElement | null;
+
+export class ArrayPattern extends BaseNode {
+  constructor(public elements: ArrayPatternElement[]) {
+    super("ArrayPattern");
+  }
+}
+
+export type ObjectPatternEntry =
+  | { key: string; target: PatternNode }
+  | { rest: IdentifierExpression };
+
+export class ObjectPattern extends BaseNode {
+  constructor(public entries: ObjectPatternEntry[]) {
+    super("ObjectPattern");
+  }
+}
+
 export class LiteralExpression extends BaseNode {
   constructor(public value: string | number | boolean | null) {
     super("Literal");
@@ -261,6 +514,21 @@ export class LiteralExpression extends BaseNode {
 
   async evaluate(): Promise<any> {
     return this.value;
+  }
+}
+
+export class TemplateExpression extends BaseNode {
+  constructor(public parts: ExpressionNode[]) {
+    super("TemplateExpression");
+  }
+
+  async evaluate(context: ExecutionContext): Promise<any> {
+    let result = "";
+    for (const part of this.parts) {
+      const value = await part.evaluate(context);
+      result += value == null ? "" : String(value);
+    }
+    return result;
   }
 }
 
@@ -311,11 +579,26 @@ export class BinaryExpression extends BaseNode {
     if (this.operator === "-") {
       return (left as any) - (right as any);
     }
+    if (this.operator === "*") {
+      return (left as any) * (right as any);
+    }
+    if (this.operator === "/") {
+      return (left as any) / (right as any);
+    }
+    if (this.operator === "%") {
+      return (left as any) % (right as any);
+    }
     if (this.operator === "==") {
       return left == right;
     }
     if (this.operator === "!=") {
       return left != right;
+    }
+    if (this.operator === "===") {
+      return left === right;
+    }
+    if (this.operator === "!==") {
+      return left !== right;
     }
     if (this.operator === "<") {
       return (left as any) < (right as any);
@@ -352,7 +635,11 @@ export class TernaryExpression extends BaseNode {
 }
 
 export class MemberExpression extends BaseNode {
-  constructor(public target: ExpressionNode, public property: string) {
+  constructor(
+    public target: ExpressionNode,
+    public property: string,
+    public optional = false
+  ) {
     super("MemberExpression");
   }
 
@@ -363,7 +650,7 @@ export class MemberExpression extends BaseNode {
 
   async resolve(
     context: ExecutionContext
-  ): Promise<{ value: any; target?: any } | undefined> {
+  ): Promise<{ value: any; target?: any; optional?: boolean } | undefined> {
     const path = this.getIdentifierPath();
     if (path) {
       const resolved = this.resolveFromScope(context, path);
@@ -378,9 +665,9 @@ export class MemberExpression extends BaseNode {
 
     const target = await this.target.evaluate(context);
     if (target == null) {
-      return { value: undefined, target };
+      return { value: undefined, target, optional: this.optional };
     }
-    return { value: (target as any)[this.property], target };
+    return { value: (target as any)[this.property], target, optional: this.optional };
   }
 
   getIdentifierPath(): { path: string; root: string } | undefined {
@@ -410,9 +697,18 @@ export class MemberExpression extends BaseNode {
   private resolveFromScope(
     context: ExecutionContext,
     path: { path: string; root: string }
-  ): { value: any; target?: any } | undefined {
+  ): { value: any; target?: any; optional?: boolean } | undefined {
     if (!context.scope) {
       return undefined;
+    }
+    if (path.path.startsWith("root.") && context.rootScope) {
+      const localPath = path.path.slice("root.".length);
+      const value = context.rootScope.getPath(`self.${localPath}`);
+      const targetPath = localPath.split(".").slice(0, -1).join(".");
+      const target = targetPath
+        ? context.rootScope.getPath(`self.${targetPath}`)
+        : context.rootScope;
+      return { value, target, optional: this.optional };
     }
     const value = context.scope.getPath(path.path);
     const explicit = path.path.startsWith("parent.")
@@ -423,13 +719,13 @@ export class MemberExpression extends BaseNode {
     }
     const targetPath = this.getTargetPath(path.path);
     const target = targetPath ? context.scope.getPath(targetPath) : undefined;
-    return { value, target };
+    return { value, target, optional: this.optional };
   }
 
   private resolveFromGlobals(
     context: ExecutionContext,
     path: { path: string; root: string }
-  ): { value: any; target?: any } | undefined {
+  ): { value: any; target?: any; optional?: boolean } | undefined {
     const globals = context.globals ?? {};
     if (!path.root || !(path.root in globals)) {
       return undefined;
@@ -441,11 +737,11 @@ export class MemberExpression extends BaseNode {
       parent = value;
       const part = parts[i];
       if (!part) {
-        return { value: undefined, target: parent };
+        return { value: undefined, target: parent, optional: this.optional };
       }
       value = value?.[part];
     }
-    return { value, target: parent };
+    return { value, target: parent, optional: this.optional };
   }
 
   private getTargetPath(path: string): string | undefined {
@@ -521,17 +817,65 @@ export class CallExpression extends BaseNode {
   }
 }
 
+export type ArrayElement = ExpressionNode | SpreadElement;
+
 export class ArrayExpression extends BaseNode {
-  constructor(public elements: ExpressionNode[]) {
+  constructor(public elements: ArrayElement[]) {
     super("ArrayExpression");
   }
 
   async evaluate(context: ExecutionContext): Promise<any> {
     const values: any[] = [];
     for (const element of this.elements) {
+      if (element instanceof SpreadElement) {
+        const spreadValue = await element.value.evaluate(context);
+        if (spreadValue == null) {
+          continue;
+        }
+        const iterator = (spreadValue as any)[Symbol.iterator];
+        if (typeof iterator === "function") {
+          for (const entry of spreadValue as any) {
+            values.push(entry);
+          }
+        } else {
+          values.push(spreadValue);
+        }
+        continue;
+      }
       values.push(await element.evaluate(context));
     }
     return values;
+  }
+}
+
+export type ObjectEntry =
+  | { key: string; value: ExpressionNode; computed?: false }
+  | { keyExpr: ExpressionNode; value: ExpressionNode; computed: true }
+  | { spread: ExpressionNode };
+
+export class ObjectExpression extends BaseNode {
+  constructor(public entries: ObjectEntry[]) {
+    super("ObjectExpression");
+  }
+
+  async evaluate(context: ExecutionContext): Promise<any> {
+    const result: Record<string, any> = {};
+    for (const entry of this.entries) {
+      if ("spread" in entry) {
+        const spreadValue = await entry.spread.evaluate(context);
+        if (spreadValue != null) {
+          Object.assign(result, spreadValue);
+        }
+        continue;
+      }
+      if ("computed" in entry && entry.computed) {
+        const keyValue = await entry.keyExpr.evaluate(context);
+        result[String(keyValue)] = await entry.value.evaluate(context);
+      } else {
+        result[entry.key] = await entry.value.evaluate(context);
+      }
+    }
+    return result;
   }
 }
 

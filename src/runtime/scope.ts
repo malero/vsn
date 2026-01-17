@@ -8,6 +8,10 @@ export class Scope {
     this.root = parent ? parent.root : this;
   }
 
+  createChild(): Scope {
+    return new Scope(this);
+  }
+
   get(key: string): any {
     return this.getPath(key);
   }

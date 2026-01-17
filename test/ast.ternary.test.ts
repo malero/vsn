@@ -12,7 +12,7 @@ describe("ternary expressions", () => {
     `);
 
     const scope = new Scope();
-    await block.evaluate({ scope });
+    await block.evaluate({ scope, rootScope: scope });
 
     expect(scope.get("a")).toBe("yes");
     expect(scope.get("b")).toBe("yes");
@@ -25,7 +25,7 @@ describe("ternary expressions", () => {
     `);
 
     const scope = new Scope();
-    await block.evaluate({ scope });
+    await block.evaluate({ scope, rootScope: scope });
 
     expect(scope.get("result")).toBe("big");
   });

@@ -10,7 +10,7 @@ describe("call expression", () => {
     scope.set("count", 3);
     const spy = vi.spyOn(console, "log").mockImplementation(() => undefined);
 
-    await block.evaluate({ scope, globals: { console } });
+    await block.evaluate({ scope, rootScope: scope, globals: { console } });
 
     expect(spy).toHaveBeenCalledWith(3);
     spy.mockRestore();
