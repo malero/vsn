@@ -13,4 +13,4 @@ npm i vsn
 ```
 
 ## Usage
-Please visit the [docs](https://www.vsnjs.org) for more information.
+Please visit the [docs](https://www.vsnjs.org/docs/) for more information.
