@@ -586,27 +586,32 @@ var AssignmentNode = class extends BaseNode {
     }
     const value = await this.value.evaluate(context);
     if (this.operator !== "=") {
-      return this.applyCompoundAssignment(context, value);
+      return await this.applyCompoundAssignment(context, value);
     }
     if (this.target instanceof IdentifierExpression && this.target.name.startsWith("root.") && context.rootScope) {
       const path = this.target.name.slice("root.".length);
-      context.rootScope.setPath?.(`self.${path}`, value);
+      context.rootScope.setPath?.(path, value);
       return value;
+    }
+    if (this.target instanceof MemberExpression || this.target instanceof IndexExpression) {
+      const resolved = await this.resolveAssignmentTarget(context);
+      if (resolved?.scope?.setPath) {
+        resolved.scope.setPath(resolved.path, value);
+        return value;
+      }
     }
     this.assignTarget(context, this.target, value);
     return value;
   }
-  applyCompoundAssignment(context, value) {
+  async applyCompoundAssignment(context, value) {
     if (!context.scope || !context.scope.setPath) {
       return void 0;
     }
-    if (!(this.target instanceof IdentifierExpression)) {
-      throw new Error("Compound assignment requires a simple identifier");
+    const resolved = await this.resolveAssignmentTarget(context);
+    if (!resolved) {
+      throw new Error("Compound assignment requires a simple identifier or member path");
     }
-    const isRoot = this.target.name.startsWith("root.");
-    const scope = isRoot && context.rootScope ? context.rootScope : context.scope;
-    const rawPath = isRoot ? this.target.name.slice("root.".length) : this.target.name;
-    const path = isRoot ? `self.${rawPath}` : rawPath;
+    const { scope, path } = resolved;
     const current = scope?.getPath ? scope.getPath(path) : void 0;
     let result;
     if (this.operator === "+=") {
@@ -620,6 +625,65 @@ var AssignmentNode = class extends BaseNode {
     }
     scope?.setPath?.(path, result);
     return result;
+  }
+  async resolveAssignmentTarget(context) {
+    if (this.target instanceof IdentifierExpression) {
+      const isRoot = this.target.name.startsWith("root.");
+      const rawPath = isRoot ? this.target.name.slice("root.".length) : this.target.name;
+      if (isRoot) {
+        return { scope: context.scope, path: `root.${rawPath}` };
+      }
+      return { scope: context.scope, path: rawPath };
+    }
+    if (this.target instanceof MemberExpression) {
+      const resolvedPath = this.target.getIdentifierPath();
+      if (!resolvedPath) {
+        return null;
+      }
+      const path = resolvedPath.path;
+      const isRoot = path.startsWith("root.");
+      const rawPath = isRoot ? path.slice("root.".length) : path;
+      if (isRoot) {
+        return { scope: context.scope, path: `root.${rawPath}` };
+      }
+      return { scope: context.scope, path: rawPath };
+    }
+    if (this.target instanceof IndexExpression) {
+      const path = await this.resolveIndexPath(context, this.target);
+      if (!path) {
+        return null;
+      }
+      const isRoot = path.startsWith("root.");
+      const rawPath = isRoot ? path.slice("root.".length) : path;
+      if (isRoot) {
+        return { scope: context.scope, path: `root.${rawPath}` };
+      }
+      return { scope: context.scope, path: rawPath };
+    }
+    return null;
+  }
+  async resolveIndexPath(context, expr) {
+    const base = await this.resolveTargetPath(context, expr.target);
+    if (!base) {
+      return null;
+    }
+    const indexValue = await expr.index.evaluate(context);
+    if (indexValue == null) {
+      return null;
+    }
+    return `${base}.${indexValue}`;
+  }
+  async resolveTargetPath(context, target) {
+    if (target instanceof IdentifierExpression) {
+      return target.name;
+    }
+    if (target instanceof MemberExpression) {
+      return target.getIdentifierPath()?.path ?? null;
+    }
+    if (target instanceof IndexExpression) {
+      return this.resolveIndexPath(context, target);
+    }
+    return null;
   }
   assignTarget(context, target, value) {
     if (!context.scope || !context.scope.setPath) {
@@ -2347,7 +2411,14 @@ ${caret}`;
       return this.parseObjectPattern();
     }
     if (token.type === "Identifier" /* Identifier */) {
-      return new IdentifierExpression(this.parseIdentifierPath());
+      const expr = this.parseCallExpression();
+      if (expr instanceof CallExpression) {
+        throw new Error("Invalid assignment target CallExpression");
+      }
+      if (expr instanceof IdentifierExpression || expr instanceof MemberExpression || expr instanceof IndexExpression) {
+        return expr;
+      }
+      throw new Error("Invalid assignment target");
     }
     throw new Error(`Invalid assignment target ${token.type}`);
   }
@@ -2625,6 +2696,25 @@ ${caret}`;
       let index = 1;
       while (this.stream.peekNonWhitespace(index)?.type === "Dot" /* Dot */ && this.stream.peekNonWhitespace(index + 1)?.type === "Identifier" /* Identifier */) {
         index += 2;
+      }
+      while (this.stream.peekNonWhitespace(index)?.type === "LBracket" /* LBracket */) {
+        let depth = 0;
+        while (true) {
+          const token = this.stream.peekNonWhitespace(index);
+          if (!token) {
+            return false;
+          }
+          if (token.type === "LBracket" /* LBracket */) {
+            depth += 1;
+          } else if (token.type === "RBracket" /* RBracket */) {
+            depth -= 1;
+            if (depth === 0) {
+              index += 1;
+              break;
+            }
+          }
+          index += 1;
+        }
       }
       return this.isAssignmentOperatorStart(index);
     }

@@ -140,28 +140,33 @@ export class AssignmentNode extends BaseNode {
     }
     const value = await this.value.evaluate(context);
     if (this.operator !== "=") {
-      return this.applyCompoundAssignment(context, value);
+      return await this.applyCompoundAssignment(context, value);
     }
     if (this.target instanceof IdentifierExpression && this.target.name.startsWith("root.") && context.rootScope) {
       const path = this.target.name.slice("root.".length);
-      context.rootScope.setPath?.(`self.${path}`, value);
+      context.rootScope.setPath?.(path, value);
       return value;
+    }
+    if (this.target instanceof MemberExpression || this.target instanceof IndexExpression) {
+      const resolved = await this.resolveAssignmentTarget(context);
+      if (resolved?.scope?.setPath) {
+        resolved.scope.setPath(resolved.path, value);
+        return value;
+      }
     }
     this.assignTarget(context, this.target, value);
     return value;
   }
 
-  private applyCompoundAssignment(context: ExecutionContext, value: any): any {
+  private async applyCompoundAssignment(context: ExecutionContext, value: any): Promise<any> {
     if (!context.scope || !context.scope.setPath) {
       return undefined;
     }
-    if (!(this.target instanceof IdentifierExpression)) {
-      throw new Error("Compound assignment requires a simple identifier");
+    const resolved = await this.resolveAssignmentTarget(context);
+    if (!resolved) {
+      throw new Error("Compound assignment requires a simple identifier or member path");
     }
-    const isRoot = this.target.name.startsWith("root.");
-    const scope = isRoot && context.rootScope ? context.rootScope : context.scope;
-    const rawPath = isRoot ? this.target.name.slice("root.".length) : this.target.name;
-    const path = isRoot ? `self.${rawPath}` : rawPath;
+    const { scope, path } = resolved;
     const current = scope?.getPath ? scope.getPath(path) : undefined;
     let result: any;
     if (this.operator === "+=") {
@@ -175,6 +180,70 @@ export class AssignmentNode extends BaseNode {
     }
     scope?.setPath?.(path, result);
     return result;
+  }
+
+  private async resolveAssignmentTarget(
+    context: ExecutionContext
+  ): Promise<{ scope: ExecutionContext["scope"]; path: string } | null> {
+    if (this.target instanceof IdentifierExpression) {
+      const isRoot = this.target.name.startsWith("root.");
+      const rawPath = isRoot ? this.target.name.slice("root.".length) : this.target.name;
+      if (isRoot) {
+        return { scope: context.scope, path: `root.${rawPath}` };
+      }
+      return { scope: context.scope, path: rawPath };
+    }
+    if (this.target instanceof MemberExpression) {
+      const resolvedPath = this.target.getIdentifierPath();
+      if (!resolvedPath) {
+        return null;
+      }
+      const path = resolvedPath.path;
+      const isRoot = path.startsWith("root.");
+      const rawPath = isRoot ? path.slice("root.".length) : path;
+      if (isRoot) {
+        return { scope: context.scope, path: `root.${rawPath}` };
+      }
+      return { scope: context.scope, path: rawPath };
+    }
+    if (this.target instanceof IndexExpression) {
+      const path = await this.resolveIndexPath(context, this.target);
+      if (!path) {
+        return null;
+      }
+      const isRoot = path.startsWith("root.");
+      const rawPath = isRoot ? path.slice("root.".length) : path;
+      if (isRoot) {
+        return { scope: context.scope, path: `root.${rawPath}` };
+      }
+      return { scope: context.scope, path: rawPath };
+    }
+    return null;
+  }
+
+  private async resolveIndexPath(context: ExecutionContext, expr: IndexExpression): Promise<string | null> {
+    const base = await this.resolveTargetPath(context, expr.target);
+    if (!base) {
+      return null;
+    }
+    const indexValue = await expr.index.evaluate(context);
+    if (indexValue == null) {
+      return null;
+    }
+    return `${base}.${indexValue}`;
+  }
+
+  private async resolveTargetPath(context: ExecutionContext, target: ExpressionNode): Promise<string | null> {
+    if (target instanceof IdentifierExpression) {
+      return target.name;
+    }
+    if (target instanceof MemberExpression) {
+      return target.getIdentifierPath()?.path ?? null;
+    }
+    if (target instanceof IndexExpression) {
+      return this.resolveIndexPath(context, target);
+    }
+    return null;
   }
 
   private assignTarget(context: ExecutionContext, target: AssignmentTarget, value: any): void {
@@ -489,7 +558,13 @@ export type ExpressionNode =
   | QueryExpression;
 
 export type DeclarationTarget = IdentifierExpression | DirectiveExpression;
-export type AssignmentTarget = IdentifierExpression | DirectiveExpression | ArrayPattern | ObjectPattern;
+export type AssignmentTarget =
+  | IdentifierExpression
+  | MemberExpression
+  | IndexExpression
+  | DirectiveExpression
+  | ArrayPattern
+  | ObjectPattern;
 
 export type FunctionParam = {
   name: string;

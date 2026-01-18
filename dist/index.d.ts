@@ -183,6 +183,9 @@ declare class AssignmentNode extends BaseNode {
     constructor(target: AssignmentTarget, value: ExpressionNode, operator?: "=" | "+=" | "-=" | "*=" | "/=");
     evaluate(context: ExecutionContext): Promise<any>;
     private applyCompoundAssignment;
+    private resolveAssignmentTarget;
+    private resolveIndexPath;
+    private resolveTargetPath;
     private assignTarget;
 }
 declare class ReturnNode extends BaseNode {
@@ -254,7 +257,7 @@ declare class DeclarationNode extends BaseNode {
 }
 type ExpressionNode = IdentifierExpression | LiteralExpression | TemplateExpression | UnaryExpression | BinaryExpression | MemberExpression | CallExpression | ArrayExpression | ObjectExpression | IndexExpression | FunctionExpression | AwaitExpression | TernaryExpression | DirectiveExpression | QueryExpression;
 type DeclarationTarget = IdentifierExpression | DirectiveExpression;
-type AssignmentTarget = IdentifierExpression | DirectiveExpression | ArrayPattern | ObjectPattern;
+type AssignmentTarget = IdentifierExpression | MemberExpression | IndexExpression | DirectiveExpression | ArrayPattern | ObjectPattern;
 type FunctionParam = {
     name: string;
     defaultValue?: ExpressionNode;

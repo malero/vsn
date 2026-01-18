@@ -49,15 +49,19 @@ describe("parser behavior", () => {
       const firstAssignment = onBlock.body.statements[0];
       expect(firstAssignment.type).toBe("Assignment");
       if (firstAssignment.type === "Assignment") {
-        expect(firstAssignment.target.type).toBe("Identifier");
-        expect(firstAssignment.target.name).toBe("parent.active");
+        expect(firstAssignment.target.type).toBe("MemberExpression");
+        if (firstAssignment.target.type === "MemberExpression") {
+          expect(firstAssignment.target.getIdentifierPath()?.path).toBe("parent.active");
+        }
       }
 
       const secondAssignment = onBlock.body.statements[1];
       expect(secondAssignment.type).toBe("Assignment");
       if (secondAssignment.type === "Assignment") {
-        expect(secondAssignment.target.type).toBe("Identifier");
-        expect(secondAssignment.target.name).toBe("root.count");
+        expect(secondAssignment.target.type).toBe("MemberExpression");
+        if (secondAssignment.target.type === "MemberExpression") {
+          expect(secondAssignment.target.getIdentifierPath()?.path).toBe("root.count");
+        }
         expect(secondAssignment.value.type).toBe("BinaryExpression");
       }
 

@@ -1095,7 +1095,14 @@ export class Parser {
     }
 
     if (token.type === TokenType.Identifier) {
-      return new IdentifierExpression(this.parseIdentifierPath());
+      const expr = this.parseCallExpression();
+      if (expr instanceof CallExpression) {
+        throw new Error("Invalid assignment target CallExpression");
+      }
+      if (expr instanceof IdentifierExpression || expr instanceof MemberExpression || expr instanceof IndexExpression) {
+        return expr;
+      }
+      throw new Error("Invalid assignment target");
     }
 
     throw new Error(`Invalid assignment target ${token.type}`);
@@ -1397,6 +1404,25 @@ export class Parser {
         this.stream.peekNonWhitespace(index + 1)?.type === TokenType.Identifier
       ) {
         index += 2;
+      }
+      while (this.stream.peekNonWhitespace(index)?.type === TokenType.LBracket) {
+        let depth = 0;
+        while (true) {
+          const token = this.stream.peekNonWhitespace(index);
+          if (!token) {
+            return false;
+          }
+          if (token.type === TokenType.LBracket) {
+            depth += 1;
+          } else if (token.type === TokenType.RBracket) {
+            depth -= 1;
+            if (depth === 0) {
+              index += 1;
+              break;
+            }
+          }
+          index += 1;
+        }
       }
       return this.isAssignmentOperatorStart(index);
     }
