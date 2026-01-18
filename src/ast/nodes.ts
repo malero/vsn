@@ -126,7 +126,11 @@ export class OnBlockNode extends BaseNode {
 }
 
 export class AssignmentNode extends BaseNode {
-  constructor(public target: AssignmentTarget, public value: ExpressionNode) {
+  constructor(
+    public target: AssignmentTarget,
+    public value: ExpressionNode,
+    public operator: "=" | "+=" | "-=" | "*=" | "/=" = "="
+  ) {
     super("Assignment");
   }
 
@@ -135,6 +139,9 @@ export class AssignmentNode extends BaseNode {
       return undefined;
     }
     const value = await this.value.evaluate(context);
+    if (this.operator !== "=") {
+      return this.applyCompoundAssignment(context, value);
+    }
     if (this.target instanceof IdentifierExpression && this.target.name.startsWith("root.") && context.rootScope) {
       const path = this.target.name.slice("root.".length);
       context.rootScope.setPath?.(`self.${path}`, value);
@@ -142,6 +149,32 @@ export class AssignmentNode extends BaseNode {
     }
     this.assignTarget(context, this.target, value);
     return value;
+  }
+
+  private applyCompoundAssignment(context: ExecutionContext, value: any): any {
+    if (!context.scope || !context.scope.setPath) {
+      return undefined;
+    }
+    if (!(this.target instanceof IdentifierExpression)) {
+      throw new Error("Compound assignment requires a simple identifier");
+    }
+    const isRoot = this.target.name.startsWith("root.");
+    const scope = isRoot && context.rootScope ? context.rootScope : context.scope;
+    const rawPath = isRoot ? this.target.name.slice("root.".length) : this.target.name;
+    const path = isRoot ? `self.${rawPath}` : rawPath;
+    const current = scope?.getPath ? scope.getPath(path) : undefined;
+    let result: any;
+    if (this.operator === "+=") {
+      result = current + value;
+    } else if (this.operator === "-=") {
+      result = current - value;
+    } else if (this.operator === "*=") {
+      result = current * value;
+    } else {
+      result = current / value;
+    }
+    scope?.setPath?.(path, result);
+    return result;
   }
 
   private assignTarget(context: ExecutionContext, target: AssignmentTarget, value: any): void {

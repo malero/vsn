@@ -574,16 +574,20 @@ var OnBlockNode = class extends BaseNode {
   }
 };
 var AssignmentNode = class extends BaseNode {
-  constructor(target, value) {
+  constructor(target, value, operator = "=") {
     super("Assignment");
     this.target = target;
     this.value = value;
+    this.operator = operator;
   }
   async evaluate(context) {
     if (!context.scope || !context.scope.setPath) {
       return void 0;
     }
     const value = await this.value.evaluate(context);
+    if (this.operator !== "=") {
+      return this.applyCompoundAssignment(context, value);
+    }
     if (this.target instanceof IdentifierExpression && this.target.name.startsWith("root.") && context.rootScope) {
       const path = this.target.name.slice("root.".length);
       context.rootScope.setPath?.(`self.${path}`, value);
@@ -591,6 +595,31 @@ var AssignmentNode = class extends BaseNode {
     }
     this.assignTarget(context, this.target, value);
     return value;
+  }
+  applyCompoundAssignment(context, value) {
+    if (!context.scope || !context.scope.setPath) {
+      return void 0;
+    }
+    if (!(this.target instanceof IdentifierExpression)) {
+      throw new Error("Compound assignment requires a simple identifier");
+    }
+    const isRoot = this.target.name.startsWith("root.");
+    const scope = isRoot && context.rootScope ? context.rootScope : context.scope;
+    const rawPath = isRoot ? this.target.name.slice("root.".length) : this.target.name;
+    const path = isRoot ? `self.${rawPath}` : rawPath;
+    const current = scope?.getPath ? scope.getPath(path) : void 0;
+    let result;
+    if (this.operator === "+=") {
+      result = current + value;
+    } else if (this.operator === "-=") {
+      result = current - value;
+    } else if (this.operator === "*=") {
+      result = current * value;
+    } else {
+      result = current / value;
+    }
+    scope?.setPath?.(path, result);
+    return result;
   }
   assignTarget(context, target, value) {
     if (!context.scope || !context.scope.setPath) {
@@ -1732,11 +1761,11 @@ ${caret}`;
   parseAssignment() {
     const target = this.parseAssignmentTarget();
     this.stream.skipWhitespace();
-    this.stream.expect("Equals" /* Equals */);
+    const operator = this.parseAssignmentOperator();
     this.stream.skipWhitespace();
     const value = this.parseExpression();
     this.consumeStatementTerminator();
-    return new AssignmentNode(target, value);
+    return new AssignmentNode(target, value, operator);
   }
   parseExpression() {
     return this.parsePipeExpression();
@@ -2597,12 +2626,12 @@ ${caret}`;
       while (this.stream.peekNonWhitespace(index)?.type === "Dot" /* Dot */ && this.stream.peekNonWhitespace(index + 1)?.type === "Identifier" /* Identifier */) {
         index += 2;
       }
-      return this.stream.peekNonWhitespace(index)?.type === "Equals" /* Equals */;
+      return this.isAssignmentOperatorStart(index);
     }
     if (first.type === "At" /* At */ || first.type === "Dollar" /* Dollar */) {
       const second = this.stream.peekNonWhitespace(1);
       const third = this.stream.peekNonWhitespace(2);
-      return second?.type === "Identifier" /* Identifier */ && third?.type === "Equals" /* Equals */;
+      return second?.type === "Identifier" /* Identifier */ && this.isAssignmentOperatorStart(2);
     }
     if (first.type === "LBrace" /* LBrace */ || first.type === "LBracket" /* LBracket */) {
       const stack = [];
@@ -2617,11 +2646,25 @@ ${caret}`;
         } else if (token.type === "RBrace" /* RBrace */ || token.type === "RBracket" /* RBracket */) {
           stack.pop();
           if (stack.length === 0) {
-            return this.stream.peekNonWhitespace(index + 1)?.type === "Equals" /* Equals */;
+            return this.isAssignmentOperatorStart(index + 1);
           }
         }
         index += 1;
       }
+    }
+    return false;
+  }
+  isAssignmentOperatorStart(index) {
+    const token = this.stream.peekNonWhitespace(index);
+    if (!token) {
+      return false;
+    }
+    if (token.type === "Equals" /* Equals */) {
+      return true;
+    }
+    if (token.type === "Plus" /* Plus */ || token.type === "Minus" /* Minus */ || token.type === "Star" /* Star */ || token.type === "Slash" /* Slash */) {
+      const next = this.stream.peekNonWhitespace(index + 1);
+      return next?.type === "Equals" /* Equals */;
     }
     return false;
   }
@@ -2849,10 +2892,35 @@ ${caret}`;
   parseAssignmentExpression() {
     const target = this.parseAssignmentTarget();
     this.stream.skipWhitespace();
-    this.stream.expect("Equals" /* Equals */);
+    const operator = this.parseAssignmentOperator();
     this.stream.skipWhitespace();
     const value = this.parseExpression();
-    return new AssignmentNode(target, value);
+    return new AssignmentNode(target, value, operator);
+  }
+  parseAssignmentOperator() {
+    const next = this.stream.peek();
+    if (!next) {
+      throw new Error("Expected assignment operator");
+    }
+    if (next.type === "Equals" /* Equals */) {
+      this.stream.next();
+      return "=";
+    }
+    if (next.type === "Plus" /* Plus */ || next.type === "Minus" /* Minus */ || next.type === "Star" /* Star */ || next.type === "Slash" /* Slash */) {
+      const op = this.stream.next();
+      this.stream.expect("Equals" /* Equals */);
+      if (op.type === "Plus" /* Plus */) {
+        return "+=";
+      }
+      if (op.type === "Minus" /* Minus */) {
+        return "-=";
+      }
+      if (op.type === "Star" /* Star */) {
+        return "*=";
+      }
+      return "/=";
+    }
+    throw new Error("Expected assignment operator");
   }
   parseTryBlock() {
     this.stream.expect("Try" /* Try */);

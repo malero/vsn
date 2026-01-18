@@ -179,8 +179,10 @@ declare class OnBlockNode extends BaseNode {
 declare class AssignmentNode extends BaseNode {
     target: AssignmentTarget;
     value: ExpressionNode;
-    constructor(target: AssignmentTarget, value: ExpressionNode);
+    operator: "=" | "+=" | "-=" | "*=" | "/=";
+    constructor(target: AssignmentTarget, value: ExpressionNode, operator?: "=" | "+=" | "-=" | "*=" | "/=");
     evaluate(context: ExecutionContext): Promise<any>;
+    private applyCompoundAssignment;
     private assignTarget;
 }
 declare class ReturnNode extends BaseNode {
@@ -447,6 +449,7 @@ declare class Parser {
     private parseCustomFlagArg;
     private isDeclarationStart;
     private isAssignmentStart;
+    private isAssignmentOperatorStart;
     private isCallStart;
     private isExpressionStatementStart;
     private isFunctionDeclarationStart;
@@ -459,6 +462,7 @@ declare class Parser {
     private parseForBlock;
     private parseForClause;
     private parseAssignmentExpression;
+    private parseAssignmentOperator;
     private parseTryBlock;
     private parseConstructBlock;
     private parseDestructBlock;

@@ -459,11 +459,11 @@ export class Parser {
   private parseAssignment(): AssignmentNode {
     const target = this.parseAssignmentTarget();
     this.stream.skipWhitespace();
-    this.stream.expect(TokenType.Equals);
+    const operator = this.parseAssignmentOperator();
     this.stream.skipWhitespace();
     const value = this.parseExpression();
     this.consumeStatementTerminator();
-    return new AssignmentNode(target, value);
+    return new AssignmentNode(target, value, operator);
   }
 
   private parseExpression(): ExpressionNode {
@@ -1398,13 +1398,13 @@ export class Parser {
       ) {
         index += 2;
       }
-      return this.stream.peekNonWhitespace(index)?.type === TokenType.Equals;
+      return this.isAssignmentOperatorStart(index);
     }
 
     if (first.type === TokenType.At || first.type === TokenType.Dollar) {
       const second = this.stream.peekNonWhitespace(1);
       const third = this.stream.peekNonWhitespace(2);
-      return second?.type === TokenType.Identifier && third?.type === TokenType.Equals;
+      return second?.type === TokenType.Identifier && this.isAssignmentOperatorStart(2);
     }
 
     if (first.type === TokenType.LBrace || first.type === TokenType.LBracket) {
@@ -1420,13 +1420,31 @@ export class Parser {
         } else if (token.type === TokenType.RBrace || token.type === TokenType.RBracket) {
           stack.pop();
           if (stack.length === 0) {
-            return this.stream.peekNonWhitespace(index + 1)?.type === TokenType.Equals;
+            return this.isAssignmentOperatorStart(index + 1);
           }
         }
         index += 1;
       }
     }
 
+    return false;
+  }
+
+  private isAssignmentOperatorStart(index: number): boolean {
+    const token = this.stream.peekNonWhitespace(index);
+    if (!token) {
+      return false;
+    }
+    if (token.type === TokenType.Equals) {
+      return true;
+    }
+    if (token.type === TokenType.Plus ||
+        token.type === TokenType.Minus ||
+        token.type === TokenType.Star ||
+        token.type === TokenType.Slash) {
+      const next = this.stream.peekNonWhitespace(index + 1);
+      return next?.type === TokenType.Equals;
+    }
     return false;
   }
 
@@ -1681,10 +1699,39 @@ export class Parser {
   private parseAssignmentExpression(): AssignmentNode {
     const target = this.parseAssignmentTarget();
     this.stream.skipWhitespace();
-    this.stream.expect(TokenType.Equals);
+    const operator = this.parseAssignmentOperator();
     this.stream.skipWhitespace();
     const value = this.parseExpression();
-    return new AssignmentNode(target, value);
+    return new AssignmentNode(target, value, operator);
+  }
+
+  private parseAssignmentOperator(): "=" | "+=" | "-=" | "*=" | "/=" {
+    const next = this.stream.peek();
+    if (!next) {
+      throw new Error("Expected assignment operator");
+    }
+    if (next.type === TokenType.Equals) {
+      this.stream.next();
+      return "=";
+    }
+    if (next.type === TokenType.Plus ||
+        next.type === TokenType.Minus ||
+        next.type === TokenType.Star ||
+        next.type === TokenType.Slash) {
+      const op = this.stream.next();
+      this.stream.expect(TokenType.Equals);
+      if (op.type === TokenType.Plus) {
+        return "+=";
+      }
+      if (op.type === TokenType.Minus) {
+        return "-=";
+      }
+      if (op.type === TokenType.Star) {
+        return "*=";
+      }
+      return "/=";
+    }
+    throw new Error("Expected assignment operator");
   }
 
   private parseTryBlock(): TryNode {
