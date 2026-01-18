@@ -144,7 +144,7 @@ export class AssignmentNode extends BaseNode {
     }
     if (this.target instanceof IdentifierExpression && this.target.name.startsWith("root.") && context.rootScope) {
       const path = this.target.name.slice("root.".length);
-      context.rootScope.setPath?.(path, value);
+      context.rootScope.setPath?.(`self.${path}`, value);
       return value;
     }
     if (this.target instanceof MemberExpression || this.target instanceof IndexExpression) {
@@ -189,6 +189,9 @@ export class AssignmentNode extends BaseNode {
       const isRoot = this.target.name.startsWith("root.");
       const rawPath = isRoot ? this.target.name.slice("root.".length) : this.target.name;
       if (isRoot) {
+        if (context.rootScope) {
+          return { scope: context.rootScope, path: `self.${rawPath}` };
+        }
         return { scope: context.scope, path: `root.${rawPath}` };
       }
       return { scope: context.scope, path: rawPath };
@@ -202,6 +205,9 @@ export class AssignmentNode extends BaseNode {
       const isRoot = path.startsWith("root.");
       const rawPath = isRoot ? path.slice("root.".length) : path;
       if (isRoot) {
+        if (context.rootScope) {
+          return { scope: context.rootScope, path: `self.${rawPath}` };
+        }
         return { scope: context.scope, path: `root.${rawPath}` };
       }
       return { scope: context.scope, path: rawPath };
@@ -214,6 +220,9 @@ export class AssignmentNode extends BaseNode {
       const isRoot = path.startsWith("root.");
       const rawPath = isRoot ? path.slice("root.".length) : path;
       if (isRoot) {
+        if (context.rootScope) {
+          return { scope: context.rootScope, path: `self.${rawPath}` };
+        }
         return { scope: context.scope, path: `root.${rawPath}` };
       }
       return { scope: context.scope, path: rawPath };

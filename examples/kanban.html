@@ -204,13 +204,16 @@
       @data-status :> status;
       @class :< (root.dropStatus == status ? "kanban-column is-drop" : "kanban-column");
 
-      on dragover(event) {
-        event.preventDefault();
+      construct {
+        console.log("Construct");
+      }
+
+      on dragover(event) !prevent {
         root.dropStatus = status;
       }
 
-      on drop(event) {
-        event.preventDefault();
+      on drop(event) !prevent {
+        console.log(`Prevent ${dropStatus}`);
         root.dropStatus = "";
         root.dragId == "" ? null : moveTask(root.dragId, status);
       }

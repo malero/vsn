@@ -137,6 +137,7 @@ export class Engine {
   private diagnostics: boolean;
   private logger: Partial<Pick<Console, "info" | "warn">>;
   private pendingUses: Promise<void>[] = [];
+  private scopeWatchers = new WeakMap<Element, { scope: Scope; kind: "path" | "any"; key?: string; handler: () => void }[]>();
 
   constructor(options: EngineOptions = {}) {
     this.diagnostics = options.diagnostics ?? false;
@@ -418,6 +419,8 @@ export class Engine {
     if (this.behaviorBindings.has(node)) {
       this.runBehaviorDestruct(node);
     }
+    this.cleanupScopeWatchers(node);
+    this.cleanupBehaviorListeners(node);
     for (const child of Array.from(node.querySelectorAll("*"))) {
       if (this.lifecycleBindings.has(child)) {
         this.runDestruct(child);
@@ -425,6 +428,8 @@ export class Engine {
       if (this.behaviorBindings.has(child)) {
         this.runBehaviorDestruct(child);
       }
+      this.cleanupScopeWatchers(child);
+      this.cleanupBehaviorListeners(child);
     }
   }
 
@@ -713,7 +718,7 @@ export class Engine {
     return undefined;
   }
 
-  private watch(scope: Scope, expr: string, handler: () => void): void {
+  private watch(scope: Scope, expr: string, handler: () => void, element?: Element): void {
     const key = expr.trim();
     if (!key) {
       return;
@@ -728,30 +733,86 @@ export class Engine {
     }
     if (target) {
       target.on(key, handler);
+      if (element) {
+        this.trackScopeWatcher(element, target, "path", handler, key);
+      }
       return;
     }
     let cursor: Scope | undefined = scope;
     while (cursor) {
       cursor.on(key, handler);
+      if (element) {
+        this.trackScopeWatcher(element, cursor, "path", handler, key);
+      }
       cursor = cursor.parent;
     }
   }
 
-  private watchWithDebounce(scope: Scope, expr: string, handler: () => void, debounceMs?: number): void {
-    if (debounceMs) {
-      this.watch(scope, expr, debounce(handler, debounceMs));
-    } else {
-      this.watch(scope, expr, handler);
-    }
+  private watchWithDebounce(
+    scope: Scope,
+    expr: string,
+    handler: () => void,
+    debounceMs?: number,
+    element?: Element
+  ): void {
+    const effectiveHandler = debounceMs ? debounce(handler, debounceMs) : handler;
+    this.watch(scope, expr, effectiveHandler, element);
   }
 
-  private watchAllScopes(scope: Scope, handler: () => void, debounceMs?: number): void {
+  private watchAllScopes(scope: Scope, handler: () => void, debounceMs?: number, element?: Element): void {
     const effectiveHandler = debounceMs ? debounce(handler, debounceMs) : handler;
     let cursor: Scope | undefined = scope;
     while (cursor) {
       cursor.onAny(effectiveHandler);
+      if (element) {
+        this.trackScopeWatcher(element, cursor, "any", effectiveHandler);
+      }
       cursor = cursor.parent;
     }
+  }
+
+  private trackScopeWatcher(
+    element: Element,
+    scope: Scope,
+    kind: "path" | "any",
+    handler: () => void,
+    key?: string
+  ): void {
+    const watchers = this.scopeWatchers.get(element) ?? [];
+    watchers.push({ scope, kind, handler, ...(key ? { key } : {}) });
+    this.scopeWatchers.set(element, watchers);
+  }
+
+  private cleanupScopeWatchers(element: Element): void {
+    const watchers = this.scopeWatchers.get(element);
+    if (!watchers) {
+      return;
+    }
+    for (const watcher of watchers) {
+      if (watcher.kind === "any") {
+        watcher.scope.offAny(watcher.handler);
+        continue;
+      }
+      if (watcher.key) {
+        watcher.scope.off(watcher.key, watcher.handler);
+      }
+    }
+    this.scopeWatchers.delete(element);
+  }
+
+  private cleanupBehaviorListeners(element: Element): void {
+    const listenerMap = this.behaviorListeners.get(element);
+    if (!listenerMap) {
+      return;
+    }
+    for (const listeners of listenerMap.values()) {
+      for (const listener of listeners) {
+        listener.target.removeEventListener(listener.event, listener.handler, listener.options);
+      }
+    }
+    listenerMap.clear();
+    this.behaviorListeners.delete(element);
+    this.behaviorBindings.delete(element);
   }
 
   private parseOnAttribute(name: string, value: string): OnConfig | null {
@@ -1729,7 +1790,7 @@ export class Engine {
         const useRoot = expr.startsWith("root.") && rootScope;
         const sourceScope = useRoot ? rootScope : scope;
         const watchExpr = useRoot ? expr.slice("root.".length) : expr;
-        this.watchWithDebounce(sourceScope, watchExpr, handler, debounceMs);
+        this.watchWithDebounce(sourceScope, watchExpr, handler, debounceMs, element);
       }
       return;
     }
@@ -1748,7 +1809,7 @@ export class Engine {
       const useRoot = expr.startsWith("root.") && rootScope;
       const sourceScope = useRoot ? rootScope : scope;
       const watchExpr = useRoot ? expr.slice("root.".length) : expr;
-      this.watchWithDebounce(sourceScope, watchExpr, handler, debounceMs);
+      this.watchWithDebounce(sourceScope, watchExpr, handler, debounceMs, element);
     }
   }
 
@@ -1769,7 +1830,7 @@ export class Engine {
     void handler();
     this.watchAllScopes(scope, () => {
       void handler();
-    }, debounceMs);
+    }, debounceMs, element);
   }
 
   private applyDirectiveToScope(
@@ -1928,7 +1989,7 @@ export class Engine {
           this.attachBindInputHandler(element, value);
         }
         if (direction === "from" || direction === "both") {
-          this.watch(scope, value, () => applyBindToElement(element, value, scope));
+          this.watch(scope, value, () => applyBindToElement(element, value, scope), element);
         }
       }
     });
@@ -1941,7 +2002,7 @@ export class Engine {
         if (element instanceof HTMLElement) {
           applyIf(element, value, scope);
         }
-        this.watch(scope, value, () => this.evaluate(element));
+        this.watch(scope, value, () => this.evaluate(element), element);
       }
     });
 
@@ -1953,7 +2014,7 @@ export class Engine {
         if (element instanceof HTMLElement) {
           applyShow(element, value, scope);
         }
-        this.watch(scope, value, () => this.evaluate(element));
+        this.watch(scope, value, () => this.evaluate(element), element);
       }
     });
 
@@ -1970,7 +2031,7 @@ export class Engine {
             this.handleTrustedHtml(element);
           }
         }
-        this.watch(scope, value, () => this.evaluate(element));
+        this.watch(scope, value, () => this.evaluate(element), element);
       }
     });
 
@@ -1984,7 +2045,7 @@ export class Engine {
         }
         this.eachBindings.set(element, { ...config, rendered: [] });
         this.renderEach(element);
-        this.watch(scope, config.listExpr, () => this.renderEach(element));
+        this.watch(scope, config.listExpr, () => this.renderEach(element), element);
       }
     });
 

@@ -522,7 +522,7 @@ var AssignmentNode = class extends BaseNode {
     }
     if (this.target instanceof IdentifierExpression && this.target.name.startsWith("root.") && context.rootScope) {
       const path = this.target.name.slice("root.".length);
-      context.rootScope.setPath?.(path, value);
+      context.rootScope.setPath?.(`self.${path}`, value);
       return value;
     }
     if (this.target instanceof MemberExpression || this.target instanceof IndexExpression) {
@@ -563,6 +563,9 @@ var AssignmentNode = class extends BaseNode {
       const isRoot = this.target.name.startsWith("root.");
       const rawPath = isRoot ? this.target.name.slice("root.".length) : this.target.name;
       if (isRoot) {
+        if (context.rootScope) {
+          return { scope: context.rootScope, path: `self.${rawPath}` };
+        }
         return { scope: context.scope, path: `root.${rawPath}` };
       }
       return { scope: context.scope, path: rawPath };
@@ -576,6 +579,9 @@ var AssignmentNode = class extends BaseNode {
       const isRoot = path.startsWith("root.");
       const rawPath = isRoot ? path.slice("root.".length) : path;
       if (isRoot) {
+        if (context.rootScope) {
+          return { scope: context.rootScope, path: `self.${rawPath}` };
+        }
         return { scope: context.scope, path: `root.${rawPath}` };
       }
       return { scope: context.scope, path: rawPath };
@@ -588,6 +594,9 @@ var AssignmentNode = class extends BaseNode {
       const isRoot = path.startsWith("root.");
       const rawPath = isRoot ? path.slice("root.".length) : path;
       if (isRoot) {
+        if (context.rootScope) {
+          return { scope: context.rootScope, path: `self.${rawPath}` };
+        }
         return { scope: context.scope, path: `root.${rawPath}` };
       }
       return { scope: context.scope, path: rawPath };
@@ -3446,6 +3455,7 @@ var Engine = class _Engine {
   diagnostics;
   logger;
   pendingUses = [];
+  scopeWatchers = /* @__PURE__ */ new WeakMap();
   constructor(options = {}) {
     this.diagnostics = options.diagnostics ?? false;
     this.logger = options.logger ?? console;
@@ -3708,6 +3718,8 @@ var Engine = class _Engine {
     if (this.behaviorBindings.has(node)) {
       this.runBehaviorDestruct(node);
     }
+    this.cleanupScopeWatchers(node);
+    this.cleanupBehaviorListeners(node);
     for (const child of Array.from(node.querySelectorAll("*"))) {
       if (this.lifecycleBindings.has(child)) {
         this.runDestruct(child);
@@ -3715,6 +3727,8 @@ var Engine = class _Engine {
       if (this.behaviorBindings.has(child)) {
         this.runBehaviorDestruct(child);
       }
+      this.cleanupScopeWatchers(child);
+      this.cleanupBehaviorListeners(child);
     }
   }
   handleAddedNode(node) {
@@ -3966,7 +3980,7 @@ var Engine = class _Engine {
     }
     return void 0;
   }
-  watch(scope, expr, handler) {
+  watch(scope, expr, handler, element) {
     const key = expr.trim();
     if (!key) {
       return;
@@ -3981,28 +3995,69 @@ var Engine = class _Engine {
     }
     if (target) {
       target.on(key, handler);
+      if (element) {
+        this.trackScopeWatcher(element, target, "path", handler, key);
+      }
       return;
     }
     let cursor = scope;
     while (cursor) {
       cursor.on(key, handler);
+      if (element) {
+        this.trackScopeWatcher(element, cursor, "path", handler, key);
+      }
       cursor = cursor.parent;
     }
   }
-  watchWithDebounce(scope, expr, handler, debounceMs) {
-    if (debounceMs) {
-      this.watch(scope, expr, debounce(handler, debounceMs));
-    } else {
-      this.watch(scope, expr, handler);
-    }
+  watchWithDebounce(scope, expr, handler, debounceMs, element) {
+    const effectiveHandler = debounceMs ? debounce(handler, debounceMs) : handler;
+    this.watch(scope, expr, effectiveHandler, element);
   }
-  watchAllScopes(scope, handler, debounceMs) {
+  watchAllScopes(scope, handler, debounceMs, element) {
     const effectiveHandler = debounceMs ? debounce(handler, debounceMs) : handler;
     let cursor = scope;
     while (cursor) {
       cursor.onAny(effectiveHandler);
+      if (element) {
+        this.trackScopeWatcher(element, cursor, "any", effectiveHandler);
+      }
       cursor = cursor.parent;
     }
+  }
+  trackScopeWatcher(element, scope, kind, handler, key) {
+    const watchers = this.scopeWatchers.get(element) ?? [];
+    watchers.push({ scope, kind, handler, ...key ? { key } : {} });
+    this.scopeWatchers.set(element, watchers);
+  }
+  cleanupScopeWatchers(element) {
+    const watchers = this.scopeWatchers.get(element);
+    if (!watchers) {
+      return;
+    }
+    for (const watcher of watchers) {
+      if (watcher.kind === "any") {
+        watcher.scope.offAny(watcher.handler);
+        continue;
+      }
+      if (watcher.key) {
+        watcher.scope.off(watcher.key, watcher.handler);
+      }
+    }
+    this.scopeWatchers.delete(element);
+  }
+  cleanupBehaviorListeners(element) {
+    const listenerMap = this.behaviorListeners.get(element);
+    if (!listenerMap) {
+      return;
+    }
+    for (const listeners of listenerMap.values()) {
+      for (const listener of listeners) {
+        listener.target.removeEventListener(listener.event, listener.handler, listener.options);
+      }
+    }
+    listenerMap.clear();
+    this.behaviorListeners.delete(element);
+    this.behaviorBindings.delete(element);
   }
   parseOnAttribute(name, value) {
     if (!name.startsWith("vsn-on:")) {
@@ -4854,7 +4909,7 @@ var Engine = class _Engine {
         const useRoot = expr.startsWith("root.") && rootScope;
         const sourceScope = useRoot ? rootScope : scope;
         const watchExpr = useRoot ? expr.slice("root.".length) : expr;
-        this.watchWithDebounce(sourceScope, watchExpr, handler2, debounceMs);
+        this.watchWithDebounce(sourceScope, watchExpr, handler2, debounceMs, element);
       }
       return;
     }
@@ -4873,7 +4928,7 @@ var Engine = class _Engine {
       const useRoot = expr.startsWith("root.") && rootScope;
       const sourceScope = useRoot ? rootScope : scope;
       const watchExpr = useRoot ? expr.slice("root.".length) : expr;
-      this.watchWithDebounce(sourceScope, watchExpr, handler, debounceMs);
+      this.watchWithDebounce(sourceScope, watchExpr, handler, debounceMs, element);
     }
   }
   applyDirectiveFromExpression(element, target, expr, scope, trusted, debounceMs, rootScope) {
@@ -4885,7 +4940,7 @@ var Engine = class _Engine {
     void handler();
     this.watchAllScopes(scope, () => {
       void handler();
-    }, debounceMs);
+    }, debounceMs, element);
   }
   applyDirectiveToScope(element, target, expr, scope, debounceMs, rootScope) {
     const useRoot = expr.startsWith("root.") && rootScope;
@@ -5015,7 +5070,7 @@ var Engine = class _Engine {
           this.attachBindInputHandler(element, value);
         }
         if (direction === "from" || direction === "both") {
-          this.watch(scope, value, () => applyBindToElement(element, value, scope));
+          this.watch(scope, value, () => applyBindToElement(element, value, scope), element);
         }
       }
     });
@@ -5027,7 +5082,7 @@ var Engine = class _Engine {
         if (element instanceof HTMLElement) {
           applyIf(element, value, scope);
         }
-        this.watch(scope, value, () => this.evaluate(element));
+        this.watch(scope, value, () => this.evaluate(element), element);
       }
     });
     this.registerAttributeHandler({
@@ -5038,7 +5093,7 @@ var Engine = class _Engine {
         if (element instanceof HTMLElement) {
           applyShow(element, value, scope);
         }
-        this.watch(scope, value, () => this.evaluate(element));
+        this.watch(scope, value, () => this.evaluate(element), element);
       }
     });
     this.registerAttributeHandler({
@@ -5054,7 +5109,7 @@ var Engine = class _Engine {
             this.handleTrustedHtml(element);
           }
         }
-        this.watch(scope, value, () => this.evaluate(element));
+        this.watch(scope, value, () => this.evaluate(element), element);
       }
     });
     this.registerAttributeHandler({
@@ -5067,7 +5122,7 @@ var Engine = class _Engine {
         }
         this.eachBindings.set(element, { ...config, rendered: [] });
         this.renderEach(element);
-        this.watch(scope, config.listExpr, () => this.renderEach(element));
+        this.watch(scope, config.listExpr, () => this.renderEach(element), element);
       }
     });
     this.registerAttributeHandler({

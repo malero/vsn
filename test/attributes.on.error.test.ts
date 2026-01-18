@@ -9,7 +9,7 @@ describe("vsn:error for vsn-on", () => {
       <button id="btn" class="danger" vsn-on:click="boom();"></button>
     `;
 
-    const engine = new Engine();
+    const engine = new Engine({ logger: { warn: vi.fn() } });
     engine.registerGlobal("boom", () => {
       throw new Error("fail");
     });

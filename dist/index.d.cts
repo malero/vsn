@@ -552,6 +552,7 @@ declare class Engine {
     private diagnostics;
     private logger;
     private pendingUses;
+    private scopeWatchers;
     constructor(options?: EngineOptions);
     mount(root: HTMLElement): Promise<void>;
     unmount(element: Element): void;
@@ -595,6 +596,9 @@ declare class Engine {
     private watch;
     private watchWithDebounce;
     private watchAllScopes;
+    private trackScopeWatcher;
+    private cleanupScopeWatchers;
+    private cleanupBehaviorListeners;
     private parseOnAttribute;
     private parseEventDescriptor;
     private matchesKeyModifiers;

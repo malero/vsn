@@ -9,7 +9,7 @@ describe("vsn:error for behavior on blocks", () => {
       <div class="card"></div>
     `;
 
-    const engine = new Engine();
+    const engine = new Engine({ logger: { warn: vi.fn() } });
     engine.registerGlobal("boom", () => {
       throw new Error("boom");
     });
