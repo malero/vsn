@@ -55,6 +55,7 @@ export class Parser {
   private customFlags: Set<string>;
   private allowImplicitSemicolon = false;
   private awaitStack: boolean[] = [];
+  private functionDepth = 0;
 
   constructor(input: string, options?: { customFlags?: Set<string> }) {
     this.source = input;
@@ -226,8 +227,9 @@ export class Parser {
     return `${content}\n${caret}`;
   }
 
-  private parseBlock(options?: { allowDeclarations?: boolean }): BlockNode {
+  private parseBlock(options?: { allowDeclarations?: boolean; allowReturn?: boolean }): BlockNode {
     const allowDeclarations = options?.allowDeclarations ?? false;
+    const allowReturn = options?.allowReturn ?? this.functionDepth > 0;
     this.stream.skipWhitespace();
     this.stream.expect(TokenType.LBrace);
     const statements = [];
@@ -293,7 +295,7 @@ export class Parser {
           }
           sawConstruct = true;
         }
-        statements.push(this.parseStatement());
+        statements.push(this.parseStatement({ allowReturn }));
       }
     }
 
@@ -1033,6 +1035,7 @@ export class Parser {
     this.stream.expect(TokenType.LBrace);
     const statements = [];
     this.awaitStack.push(allowAwait);
+    this.functionDepth += 1;
     try {
       while (true) {
         this.stream.skipWhitespace();
@@ -1044,9 +1047,10 @@ export class Parser {
           this.stream.next();
           break;
         }
-        statements.push(this.parseStatement({ allowBlocks: false, allowReturn: true }));
+        statements.push(this.parseStatement({ allowBlocks: true, allowReturn: true }));
       }
     } finally {
+      this.functionDepth -= 1;
       this.awaitStack.pop();
     }
     return new BlockNode(statements);

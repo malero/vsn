@@ -1,0 +1,470 @@
+<style>
+  :root {
+    color-scheme: light;
+    --ink: #1f2430;
+    --muted: #5b6574;
+    --accent: #0f2f2a;
+    --accent-soft: #dbe7dd;
+    --panel: #f9f5ef;
+    --panel-deep: #efe7db;
+    --card: #ffffff;
+    --edge: rgba(15, 47, 42, 0.18);
+    --shadow: 0 28px 60px rgba(26, 24, 32, 0.16);
+    --radius: 20px;
+  }
+
+  #product-filters-app {
+    font-family: "Avenir Next", "Gill Sans", "Trebuchet MS", sans-serif;
+    color: var(--ink);
+    background: linear-gradient(135deg, #f7f2e8 0%, #f0efe9 40%, #e9f0ee 100%);
+    border-radius: 28px;
+    padding: 32px;
+    box-shadow: var(--shadow);
+  }
+
+  #product-filters-app .app-header {
+    display: flex;
+    justify-content: space-between;
+    gap: 24px;
+    margin-bottom: 28px;
+  }
+
+  #product-filters-app .eyebrow {
+    text-transform: uppercase;
+    letter-spacing: 0.22em;
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--muted);
+  }
+
+  #product-filters-app h1 {
+    font-family: "Bodoni 72", "Didot", "Times New Roman", serif;
+    font-size: clamp(2.2rem, 3vw, 3.2rem);
+    margin: 6px 0;
+  }
+
+  #product-filters-app .subtitle {
+    margin: 0;
+    color: var(--muted);
+    max-width: 460px;
+  }
+
+  #product-filters-app .filters-layout {
+    display: grid;
+    grid-template-columns: minmax(220px, 1fr) minmax(0, 3fr);
+    gap: 28px;
+  }
+
+  #product-filters-app .filters-panel {
+    background: var(--panel);
+    border-radius: var(--radius);
+    padding: 20px;
+    border: 1px solid var(--edge);
+    position: sticky;
+    top: 24px;
+    height: fit-content;
+  }
+
+  #product-filters-app .panel-header {
+    margin-bottom: 16px;
+  }
+
+  #product-filters-app .panel-header h3 {
+    font-size: 1.1rem;
+    margin: 0 0 6px;
+  }
+
+  #product-filters-app .panel-note {
+    font-size: 0.85rem;
+    color: var(--muted);
+    margin: 0;
+  }
+
+  #product-filters-app .filter-group {
+    margin-bottom: 18px;
+    padding-bottom: 16px;
+    border-bottom: 1px dashed rgba(31, 36, 48, 0.15);
+  }
+
+  #product-filters-app .filter-label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--muted);
+    margin-bottom: 10px;
+  }
+
+  #product-filters-app .filter-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  #product-filters-app .filter,
+  #product-filters-app .clear-filters {
+    border: 1px solid transparent;
+    border-radius: 999px;
+    padding: 8px 14px;
+    font-weight: 600;
+    background: #fff;
+    color: var(--accent);
+    cursor: pointer;
+    transition: transform 160ms ease, box-shadow 160ms ease, background 160ms ease;
+  }
+
+  #product-filters-app .filter[data-active="true"] {
+    background: var(--accent);
+    color: #fff;
+    box-shadow: 0 8px 18px rgba(15, 47, 42, 0.25);
+  }
+
+  #product-filters-app .filter:hover,
+  #product-filters-app .clear-filters:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 14px rgba(15, 47, 42, 0.15);
+  }
+
+  #product-filters-app .clear-filters {
+    width: 100%;
+    margin-top: 12px;
+    background: var(--accent-soft);
+    border: 1px solid rgba(15, 47, 42, 0.2);
+  }
+
+  #product-filters-app .products-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+
+  #product-filters-app .products-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+  }
+
+  #product-filters-app .products-header h2 {
+    font-family: "Bodoni 72", "Didot", "Times New Roman", serif;
+    font-size: 1.6rem;
+    margin: 0;
+  }
+
+  #product-filters-app .products-summary {
+    margin: 4px 0 0;
+    color: var(--muted);
+  }
+
+  #product-filters-app .active-tags {
+    font-size: 0.85rem;
+    color: var(--muted);
+    text-align: right;
+    max-width: 260px;
+  }
+
+  #product-filters-app .products-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 18px;
+  }
+
+  #product-filters-app .product-card {
+    background: var(--card);
+    border-radius: 18px;
+    border: 1px solid var(--edge);
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  #product-filters-app .product-card::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    opacity: 0.08;
+    background: radial-gradient(circle at top right, var(--tone) 0%, transparent 60%);
+    pointer-events: none;
+  }
+
+  #product-filters-app .product-card[data-tone="red"] { --tone: #b23a3a; }
+  #product-filters-app .product-card[data-tone="green"] { --tone: #2f6d57; }
+  #product-filters-app .product-card[data-tone="blue"] { --tone: #2b4f7d; }
+  #product-filters-app .product-card[data-tone="amber"] { --tone: #b66a2e; }
+
+  #product-filters-app .product-top {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+  }
+
+  #product-filters-app .product-swatch {
+    width: 38px;
+    height: 38px;
+    border-radius: 12px;
+    background: var(--tone, #c5c8cc);
+    box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.8);
+  }
+
+  #product-filters-app .product-name {
+    margin: 0;
+    font-size: 1rem;
+  }
+
+  #product-filters-app .product-price {
+    margin: 2px 0 0;
+    font-weight: 700;
+    color: var(--accent);
+  }
+
+  #product-filters-app .product-desc {
+    margin: 0;
+    color: var(--muted);
+    font-size: 0.9rem;
+  }
+
+  #product-filters-app .product-tags {
+    margin: 0;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+  }
+
+  #product-filters-app .empty-state {
+    background: var(--panel-deep);
+    border-radius: 18px;
+    padding: 24px;
+    text-align: center;
+    border: 1px solid var(--edge);
+  }
+
+  @media (max-width: 900px) {
+    #product-filters-app .filters-layout {
+      grid-template-columns: 1fr;
+    }
+
+    #product-filters-app .filters-panel {
+      position: static;
+    }
+
+    #product-filters-app .products-header {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    #product-filters-app .active-tags {
+      text-align: left;
+    }
+  }
+</style>
+
+<section id="product-filters-app" class="example-card">
+  <header class="app-header">
+    <div>
+      <p class="eyebrow">Studio Stock</p>
+      <h1>Market Shelf</h1>
+      <p class="subtitle">Filter a small catalog of playful home goods by color and material.</p>
+    </div>
+  </header>
+
+  <div class="filters-layout">
+    <aside class="filters-panel" id="product-filters">
+      <div class="panel-header">
+        <h3>Filters</h3>
+        <p class="panel-note" vsn-html="activeFiltersLabel"></p>
+      </div>
+
+      <div class="filter-group">
+        <p class="filter-label">Color</p>
+        <div class="filter-buttons">
+          <button class="filter" type="button" data-filter="red">Red</button>
+          <button class="filter" type="button" data-filter="green">Green</button>
+          <button class="filter" type="button" data-filter="blue">Blue</button>
+          <button class="filter" type="button" data-filter="amber">Amber</button>
+        </div>
+      </div>
+
+      <div class="filter-group">
+        <p class="filter-label">Material</p>
+        <div class="filter-buttons">
+          <button class="filter" type="button" data-filter="ceramic">Ceramic</button>
+          <button class="filter" type="button" data-filter="glass">Glass</button>
+          <button class="filter" type="button" data-filter="linen">Linen</button>
+          <button class="filter" type="button" data-filter="metal">Metal</button>
+        </div>
+      </div>
+
+      <button class="clear-filters" type="button">Clear filters</button>
+    </aside>
+
+    <main class="products-panel">
+      <div class="products-header">
+        <div>
+          <h2>Catalog</h2>
+          <p class="products-summary" vsn-html="summary"></p>
+        </div>
+        <p class="active-tags" vsn-html="activeFiltersTags"></p>
+      </div>
+
+      <div class="products-grid" vsn-show="hasResults">
+        <template id="product-template" vsn-each="visibleProducts as product">
+          <article class="product-card" vsn-construct="@data-tone = product.tone;">
+            <div class="product-top">
+              <div class="product-swatch"></div>
+              <div>
+                <h3 class="product-name" vsn-bind="product.name"></h3>
+                <p class="product-price" vsn-bind="product.price"></p>
+              </div>
+            </div>
+            <p class="product-desc" vsn-bind="product.desc"></p>
+            <p class="product-tags" vsn-bind="product.tagsLabel"></p>
+          </article>
+        </template>
+      </div>
+
+      <div class="empty-state" vsn-show="noResults">
+        <h3>No matches</h3>
+        <p>Try removing a filter or clearing the list.</p>
+      </div>
+    </main>
+  </div>
+</section>
+
+<script type="text/vsn">
+behavior #product-filters-app {
+  filters: [];
+  products: [
+    {
+      name: "Crimson Clay Mug",
+      price: "$18",
+      desc: "Hand-thrown stoneware with a satin red glaze.",
+      tone: "red",
+      tags: ["red", "ceramic"],
+      tagsLabel: "red / ceramic"
+    },
+    {
+      name: "Verdant Linen Runner",
+      price: "$36",
+      desc: "Soft washed linen for morning tables.",
+      tone: "green",
+      tags: ["green", "linen"],
+      tagsLabel: "green / linen"
+    },
+    {
+      name: "Blue Harbor Glass",
+      price: "$24",
+      desc: "Weighted tumbler with a cool blue tint.",
+      tone: "blue",
+      tags: ["blue", "glass"],
+      tagsLabel: "blue / glass"
+    },
+    {
+      name: "Amber Prism Vase",
+      price: "$42",
+      desc: "Faceted glass vase that glows at sunset.",
+      tone: "amber",
+      tags: ["amber", "glass"],
+      tagsLabel: "amber / glass"
+    },
+    {
+      name: "Oxidized Desk Tray",
+      price: "$29",
+      desc: "Brushed metal catchall for keys and pens.",
+      tone: "blue",
+      tags: ["blue", "metal"],
+      tagsLabel: "blue / metal"
+    },
+    {
+      name: "Forest Stack Plates",
+      price: "$52",
+      desc: "Stack of four ceramic plates with green speckle.",
+      tone: "green",
+      tags: ["green", "ceramic"],
+      tagsLabel: "green / ceramic"
+    },
+    {
+      name: "Rosin Wall Hooks",
+      price: "$22",
+      desc: "Set of three colored metal hooks.",
+      tone: "red",
+      tags: ["red", "metal"],
+      tagsLabel: "red / metal"
+    },
+    {
+      name: "Indigo Linen Napkins",
+      price: "$30",
+      desc: "Two-piece linen set dyed in deep blue.",
+      tone: "blue",
+      tags: ["blue", "linen"],
+      tagsLabel: "blue / linen"
+    }
+  ];
+  visibleProducts: [];
+  summary: "";
+  activeFiltersLabel: "";
+  activeFiltersTags: "";
+  hasResults: true;
+  noResults: false;
+
+  construct {
+    updateVisible();
+  }
+
+  updateVisible() {
+    if (filters.length == 0) {
+      visibleProducts = products;
+      summary = products.length + " products";
+      activeFiltersLabel = "All items";
+      activeFiltersTags = "All tones and materials";
+      hasResults = products.length > 0;
+      noResults = !hasResults;
+      return;
+    }
+
+    visibleProducts = products.filter((item) => {
+      for (i = 0; i < filters.length; i = i + 1) {
+        if (item.tags.indexOf(filters[i]) > -1) {
+          return true;
+        }
+      }
+      return false;
+    });
+
+    summary = visibleProducts.length + " products";
+    activeFiltersLabel = "Active: " + filters.join(", ");
+    activeFiltersTags = "Filtered by " + filters.join(" / ");
+    hasResults = visibleProducts.length > 0;
+    noResults = !hasResults;
+  }
+
+  toggleFilter(filter) {
+    index = filters.indexOf(filter);
+    if (index > -1) {
+      filters = filters.filter((entry) => entry != filter);
+    } else {
+      filters = [...filters, filter];
+    }
+    updateVisible();
+  }
+
+  behavior .filter {
+    @aria-current:< filters.indexOf(@data-filter) > -1;
+    @data-active:< filters.indexOf(@data-filter) > -1;
+
+    on click(event) !prevent {
+      toggleFilter(@data-filter);
+    }
+  }
+
+  behavior .clear-filters {
+    on click(event) {
+      filters = [];
+      updateVisible();
+    }
+  }
+}
+</script>

@@ -24,4 +24,18 @@ describe("construct/destruct", () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect(scope.get("ready")).toBe(false);
   });
+
+  it("sets attributes from directive assignments in construct", async () => {
+    document.body.innerHTML = `
+      <div id="box" vsn-construct="@data-ready = 'yes';"></div>
+    `;
+
+    const engine = new Engine();
+    await engine.mount(document.body);
+
+    const element = document.getElementById("box") as HTMLDivElement;
+
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(element.getAttribute("data-ready")).toBe("yes");
+  });
 });

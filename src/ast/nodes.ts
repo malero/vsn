@@ -259,6 +259,10 @@ export class AssignmentNode extends BaseNode {
     if (!context.scope || !context.scope.setPath) {
       return;
     }
+    if (target instanceof DirectiveExpression) {
+      this.assignDirectiveTarget(context, target, value);
+      return;
+    }
     if (target instanceof IdentifierExpression) {
       context.scope.setPath(target.name, value);
       return;
@@ -298,6 +302,49 @@ export class AssignmentNode extends BaseNode {
         this.assignTarget(context, entry.target, (source as any)[entry.key]);
       }
       return;
+    }
+  }
+
+  private assignDirectiveTarget(
+    context: ExecutionContext,
+    target: DirectiveExpression,
+    value: any
+  ): void {
+    const element = context.element;
+    if (!element) {
+      return;
+    }
+    if (target.kind === "attr") {
+      if (target.name === "value") {
+        if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) {
+          element.value = value == null ? "" : String(value);
+          element.setAttribute("value", element.value);
+          return;
+        }
+        if (element instanceof HTMLSelectElement) {
+          element.value = value == null ? "" : String(value);
+          return;
+        }
+      }
+      if (target.name === "checked" && element instanceof HTMLInputElement) {
+        const checked = value === true || value === "true" || value === 1 || value === "1";
+        element.checked = checked;
+        if (checked) {
+          element.setAttribute("checked", "");
+        } else {
+          element.removeAttribute("checked");
+        }
+        return;
+      }
+      if (target.name === "html" && element instanceof HTMLElement) {
+        element.innerHTML = value == null ? "" : String(value);
+        return;
+      }
+      element.setAttribute(target.name, value == null ? "" : String(value));
+      return;
+    }
+    if (target.kind === "style" && element instanceof HTMLElement) {
+      element.style.setProperty(target.name, value == null ? "" : String(value));
     }
   }
 }

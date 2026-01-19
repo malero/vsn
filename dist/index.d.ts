@@ -187,6 +187,7 @@ declare class AssignmentNode extends BaseNode {
     private resolveIndexPath;
     private resolveTargetPath;
     private assignTarget;
+    private assignDirectiveTarget;
 }
 declare class ReturnNode extends BaseNode {
     value?: ExpressionNode | undefined;
@@ -401,6 +402,7 @@ declare class Parser {
     private customFlags;
     private allowImplicitSemicolon;
     private awaitStack;
+    private functionDepth;
     constructor(input: string, options?: {
         customFlags?: Set<string>;
     });

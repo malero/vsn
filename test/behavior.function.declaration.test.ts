@@ -99,4 +99,77 @@ describe("behavior function declarations", () => {
     const engine = new Engine();
     expect(() => engine.registerBehaviors(source)).toThrow("construct");
   });
+
+  it("allows control flow blocks inside function bodies", async () => {
+    document.body.innerHTML = `<button class="card"></button>`;
+
+    const source = `
+      behavior .card {
+        count: 0;
+
+        total(n) {
+          sum = 0;
+          i = 0;
+          while (i < n) {
+            sum = sum + i;
+            i = i + 1;
+          }
+          if (sum >= 0) {
+            sum = sum + 1;
+          }
+          for (j = 0; j < 1; j = j + 1) {
+            sum = sum + 1;
+          }
+          return sum;
+        }
+
+        on click() {
+          count = total(3);
+        }
+      }
+    `;
+
+    const engine = new Engine();
+    engine.registerBehaviors(source);
+    await engine.mount(document.body);
+
+    const element = document.querySelector(".card") as HTMLButtonElement;
+    const scope = engine.getScope(element);
+
+    element.dispatchEvent(new Event("click", { bubbles: true }));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(scope.get("count")).toBe(5);
+  });
+
+  it("allows return inside nested blocks in function bodies", async () => {
+    document.body.innerHTML = `<button class="card"></button>`;
+
+    const source = `
+      behavior .card {
+        decide(value) {
+          if (value > 0) {
+            return "positive";
+          }
+          return "other";
+        }
+
+        on click() {
+          result = decide(1);
+        }
+      }
+    `;
+
+    const engine = new Engine();
+    engine.registerBehaviors(source);
+    await engine.mount(document.body);
+
+    const element = document.querySelector(".card") as HTMLButtonElement;
+    const scope = engine.getScope(element);
+
+    element.dispatchEvent(new Event("click", { bubbles: true }));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(scope.get("result")).toBe("positive");
+  });
 });

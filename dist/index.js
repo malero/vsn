@@ -630,6 +630,10 @@ var AssignmentNode = class extends BaseNode {
     if (!context.scope || !context.scope.setPath) {
       return;
     }
+    if (target instanceof DirectiveExpression) {
+      this.assignDirectiveTarget(context, target, value);
+      return;
+    }
     if (target instanceof IdentifierExpression) {
       context.scope.setPath(target.name, value);
       return;
@@ -669,6 +673,44 @@ var AssignmentNode = class extends BaseNode {
         this.assignTarget(context, entry.target, source[entry.key]);
       }
       return;
+    }
+  }
+  assignDirectiveTarget(context, target, value) {
+    const element = context.element;
+    if (!element) {
+      return;
+    }
+    if (target.kind === "attr") {
+      if (target.name === "value") {
+        if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) {
+          element.value = value == null ? "" : String(value);
+          element.setAttribute("value", element.value);
+          return;
+        }
+        if (element instanceof HTMLSelectElement) {
+          element.value = value == null ? "" : String(value);
+          return;
+        }
+      }
+      if (target.name === "checked" && element instanceof HTMLInputElement) {
+        const checked = value === true || value === "true" || value === 1 || value === "1";
+        element.checked = checked;
+        if (checked) {
+          element.setAttribute("checked", "");
+        } else {
+          element.removeAttribute("checked");
+        }
+        return;
+      }
+      if (target.name === "html" && element instanceof HTMLElement) {
+        element.innerHTML = value == null ? "" : String(value);
+        return;
+      }
+      element.setAttribute(target.name, value == null ? "" : String(value));
+      return;
+    }
+    if (target.kind === "style" && element instanceof HTMLElement) {
+      element.style.setProperty(target.name, value == null ? "" : String(value));
     }
   }
 };
@@ -1411,6 +1453,7 @@ var Parser = class _Parser {
   customFlags;
   allowImplicitSemicolon = false;
   awaitStack = [];
+  functionDepth = 0;
   constructor(input, options) {
     this.source = input;
     this.customFlags = options?.customFlags ?? /* @__PURE__ */ new Set();
@@ -1566,6 +1609,7 @@ ${caret}`;
   }
   parseBlock(options) {
     const allowDeclarations = options?.allowDeclarations ?? false;
+    const allowReturn = options?.allowReturn ?? this.functionDepth > 0;
     this.stream.skipWhitespace();
     this.stream.expect("LBrace" /* LBrace */);
     const statements = [];
@@ -1627,7 +1671,7 @@ ${caret}`;
           }
           sawConstruct = true;
         }
-        statements.push(this.parseStatement());
+        statements.push(this.parseStatement({ allowReturn }));
       }
     }
     return new BlockNode(statements);
@@ -2298,6 +2342,7 @@ ${caret}`;
     this.stream.expect("LBrace" /* LBrace */);
     const statements = [];
     this.awaitStack.push(allowAwait);
+    this.functionDepth += 1;
     try {
       while (true) {
         this.stream.skipWhitespace();
@@ -2309,9 +2354,10 @@ ${caret}`;
           this.stream.next();
           break;
         }
-        statements.push(this.parseStatement({ allowBlocks: false, allowReturn: true }));
+        statements.push(this.parseStatement({ allowBlocks: true, allowReturn: true }));
       }
     } finally {
+      this.functionDepth -= 1;
       this.awaitStack.pop();
     }
     return new BlockNode(statements);
