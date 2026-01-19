@@ -1,6 +1,6 @@
 import { Scope } from "./scope";
 
-export type BindDirection = "both" | "from" | "to";
+export type BindDirection = "auto" | "both" | "from" | "to";
 
 function getElementValue(element: Element): string {
   if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) {

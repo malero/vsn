@@ -3247,6 +3247,7 @@ var Scope = class _Scope {
   root;
   listeners = /* @__PURE__ */ new Map();
   anyListeners = /* @__PURE__ */ new Set();
+  isEachItem = false;
   createChild() {
     return new _Scope(this);
   }
@@ -3569,6 +3570,7 @@ var Engine = class _Engine {
   diagnostics;
   logger;
   pendingUses = [];
+  pendingAutoBindToScope = [];
   scopeWatchers = /* @__PURE__ */ new WeakMap();
   constructor(options = {}) {
     this.diagnostics = options.diagnostics ?? false;
@@ -3866,13 +3868,13 @@ var Engine = class _Engine {
   }
   async applyBehaviors(root) {
     await this.waitForUses();
-    if (this.behaviorRegistry.length === 0) {
-      return;
+    if (this.behaviorRegistry.length > 0) {
+      const elements = [root, ...Array.from(root.querySelectorAll("*"))];
+      for (const element of elements) {
+        await this.reapplyBehaviorsForElement(element);
+      }
     }
-    const elements = [root, ...Array.from(root.querySelectorAll("*"))];
-    for (const element of elements) {
-      await this.reapplyBehaviorsForElement(element);
-    }
+    this.flushAutoBindQueue();
   }
   async reapplyBehaviorsForElement(element) {
     if (this.behaviorRegistry.length === 0) {
@@ -4027,10 +4029,12 @@ var Engine = class _Engine {
       return;
     }
     const rendered = [];
+    console.log("renderEach list", list);
     list.forEach((item, index) => {
       const fragment = element.content.cloneNode(true);
       const roots = Array.from(fragment.children);
       const itemScope = new Scope(scope);
+      itemScope.isEachItem = true;
       itemScope.setPath(`self.${binding.itemName}`, item);
       if (binding.indexName) {
         itemScope.setPath(`self.${binding.indexName}`, index);
@@ -4069,7 +4073,79 @@ var Engine = class _Engine {
     if (name.includes(":to")) {
       return "to";
     }
-    return "both";
+    return "auto";
+  }
+  resolveBindConfig(element, expr, scope, direction) {
+    if (direction !== "auto") {
+      return {
+        direction,
+        seedFromScope: false,
+        syncToScope: direction === "to" || direction === "both",
+        deferToScope: false
+      };
+    }
+    if (this.isInEachScope(scope)) {
+      return { direction: "both", seedFromScope: false, syncToScope: false, deferToScope: false };
+    }
+    if (this.isFormControl(element)) {
+      if (this.hasScopeValue(scope, expr)) {
+        return { direction: "both", seedFromScope: true, syncToScope: false, deferToScope: false };
+      }
+      return { direction: "both", seedFromScope: false, syncToScope: false, deferToScope: true };
+    }
+    if (this.hasScopeValue(scope, expr)) {
+      return { direction: "both", seedFromScope: false, syncToScope: false, deferToScope: false };
+    }
+    if (this.hasElementValue(element)) {
+      return { direction: "both", seedFromScope: false, syncToScope: false, deferToScope: true };
+    }
+    return { direction: "both", seedFromScope: false, syncToScope: false, deferToScope: false };
+  }
+  isFormControl(element) {
+    return element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement || element instanceof HTMLSelectElement;
+  }
+  hasScopeValue(scope, expr) {
+    const key = expr.trim();
+    if (!key) {
+      return false;
+    }
+    const value = scope.get(key);
+    return value !== void 0 && value !== null;
+  }
+  hasElementValue(element) {
+    if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement || element instanceof HTMLSelectElement) {
+      return element.value.length > 0;
+    }
+    return (element.textContent ?? "").trim().length > 0;
+  }
+  isInEachScope(scope) {
+    let cursor = scope;
+    while (cursor) {
+      if (cursor.isEachItem) {
+        return true;
+      }
+      cursor = cursor.parent;
+    }
+    return false;
+  }
+  flushAutoBindQueue() {
+    if (this.pendingAutoBindToScope.length === 0) {
+      return;
+    }
+    const pending = this.pendingAutoBindToScope;
+    this.pendingAutoBindToScope = [];
+    for (const entry of pending) {
+      if (!entry.element.isConnected) {
+        continue;
+      }
+      if (this.hasScopeValue(entry.scope, entry.expr)) {
+        continue;
+      }
+      if (!this.hasElementValue(entry.element)) {
+        continue;
+      }
+      applyBindToScope(entry.element, entry.expr, entry.scope);
+    }
   }
   hasVsnAttributes(element) {
     return element.getAttributeNames().some((name) => name.startsWith("vsn-"));
@@ -5174,13 +5250,23 @@ var Engine = class _Engine {
       id: "vsn-bind",
       match: (name) => name.startsWith("vsn-bind"),
       handle: (element, name, value, scope) => {
-        const direction = this.parseBindDirection(name);
-        this.bindBindings.set(element, { expr: value, direction });
-        if (direction === "to" || direction === "both") {
+        const parsedDirection = this.parseBindDirection(name);
+        const config = this.resolveBindConfig(element, value, scope, parsedDirection);
+        const direction = config.direction;
+        const auto = parsedDirection === "auto";
+        this.bindBindings.set(element, { expr: value, direction, auto });
+        if (!auto && (direction === "to" || direction === "both")) {
           this.markInlineDeclaration(element, `state:${value}`);
         }
-        if (direction === "to" || direction === "both") {
+        if (config.seedFromScope) {
+          applyBindToElement(element, value, scope);
+        }
+        if (config.deferToScope) {
+          this.pendingAutoBindToScope.push({ element, expr: value, scope });
+        } else if (config.syncToScope) {
           applyBindToScope(element, value, scope);
+        }
+        if (direction === "to" || direction === "both") {
           this.attachBindInputHandler(element, value);
         }
         if (direction === "from" || direction === "both") {

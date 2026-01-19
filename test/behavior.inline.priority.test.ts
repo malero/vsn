@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { Engine } from "../src/index";
 
 describe("inline vsn-* priority", () => {
-  it("keeps vsn-bind state over behavior declarations", async () => {
+  it("prefers behavior declarations over inline vsn-bind state", async () => {
     document.body.innerHTML = `<div id="card" vsn-bind="count">10</div>`;
 
     const source = `
@@ -20,10 +20,10 @@ describe("inline vsn-* priority", () => {
     const element = document.getElementById("card") as HTMLDivElement;
     const scope = engine.getScope(element);
 
-    expect(scope.get("count")).toBe("10");
+    expect(scope.get("count")).toBe(1);
   });
 
-  it("keeps vsn-bind state over more specific behavior selectors", async () => {
+  it("prefers more specific behavior declarations over inline vsn-bind state", async () => {
     document.body.innerHTML = `<div id="card" class="card" vsn-bind="count">8</div>`;
 
     const source = `
@@ -43,7 +43,7 @@ describe("inline vsn-* priority", () => {
     const element = document.getElementById("card") as HTMLDivElement;
     const scope = engine.getScope(element);
 
-    expect(scope.get("count")).toBe("8");
+    expect(scope.get("count")).toBe(2);
   });
 
   it("keeps inline vsn-html over behavior @html binding", async () => {

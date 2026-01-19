@@ -487,6 +487,7 @@ declare class Scope {
     private root;
     private listeners;
     private anyListeners;
+    isEachItem: boolean;
     constructor(parent?: Scope | undefined);
     createChild(): Scope;
     get(key: string): any;
@@ -554,6 +555,7 @@ declare class Engine {
     private diagnostics;
     private logger;
     private pendingUses;
+    private pendingAutoBindToScope;
     private scopeWatchers;
     constructor(options?: EngineOptions);
     mount(root: HTMLElement): Promise<void>;
@@ -591,6 +593,12 @@ declare class Engine {
     private renderEach;
     private attachBindInputHandler;
     private parseBindDirection;
+    private resolveBindConfig;
+    private isFormControl;
+    private hasScopeValue;
+    private hasElementValue;
+    private isInEachScope;
+    private flushAutoBindQueue;
     private hasVsnAttributes;
     private markInlineDeclaration;
     private isInlineDeclaration;

@@ -3,6 +3,7 @@ export class Scope {
   private root: Scope;
   private listeners = new Map<string, Set<() => void>>();
   private anyListeners = new Set<() => void>();
+  public isEachItem = false;
 
   constructor(public readonly parent?: Scope) {
     this.root = parent ? parent.root : this;

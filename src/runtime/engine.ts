@@ -35,6 +35,7 @@ interface OnConfig {
 interface BindConfig {
   expr: string;
   direction: BindDirection;
+  auto?: boolean;
 }
 
 interface LifecycleConfig {
@@ -137,6 +138,7 @@ export class Engine {
   private diagnostics: boolean;
   private logger: Partial<Pick<Console, "info" | "warn">>;
   private pendingUses: Promise<void>[] = [];
+  private pendingAutoBindToScope: Array<{ element: Element; expr: string; scope: Scope }> = [];
   private scopeWatchers = new WeakMap<Element, { scope: Scope; kind: "path" | "any"; key?: string; handler: () => void }[]>();
 
   constructor(options: EngineOptions = {}) {
@@ -456,13 +458,13 @@ export class Engine {
 
   private async applyBehaviors(root: Element): Promise<void> {
     await this.waitForUses();
-    if (this.behaviorRegistry.length === 0) {
-      return;
+    if (this.behaviorRegistry.length > 0) {
+      const elements: Element[] = [root, ...Array.from(root.querySelectorAll("*"))];
+      for (const element of elements) {
+        await this.reapplyBehaviorsForElement(element);
+      }
     }
-    const elements: Element[] = [root, ...Array.from(root.querySelectorAll("*"))];
-    for (const element of elements) {
-      await this.reapplyBehaviorsForElement(element);
-    }
+    this.flushAutoBindQueue();
   }
 
   private async reapplyBehaviorsForElement(element: Element): Promise<void> {
@@ -644,10 +646,12 @@ export class Engine {
     }
 
     const rendered: Element[] = [];
+    console.log('renderEach list', list);
     list.forEach((item, index) => {
       const fragment = element.content.cloneNode(true) as DocumentFragment;
       const roots = Array.from(fragment.children) as Element[];
       const itemScope = new Scope(scope);
+      itemScope.isEachItem = true;
       itemScope.setPath(`self.${binding.itemName}`, item);
       if (binding.indexName) {
         itemScope.setPath(`self.${binding.indexName}`, index);
@@ -688,7 +692,95 @@ export class Engine {
     if (name.includes(":to")) {
       return "to";
     }
-    return "both";
+    return "auto";
+  }
+
+  private resolveBindConfig(element: Element, expr: string, scope: Scope, direction: BindDirection): {
+    direction: BindDirection;
+    seedFromScope: boolean;
+    syncToScope: boolean;
+    deferToScope: boolean;
+  } {
+    if (direction !== "auto") {
+      return {
+        direction,
+        seedFromScope: false,
+        syncToScope: direction === "to" || direction === "both",
+        deferToScope: false
+      };
+    }
+
+    if (this.isInEachScope(scope)) {
+      return { direction: "both", seedFromScope: false, syncToScope: false, deferToScope: false };
+    }
+
+    if (this.isFormControl(element)) {
+      if (this.hasScopeValue(scope, expr)) {
+        return { direction: "both", seedFromScope: true, syncToScope: false, deferToScope: false };
+      }
+      return { direction: "both", seedFromScope: false, syncToScope: false, deferToScope: true };
+    }
+
+    if (this.hasScopeValue(scope, expr)) {
+      return { direction: "both", seedFromScope: false, syncToScope: false, deferToScope: false };
+    }
+
+    if (this.hasElementValue(element)) {
+      return { direction: "both", seedFromScope: false, syncToScope: false, deferToScope: true };
+    }
+
+    return { direction: "both", seedFromScope: false, syncToScope: false, deferToScope: false };
+  }
+
+  private isFormControl(element: Element): boolean {
+    return element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement || element instanceof HTMLSelectElement;
+  }
+
+  private hasScopeValue(scope: Scope, expr: string): boolean {
+    const key = expr.trim();
+    if (!key) {
+      return false;
+    }
+    const value = scope.get(key);
+    return value !== undefined && value !== null;
+  }
+
+  private hasElementValue(element: Element): boolean {
+    if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement || element instanceof HTMLSelectElement) {
+      return element.value.length > 0;
+    }
+    return (element.textContent ?? "").trim().length > 0;
+  }
+
+  private isInEachScope(scope: Scope): boolean {
+    let cursor: Scope | undefined = scope;
+    while (cursor) {
+      if (cursor.isEachItem) {
+        return true;
+      }
+      cursor = cursor.parent;
+    }
+    return false;
+  }
+
+  private flushAutoBindQueue(): void {
+    if (this.pendingAutoBindToScope.length === 0) {
+      return;
+    }
+    const pending = this.pendingAutoBindToScope;
+    this.pendingAutoBindToScope = [];
+    for (const entry of pending) {
+      if (!entry.element.isConnected) {
+        continue;
+      }
+      if (this.hasScopeValue(entry.scope, entry.expr)) {
+        continue;
+      }
+      if (!this.hasElementValue(entry.element)) {
+        continue;
+      }
+      applyBindToScope(entry.element, entry.expr, entry.scope);
+    }
   }
 
   private hasVsnAttributes(element: Element): boolean {
@@ -1979,13 +2071,23 @@ export class Engine {
       id: "vsn-bind",
       match: (name) => name.startsWith("vsn-bind"),
       handle: (element, name, value, scope) => {
-        const direction = this.parseBindDirection(name);
-        this.bindBindings.set(element, { expr: value, direction });
-        if (direction === "to" || direction === "both") {
+        const parsedDirection = this.parseBindDirection(name);
+        const config = this.resolveBindConfig(element, value, scope, parsedDirection);
+        const direction = config.direction;
+        const auto = parsedDirection === "auto";
+        this.bindBindings.set(element, { expr: value, direction, auto });
+        if (!auto && (direction === "to" || direction === "both")) {
           this.markInlineDeclaration(element, `state:${value}`);
         }
-        if (direction === "to" || direction === "both") {
+        if (config.seedFromScope) {
+          applyBindToElement(element, value, scope);
+        }
+        if (config.deferToScope) {
+          this.pendingAutoBindToScope.push({ element, expr: value, scope });
+        } else if (config.syncToScope) {
           applyBindToScope(element, value, scope);
+        }
+        if (direction === "to" || direction === "both") {
           this.attachBindInputHandler(element, value);
         }
         if (direction === "from" || direction === "both") {
