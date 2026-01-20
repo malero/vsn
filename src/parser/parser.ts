@@ -4,6 +4,8 @@ import {
   ArrayPattern,
   CFSNode,
   BehaviorNode,
+  BehaviorFlags,
+  BehaviorFlagArgs,
   BinaryExpression,
   BlockNode,
   AssignmentTarget,
@@ -53,13 +55,15 @@ export class Parser {
   private stream: TokenStream;
   private source: string;
   private customFlags: Set<string>;
+  private behaviorFlags: Set<string>;
   private allowImplicitSemicolon = false;
   private awaitStack: boolean[] = [];
   private functionDepth = 0;
 
-  constructor(input: string, options?: { customFlags?: Set<string> }) {
+  constructor(input: string, options?: { customFlags?: Set<string>; behaviorFlags?: Set<string> }) {
     this.source = input;
-    this.customFlags = options?.customFlags ?? new Set<string>();
+    this.customFlags = options?.customFlags ?? new Set<string>(["important", "trusted", "debounce"]);
+    this.behaviorFlags = options?.behaviorFlags ?? new Set<string>();
     const lexer = new Lexer(input);
     this.stream = new TokenStream(lexer.tokenize());
   }
@@ -103,8 +107,9 @@ export class Parser {
       this.stream.skipWhitespace();
       this.stream.expect(TokenType.Behavior);
       const selector = this.parseSelector();
+      const { flags, flagArgs } = this.parseBehaviorFlags();
       const body = this.parseBlock({ allowDeclarations: true });
-      return new BehaviorNode(selector, body);
+      return new BehaviorNode(selector, body, flags, flagArgs);
     });
   }
 
@@ -119,6 +124,9 @@ export class Parser {
       }
 
       if (token.type === TokenType.LBrace) {
+        break;
+      }
+      if (token.type === TokenType.Bang) {
         break;
       }
 
@@ -139,6 +147,11 @@ export class Parser {
     }
 
     return new SelectorNode(selectorText.trim());
+  }
+
+  private parseBehaviorFlags(): { flags: BehaviorFlags; flagArgs: BehaviorFlagArgs } {
+    const result = this.parseFlags(this.behaviorFlags, "behavior modifier");
+    return { flags: result.flags, flagArgs: result.flagArgs };
   }
 
   private parseUseStatement(): UseNode {
@@ -439,23 +452,9 @@ export class Parser {
       throw new Error(`Unexpected token in on() args: ${next.type}`);
     }
 
-    const modifiers = this.parseOnModifiers();
+    const { flags, flagArgs } = this.parseFlags(this.customFlags, "flag");
     const body = this.parseBlock({ allowDeclarations: false });
-    return new OnBlockNode(event, args, body, modifiers);
-  }
-
-  private parseOnModifiers(): string[] {
-    const modifiers: string[] = [];
-    while (true) {
-      this.stream.skipWhitespace();
-      if (this.stream.peek()?.type !== TokenType.Bang) {
-        break;
-      }
-      this.stream.next();
-      const name = this.stream.expect(TokenType.Identifier).value;
-      modifiers.push(name);
-    }
-    return modifiers;
+    return new OnBlockNode(event, args, body, flags, flagArgs);
   }
 
   private parseAssignment(): AssignmentNode {
@@ -1259,7 +1258,7 @@ export class Parser {
     const operator = this.parseDeclarationOperator();
     this.stream.skipWhitespace();
     const value = this.parseExpression();
-    const { flags, flagArgs } = this.parseFlags();
+    const { flags, flagArgs } = this.parseFlags(this.customFlags, "flag");
     this.stream.skipWhitespace();
     this.stream.expect(TokenType.Semicolon);
     return new DeclarationNode(target, operator, value, flags, flagArgs);
@@ -1306,7 +1305,10 @@ export class Parser {
     return ":";
   }
 
-  private parseFlags(): { flags: DeclarationFlags; flagArgs: DeclarationFlagArgs } {
+  private parseFlags(
+    allowed: Set<string> | null,
+    errorLabel: string
+  ): { flags: DeclarationFlags; flagArgs: DeclarationFlagArgs } {
     const flags: DeclarationFlags = {};
     const flagArgs: DeclarationFlagArgs = {};
 
@@ -1317,31 +1319,13 @@ export class Parser {
       }
       this.stream.next();
       const name = this.stream.expect(TokenType.Identifier).value;
-
-      if (name === "important") {
-        flags.important = true;
-      } else if (name === "trusted") {
-        flags.trusted = true;
-      } else if (name === "debounce") {
-        flags.debounce = true;
-        if (this.stream.peek()?.type === TokenType.LParen) {
-          this.stream.next();
-          this.stream.skipWhitespace();
-          const numberToken = this.stream.expect(TokenType.Number);
-          flagArgs.debounce = Number(numberToken.value);
-          this.stream.skipWhitespace();
-          this.stream.expect(TokenType.RParen);
-        } else {
-          flagArgs.debounce = 200;
-        }
-      } else if (this.customFlags.has(name)) {
-        (flags as Record<string, boolean>)[name] = true;
-        const customArg = this.parseCustomFlagArg();
-        if (customArg !== undefined) {
-          (flagArgs as Record<string, any>)[name] = customArg;
-        }
-      } else {
-        throw new Error(`Unknown flag ${name}`);
+      if (allowed && !allowed.has(name)) {
+        throw new Error(`Unknown ${errorLabel} ${name}`);
+      }
+      (flags as Record<string, boolean>)[name] = true;
+      const customArg = this.parseCustomFlagArg();
+      if (customArg !== undefined) {
+        (flagArgs as Record<string, any>)[name] = customArg;
       }
     }
 

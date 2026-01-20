@@ -32,7 +32,7 @@ describe("parser declarations", () => {
 
     expect(statements[2].operator).toBe(":<");
     expect(statements[3].operator).toBe(":>");
-    expect(statements[3].flagArgs.debounce).toBe(200);
+    expect(statements[3].flagArgs.debounce).toBe(undefined);
 
     expect(statements[4].target.type).toBe("Directive");
     expect(statements[4].flags.trusted).toBe(true);

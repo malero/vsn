@@ -157,7 +157,9 @@ declare class SelectorNode extends BaseNode {
 declare class BehaviorNode extends BaseNode {
     selector: SelectorNode;
     body: BlockNode;
-    constructor(selector: SelectorNode, body: BlockNode);
+    flags: BehaviorFlags;
+    flagArgs: BehaviorFlagArgs;
+    constructor(selector: SelectorNode, body: BlockNode, flags?: BehaviorFlags, flagArgs?: BehaviorFlagArgs);
 }
 declare class StateEntryNode extends BaseNode {
     name: string;
@@ -173,8 +175,9 @@ declare class OnBlockNode extends BaseNode {
     eventName: string;
     args: string[];
     body: BlockNode;
-    modifiers: string[];
-    constructor(eventName: string, args: string[], body: BlockNode, modifiers?: string[]);
+    flags: DeclarationFlags;
+    flagArgs: DeclarationFlagArgs;
+    constructor(eventName: string, args: string[], body: BlockNode, flags?: DeclarationFlags, flagArgs?: DeclarationFlagArgs);
 }
 declare class AssignmentNode extends BaseNode {
     target: AssignmentTarget;
@@ -246,6 +249,12 @@ interface DeclarationFlags {
 }
 interface DeclarationFlagArgs {
     debounce?: number;
+    [key: string]: any;
+}
+interface BehaviorFlags {
+    [key: string]: boolean | undefined;
+}
+interface BehaviorFlagArgs {
     [key: string]: any;
 }
 declare class DeclarationNode extends BaseNode {
@@ -400,17 +409,20 @@ declare class Parser {
     private stream;
     private source;
     private customFlags;
+    private behaviorFlags;
     private allowImplicitSemicolon;
     private awaitStack;
     private functionDepth;
     constructor(input: string, options?: {
         customFlags?: Set<string>;
+        behaviorFlags?: Set<string>;
     });
     static parseInline(code: string): BlockNode;
     parseProgram(): ProgramNode;
     parseInlineBlock(): BlockNode;
     private parseBehavior;
     private parseSelector;
+    private parseBehaviorFlags;
     private parseUseStatement;
     private parseUseFlags;
     private wrapErrors;
@@ -420,7 +432,6 @@ declare class Parser {
     private parseStatement;
     private parseStateBlock;
     private parseOnBlock;
-    private parseOnModifiers;
     private parseAssignment;
     private parseExpression;
     private parsePipeExpression;
@@ -505,6 +516,31 @@ declare class Scope {
     private findNearestScopeWithKey;
 }
 
+interface RegisteredBehavior {
+    id: number;
+    selector: string;
+    rootSelector: string;
+    specificity: number;
+    order: number;
+    construct?: BlockNode;
+    destruct?: BlockNode;
+    onBlocks: {
+        event: string;
+        body: BlockNode;
+        flags: DeclarationFlags;
+        flagArgs: DeclarationFlagArgs;
+        args: string[];
+    }[];
+    declarations: DeclarationNode[];
+    functions: FunctionBinding[];
+    flags: BehaviorFlags;
+    flagArgs: BehaviorFlagArgs;
+}
+type FunctionBinding = {
+    name: string;
+    params: FunctionParam[];
+    body: BlockNode;
+};
 type AttributeHandler = {
     id: string;
     match: (name: string) => boolean;
@@ -519,6 +555,40 @@ type FlagApplyContext = {
 };
 type FlagHandler = {
     onApply?: (context: FlagApplyContext) => void;
+    transformValue?: (context: FlagApplyContext, value: any) => any;
+    onEventBind?: (context: EventFlagContext) => EventBindPatch | void;
+    onEventBefore?: (context: EventFlagContext) => boolean | void;
+    onEventAfter?: (context: EventFlagContext) => void;
+    transformEventArgs?: (context: EventFlagContext, args: any[]) => any[];
+};
+type BehaviorModifierHandler = {
+    onBind?: (context: BehaviorModifierContext) => void | Promise<void>;
+    onConstruct?: (context: BehaviorModifierContext) => void | Promise<void>;
+    onDestruct?: (context: BehaviorModifierContext) => void | Promise<void>;
+    onUnbind?: (context: BehaviorModifierContext) => void | Promise<void>;
+};
+type BehaviorModifierContext = {
+    name: string;
+    args: any;
+    element: Element;
+    scope: Scope;
+    rootScope: Scope | undefined;
+    behavior: RegisteredBehavior;
+    engine: Engine;
+};
+type EventBindPatch = {
+    listenerTarget?: EventTarget;
+    options?: AddEventListenerOptions;
+    debounceMs?: number;
+};
+type EventFlagContext = {
+    name: string;
+    args: any;
+    element: Element;
+    scope: Scope;
+    rootScope: Scope | undefined;
+    event: Event | undefined;
+    engine: Engine;
 };
 type EngineOptions = {
     diagnostics?: boolean;
@@ -547,6 +617,7 @@ declare class Engine {
     private importantFlags;
     private inlineDeclarations;
     private flagHandlers;
+    private behaviorModifiers;
     private pendingAdded;
     private pendingRemoved;
     private pendingUpdated;
@@ -564,6 +635,7 @@ declare class Engine {
     registerGlobal(name: string, value: any): void;
     registerGlobals(values: Record<string, any>): void;
     registerFlag(name: string, handler?: FlagHandler): void;
+    registerBehaviorModifier(name: string, handler?: BehaviorModifierHandler): void;
     getRegistryStats(): {
         behaviorCount: number;
         behaviorCacheSize: number;
@@ -597,6 +669,8 @@ declare class Engine {
     private isFormControl;
     private hasScopeValue;
     private hasElementValue;
+    private coerceInt;
+    private coerceFloat;
     private isInEachScope;
     private flushAutoBindQueue;
     private hasVsnAttributes;
@@ -610,9 +684,8 @@ declare class Engine {
     private cleanupScopeWatchers;
     private cleanupBehaviorListeners;
     private parseOnAttribute;
-    private parseEventDescriptor;
-    private matchesKeyModifiers;
-    private matchesTargetModifiers;
+    private parseInlineFlags;
+    private parseInlineFlagArg;
     private describeElement;
     private logDiagnostic;
     private emitError;
@@ -620,8 +693,11 @@ declare class Engine {
     private attachOnHandler;
     private attachBehaviorOnHandler;
     private attachGetHandler;
-    private applyEventModifiers;
-    private getListenerOptions;
+    private getEventBindingConfig;
+    private applyEventFlagBefore;
+    private applyEventFlagAfter;
+    private applyEventFlagArgTransforms;
+    private matchesKeyFlag;
     private execute;
     private executeBlock;
     private safeExecute;
@@ -648,6 +724,9 @@ declare class Engine {
     private applyBehaviorDeclarations;
     private applyBehaviorDeclaration;
     private applyCustomFlags;
+    private applyCustomFlagTransforms;
+    private applyBehaviorModifierHook;
+    private behaviorHasModifierHooks;
     private applyDirectiveFromScope;
     private applyDirectiveFromExpression;
     private applyDirectiveToScope;
@@ -664,4 +743,4 @@ declare const VERSION = "0.1.0";
 declare function parseCFS(source: string): ProgramNode;
 declare function autoMount(root?: HTMLElement | Document): Engine | null;
 
-export { type ArrayElement, ArrayExpression, ArrayPattern, type ArrayPatternElement, AssignmentNode, type AssignmentTarget, AwaitExpression, BaseNode, BehaviorNode, BinaryExpression, BlockNode, type CFSNode, CallExpression, type DeclarationFlagArgs, type DeclarationFlags, DeclarationNode, type DeclarationTarget, DirectiveExpression, Engine, type ExecutionContext, type ExpressionNode, ForNode, FunctionDeclarationNode, FunctionExpression, type FunctionParam, IdentifierExpression, IfNode, IndexExpression, Lexer, LiteralExpression, MemberExpression, type ObjectEntry, ObjectExpression, ObjectPattern, type ObjectPatternEntry, OnBlockNode, Parser, type PatternNode, ProgramNode, QueryExpression, RestElement, ReturnNode, SelectorNode, SpreadElement, StateBlockNode, StateEntryNode, TemplateExpression, TernaryExpression, TokenType, TryNode, UnaryExpression, type UseFlagArgs, type UseFlags, UseNode, VERSION, WhileNode, autoMount, parseCFS };
+export { type ArrayElement, ArrayExpression, ArrayPattern, type ArrayPatternElement, AssignmentNode, type AssignmentTarget, AwaitExpression, BaseNode, type BehaviorFlagArgs, type BehaviorFlags, BehaviorNode, BinaryExpression, BlockNode, type CFSNode, CallExpression, type DeclarationFlagArgs, type DeclarationFlags, DeclarationNode, type DeclarationTarget, DirectiveExpression, Engine, type ExecutionContext, type ExpressionNode, ForNode, FunctionDeclarationNode, FunctionExpression, type FunctionParam, IdentifierExpression, IfNode, IndexExpression, Lexer, LiteralExpression, MemberExpression, type ObjectEntry, ObjectExpression, ObjectPattern, type ObjectPatternEntry, OnBlockNode, Parser, type PatternNode, ProgramNode, QueryExpression, RestElement, ReturnNode, SelectorNode, SpreadElement, StateBlockNode, StateEntryNode, TemplateExpression, TernaryExpression, TokenType, TryNode, UnaryExpression, type UseFlagArgs, type UseFlags, UseNode, VERSION, WhileNode, autoMount, parseCFS };

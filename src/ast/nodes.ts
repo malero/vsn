@@ -93,7 +93,12 @@ export class SelectorNode extends BaseNode {
 }
 
 export class BehaviorNode extends BaseNode {
-  constructor(public selector: SelectorNode, public body: BlockNode) {
+  constructor(
+    public selector: SelectorNode,
+    public body: BlockNode,
+    public flags: BehaviorFlags = {},
+    public flagArgs: BehaviorFlagArgs = {}
+  ) {
     super("Behavior");
   }
 }
@@ -119,7 +124,8 @@ export class OnBlockNode extends BaseNode {
     public eventName: string,
     public args: string[],
     public body: BlockNode,
-    public modifiers: string[] = []
+    public flags: DeclarationFlags = {},
+    public flagArgs: DeclarationFlagArgs = {}
   ) {
     super("OnBlock");
   }
@@ -581,6 +587,14 @@ export interface DeclarationFlags {
 
 export interface DeclarationFlagArgs {
   debounce?: number;
+  [key: string]: any;
+}
+
+export interface BehaviorFlags {
+  [key: string]: boolean | undefined;
+}
+
+export interface BehaviorFlagArgs {
   [key: string]: any;
 }
 

@@ -16,7 +16,7 @@
       placeholder="Add a new task"
       autocomplete="off"
       vsn-bind="newTitle"
-      vsn-on:keyup.enter="submit();"
+      vsn-on:keyup!enter="submit();"
     />
     <button class="btn" type="submit">Add</button>
   </form>

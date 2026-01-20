@@ -26,7 +26,7 @@
       placeholder="Add a new card to backlog"
       autocomplete="off"
       vsn-bind="newTitle"
-      vsn-on:keyup.enter="submit();"
+      vsn-on:keyup!enter="submit();"
     />
     <select class="kanban-select" vsn-bind="newPriority">
       <option value="low">Low</option>

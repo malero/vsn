@@ -4,14 +4,14 @@ import { describe, expect, it } from "vitest";
 import { Engine } from "../src/index";
 
 describe("behavior on key modifiers", () => {
-  it("supports keyup.enter in CFS on blocks", async () => {
+  it("supports keyup with !enter in CFS on blocks", async () => {
     document.body.innerHTML = `<input class="field" />`;
 
     const source = `
       behavior .field {
         count: 0;
 
-        on keyup.enter() {
+        on keyup() !enter {
           count = count + 1;
         }
       }
@@ -30,7 +30,7 @@ describe("behavior on key modifiers", () => {
     expect(scope.get("count")).toBe(1);
   });
 
-  it("supports click.outside in CFS on blocks", async () => {
+  it("supports click with !outside in CFS on blocks", async () => {
     document.body.innerHTML = `
       <div class="panel">
         <button class="inside"></button>
@@ -40,7 +40,7 @@ describe("behavior on key modifiers", () => {
 
     const source = `
       behavior .panel {
-        on click.outside() {
+        on click() !outside {
           closed = true;
         }
       }
@@ -64,7 +64,7 @@ describe("behavior on key modifiers", () => {
     expect(scope.get("closed")).toBe(true);
   });
 
-  it("supports click.self in CFS on blocks", async () => {
+  it("supports click with !self in CFS on blocks", async () => {
     document.body.innerHTML = `
       <div class="panel">
         <button class="inside"></button>
@@ -73,7 +73,7 @@ describe("behavior on key modifiers", () => {
 
     const source = `
       behavior .panel {
-        on click.self() {
+        on click() !self {
           clicked = true;
         }
       }

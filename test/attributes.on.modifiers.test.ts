@@ -24,9 +24,9 @@ describe("vsn-on modifiers", () => {
     expect(scope.get("count")).toBe(1);
   });
 
-  it("supports click.outside", async () => {
+  it("supports click!outside", async () => {
     document.body.innerHTML = `
-      <div class="panel" vsn-on:click.outside="closed = true;">
+      <div class="panel" vsn-on:click!outside="closed = true;">
         <button class="inside"></button>
       </div>
       <button class="outside"></button>
@@ -49,9 +49,9 @@ describe("vsn-on modifiers", () => {
     expect(scope.get("closed")).toBe(true);
   });
 
-  it("supports click.self", async () => {
+  it("supports click!self", async () => {
     document.body.innerHTML = `
-      <div class="panel" vsn-on:click.self="clicked = true;">
+      <div class="panel" vsn-on:click!self="clicked = true;">
         <button class="inside"></button>
       </div>
     `;

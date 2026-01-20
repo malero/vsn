@@ -8,7 +8,11 @@ import { Parser } from "../parser/parser";
 import {
   AssignmentNode,
   BehaviorNode,
+  BehaviorFlags,
+  BehaviorFlagArgs,
   BlockNode,
+  DeclarationFlags,
+  DeclarationFlagArgs,
   DeclarationNode,
   DirectiveExpression,
   ExecutionContext,
@@ -27,9 +31,8 @@ import {
 interface OnConfig {
   event: string;
   code: string;
-  debounceMs?: number;
-  modifiers?: string[];
-  keyModifiers?: string[];
+  flags: DeclarationFlags;
+  flagArgs: DeclarationFlagArgs;
 }
 
 interface BindConfig {
@@ -51,9 +54,11 @@ interface RegisteredBehavior {
   order: number;
   construct?: BlockNode;
   destruct?: BlockNode;
-  onBlocks: { event: string; body: BlockNode; modifiers: string[]; args: string[] }[];
+  onBlocks: { event: string; body: BlockNode; flags: DeclarationFlags; flagArgs: DeclarationFlagArgs; args: string[] }[];
   declarations: DeclarationNode[];
   functions: FunctionBinding[];
+  flags: BehaviorFlags;
+  flagArgs: BehaviorFlagArgs;
 }
 
 type FunctionBinding = {
@@ -78,7 +83,7 @@ type EachBinding = {
 type CachedBehavior = {
   construct?: BlockNode;
   destruct?: BlockNode;
-  onBlocks: { event: string; body: BlockNode; modifiers: string[]; args: string[] }[];
+  onBlocks: { event: string; body: BlockNode; flags: DeclarationFlags; flagArgs: DeclarationFlagArgs; args: string[] }[];
   declarations: DeclarationNode[];
   functions: FunctionBinding[];
 };
@@ -100,6 +105,44 @@ type FlagApplyContext = {
 
 type FlagHandler = {
   onApply?: (context: FlagApplyContext) => void;
+  transformValue?: (context: FlagApplyContext, value: any) => any;
+  onEventBind?: (context: EventFlagContext) => EventBindPatch | void;
+  onEventBefore?: (context: EventFlagContext) => boolean | void;
+  onEventAfter?: (context: EventFlagContext) => void;
+  transformEventArgs?: (context: EventFlagContext, args: any[]) => any[];
+};
+
+type BehaviorModifierHandler = {
+  onBind?: (context: BehaviorModifierContext) => void | Promise<void>;
+  onConstruct?: (context: BehaviorModifierContext) => void | Promise<void>;
+  onDestruct?: (context: BehaviorModifierContext) => void | Promise<void>;
+  onUnbind?: (context: BehaviorModifierContext) => void | Promise<void>;
+};
+
+type BehaviorModifierContext = {
+  name: string;
+  args: any;
+  element: Element;
+  scope: Scope;
+  rootScope: Scope | undefined;
+  behavior: RegisteredBehavior;
+  engine: Engine;
+};
+
+type EventBindPatch = {
+  listenerTarget?: EventTarget;
+  options?: AddEventListenerOptions;
+  debounceMs?: number;
+};
+
+type EventFlagContext = {
+  name: string;
+  args: any;
+  element: Element;
+  scope: Scope;
+  rootScope: Scope | undefined;
+  event: Event | undefined;
+  engine: Engine;
 };
 
 type EngineOptions = {
@@ -130,6 +173,7 @@ export class Engine {
   private importantFlags = new WeakMap<Element, Set<string>>();
   private inlineDeclarations = new WeakMap<Element, Set<string>>();
   private flagHandlers = new Map<string, FlagHandler>();
+  private behaviorModifiers = new Map<string, BehaviorModifierHandler>();
   private pendingAdded = new Set<Element>();
   private pendingRemoved = new Set<Element>();
   private pendingUpdated = new Set<Element>();
@@ -145,6 +189,111 @@ export class Engine {
     this.diagnostics = options.diagnostics ?? false;
     this.logger = options.logger ?? console;
     this.registerGlobal("console", console);
+    this.registerFlag("important");
+    this.registerFlag("trusted");
+    this.registerFlag("debounce", {
+      onEventBind: ({ args }) => ({
+        debounceMs: typeof args === "number" ? args : 200
+      })
+    });
+    this.registerFlag("prevent", {
+      onEventBefore: ({ event }) => {
+        event?.preventDefault();
+      }
+    });
+    this.registerFlag("stop", {
+      onEventBefore: ({ event }) => {
+        event?.stopPropagation();
+      }
+    });
+    this.registerFlag("self", {
+      onEventBefore: ({ event, element }) => {
+        const target = event?.target;
+        if (!(target instanceof Node)) {
+          return false;
+        }
+        return target === element;
+      }
+    });
+    this.registerFlag("outside", {
+      onEventBind: ({ element }) => ({ listenerTarget: element.ownerDocument }),
+      onEventBefore: ({ event, element }) => {
+        const target = event?.target;
+        if (!(target instanceof Node)) {
+          return false;
+        }
+        return !element.contains(target);
+      }
+    });
+    this.registerFlag("once", {
+      onEventBind: () => ({ options: { once: true } })
+    });
+    this.registerFlag("passive", {
+      onEventBind: () => ({ options: { passive: true } })
+    });
+    this.registerFlag("capture", {
+      onEventBind: () => ({ options: { capture: true } })
+    });
+    this.registerFlag("shift", {
+      onEventBefore: ({ event }) => this.matchesKeyFlag(event, "shift")
+    });
+    this.registerFlag("ctrl", {
+      onEventBefore: ({ event }) => this.matchesKeyFlag(event, "ctrl")
+    });
+    this.registerFlag("control", {
+      onEventBefore: ({ event }) => this.matchesKeyFlag(event, "ctrl")
+    });
+    this.registerFlag("alt", {
+      onEventBefore: ({ event }) => this.matchesKeyFlag(event, "alt")
+    });
+    this.registerFlag("meta", {
+      onEventBefore: ({ event }) => this.matchesKeyFlag(event, "meta")
+    });
+    this.registerFlag("enter", {
+      onEventBefore: ({ event }) => this.matchesKeyFlag(event, "enter")
+    });
+    this.registerFlag("escape", {
+      onEventBefore: ({ event }) => this.matchesKeyFlag(event, "escape")
+    });
+    this.registerFlag("esc", {
+      onEventBefore: ({ event }) => this.matchesKeyFlag(event, "escape")
+    });
+    this.registerFlag("tab", {
+      onEventBefore: ({ event }) => this.matchesKeyFlag(event, "tab")
+    });
+    this.registerFlag("space", {
+      onEventBefore: ({ event }) => this.matchesKeyFlag(event, "space")
+    });
+    this.registerFlag("up", {
+      onEventBefore: ({ event }) => this.matchesKeyFlag(event, "arrowup")
+    });
+    this.registerFlag("down", {
+      onEventBefore: ({ event }) => this.matchesKeyFlag(event, "arrowdown")
+    });
+    this.registerFlag("left", {
+      onEventBefore: ({ event }) => this.matchesKeyFlag(event, "arrowleft")
+    });
+    this.registerFlag("right", {
+      onEventBefore: ({ event }) => this.matchesKeyFlag(event, "arrowright")
+    });
+    this.registerFlag("arrowup", {
+      onEventBefore: ({ event }) => this.matchesKeyFlag(event, "arrowup")
+    });
+    this.registerFlag("arrowdown", {
+      onEventBefore: ({ event }) => this.matchesKeyFlag(event, "arrowdown")
+    });
+    this.registerFlag("arrowleft", {
+      onEventBefore: ({ event }) => this.matchesKeyFlag(event, "arrowleft")
+    });
+    this.registerFlag("arrowright", {
+      onEventBefore: ({ event }) => this.matchesKeyFlag(event, "arrowright")
+    });
+    this.registerFlag("delete", {
+      onEventBefore: ({ event }) => this.matchesKeyFlag(event, "delete")
+    });
+    this.registerFlag("backspace", {
+      onEventBefore: ({ event }) => this.matchesKeyFlag(event, "backspace")
+    });
     this.registerGlobal("list", {
       async map(items: any[], fn: (item: any, index: number) => any) {
         if (!Array.isArray(items) || typeof fn !== "function") {
@@ -182,6 +331,12 @@ export class Engine {
       }
     });
     this.registerDefaultAttributeHandlers();
+    this.registerFlag("int", {
+      transformValue: (_context, value) => this.coerceInt(value)
+    });
+    this.registerFlag("float", {
+      transformValue: (_context, value) => this.coerceFloat(value)
+    });
   }
 
   async mount(root: HTMLElement): Promise<void> {
@@ -211,7 +366,10 @@ export class Engine {
   }
 
   registerBehaviors(source: string): void {
-    const program = new Parser(source, { customFlags: new Set(this.flagHandlers.keys()) }).parseProgram();
+    const program = new Parser(source, {
+      customFlags: new Set(this.flagHandlers.keys()),
+      behaviorFlags: new Set(this.behaviorModifiers.keys())
+    }).parseProgram();
     for (const use of program.uses) {
       if (use.flags?.wait) {
         this.pendingUses.push(this.waitForUseGlobal(use));
@@ -238,11 +396,15 @@ export class Engine {
   }
 
   registerFlag(name: string, handler: FlagHandler = {}): void {
+    this.flagHandlers.set(name, handler);
+  }
+
+  registerBehaviorModifier(name: string, handler: BehaviorModifierHandler = {}): void {
     const reserved = new Set(["important", "trusted", "debounce"]);
     if (reserved.has(name)) {
-      throw new Error(`Flag '${name}' is reserved`);
+      throw new Error(`Behavior modifier '${name}' is reserved`);
     }
-    this.flagHandlers.set(name, handler);
+    this.behaviorModifiers.set(name, handler);
   }
 
   getRegistryStats(): { behaviorCount: number; behaviorCacheSize: number } {
@@ -507,15 +669,18 @@ export class Engine {
     const rootScope = this.getBehaviorRootScope(element, behavior);
     this.applyBehaviorFunctions(element, scope, behavior.functions, rootScope);
     await this.applyBehaviorDeclarations(element, scope, behavior.declarations, rootScope);
+    await this.applyBehaviorModifierHook("onBind", behavior, element, scope, rootScope);
     if (behavior.construct) {
       await this.safeExecuteBlock(behavior.construct, scope, element, rootScope);
     }
+    await this.applyBehaviorModifierHook("onConstruct", behavior, element, scope, rootScope);
     for (const onBlock of behavior.onBlocks) {
       this.attachBehaviorOnHandler(
         element,
         onBlock.event,
         onBlock.body,
-        onBlock.modifiers,
+        onBlock.flags,
+        onBlock.flagArgs,
         onBlock.args,
         behavior.id,
         rootScope
@@ -531,10 +696,11 @@ export class Engine {
     bound: Set<number>
   ): void {
     bound.delete(behavior.id);
+    const rootScope = this.getBehaviorRootScope(element, behavior);
     if (behavior.destruct) {
-      const rootScope = this.getBehaviorRootScope(element, behavior);
       void this.safeExecuteBlock(behavior.destruct, scope, element, rootScope);
     }
+    void this.applyBehaviorModifierHook("onDestruct", behavior, element, scope, rootScope);
     const listenerMap = this.behaviorListeners.get(element);
     const listeners = listenerMap?.get(behavior.id);
     if (listeners) {
@@ -543,6 +709,7 @@ export class Engine {
       }
       listenerMap?.delete(behavior.id);
     }
+    void this.applyBehaviorModifierHook("onUnbind", behavior, element, scope, rootScope);
     this.logDiagnostic("unbind", element, behavior);
   }
 
@@ -553,11 +720,15 @@ export class Engine {
     }
     const scope = this.getScope(element);
     for (const behavior of this.behaviorRegistry) {
-      if (!bound.has(behavior.id) || !behavior.destruct) {
+      if (!bound.has(behavior.id) || (!behavior.destruct && !this.behaviorHasModifierHooks(behavior))) {
         continue;
       }
       const rootScope = this.getBehaviorRootScope(element, behavior);
-      void this.safeExecuteBlock(behavior.destruct, scope, element, rootScope);
+      if (behavior.destruct) {
+        void this.safeExecuteBlock(behavior.destruct, scope, element, rootScope);
+      }
+      void this.applyBehaviorModifierHook("onDestruct", behavior, element, scope, rootScope);
+      void this.applyBehaviorModifierHook("onUnbind", behavior, element, scope, rootScope);
     }
   }
 
@@ -752,6 +923,22 @@ export class Engine {
     return (element.textContent ?? "").trim().length > 0;
   }
 
+  private coerceInt(value: any): any {
+    if (value == null || value === "") {
+      return value;
+    }
+    const num = typeof value === "number" ? value : Number.parseInt(String(value), 10);
+    return Number.isNaN(num) ? value : num;
+  }
+
+  private coerceFloat(value: any): any {
+    if (value == null || value === "") {
+      return value;
+    }
+    const num = typeof value === "number" ? value : Number.parseFloat(String(value));
+    return Number.isNaN(num) ? value : num;
+  }
+
   private isInEachScope(scope: Scope): boolean {
     let cursor: Scope | undefined = scope;
     while (cursor) {
@@ -917,117 +1104,60 @@ export class Engine {
     if (!event) {
       return null;
     }
-    const descriptor = this.parseEventDescriptor(event);
-    if (!descriptor.event) {
-      return null;
+    if (event.includes(".")) {
+      throw new Error("vsn:on does not support dot modifiers; use !flags instead");
     }
 
-    let debounceMs: number | undefined;
-    const modifiers: string[] = [];
-    for (const flag of flags) {
-      if (flag.startsWith("debounce")) {
-        const match = flag.match(/debounce\((\d+)\)/);
-        debounceMs = match ? Number(match[1]) : 200;
-        continue;
-      }
-      modifiers.push(flag);
-    }
+    const { flagMap, flagArgs } = this.parseInlineFlags(flags);
 
-    const combinedModifiers = [...modifiers, ...descriptor.modifiers];
     const config: OnConfig = {
-      event: descriptor.event,
+      event,
       code: value,
-      ...(debounceMs !== undefined ? { debounceMs } : {}),
-      ...(combinedModifiers.length > 0 ? { modifiers: combinedModifiers } : {}),
-      ...(descriptor.keyModifiers.length > 0 ? { keyModifiers: descriptor.keyModifiers } : {})
+      flags: flagMap,
+      flagArgs
     };
     return config;
   }
 
-  private parseEventDescriptor(raw: string): { event: string; keyModifiers: string[]; modifiers: string[] } {
-    const parts = raw.split(".").map((part) => part.trim()).filter(Boolean);
-    const event = parts.shift() ?? "";
-    const modifiers: string[] = [];
-    const keyModifiers: string[] = [];
-    const modifierSet = new Set(["outside", "self"]);
-    for (const part of parts) {
-      if (modifierSet.has(part)) {
-        modifiers.push(part);
-      } else {
-        keyModifiers.push(part);
-      }
-    }
-    return { event, keyModifiers, modifiers };
-  }
-
-  private matchesKeyModifiers(event: Event | undefined, keyModifiers?: string[]): boolean {
-    if (!keyModifiers || keyModifiers.length === 0) {
-      return true;
-    }
-    if (!(event instanceof KeyboardEvent)) {
-      return false;
-    }
-    const modifierChecks: Record<string, boolean> = {
-      shift: event.shiftKey,
-      ctrl: event.ctrlKey,
-      control: event.ctrlKey,
-      alt: event.altKey,
-      meta: event.metaKey
-    };
-    const keyAliases: Record<string, string> = {
-      esc: "escape",
-      escape: "escape",
-      enter: "enter",
-      tab: "tab",
-      space: "space",
-      spacebar: "space",
-      up: "arrowup",
-      down: "arrowdown",
-      left: "arrowleft",
-      right: "arrowright",
-      arrowup: "arrowup",
-      arrowdown: "arrowdown",
-      arrowleft: "arrowleft",
-      arrowright: "arrowright",
-      delete: "delete",
-      backspace: "backspace"
-    };
-    let key = event.key?.toLowerCase() ?? "";
-    if (key === " ") {
-      key = "space";
-    }
-
-    for (const rawModifier of keyModifiers) {
-      const modifier = rawModifier.toLowerCase();
-      if (modifier in modifierChecks) {
-        if (!modifierChecks[modifier]) {
-          return false;
-        }
+  private parseInlineFlags(parts: string[]): { flagMap: DeclarationFlags; flagArgs: DeclarationFlagArgs } {
+    const flagMap: DeclarationFlags = {};
+    const flagArgs: DeclarationFlagArgs = {};
+    for (const raw of parts) {
+      const trimmed = raw.trim();
+      if (!trimmed) {
         continue;
       }
-      const expectedKey = keyAliases[modifier] ?? modifier;
-      if (key !== expectedKey) {
-        return false;
+      const match = trimmed.match(/^([a-zA-Z][\w-]*)(?:\((.+)\))?$/);
+      if (!match) {
+        continue;
+      }
+      const name = match[1] ?? "";
+      if (!name) {
+        continue;
+      }
+      if (!this.flagHandlers.has(name)) {
+        throw new Error(`Unknown flag ${name}`);
+      }
+      flagMap[name] = true;
+      if (match[2] !== undefined) {
+        flagArgs[name] = this.parseInlineFlagArg(match[2]);
       }
     }
-    return true;
+    return { flagMap, flagArgs };
   }
 
-  private matchesTargetModifiers(element: Element, event: Event | undefined, modifiers?: string[]): boolean {
-    if (!modifiers || modifiers.length === 0) {
+  private parseInlineFlagArg(raw: string): any {
+    const trimmed = raw.trim();
+    if (trimmed === "true") {
       return true;
     }
-    const target = event?.target;
-    if (!target || !(target instanceof Node)) {
-      return !modifiers.includes("self") && !modifiers.includes("outside");
-    }
-    if (modifiers.includes("self") && target !== element) {
+    if (trimmed === "false") {
       return false;
     }
-    if (modifiers.includes("outside") && element.contains(target)) {
-      return false;
+    if (/^-?\d+(\.\d+)?$/.test(trimmed)) {
+      return Number(trimmed);
     }
-    return true;
+    return trimmed;
   }
 
   private describeElement(element: Element): string {
@@ -1074,30 +1204,31 @@ export class Engine {
   }
 
   private attachOnHandler(element: Element, config: OnConfig): void {
-    const options = this.getListenerOptions(config.modifiers);
-    const listenerTarget = config.modifiers?.includes("outside") ? element.ownerDocument : element;
+    const { listenerTarget, options, debounceMs } = this.getEventBindingConfig(
+      element,
+      config.flags,
+      config.flagArgs
+    );
     let effectiveHandler: (event?: Event) => void;
     const handler = async (event?: Event) => {
       if (!element.isConnected) {
         listenerTarget.removeEventListener(config.event, effectiveHandler, options);
         return;
       }
-      if (!this.matchesKeyModifiers(event, config.keyModifiers)) {
-        return;
-      }
-      if (!this.matchesTargetModifiers(element, event, config.modifiers)) {
-        return;
-      }
-      this.applyEventModifiers(event, config.modifiers);
       const scope = this.getScope(element);
+      if (!this.applyEventFlagBefore(element, scope, config.flags, config.flagArgs, event)) {
+        return;
+      }
       try {
         await this.execute(config.code, scope, element);
         this.evaluate(element);
       } catch (error) {
         this.emitError(element, error);
+      } finally {
+        this.applyEventFlagAfter(element, scope, config.flags, config.flagArgs, event);
       }
     };
-    effectiveHandler = config.debounceMs ? debounce(handler, config.debounceMs) : handler;
+    effectiveHandler = debounceMs ? debounce(handler, debounceMs) : handler;
     listenerTarget.addEventListener(config.event, effectiveHandler, options);
   }
 
@@ -1105,33 +1236,28 @@ export class Engine {
     element: Element,
     event: string,
     body: BlockNode,
-    modifiers: string[] | undefined,
+    flags: DeclarationFlags,
+    flagArgs: DeclarationFlagArgs,
     args: string[] | undefined,
     behaviorId: number,
     rootScope?: Scope
   ): void {
-    const descriptor = this.parseEventDescriptor(event);
-    const combinedModifiers = modifiers
-      ? [...modifiers, ...descriptor.modifiers]
-      : descriptor.modifiers.length > 0
-        ? [...descriptor.modifiers]
-        : undefined;
-    const listenerTarget = combinedModifiers?.includes("outside") ? element.ownerDocument : element;
+    if (event.includes(".")) {
+      throw new Error("vsn:on does not support dot modifiers; use !flags instead");
+    }
+    const { listenerTarget, options, debounceMs } = this.getEventBindingConfig(element, flags, flagArgs);
     const handler = async (evt?: Event) => {
-      if (!this.matchesKeyModifiers(evt, descriptor.keyModifiers)) {
-        return;
-      }
-      if (!this.matchesTargetModifiers(element, evt, combinedModifiers)) {
-        return;
-      }
-      this.applyEventModifiers(evt, combinedModifiers);
       const scope = this.getScope(element);
+      if (!this.applyEventFlagBefore(element, scope, flags, flagArgs, evt)) {
+        return;
+      }
       const previousValues = new Map<string, any>();
       if (args && args.length > 0) {
         const argName = args[0];
         if (argName) {
           previousValues.set(argName, scope.getPath(argName));
-          scope.setPath(argName, evt);
+          const [nextArg] = this.applyEventFlagArgTransforms(element, scope, flags, flagArgs, evt);
+          scope.setPath(argName, nextArg);
         }
       }
       let failed = false;
@@ -1144,16 +1270,17 @@ export class Engine {
         for (const [name, value] of previousValues.entries()) {
           scope.setPath(name, value);
         }
+        this.applyEventFlagAfter(element, scope, flags, flagArgs, evt);
       }
       if (!failed) {
         this.evaluate(element);
       }
     };
-    const options = this.getListenerOptions(combinedModifiers);
-    listenerTarget.addEventListener(descriptor.event, handler, options);
+    const effectiveHandler = debounceMs ? debounce(handler, debounceMs) : handler;
+    listenerTarget.addEventListener(event, effectiveHandler, options);
     const listenerMap = this.behaviorListeners.get(element) ?? new Map<number, BehaviorListener[]>();
     const listeners = listenerMap.get(behaviorId) ?? [];
-    listeners.push({ target: listenerTarget, event: descriptor.event, handler, options });
+    listeners.push({ target: listenerTarget, event, handler: effectiveHandler, options });
     listenerMap.set(behaviorId, listeners);
     this.behaviorListeners.set(element, listenerMap);
   }
@@ -1187,34 +1314,169 @@ export class Engine {
     }
   }
 
-  private applyEventModifiers(event: Event | undefined, modifiers?: string[]): void {
-    if (!event || !modifiers || modifiers.length === 0) {
-      return;
-    }
-    for (const modifier of modifiers) {
-      if (modifier === "prevent") {
-        event.preventDefault();
-      } else if (modifier === "stop") {
-        event.stopPropagation();
+  private getEventBindingConfig(
+    element: Element,
+    flags: DeclarationFlags,
+    flagArgs: DeclarationFlagArgs
+  ): { listenerTarget: EventTarget; options?: AddEventListenerOptions; debounceMs?: number } {
+    let listenerTarget: EventTarget = element;
+    let options: AddEventListenerOptions = {};
+    let debounceMs: number | undefined;
+    for (const name of Object.keys(flags)) {
+      const handler = this.flagHandlers.get(name);
+      if (!handler?.onEventBind) {
+        continue;
       }
+      const patch = handler.onEventBind({
+        name,
+        args: flagArgs[name],
+        element,
+        scope: this.getScope(element),
+        rootScope: undefined,
+        event: undefined,
+        engine: this
+      });
+      if (!patch) {
+        continue;
+      }
+      if (patch.listenerTarget) {
+        listenerTarget = patch.listenerTarget;
+      }
+      if (patch.options) {
+        options = { ...options, ...patch.options };
+      }
+      if (patch.debounceMs !== undefined) {
+        debounceMs = patch.debounceMs;
+      }
+    }
+    return {
+      listenerTarget,
+      ...(Object.keys(options).length > 0 ? { options } : {}),
+      ...(debounceMs !== undefined ? { debounceMs } : {})
+    };
+  }
+
+  private applyEventFlagBefore(
+    element: Element,
+    scope: Scope,
+    flags: DeclarationFlags,
+    flagArgs: DeclarationFlagArgs,
+    event?: Event
+  ): boolean {
+    for (const name of Object.keys(flags)) {
+      const handler = this.flagHandlers.get(name);
+      if (!handler?.onEventBefore) {
+        continue;
+      }
+      const result = handler.onEventBefore({
+        name,
+        args: flagArgs[name],
+        element,
+        scope,
+        rootScope: undefined,
+        event,
+        engine: this
+      });
+      if (result === false) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  private applyEventFlagAfter(
+    element: Element,
+    scope: Scope,
+    flags: DeclarationFlags,
+    flagArgs: DeclarationFlagArgs,
+    event?: Event
+  ): void {
+    for (const name of Object.keys(flags)) {
+      const handler = this.flagHandlers.get(name);
+      if (!handler?.onEventAfter) {
+        continue;
+      }
+      handler.onEventAfter({
+        name,
+        args: flagArgs[name],
+        element,
+        scope,
+        rootScope: undefined,
+        event,
+        engine: this
+      });
     }
   }
 
-  private getListenerOptions(modifiers?: string[]): AddEventListenerOptions | undefined {
-    if (!modifiers || modifiers.length === 0) {
-      return undefined;
+  private applyEventFlagArgTransforms(
+    element: Element,
+    scope: Scope,
+    flags: DeclarationFlags,
+    flagArgs: DeclarationFlagArgs,
+    event?: Event
+  ): any[] {
+    let args: any[] = [event];
+    for (const name of Object.keys(flags)) {
+      const handler = this.flagHandlers.get(name);
+      if (!handler?.transformEventArgs) {
+        continue;
+      }
+      const nextArgs = handler.transformEventArgs(
+        {
+          name,
+          args: flagArgs[name],
+          element,
+          scope,
+          rootScope: undefined,
+          event,
+          engine: this
+        },
+        args
+      );
+      if (Array.isArray(nextArgs)) {
+        args = nextArgs;
+      }
     }
-    const options: AddEventListenerOptions = {};
-    if (modifiers.includes("once")) {
-      options.once = true;
+    return args;
+  }
+
+  private matchesKeyFlag(event: Event | undefined, flag: string): boolean {
+    if (!(event instanceof KeyboardEvent)) {
+      return false;
     }
-    if (modifiers.includes("passive")) {
-      options.passive = true;
+    const modifierChecks: Record<string, boolean> = {
+      shift: event.shiftKey,
+      ctrl: event.ctrlKey,
+      alt: event.altKey,
+      meta: event.metaKey
+    };
+    if (flag in modifierChecks) {
+      return modifierChecks[flag] ?? false;
     }
-    if (modifiers.includes("capture")) {
-      options.capture = true;
+    const keyAliases: Record<string, string> = {
+      escape: "escape",
+      esc: "escape",
+      enter: "enter",
+      tab: "tab",
+      space: "space",
+      spacebar: "space",
+      up: "arrowup",
+      down: "arrowdown",
+      left: "arrowleft",
+      right: "arrowright",
+      arrowup: "arrowup",
+      arrowdown: "arrowdown",
+      arrowleft: "arrowleft",
+      arrowright: "arrowright",
+      delete: "delete",
+      backspace: "backspace"
+    };
+    let key = event.key?.toLowerCase() ?? "";
+    if (key === " ") {
+      key = "space";
     }
-    return Object.keys(options).length > 0 ? options : undefined;
+    const expectedKey = keyAliases[flag] ?? flag;
+    return key === expectedKey;
   }
 
   private async execute(code: string, scope: Scope, element?: Element, rootScope?: Scope): Promise<void> {
@@ -1279,6 +1541,8 @@ export class Engine {
       rootSelector,
       specificity: this.computeSpecificity(selector),
       order: this.behaviorRegistry.length,
+      flags: behavior.flags ?? {},
+      flagArgs: behavior.flagArgs ?? {},
       ...cached
     });
     this.collectNestedBehaviors(behavior.body, selector, rootSelector);
@@ -1355,14 +1619,17 @@ export class Engine {
     };
   }
 
-  private extractOnBlocks(body: BlockNode): { event: string; body: BlockNode; modifiers: string[]; args: string[] }[] {
-    const blocks: { event: string; body: BlockNode; modifiers: string[]; args: string[] }[] = [];
+  private extractOnBlocks(
+    body: BlockNode
+  ): { event: string; body: BlockNode; flags: DeclarationFlags; flagArgs: DeclarationFlagArgs; args: string[] }[] {
+    const blocks: { event: string; body: BlockNode; flags: DeclarationFlags; flagArgs: DeclarationFlagArgs; args: string[] }[] = [];
     for (const statement of body.statements) {
       if (statement instanceof OnBlockNode) {
         blocks.push({
           event: statement.eventName,
           body: statement.body,
-          modifiers: statement.modifiers,
+          flags: statement.flags,
+          flagArgs: statement.flagArgs,
           args: statement.args
         });
       }
@@ -1432,6 +1699,8 @@ export class Engine {
       return {
         type,
         selector: node.selector?.selectorText ?? "",
+        flags: node.flags ?? {},
+        flagArgs: node.flagArgs ?? {},
         body: this.normalizeNode(node.body)
       };
     }
@@ -1451,6 +1720,8 @@ export class Engine {
         type,
         eventName: node.eventName ?? "",
         args: Array.isArray(node.args) ? node.args : [],
+        flags: node.flags ?? {},
+        flagArgs: node.flagArgs ?? {},
         body: this.normalizeNode(node.body)
       };
     }
@@ -1762,6 +2033,7 @@ export class Engine {
     const debounceMs = declaration.flags.debounce
       ? declaration.flagArgs.debounce ?? 200
       : undefined;
+    const transform = (value: any) => this.applyCustomFlagTransforms(value, element, scope, declaration);
     const importantKey = this.getImportantKey(declaration);
     if (!declaration.flags.important && importantKey && this.isImportant(element, importantKey)) {
       return;
@@ -1773,7 +2045,8 @@ export class Engine {
 
     if (declaration.target instanceof IdentifierExpression) {
       const value = await declaration.value.evaluate(context);
-      scope.setPath(declaration.target.name, value);
+      const transformed = this.applyCustomFlagTransforms(value, element, scope, declaration);
+      scope.setPath(declaration.target.name, transformed);
       if (declaration.flags.important && importantKey) {
         this.markImportant(element, importantKey);
       }
@@ -1790,7 +2063,7 @@ export class Engine {
 
     if (operator === ":>") {
       if (exprIdentifier) {
-        this.applyDirectiveToScope(element, target, exprIdentifier, scope, debounceMs, rootScope);
+        this.applyDirectiveToScope(element, target, exprIdentifier, scope, debounceMs, rootScope, transform);
       }
       if (declaration.flags.important && importantKey) {
         this.markImportant(element, importantKey);
@@ -1799,12 +2072,13 @@ export class Engine {
     }
 
     if (operator === ":=" && exprIdentifier) {
-      this.applyDirectiveToScope(element, target, exprIdentifier, scope, debounceMs, rootScope);
+      this.applyDirectiveToScope(element, target, exprIdentifier, scope, debounceMs, rootScope, transform);
     }
 
     if (!exprIdentifier) {
       const value = await declaration.value.evaluate(context);
-      this.setDirectiveValue(element, target, value, declaration.flags.trusted);
+      const transformed = this.applyCustomFlagTransforms(value, element, scope, declaration);
+      this.setDirectiveValue(element, target, transformed, declaration.flags.trusted);
       const shouldWatch = operator === ":<" || operator === ":=";
       if (shouldWatch) {
         this.applyDirectiveFromExpression(
@@ -1855,6 +2129,77 @@ export class Engine {
         declaration
       });
     }
+  }
+
+  private applyCustomFlagTransforms(
+    value: any,
+    element: Element,
+    scope: Scope,
+    declaration: DeclarationNode
+  ): any {
+    if (this.flagHandlers.size === 0) {
+      return value;
+    }
+    let nextValue = value;
+    for (const [name, handler] of this.flagHandlers) {
+      if (!declaration.flags[name] || !handler.transformValue) {
+        continue;
+      }
+      nextValue = handler.transformValue(
+        {
+          name,
+          args: declaration.flagArgs[name],
+          element,
+          scope,
+          declaration
+        },
+        nextValue
+      );
+    }
+    return nextValue;
+  }
+
+  private async applyBehaviorModifierHook(
+    hook: keyof BehaviorModifierHandler,
+    behavior: RegisteredBehavior,
+    element: Element,
+    scope: Scope,
+    rootScope?: Scope
+  ): Promise<void> {
+    if (this.behaviorModifiers.size === 0) {
+      return;
+    }
+    for (const [name, handler] of this.behaviorModifiers) {
+      if (!behavior.flags?.[name]) {
+        continue;
+      }
+      const callback = handler[hook];
+      if (!callback) {
+        continue;
+      }
+      await callback({
+        name,
+        args: behavior.flagArgs?.[name],
+        element,
+        scope,
+        rootScope,
+        behavior,
+        engine: this
+      });
+    }
+  }
+
+  private behaviorHasModifierHooks(behavior: RegisteredBehavior): boolean {
+    if (this.behaviorModifiers.size === 0) {
+      return false;
+    }
+    const flags = behavior.flags ?? {};
+    for (const name of Object.keys(flags)) {
+      if (flags[name] && this.behaviorModifiers.has(name)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   private applyDirectiveFromScope(
@@ -1931,22 +2276,24 @@ export class Engine {
     expr: string,
     scope: Scope,
     debounceMs?: number,
-    rootScope?: Scope
+    rootScope?: Scope,
+    transform?: (value: any) => any
   ): void {
     const useRoot = expr.startsWith("root.") && rootScope;
     const targetScope = useRoot ? rootScope : scope;
     const targetExpr = useRoot ? `self.${expr.slice("root.".length)}` : expr;
     if (target.kind === "attr" && target.name === "value") {
-      this.applyValueBindingToScope(element, targetExpr, debounceMs, targetScope);
+      this.applyValueBindingToScope(element, targetExpr, debounceMs, targetScope, transform);
       return;
     }
     if (target.kind === "attr" && target.name === "checked") {
-      this.applyCheckedBindingToScope(element, targetExpr, debounceMs, targetScope);
+      this.applyCheckedBindingToScope(element, targetExpr, debounceMs, targetScope, transform);
       return;
     }
     const value = this.getDirectiveValue(element, target);
     if (value != null) {
-      targetScope.set(targetExpr, value);
+      const nextValue = transform ? transform(value) : value;
+      targetScope.set(targetExpr, nextValue);
     }
   }
 
@@ -1954,14 +2301,16 @@ export class Engine {
     element: Element,
     expr: string,
     debounceMs?: number,
-    scope?: Scope
+    scope?: Scope,
+    transform?: (value: any) => any
   ): void {
     if (!(element instanceof HTMLInputElement)) {
       return;
     }
     const handler = () => {
       const targetScope = scope ?? this.getScope(element);
-      targetScope.set(expr, element.checked);
+      const value = transform ? transform(element.checked) : element.checked;
+      targetScope.set(expr, value);
     };
     const effectiveHandler = debounceMs ? debounce(handler, debounceMs) : handler;
     effectiveHandler();
@@ -1973,14 +2322,17 @@ export class Engine {
     element: Element,
     expr: string,
     debounceMs?: number,
-    scope?: Scope
+    scope?: Scope,
+    transform?: (value: any) => any
   ): void {
     if (!(element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement || element instanceof HTMLSelectElement)) {
       return;
     }
     const handler = () => {
       const targetScope = scope ?? this.getScope(element);
-      applyBindToScope(element, expr, targetScope);
+      const value = element.value;
+      const nextValue = transform ? transform(value) : value;
+      targetScope.set(expr, nextValue);
     };
     const effectiveHandler = debounceMs ? debounce(handler, debounceMs) : handler;
     effectiveHandler();

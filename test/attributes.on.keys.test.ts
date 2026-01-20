@@ -6,7 +6,7 @@ import { Engine } from "../src/index";
 describe("vsn-on key modifiers", () => {
   it("fires for keyup.enter and supports shift", async () => {
     document.body.innerHTML = `
-      <input id="field" vsn-construct="count = 0;" vsn-on:keyup.enter.shift="count = count + 1;" />
+      <input id="field" vsn-construct="count = 0;" vsn-on:keyup!enter!shift="count = count + 1;" />
     `;
 
     const engine = new Engine();

@@ -113,7 +113,7 @@
     transition: transform 160ms ease, box-shadow 160ms ease, background 160ms ease;
   }
 
-  #product-filters-app .filter[data-active="true"] {
+  #product-filters-app .filter[aria-current="true"] {
     background: var(--accent);
     color: #fff;
     box-shadow: 0 8px 18px rgba(15, 47, 42, 0.25);
@@ -311,17 +311,244 @@
       </div>
 
       <div class="products-grid" vsn-show="hasResults">
+        <article
+          class="product-card"
+          data-tone="red"
+          data-material="ceramic"
+          data-tags="red, ceramic"
+          data-price="18.00"
+          data-currency="USD"
+          itemscope
+          itemtype="https://schema.org/Product"
+        >
+          <meta itemprop="color" content="red">
+          <meta itemprop="material" content="ceramic">
+          <div class="product-top">
+            <div class="product-swatch"></div>
+            <div>
+              <h3 class="product-name" itemprop="name">Crimson Clay Mug</h3>
+              <p class="product-price" itemprop="offers" itemscope itemtype="https://schema.org/Offer">
+                <span class="price-display">$18</span>
+                <meta itemprop="price" content="18.00">
+                <meta itemprop="priceCurrency" content="USD">
+              </p>
+            </div>
+          </div>
+          <p class="product-desc" itemprop="description">Hand-thrown stoneware with a satin red glaze.</p>
+          <p class="product-tags">red / ceramic</p>
+        </article>
+
+        <article
+          class="product-card"
+          data-tone="green"
+          data-material="linen"
+          data-tags="green, linen"
+          data-price="36.00"
+          data-currency="USD"
+          itemscope
+          itemtype="https://schema.org/Product"
+        >
+          <meta itemprop="color" content="green">
+          <meta itemprop="material" content="linen">
+          <div class="product-top">
+            <div class="product-swatch"></div>
+            <div>
+              <h3 class="product-name" itemprop="name">Verdant Linen Runner</h3>
+              <p class="product-price" itemprop="offers" itemscope itemtype="https://schema.org/Offer">
+                <span class="price-display">$36</span>
+                <meta itemprop="price" content="36.00">
+                <meta itemprop="priceCurrency" content="USD">
+              </p>
+            </div>
+          </div>
+          <p class="product-desc" itemprop="description">Soft washed linen for morning tables.</p>
+          <p class="product-tags">green / linen</p>
+        </article>
+
+        <article
+          class="product-card"
+          data-tone="blue"
+          data-material="glass"
+          data-tags="blue, glass"
+          data-price="24.00"
+          data-currency="USD"
+          itemscope
+          itemtype="https://schema.org/Product"
+        >
+          <meta itemprop="color" content="blue">
+          <meta itemprop="material" content="glass">
+          <div class="product-top">
+            <div class="product-swatch"></div>
+            <div>
+              <h3 class="product-name" itemprop="name">Blue Harbor Glass</h3>
+              <p class="product-price" itemprop="offers" itemscope itemtype="https://schema.org/Offer">
+                <span class="price-display">$24</span>
+                <meta itemprop="price" content="24.00">
+                <meta itemprop="priceCurrency" content="USD">
+              </p>
+            </div>
+          </div>
+          <p class="product-desc" itemprop="description">Weighted tumbler with a cool blue tint.</p>
+          <p class="product-tags">blue / glass</p>
+        </article>
+
+        <article
+          class="product-card"
+          data-tone="amber"
+          data-material="glass"
+          data-tags="amber, glass"
+          data-price="42.00"
+          data-currency="USD"
+          itemscope
+          itemtype="https://schema.org/Product"
+        >
+          <meta itemprop="color" content="amber">
+          <meta itemprop="material" content="glass">
+          <div class="product-top">
+            <div class="product-swatch"></div>
+            <div>
+              <h3 class="product-name" itemprop="name">Amber Prism Vase</h3>
+              <p class="product-price" itemprop="offers" itemscope itemtype="https://schema.org/Offer">
+                <span class="price-display">$42</span>
+                <meta itemprop="price" content="42.00">
+                <meta itemprop="priceCurrency" content="USD">
+              </p>
+            </div>
+          </div>
+          <p class="product-desc" itemprop="description">Faceted glass vase that glows at sunset.</p>
+          <p class="product-tags">amber / glass</p>
+        </article>
+
+        <article
+          class="product-card"
+          data-tone="blue"
+          data-material="metal"
+          data-tags="blue, metal"
+          data-price="29.00"
+          data-currency="USD"
+          itemscope
+          itemtype="https://schema.org/Product"
+        >
+          <meta itemprop="color" content="blue">
+          <meta itemprop="material" content="metal">
+          <div class="product-top">
+            <div class="product-swatch"></div>
+            <div>
+              <h3 class="product-name" itemprop="name">Oxidized Desk Tray</h3>
+              <p class="product-price" itemprop="offers" itemscope itemtype="https://schema.org/Offer">
+                <span class="price-display">$29</span>
+                <meta itemprop="price" content="29.00">
+                <meta itemprop="priceCurrency" content="USD">
+              </p>
+            </div>
+          </div>
+          <p class="product-desc" itemprop="description">Brushed metal catchall for keys and pens.</p>
+          <p class="product-tags">blue / metal</p>
+        </article>
+
+        <article
+          class="product-card"
+          data-tone="green"
+          data-material="ceramic"
+          data-tags="green, ceramic"
+          data-price="52.00"
+          data-currency="USD"
+          itemscope
+          itemtype="https://schema.org/Product"
+        >
+          <meta itemprop="color" content="green">
+          <meta itemprop="material" content="ceramic">
+          <div class="product-top">
+            <div class="product-swatch"></div>
+            <div>
+              <h3 class="product-name" itemprop="name">Forest Stack Plates</h3>
+              <p class="product-price" itemprop="offers" itemscope itemtype="https://schema.org/Offer">
+                <span class="price-display">$52</span>
+                <meta itemprop="price" content="52.00">
+                <meta itemprop="priceCurrency" content="USD">
+              </p>
+            </div>
+          </div>
+          <p class="product-desc" itemprop="description">Stack of four ceramic plates with green speckle.</p>
+          <p class="product-tags">green / ceramic</p>
+        </article>
+
+        <article
+          class="product-card"
+          data-tone="red"
+          data-material="metal"
+          data-tags="red, metal"
+          data-price="22.00"
+          data-currency="USD"
+          itemscope
+          itemtype="https://schema.org/Product"
+        >
+          <meta itemprop="color" content="red">
+          <meta itemprop="material" content="metal">
+          <div class="product-top">
+            <div class="product-swatch"></div>
+            <div>
+              <h3 class="product-name" itemprop="name">Rosin Wall Hooks</h3>
+              <p class="product-price" itemprop="offers" itemscope itemtype="https://schema.org/Offer">
+                <span class="price-display">$22</span>
+                <meta itemprop="price" content="22.00">
+                <meta itemprop="priceCurrency" content="USD">
+              </p>
+            </div>
+          </div>
+          <p class="product-desc" itemprop="description">Set of three colored metal hooks.</p>
+          <p class="product-tags">red / metal</p>
+        </article>
+
+        <article
+          class="product-card"
+          data-tone="blue"
+          data-material="linen"
+          data-tags="blue, linen"
+          data-price="30.00"
+          data-currency="USD"
+          itemscope
+          itemtype="https://schema.org/Product"
+        >
+          <meta itemprop="color" content="blue">
+          <meta itemprop="material" content="linen">
+          <div class="product-top">
+            <div class="product-swatch"></div>
+            <div>
+              <h3 class="product-name" itemprop="name">Indigo Linen Napkins</h3>
+              <p class="product-price" itemprop="offers" itemscope itemtype="https://schema.org/Offer">
+                <span class="price-display">$30</span>
+                <meta itemprop="price" content="30.00">
+                <meta itemprop="priceCurrency" content="USD">
+              </p>
+            </div>
+          </div>
+          <p class="product-desc" itemprop="description">Two-piece linen set dyed in deep blue.</p>
+          <p class="product-tags">blue / linen</p>
+        </article>
+
         <template id="product-template" vsn-each="visibleProducts as product">
-          <article class="product-card" vsn-construct="@data-tone = product.tone;">
+          <article
+            class="product-card"
+            vsn-construct="@data-tone = product.tone; @data-material = product.material; @data-tags = product.tags.join(', '); @data-price = product.priceValue; @data-currency = product.currency;"
+            itemscope
+            itemtype="https://schema.org/Product"
+          >
+            <meta itemprop="color" vsn-construct="@content = product.tone;">
+            <meta itemprop="material" vsn-construct="@content = product.material;">
             <div class="product-top">
               <div class="product-swatch"></div>
               <div>
-                <h3 class="product-name" vsn-bind="product.name"></h3>
-                <p class="product-price" vsn-bind="product.price"></p>
+                <h3 class="product-name" itemprop="name" vsn-bind:from="product.name"></h3>
+                <p class="product-price" itemprop="offers" itemscope itemtype="https://schema.org/Offer">
+                  <span class="price-display" vsn-bind:from="product.price"></span>
+                  <meta itemprop="price" vsn-construct="@content = product.priceValue;">
+                  <meta itemprop="priceCurrency" vsn-construct="@content = product.currency;">
+                </p>
               </div>
             </div>
-            <p class="product-desc" vsn-bind="product.desc"></p>
-            <p class="product-tags" vsn-bind="product.tagsLabel"></p>
+            <p class="product-desc" itemprop="description" vsn-bind:from="product.desc"></p>
+            <p class="product-tags" vsn-bind:from="product.tagsLabel"></p>
           </article>
         </template>
       </div>
@@ -337,83 +564,13 @@
 <script type="text/vsn">
 behavior #product-filters-app {
   filters: [];
-  products: [
-    {
-      name: "Crimson Clay Mug",
-      price: "$18",
-      desc: "Hand-thrown stoneware with a satin red glaze.",
-      tone: "red",
-      tags: ["red", "ceramic"],
-      tagsLabel: "red / ceramic"
-    },
-    {
-      name: "Verdant Linen Runner",
-      price: "$36",
-      desc: "Soft washed linen for morning tables.",
-      tone: "green",
-      tags: ["green", "linen"],
-      tagsLabel: "green / linen"
-    },
-    {
-      name: "Blue Harbor Glass",
-      price: "$24",
-      desc: "Weighted tumbler with a cool blue tint.",
-      tone: "blue",
-      tags: ["blue", "glass"],
-      tagsLabel: "blue / glass"
-    },
-    {
-      name: "Amber Prism Vase",
-      price: "$42",
-      desc: "Faceted glass vase that glows at sunset.",
-      tone: "amber",
-      tags: ["amber", "glass"],
-      tagsLabel: "amber / glass"
-    },
-    {
-      name: "Oxidized Desk Tray",
-      price: "$29",
-      desc: "Brushed metal catchall for keys and pens.",
-      tone: "blue",
-      tags: ["blue", "metal"],
-      tagsLabel: "blue / metal"
-    },
-    {
-      name: "Forest Stack Plates",
-      price: "$52",
-      desc: "Stack of four ceramic plates with green speckle.",
-      tone: "green",
-      tags: ["green", "ceramic"],
-      tagsLabel: "green / ceramic"
-    },
-    {
-      name: "Rosin Wall Hooks",
-      price: "$22",
-      desc: "Set of three colored metal hooks.",
-      tone: "red",
-      tags: ["red", "metal"],
-      tagsLabel: "red / metal"
-    },
-    {
-      name: "Indigo Linen Napkins",
-      price: "$30",
-      desc: "Two-piece linen set dyed in deep blue.",
-      tone: "blue",
-      tags: ["blue", "linen"],
-      tagsLabel: "blue / linen"
-    }
-  ];
+  products: [];
   visibleProducts: [];
   summary: "";
   activeFiltersLabel: "";
   activeFiltersTags: "";
   hasResults: true;
   noResults: false;
-
-  construct {
-    updateVisible();
-    console.log('products', products);
-  }
 
   updateVisible() {
     if (filters.length == 0) {
@@ -454,7 +611,6 @@ behavior #product-filters-app {
 
   behavior .filter {
     @aria-current:< filters.indexOf(@data-filter) > -1;
-    @data-active:< filters.indexOf(@data-filter) > -1;
 
     on click(event) !prevent {
       toggleFilter(@data-filter);
@@ -465,6 +621,19 @@ behavior #product-filters-app {
     on click(event) {
       filters = [];
       updateVisible();
+    }
+  }
+
+  behavior .product-card {
+    tone: @data-tone;
+    material: @data-material;
+    tags: @data-tags;
+    price: @data-price;
+    currency: @data-currency;
+    description: ?>("");
+
+    construct {
+      console.log(`${tone}, ${material}, ${tags}`);
     }
   }
 }
