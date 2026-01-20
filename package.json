@@ -36,6 +36,7 @@
     "build": "tsup",
     "dev": "tsup --watch",
     "test": "vitest run",
+    "coverage": "vitest run --coverage",
     "test:watch": "vitest",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "clean": "rm -rf dist",

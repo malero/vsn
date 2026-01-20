@@ -57,4 +57,28 @@ export class TokenStream {
     }
     return null;
   }
+
+  indexAfterDelimited(openType: TokenType, closeType: TokenType, offset = 0): number | null {
+    const first = this.peekNonWhitespace(offset);
+    if (!first || first.type !== openType) {
+      return null;
+    }
+    let index = offset + 1;
+    let depth = 1;
+    while (true) {
+      const token = this.peekNonWhitespace(index);
+      if (!token) {
+        return null;
+      }
+      if (token.type === openType) {
+        depth += 1;
+      } else if (token.type === closeType) {
+        depth -= 1;
+        if (depth === 0) {
+          return index + 1;
+        }
+      }
+      index += 1;
+    }
+  }
 }

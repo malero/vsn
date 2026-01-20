@@ -516,6 +516,7 @@ export class FunctionExpression extends BaseNode {
     const scope = context.scope;
     const globals = context.globals;
     const element = context.element;
+
     return async (...args: any[]) => {
       const activeScope = scope?.createChild ? scope.createChild() : scope;
       const inner: ExecutionContext = {
@@ -526,6 +527,7 @@ export class FunctionExpression extends BaseNode {
         returnValue: undefined,
         returning: false
       };
+
       if (activeScope) {
         const previousValues = new Map<string, any>();
         await this.applyParams(activeScope, previousValues, inner, args);
@@ -958,13 +960,16 @@ export class CallExpression extends BaseNode {
   async evaluate(context: ExecutionContext): Promise<any> {
     const resolved = await this.resolveCallee(context);
     const fn = resolved?.fn ?? (await this.callee.evaluate(context));
+
     if (typeof fn !== "function") {
       return undefined;
     }
+
     const values = [];
     for (const arg of this.args) {
       values.push(await arg.evaluate(context));
     }
+
     return fn.apply(resolved?.thisArg, values);
   }
 

@@ -1421,30 +1421,17 @@ export class Parser {
         index += 2;
       }
       while (this.stream.peekNonWhitespace(index)?.type === TokenType.LBracket) {
-        let depth = 0;
-        while (true) {
-          const token = this.stream.peekNonWhitespace(index);
-          if (!token) {
-            return false;
-          }
-          if (token.type === TokenType.LBracket) {
-            depth += 1;
-          } else if (token.type === TokenType.RBracket) {
-            depth -= 1;
-            if (depth === 0) {
-              index += 1;
-              break;
-            }
-          }
-          index += 1;
+        const indexAfter = this.stream.indexAfterDelimited(TokenType.LBracket, TokenType.RBracket, index);
+        if (indexAfter === null) {
+          return false;
         }
+        index = indexAfter;
       }
       return this.isAssignmentOperatorStart(index);
     }
 
     if (first.type === TokenType.At || first.type === TokenType.Dollar) {
       const second = this.stream.peekNonWhitespace(1);
-      const third = this.stream.peekNonWhitespace(2);
       return second?.type === TokenType.Identifier && this.isAssignmentOperatorStart(2);
     }
 
@@ -1532,25 +1519,11 @@ export class Parser {
     if (this.stream.peekNonWhitespace(index)?.type !== TokenType.LParen) {
       return false;
     }
-    index += 1;
-    let depth = 1;
-    while (true) {
-      const token = this.stream.peekNonWhitespace(index);
-      if (!token) {
-        return false;
-      }
-      if (token.type === TokenType.LParen) {
-        depth += 1;
-      } else if (token.type === TokenType.RParen) {
-        depth -= 1;
-        if (depth === 0) {
-          index += 1;
-          break;
-        }
-      }
-      index += 1;
+    const indexAfterParams = this.stream.indexAfterDelimited(TokenType.LParen, TokenType.RParen, index);
+    if (indexAfterParams === null) {
+      return false;
     }
-    return this.stream.peekNonWhitespace(index)?.type === TokenType.LBrace;
+    return this.stream.peekNonWhitespace(indexAfterParams)?.type === TokenType.LBrace;
   }
 
   private isArrowFunctionStart(): boolean {
@@ -1558,25 +1531,11 @@ export class Parser {
     if (!first || first.type !== TokenType.LParen) {
       return false;
     }
-    let index = 1;
-    let depth = 1;
-    while (true) {
-      const token = this.stream.peekNonWhitespace(index);
-      if (!token) {
-        return false;
-      }
-      if (token.type === TokenType.LParen) {
-        depth += 1;
-      } else if (token.type === TokenType.RParen) {
-        depth -= 1;
-        if (depth === 0) {
-          index += 1;
-          break;
-        }
-      }
-      index += 1;
+    const indexAfterParams = this.stream.indexAfterDelimited(TokenType.LParen, TokenType.RParen, 0);
+    if (indexAfterParams === null) {
+      return false;
     }
-    return this.stream.peekNonWhitespace(index)?.type === TokenType.Arrow;
+    return this.stream.peekNonWhitespace(indexAfterParams)?.type === TokenType.Arrow;
   }
 
   private isAsyncArrowFunctionStart(): boolean {
@@ -1587,25 +1546,11 @@ export class Parser {
     if (this.stream.peekNonWhitespace(1)?.type !== TokenType.LParen) {
       return false;
     }
-    let index = 2;
-    let depth = 1;
-    while (true) {
-      const token = this.stream.peekNonWhitespace(index);
-      if (!token) {
-        return false;
-      }
-      if (token.type === TokenType.LParen) {
-        depth += 1;
-      } else if (token.type === TokenType.RParen) {
-        depth -= 1;
-        if (depth === 0) {
-          index += 1;
-          break;
-        }
-      }
-      index += 1;
+    const indexAfterParams = this.stream.indexAfterDelimited(TokenType.LParen, TokenType.RParen, 1);
+    if (indexAfterParams === null) {
+      return false;
     }
-    return this.stream.peekNonWhitespace(index)?.type === TokenType.Arrow;
+    return this.stream.peekNonWhitespace(indexAfterParams)?.type === TokenType.Arrow;
   }
 
   private isFunctionExpressionAssignmentStart(): boolean {
@@ -1623,25 +1568,11 @@ export class Parser {
     if (this.stream.peekNonWhitespace(index)?.type !== TokenType.LParen) {
       return false;
     }
-    index += 1;
-    let depth = 1;
-    while (true) {
-      const token = this.stream.peekNonWhitespace(index);
-      if (!token) {
-        return false;
-      }
-      if (token.type === TokenType.LParen) {
-        depth += 1;
-      } else if (token.type === TokenType.RParen) {
-        depth -= 1;
-        if (depth === 0) {
-          index += 1;
-          break;
-        }
-      }
-      index += 1;
+    const indexAfterParams = this.stream.indexAfterDelimited(TokenType.LParen, TokenType.RParen, index);
+    if (indexAfterParams === null) {
+      return false;
     }
-    return this.stream.peekNonWhitespace(index)?.type === TokenType.Arrow;
+    return this.stream.peekNonWhitespace(indexAfterParams)?.type === TokenType.Arrow;
   }
 
   private parseExpressionStatement(): ExpressionNode {

@@ -13,6 +13,10 @@ export function parseCFS(source: string) {
   return parser.parseProgram();
 }
 
+if (window) {
+  (window as any)['parseCFS'] = parseCFS;
+}
+
 export function autoMount(root: HTMLElement | Document = document): Engine | null {
   if (typeof document === "undefined") {
     return null;

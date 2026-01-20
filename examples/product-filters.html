@@ -544,7 +544,7 @@ behavior #product-filters-app {
       return;
     }
 
-    visibleProducts = await list.filter(products, (item) => {
+    visibleProducts = list.filter(products, (item) => {
       for (i = 0; i < filters.length; i = i + 1) {
         if (item.tags.indexOf(filters[i]) > -1) {
           return true;
@@ -563,7 +563,7 @@ behavior #product-filters-app {
   async toggleFilter(filter) {
     index = filters.indexOf(filter);
     if (index > -1) {
-      filters = list.filter(filters, (entry) => entry != filter);
+      filters = filters.filter((entry) => { console.log('filter check'); return entry != filter;});
     } else {
       filters = [...filters, filter];
     }
@@ -589,6 +589,7 @@ behavior #product-filters-app {
     tags: [];
 
     construct {
+      console.log(self);
       tags.push(color);
       tags.push(material);
       @data-tone = color;

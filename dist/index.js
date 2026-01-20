@@ -20,6 +20,7 @@ var TokenType = /* @__PURE__ */ ((TokenType2) => {
   TokenType2["While"] = "While";
   TokenType2["Try"] = "Try";
   TokenType2["Catch"] = "Catch";
+  TokenType2["Assert"] = "Assert";
   TokenType2["LBrace"] = "LBrace";
   TokenType2["RBrace"] = "RBrace";
   TokenType2["LParen"] = "LParen";
@@ -75,6 +76,7 @@ var KEYWORDS = {
   while: "While" /* While */,
   try: "Try" /* Try */,
   catch: "Catch" /* Catch */,
+  assert: "Assert" /* Assert */,
   true: "Boolean" /* Boolean */,
   false: "Boolean" /* Boolean */,
   null: "Null" /* Null */
@@ -717,6 +719,25 @@ var ReturnNode = class extends BaseNode {
     return context.returnValue;
   }
 };
+var AssertError = class extends Error {
+  constructor(message = "Assertion failed") {
+    super(message);
+    this.name = "AssertError";
+  }
+};
+var AssertNode = class extends BaseNode {
+  constructor(test) {
+    super("Assert");
+    this.test = test;
+  }
+  async evaluate(context) {
+    const value = await this.test.evaluate(context);
+    if (!value) {
+      throw new AssertError();
+    }
+    return value;
+  }
+};
 var IfNode = class extends BaseNode {
   constructor(test, consequent, alternate) {
     super("If");
@@ -1183,7 +1204,11 @@ var CallExpression = class extends BaseNode {
   }
   async evaluate(context) {
     const resolved = await this.resolveCallee(context);
+    console.log(this.type, "args", this.args);
+    console.log("CallExpression context", context);
+    console.log("CallExpression resolved", resolved);
     const fn = resolved?.fn ?? await this.callee.evaluate(context);
+    console.log("CallExpression fn", fn);
     if (typeof fn !== "function") {
       return void 0;
     }
@@ -1191,6 +1216,7 @@ var CallExpression = class extends BaseNode {
     for (const arg of this.args) {
       values.push(await arg.evaluate(context));
     }
+    console.log(this.type, "values", values);
     return fn.apply(resolved?.thisArg, values);
   }
   async resolveCallee(context) {
@@ -1432,6 +1458,29 @@ var TokenStream = class {
       count += 1;
     }
     return null;
+  }
+  indexAfterDelimited(openType, closeType, offset = 0) {
+    const first = this.peekNonWhitespace(offset);
+    if (!first || first.type !== openType) {
+      return null;
+    }
+    let index = offset + 1;
+    let depth = 1;
+    while (true) {
+      const token = this.peekNonWhitespace(index);
+      if (!token) {
+        return null;
+      }
+      if (token.type === openType) {
+        depth += 1;
+      } else if (token.type === closeType) {
+        depth -= 1;
+        if (depth === 0) {
+          return index + 1;
+        }
+      }
+      index += 1;
+    }
   }
 };
 
@@ -1688,6 +1737,9 @@ ${caret}`;
         throw new Error("Return is only allowed inside functions");
       }
       return this.parseReturnStatement();
+    }
+    if (next.type === "Assert" /* Assert */) {
+      return this.parseAssertStatement();
     }
     if (allowBlocks && next.type === "On" /* On */) {
       return this.parseOnBlock();
@@ -2681,29 +2733,16 @@ ${caret}`;
         index += 2;
       }
       while (this.stream.peekNonWhitespace(index)?.type === "LBracket" /* LBracket */) {
-        let depth = 0;
-        while (true) {
-          const token = this.stream.peekNonWhitespace(index);
-          if (!token) {
-            return false;
-          }
-          if (token.type === "LBracket" /* LBracket */) {
-            depth += 1;
-          } else if (token.type === "RBracket" /* RBracket */) {
-            depth -= 1;
-            if (depth === 0) {
-              index += 1;
-              break;
-            }
-          }
-          index += 1;
+        const indexAfter = this.stream.indexAfterDelimited("LBracket" /* LBracket */, "RBracket" /* RBracket */, index);
+        if (indexAfter === null) {
+          return false;
         }
+        index = indexAfter;
       }
       return this.isAssignmentOperatorStart(index);
     }
     if (first.type === "At" /* At */ || first.type === "Dollar" /* Dollar */) {
       const second = this.stream.peekNonWhitespace(1);
-      const third = this.stream.peekNonWhitespace(2);
       return second?.type === "Identifier" /* Identifier */ && this.isAssignmentOperatorStart(2);
     }
     if (first.type === "LBrace" /* LBrace */ || first.type === "LBracket" /* LBracket */) {
@@ -2770,50 +2809,22 @@ ${caret}`;
     if (this.stream.peekNonWhitespace(index)?.type !== "LParen" /* LParen */) {
       return false;
     }
-    index += 1;
-    let depth = 1;
-    while (true) {
-      const token = this.stream.peekNonWhitespace(index);
-      if (!token) {
-        return false;
-      }
-      if (token.type === "LParen" /* LParen */) {
-        depth += 1;
-      } else if (token.type === "RParen" /* RParen */) {
-        depth -= 1;
-        if (depth === 0) {
-          index += 1;
-          break;
-        }
-      }
-      index += 1;
+    const indexAfterParams = this.stream.indexAfterDelimited("LParen" /* LParen */, "RParen" /* RParen */, index);
+    if (indexAfterParams === null) {
+      return false;
     }
-    return this.stream.peekNonWhitespace(index)?.type === "LBrace" /* LBrace */;
+    return this.stream.peekNonWhitespace(indexAfterParams)?.type === "LBrace" /* LBrace */;
   }
   isArrowFunctionStart() {
     const first = this.stream.peekNonWhitespace(0);
     if (!first || first.type !== "LParen" /* LParen */) {
       return false;
     }
-    let index = 1;
-    let depth = 1;
-    while (true) {
-      const token = this.stream.peekNonWhitespace(index);
-      if (!token) {
-        return false;
-      }
-      if (token.type === "LParen" /* LParen */) {
-        depth += 1;
-      } else if (token.type === "RParen" /* RParen */) {
-        depth -= 1;
-        if (depth === 0) {
-          index += 1;
-          break;
-        }
-      }
-      index += 1;
+    const indexAfterParams = this.stream.indexAfterDelimited("LParen" /* LParen */, "RParen" /* RParen */, 0);
+    if (indexAfterParams === null) {
+      return false;
     }
-    return this.stream.peekNonWhitespace(index)?.type === "Arrow" /* Arrow */;
+    return this.stream.peekNonWhitespace(indexAfterParams)?.type === "Arrow" /* Arrow */;
   }
   isAsyncArrowFunctionStart() {
     const first = this.stream.peekNonWhitespace(0);
@@ -2823,25 +2834,11 @@ ${caret}`;
     if (this.stream.peekNonWhitespace(1)?.type !== "LParen" /* LParen */) {
       return false;
     }
-    let index = 2;
-    let depth = 1;
-    while (true) {
-      const token = this.stream.peekNonWhitespace(index);
-      if (!token) {
-        return false;
-      }
-      if (token.type === "LParen" /* LParen */) {
-        depth += 1;
-      } else if (token.type === "RParen" /* RParen */) {
-        depth -= 1;
-        if (depth === 0) {
-          index += 1;
-          break;
-        }
-      }
-      index += 1;
+    const indexAfterParams = this.stream.indexAfterDelimited("LParen" /* LParen */, "RParen" /* RParen */, 1);
+    if (indexAfterParams === null) {
+      return false;
     }
-    return this.stream.peekNonWhitespace(index)?.type === "Arrow" /* Arrow */;
+    return this.stream.peekNonWhitespace(indexAfterParams)?.type === "Arrow" /* Arrow */;
   }
   isFunctionExpressionAssignmentStart() {
     const first = this.stream.peekNonWhitespace(0);
@@ -2858,25 +2855,11 @@ ${caret}`;
     if (this.stream.peekNonWhitespace(index)?.type !== "LParen" /* LParen */) {
       return false;
     }
-    index += 1;
-    let depth = 1;
-    while (true) {
-      const token = this.stream.peekNonWhitespace(index);
-      if (!token) {
-        return false;
-      }
-      if (token.type === "LParen" /* LParen */) {
-        depth += 1;
-      } else if (token.type === "RParen" /* RParen */) {
-        depth -= 1;
-        if (depth === 0) {
-          index += 1;
-          break;
-        }
-      }
-      index += 1;
+    const indexAfterParams = this.stream.indexAfterDelimited("LParen" /* LParen */, "RParen" /* RParen */, index);
+    if (indexAfterParams === null) {
+      return false;
     }
-    return this.stream.peekNonWhitespace(index)?.type === "Arrow" /* Arrow */;
+    return this.stream.peekNonWhitespace(indexAfterParams)?.type === "Arrow" /* Arrow */;
   }
   parseExpressionStatement() {
     const expr = this.parseExpression();
@@ -3051,6 +3034,13 @@ ${caret}`;
     this.stream.skipWhitespace();
     this.stream.expect("Semicolon" /* Semicolon */);
     return new ReturnNode(value);
+  }
+  parseAssertStatement() {
+    this.stream.expect("Assert" /* Assert */);
+    this.stream.skipWhitespace();
+    const test = this.parseExpression();
+    this.consumeStatementTerminator();
+    return new AssertNode(test);
   }
   parseArrowFunctionExpression(isAsync = false) {
     const params = this.parseFunctionParams();
@@ -4920,6 +4910,12 @@ var Engine = class _Engine {
         value: this.normalizeNode(node.value ?? null)
       };
     }
+    if (type === "Assert") {
+      return {
+        type,
+        test: this.normalizeNode(node.test)
+      };
+    }
     if (type === "If") {
       return {
         type,
@@ -5560,6 +5556,9 @@ function parseCFS(source) {
   const parser = new Parser(source);
   return parser.parseProgram();
 }
+if (window) {
+  window["parseCFS"] = parseCFS;
+}
 function autoMount(root = document) {
   if (typeof document === "undefined") {
     return null;
@@ -5604,6 +5603,8 @@ if (typeof document !== "undefined") {
 export {
   ArrayExpression,
   ArrayPattern,
+  AssertError,
+  AssertNode,
   AssignmentNode,
   AwaitExpression,
   BaseNode,
