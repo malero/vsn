@@ -18,10 +18,19 @@ export function autoMount(root: HTMLElement | Document = document): Engine | nul
     return null;
   }
   const engine = new Engine();
+  (globalThis as any).VSNEngine = engine;
   const startTime = typeof performance !== "undefined" && performance.now ? performance.now() : Date.now();
   const mount = () => {
     const target = root instanceof Document ? root.body : root;
     if (target) {
+      const plugins = (globalThis as any).VSNPlugins;
+      if (plugins && typeof plugins === "object") {
+        for (const plugin of Object.values(plugins)) {
+          if (typeof plugin === "function") {
+            plugin(engine);
+          }
+        }
+      }
       const sources = Array.from(document.querySelectorAll('script[type="text/vsn"]'))
         .map((script) => script.textContent ?? "")
         .join("\n");
@@ -35,9 +44,9 @@ export function autoMount(root: HTMLElement | Document = document): Engine | nul
     }
   };
   if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", mount, { once: true });
+    document.addEventListener("DOMContentLoaded", () => setTimeout(mount, 0), { once: true });
   } else {
-    mount();
+    setTimeout(mount, 0);
   }
   return engine;
 }

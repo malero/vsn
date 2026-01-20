@@ -51,8 +51,6 @@ __export(index_exports, {
   ReturnNode: () => ReturnNode,
   SelectorNode: () => SelectorNode,
   SpreadElement: () => SpreadElement,
-  StateBlockNode: () => StateBlockNode,
-  StateEntryNode: () => StateEntryNode,
   TemplateExpression: () => TemplateExpression,
   TernaryExpression: () => TernaryExpression,
   TokenType: () => TokenType,
@@ -550,20 +548,6 @@ var BehaviorNode = class extends BaseNode {
     this.body = body;
     this.flags = flags;
     this.flagArgs = flagArgs;
-  }
-};
-var StateEntryNode = class extends BaseNode {
-  constructor(name, value, important) {
-    super("StateEntry");
-    this.name = name;
-    this.value = value;
-    this.important = important;
-  }
-};
-var StateBlockNode = class extends BaseNode {
-  constructor(entries) {
-    super("StateBlock");
-    this.entries = entries;
   }
 };
 var OnBlockNode = class extends BaseNode {
@@ -1806,44 +1790,6 @@ ${caret}`;
     }
     throw new Error(`Unexpected token ${next.type}`);
   }
-  parseStateBlock() {
-    this.stream.expect("State" /* State */);
-    this.stream.skipWhitespace();
-    this.stream.expect("LBrace" /* LBrace */);
-    const entries = [];
-    while (true) {
-      this.stream.skipWhitespace();
-      const next = this.stream.peek();
-      if (!next) {
-        throw new Error("Unterminated state block");
-      }
-      if (next.type === "RBrace" /* RBrace */) {
-        this.stream.next();
-        break;
-      }
-      const nameToken = this.stream.expect("Identifier" /* Identifier */);
-      this.stream.skipWhitespace();
-      this.stream.expect("Colon" /* Colon */);
-      this.stream.skipWhitespace();
-      const value = this.parseExpression();
-      this.stream.skipWhitespace();
-      let important = false;
-      if (this.stream.peek()?.type === "Bang" /* Bang */) {
-        this.stream.next();
-        this.stream.skipWhitespace();
-        const importantToken = this.stream.next();
-        if (importantToken.type === "Identifier" /* Identifier */ && importantToken.value === "important") {
-          important = true;
-        } else {
-          throw new Error("Expected 'important' after '!'");
-        }
-      }
-      this.stream.skipWhitespace();
-      this.stream.expect("Semicolon" /* Semicolon */);
-      entries.push(new StateEntryNode(nameToken.value, value, important));
-    }
-    return new StateBlockNode(entries);
-  }
   parseOnBlock() {
     this.stream.expect("On" /* On */);
     this.stream.skipWhitespace();
@@ -2693,21 +2639,86 @@ ${caret}`;
     if (!token) {
       throw new Error("Unterminated flag arguments");
     }
-    let value;
-    if (token.type === "Number" /* Number */) {
-      value = Number(this.stream.next().value);
-    } else if (token.type === "String" /* String */) {
-      value = this.stream.next().value;
-    } else if (token.type === "Boolean" /* Boolean */) {
-      value = this.stream.next().value === "true";
-    } else if (token.type === "Identifier" /* Identifier */) {
-      value = this.stream.next().value;
-    } else {
-      throw new Error(`Unsupported flag argument ${token.type}`);
-    }
+    const value = this.parseCustomFlagLiteral();
     this.stream.skipWhitespace();
     this.stream.expect("RParen" /* RParen */);
     return value;
+  }
+  parseCustomFlagLiteral() {
+    const token = this.stream.peek();
+    if (!token) {
+      throw new Error("Unterminated flag arguments");
+    }
+    if (token.type === "Number" /* Number */) {
+      return Number(this.stream.next().value);
+    }
+    if (token.type === "String" /* String */) {
+      return this.stream.next().value;
+    }
+    if (token.type === "Boolean" /* Boolean */) {
+      return this.stream.next().value === "true";
+    }
+    if (token.type === "Identifier" /* Identifier */) {
+      return this.stream.next().value;
+    }
+    if (token.type === "LBracket" /* LBracket */) {
+      return this.parseCustomFlagArray();
+    }
+    if (token.type === "LBrace" /* LBrace */) {
+      return this.parseCustomFlagObject();
+    }
+    throw new Error(`Unsupported flag argument ${token.type}`);
+  }
+  parseCustomFlagArray() {
+    this.stream.expect("LBracket" /* LBracket */);
+    const items = [];
+    while (true) {
+      this.stream.skipWhitespace();
+      const next = this.stream.peek();
+      if (!next) {
+        throw new Error("Unterminated flag array");
+      }
+      if (next.type === "RBracket" /* RBracket */) {
+        this.stream.next();
+        break;
+      }
+      items.push(this.parseCustomFlagLiteral());
+      this.stream.skipWhitespace();
+      if (this.stream.peek()?.type === "Comma" /* Comma */) {
+        this.stream.next();
+      }
+    }
+    return items;
+  }
+  parseCustomFlagObject() {
+    this.stream.expect("LBrace" /* LBrace */);
+    const obj = {};
+    while (true) {
+      this.stream.skipWhitespace();
+      const next = this.stream.peek();
+      if (!next) {
+        throw new Error("Unterminated flag object");
+      }
+      if (next.type === "RBrace" /* RBrace */) {
+        this.stream.next();
+        break;
+      }
+      let key;
+      if (next.type === "Identifier" /* Identifier */ || next.type === "String" /* String */) {
+        key = this.stream.next().value;
+      } else {
+        throw new Error(`Unsupported flag object key ${next.type}`);
+      }
+      this.stream.skipWhitespace();
+      this.stream.expect("Colon" /* Colon */);
+      this.stream.skipWhitespace();
+      obj[key] = this.parseCustomFlagLiteral();
+      this.stream.skipWhitespace();
+      if (this.stream.peek()?.type === "Comma" /* Comma */) {
+        this.stream.next();
+      }
+    }
+    return obj;
   }
   isDeclarationStart() {
     const first = this.stream.peekNonWhitespace(0);
@@ -2795,17 +2806,6 @@ ${caret}`;
       return next?.type === "Equals" /* Equals */;
     }
     return false;
-  }
-  isCallStart() {
-    const first = this.stream.peekNonWhitespace(0);
-    if (!first || first.type !== "Identifier" /* Identifier */) {
-      return false;
-    }
-    let index = 1;
-    while (this.stream.peekNonWhitespace(index)?.type === "Dot" /* Dot */ && this.stream.peekNonWhitespace(index + 1)?.type === "Identifier" /* Identifier */) {
-      index += 2;
-    }
-    return this.stream.peekNonWhitespace(index)?.type === "LParen" /* LParen */;
   }
   isExpressionStatementStart() {
     const first = this.stream.peekNonWhitespace(0);
@@ -3105,9 +3105,6 @@ ${caret}`;
     this.stream.skipWhitespace();
     const body = this.parseFunctionBlockWithAwait(isAsync);
     return new FunctionDeclarationNode(name, params, body, isAsync);
-  }
-  parseFunctionBlock() {
-    return this.parseFunctionBlockWithAwait(false);
   }
   parseReturnStatement() {
     this.stream.expect("Return" /* Return */);
@@ -3539,7 +3536,6 @@ var Engine = class _Engine {
   codeCache = /* @__PURE__ */ new Map();
   behaviorCache = /* @__PURE__ */ new Map();
   observer;
-  observerRoot;
   attributeHandlers = [];
   globals = {};
   importantFlags = /* @__PURE__ */ new WeakMap();
@@ -3556,6 +3552,7 @@ var Engine = class _Engine {
   pendingUses = [];
   pendingAutoBindToScope = [];
   scopeWatchers = /* @__PURE__ */ new WeakMap();
+  executionStack = [];
   constructor(options = {}) {
     this.diagnostics = options.diagnostics ?? false;
     this.logger = options.logger ?? console;
@@ -3876,7 +3873,6 @@ var Engine = class _Engine {
     if (this.observer) {
       return;
     }
-    this.observerRoot = root;
     this.observerFlush = debounce(() => this.flushObserverQueue(), 10);
     this.observer = new MutationObserver((mutations) => {
       for (const mutation of mutations) {
@@ -3906,7 +3902,6 @@ var Engine = class _Engine {
   disconnectObserver() {
     this.observer?.disconnect();
     this.observer = void 0;
-    this.observerRoot = void 0;
     this.pendingAdded.clear();
     this.pendingRemoved.clear();
     this.pendingUpdated.clear();
@@ -4139,7 +4134,6 @@ var Engine = class _Engine {
       return;
     }
     const rendered = [];
-    console.log("renderEach list", list);
     list.forEach((item, index) => {
       const fragment = element.content.cloneNode(true);
       const roots = Array.from(fragment.children);
@@ -4708,28 +4702,47 @@ var Engine = class _Engine {
     const expectedKey = keyAliases[flag] ?? flag;
     return key === expectedKey;
   }
+  async withExecutionElement(element, fn) {
+    if (!element) {
+      await fn();
+      return;
+    }
+    this.executionStack.push(element);
+    try {
+      await fn();
+    } finally {
+      this.executionStack.pop();
+    }
+  }
+  getCurrentElement() {
+    return this.executionStack[this.executionStack.length - 1];
+  }
   async execute(code, scope, element, rootScope) {
     let block = this.codeCache.get(code);
     if (!block) {
       block = Parser.parseInline(code);
       this.codeCache.set(code, block);
     }
-    const context = {
-      scope,
-      rootScope,
-      globals: this.globals,
-      ...element ? { element } : {}
-    };
-    await block.evaluate(context);
+    await this.withExecutionElement(element, async () => {
+      const context = {
+        scope,
+        rootScope,
+        globals: this.globals,
+        ...element ? { element } : {}
+      };
+      await block.evaluate(context);
+    });
   }
   async executeBlock(block, scope, element, rootScope) {
-    const context = {
-      scope,
-      rootScope,
-      globals: this.globals,
-      ...element ? { element } : {}
-    };
-    await block.evaluate(context);
+    await this.withExecutionElement(element, async () => {
+      const context = {
+        scope,
+        rootScope,
+        globals: this.globals,
+        ...element ? { element } : {}
+      };
+      await block.evaluate(context);
+    });
   }
   async safeExecute(code, scope, element, rootScope) {
     try {
@@ -4940,20 +4953,6 @@ var Engine = class _Engine {
         type,
         target: this.normalizeNode(node.target),
         value: this.normalizeNode(node.value)
-      };
-    }
-    if (type === "StateBlock") {
-      return {
-        type,
-        entries: Array.isArray(node.entries) ? node.entries.map((entry) => this.normalizeNode(entry)) : []
-      };
-    }
-    if (type === "StateEntry") {
-      return {
-        type,
-        name: node.name ?? "",
-        value: this.normalizeNode(node.value),
-        important: Boolean(node.important)
       };
     }
     if (type === "FunctionDeclaration") {
@@ -5632,10 +5631,19 @@ function autoMount(root = document) {
     return null;
   }
   const engine = new Engine();
+  globalThis.VSNEngine = engine;
   const startTime = typeof performance !== "undefined" && performance.now ? performance.now() : Date.now();
   const mount = () => {
     const target = root instanceof Document ? root.body : root;
     if (target) {
+      const plugins = globalThis.VSNPlugins;
+      if (plugins && typeof plugins === "object") {
+        for (const plugin of Object.values(plugins)) {
+          if (typeof plugin === "function") {
+            plugin(engine);
+          }
+        }
+      }
       const sources = Array.from(document.querySelectorAll('script[type="text/vsn"]')).map((script) => script.textContent ?? "").join("\n");
       if (sources.trim()) {
         engine.registerBehaviors(sources);
@@ -5647,9 +5655,9 @@ function autoMount(root = document) {
     }
   };
   if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", mount, { once: true });
+    document.addEventListener("DOMContentLoaded", () => setTimeout(mount, 0), { once: true });
   } else {
-    mount();
+    setTimeout(mount, 0);
   }
   return engine;
 }
@@ -5692,8 +5700,6 @@ if (typeof document !== "undefined") {
   ReturnNode,
   SelectorNode,
   SpreadElement,
-  StateBlockNode,
-  StateEntryNode,
   TemplateExpression,
   TernaryExpression,
   TokenType,

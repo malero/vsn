@@ -1,416 +1,303 @@
-// src/parser/token.ts
-var TokenType = /* @__PURE__ */ ((TokenType2) => {
-  TokenType2["Whitespace"] = "Whitespace";
-  TokenType2["Identifier"] = "Identifier";
-  TokenType2["Number"] = "Number";
-  TokenType2["String"] = "String";
-  TokenType2["Template"] = "Template";
-  TokenType2["Boolean"] = "Boolean";
-  TokenType2["Null"] = "Null";
-  TokenType2["Behavior"] = "Behavior";
-  TokenType2["Use"] = "Use";
-  TokenType2["State"] = "State";
-  TokenType2["On"] = "On";
-  TokenType2["Construct"] = "Construct";
-  TokenType2["Destruct"] = "Destruct";
-  TokenType2["Return"] = "Return";
-  TokenType2["If"] = "If";
-  TokenType2["Else"] = "Else";
-  TokenType2["For"] = "For";
-  TokenType2["While"] = "While";
-  TokenType2["Try"] = "Try";
-  TokenType2["Catch"] = "Catch";
-  TokenType2["LBrace"] = "LBrace";
-  TokenType2["RBrace"] = "RBrace";
-  TokenType2["LParen"] = "LParen";
-  TokenType2["RParen"] = "RParen";
-  TokenType2["LBracket"] = "LBracket";
-  TokenType2["RBracket"] = "RBracket";
-  TokenType2["Colon"] = "Colon";
-  TokenType2["Semicolon"] = "Semicolon";
-  TokenType2["Comma"] = "Comma";
-  TokenType2["Ellipsis"] = "Ellipsis";
-  TokenType2["Dot"] = "Dot";
-  TokenType2["Hash"] = "Hash";
-  TokenType2["Greater"] = "Greater";
-  TokenType2["Less"] = "Less";
-  TokenType2["Plus"] = "Plus";
-  TokenType2["Minus"] = "Minus";
-  TokenType2["Tilde"] = "Tilde";
-  TokenType2["Star"] = "Star";
-  TokenType2["Slash"] = "Slash";
-  TokenType2["Percent"] = "Percent";
-  TokenType2["Equals"] = "Equals";
-  TokenType2["Arrow"] = "Arrow";
-  TokenType2["DoubleEquals"] = "DoubleEquals";
-  TokenType2["TripleEquals"] = "TripleEquals";
-  TokenType2["NotEquals"] = "NotEquals";
-  TokenType2["StrictNotEquals"] = "StrictNotEquals";
-  TokenType2["LessEqual"] = "LessEqual";
-  TokenType2["GreaterEqual"] = "GreaterEqual";
-  TokenType2["And"] = "And";
-  TokenType2["Or"] = "Or";
-  TokenType2["Pipe"] = "Pipe";
-  TokenType2["NullishCoalesce"] = "NullishCoalesce";
-  TokenType2["OptionalChain"] = "OptionalChain";
-  TokenType2["Bang"] = "Bang";
-  TokenType2["At"] = "At";
-  TokenType2["Dollar"] = "Dollar";
-  TokenType2["Question"] = "Question";
-  return TokenType2;
-})(TokenType || {});
-
-// src/parser/lexer.ts
-var KEYWORDS = {
-  behavior: "Behavior" /* Behavior */,
-  use: "Use" /* Use */,
-  state: "State" /* State */,
-  on: "On" /* On */,
-  construct: "Construct" /* Construct */,
-  destruct: "Destruct" /* Destruct */,
-  return: "Return" /* Return */,
-  if: "If" /* If */,
-  else: "Else" /* Else */,
-  for: "For" /* For */,
-  while: "While" /* While */,
-  try: "Try" /* Try */,
-  catch: "Catch" /* Catch */,
-  true: "Boolean" /* Boolean */,
-  false: "Boolean" /* Boolean */,
-  null: "Null" /* Null */
-};
-var Lexer = class {
-  constructor(input) {
-    this.input = input;
+// src/runtime/scope.ts
+var Scope = class _Scope {
+  constructor(parent) {
+    this.parent = parent;
+    this.root = parent ? parent.root : this;
   }
-  index = 0;
-  line = 1;
-  column = 1;
-  pendingTokens = [];
-  templateMode = false;
-  templateExpressionMode = false;
-  templateBraceDepth = 0;
-  tokenize() {
-    const tokens = [];
-    while (!this.eof()) {
-      if (this.pendingTokens.length > 0) {
-        const pending = this.pendingTokens.shift();
-        if (pending) {
-          tokens.push(pending);
-          this.trackTemplateBrace(pending);
-          continue;
-        }
-      }
-      if (this.templateMode) {
-        const chunk = this.readTemplateChunk();
-        tokens.push(chunk);
-        continue;
-      }
-      const ch = this.peek();
-      if (this.isWhitespace(ch)) {
-        tokens.push(this.readWhitespace());
-        continue;
-      }
-      if (ch === "`") {
-        this.next();
-        this.templateMode = true;
-        continue;
-      }
-      if (ch === "/" && this.peek(1) === "/") {
-        this.readLineComment();
-        continue;
-      }
-      if (ch === "/" && this.peek(1) === "*") {
-        this.readBlockComment();
-        continue;
-      }
-      if (this.isAlpha(ch) || ch === "_") {
-        tokens.push(this.readIdentifier());
-        continue;
-      }
-      if (this.isDigit(ch) || ch === "-" && this.isDigit(this.peek(1))) {
-        tokens.push(this.readNumber());
-        continue;
-      }
-      if (ch === '"' || ch === "'") {
-        tokens.push(this.readString());
-        continue;
-      }
-      const punct = this.readPunctuator();
-      if (punct) {
-        tokens.push(punct);
-        this.trackTemplateBrace(punct);
-        continue;
-      }
-      throw new Error(`Unexpected character '${ch}' at ${this.line}:${this.column}`);
-    }
-    return tokens;
+  data = /* @__PURE__ */ new Map();
+  root;
+  listeners = /* @__PURE__ */ new Map();
+  anyListeners = /* @__PURE__ */ new Set();
+  isEachItem = false;
+  createChild() {
+    return new _Scope(this);
   }
-  readWhitespace() {
-    const start = this.position();
-    let value = "";
-    while (!this.eof() && this.isWhitespace(this.peek())) {
-      value += this.next();
-    }
-    return this.token("Whitespace" /* Whitespace */, value, start);
+  get(key) {
+    return this.getPath(key);
   }
-  readLineComment() {
-    this.next();
-    this.next();
-    while (!this.eof() && this.peek() !== "\n") {
-      this.next();
-    }
+  set(key, value) {
+    this.setPath(key, value);
   }
-  readBlockComment() {
-    this.next();
-    this.next();
-    while (!this.eof()) {
-      if (this.peek() === "*" && this.peek(1) === "/") {
-        this.next();
-        this.next();
-        return;
+  hasKey(path) {
+    const parts = path.split(".");
+    const root = parts[0];
+    if (!root) {
+      return false;
+    }
+    return this.data.has(root);
+  }
+  getPath(path) {
+    const explicit = path.startsWith("parent.") || path.startsWith("root.") || path.startsWith("self.");
+    const { targetScope, targetPath } = this.resolveScope(path);
+    if (!targetScope || !targetPath) {
+      return void 0;
+    }
+    const localValue = this.getLocalPathValue(targetScope, targetPath);
+    if (explicit || localValue !== void 0) {
+      return localValue;
+    }
+    let cursor = targetScope.parent;
+    while (cursor) {
+      const value = this.getLocalPathValue(cursor, targetPath);
+      if (value !== void 0) {
+        return value;
       }
-      this.next();
+      cursor = cursor.parent;
     }
+    return void 0;
   }
-  readIdentifier() {
-    const start = this.position();
-    let value = "";
-    while (!this.eof() && (this.isAlphaNumeric(this.peek()) || this.peek() === "_" || this.peek() === "-")) {
-      value += this.next();
-    }
-    const keywordType = KEYWORDS[value];
-    if (keywordType) {
-      return this.token(keywordType, value, start);
-    }
-    return this.token("Identifier" /* Identifier */, value, start);
-  }
-  readNumber() {
-    const start = this.position();
-    let value = "";
-    if (this.peek() === "-") {
-      value += this.next();
-    }
-    while (!this.eof() && this.isDigit(this.peek())) {
-      value += this.next();
-    }
-    if (this.peek() === ".") {
-      value += this.next();
-      while (!this.eof() && this.isDigit(this.peek())) {
-        value += this.next();
-      }
-    }
-    return this.token("Number" /* Number */, value, start);
-  }
-  readString() {
-    const quote = this.next();
-    const start = this.position();
-    let value = "";
-    while (!this.eof()) {
-      const ch = this.next();
-      if (ch === "\\") {
-        const escaped = this.next();
-        value += escaped;
-        continue;
-      }
-      if (ch === quote) {
-        return this.token("String" /* String */, value, start);
-      }
-      value += ch;
-    }
-    throw new Error(`Unterminated string at ${start.line}:${start.column}`);
-  }
-  readTemplateChunk() {
-    const start = this.position();
-    let value = "";
-    while (!this.eof()) {
-      const ch = this.peek();
-      if (ch === "`") {
-        this.next();
-        this.templateMode = false;
-        return this.token("Template" /* Template */, value, start);
-      }
-      if (ch === "$" && this.peek(1) === "{") {
-        const dollarStart = this.position();
-        this.next();
-        const braceStart = this.position();
-        this.next();
-        this.templateMode = false;
-        this.templateExpressionMode = true;
-        this.templateBraceDepth = 0;
-        this.pendingTokens.push(this.token("Dollar" /* Dollar */, "$", dollarStart));
-        this.pendingTokens.push(this.token("LBrace" /* LBrace */, "{", braceStart));
-        return this.token("Template" /* Template */, value, start);
-      }
-      if (ch === "\\") {
-        this.next();
-        const escaped = this.next();
-        value += escaped;
-        continue;
-      }
-      value += this.next();
-    }
-    throw new Error(`Unterminated template literal at ${start.line}:${start.column}`);
-  }
-  readPunctuator() {
-    const start = this.position();
-    const ch = this.peek();
-    const next = this.peek(1);
-    if (ch === "=" && next === "=" && this.peek(2) === "=") {
-      this.next();
-      this.next();
-      this.next();
-      return this.token("TripleEquals" /* TripleEquals */, "===", start);
-    }
-    if (ch === "=" && next === "=") {
-      this.next();
-      this.next();
-      return this.token("DoubleEquals" /* DoubleEquals */, "==", start);
-    }
-    if (ch === "=" && next === ">") {
-      this.next();
-      this.next();
-      return this.token("Arrow" /* Arrow */, "=>", start);
-    }
-    if (ch === "!" && next === "=" && this.peek(2) === "=") {
-      this.next();
-      this.next();
-      this.next();
-      return this.token("StrictNotEquals" /* StrictNotEquals */, "!==", start);
-    }
-    if (ch === "!" && next === "=") {
-      this.next();
-      this.next();
-      return this.token("NotEquals" /* NotEquals */, "!=", start);
-    }
-    if (ch === "<" && next === "=") {
-      this.next();
-      this.next();
-      return this.token("LessEqual" /* LessEqual */, "<=", start);
-    }
-    if (ch === ">" && next === "=") {
-      this.next();
-      this.next();
-      return this.token("GreaterEqual" /* GreaterEqual */, ">=", start);
-    }
-    if (ch === "&" && next === "&") {
-      this.next();
-      this.next();
-      return this.token("And" /* And */, "&&", start);
-    }
-    if (ch === "|" && next === "|") {
-      this.next();
-      this.next();
-      return this.token("Or" /* Or */, "||", start);
-    }
-    if (ch === "?" && next === "?") {
-      this.next();
-      this.next();
-      return this.token("NullishCoalesce" /* NullishCoalesce */, "??", start);
-    }
-    if (ch === "?" && next === ".") {
-      this.next();
-      this.next();
-      return this.token("OptionalChain" /* OptionalChain */, "?.", start);
-    }
-    if (ch === "|" && next === ">") {
-      this.next();
-      this.next();
-      return this.token("Pipe" /* Pipe */, "|>", start);
-    }
-    if (ch === "." && next === "." && this.peek(2) === ".") {
-      this.next();
-      this.next();
-      this.next();
-      return this.token("Ellipsis" /* Ellipsis */, "...", start);
-    }
-    const punctMap = {
-      "{": "LBrace" /* LBrace */,
-      "}": "RBrace" /* RBrace */,
-      "(": "LParen" /* LParen */,
-      ")": "RParen" /* RParen */,
-      "[": "LBracket" /* LBracket */,
-      "]": "RBracket" /* RBracket */,
-      ":": "Colon" /* Colon */,
-      ";": "Semicolon" /* Semicolon */,
-      ",": "Comma" /* Comma */,
-      ".": "Dot" /* Dot */,
-      "#": "Hash" /* Hash */,
-      ">": "Greater" /* Greater */,
-      "<": "Less" /* Less */,
-      "+": "Plus" /* Plus */,
-      "-": "Minus" /* Minus */,
-      "~": "Tilde" /* Tilde */,
-      "*": "Star" /* Star */,
-      "/": "Slash" /* Slash */,
-      "%": "Percent" /* Percent */,
-      "=": "Equals" /* Equals */,
-      "!": "Bang" /* Bang */,
-      "@": "At" /* At */,
-      "$": "Dollar" /* Dollar */,
-      "?": "Question" /* Question */
-    };
-    const type = punctMap[ch];
-    if (!type) {
-      return null;
-    }
-    this.next();
-    return this.token(type, ch, start);
-  }
-  trackTemplateBrace(token) {
-    if (!this.templateExpressionMode) {
+  setPath(path, value) {
+    const explicit = path.startsWith("parent.") || path.startsWith("root.") || path.startsWith("self.");
+    const { targetScope, targetPath } = this.resolveScope(path);
+    if (!targetScope || !targetPath) {
       return;
     }
-    if (token.type === "LBrace" /* LBrace */) {
-      this.templateBraceDepth += 1;
-    } else if (token.type === "RBrace" /* RBrace */) {
-      this.templateBraceDepth -= 1;
-      if (this.templateBraceDepth <= 0) {
-        this.templateExpressionMode = false;
-        this.templateMode = true;
+    const scopeForSet = explicit ? targetScope : this.findNearestScopeWithKey(targetScope, targetPath) ?? targetScope;
+    const parts = targetPath.split(".");
+    const root = parts[0];
+    if (!root) {
+      return;
+    }
+    if (parts.length === 1) {
+      scopeForSet.data.set(root, value);
+      scopeForSet.emitChange(targetPath);
+      return;
+    }
+    let obj = scopeForSet.data.get(root);
+    if (obj == null || typeof obj !== "object") {
+      obj = {};
+      scopeForSet.data.set(root, obj);
+    }
+    let cursor = obj;
+    for (let i = 1; i < parts.length - 1; i += 1) {
+      const key = parts[i];
+      if (!key) {
+        return;
       }
+      if (cursor[key] == null || typeof cursor[key] !== "object") {
+        cursor[key] = {};
+      }
+      cursor = cursor[key];
+    }
+    const lastKey = parts[parts.length - 1];
+    if (!lastKey) {
+      return;
+    }
+    cursor[lastKey] = value;
+    scopeForSet.emitChange(targetPath);
+  }
+  on(path, handler) {
+    const key = path.trim();
+    if (!key) {
+      return;
+    }
+    const set = this.listeners.get(key) ?? /* @__PURE__ */ new Set();
+    set.add(handler);
+    this.listeners.set(key, set);
+  }
+  off(path, handler) {
+    const key = path.trim();
+    const set = this.listeners.get(key);
+    if (!set) {
+      return;
+    }
+    set.delete(handler);
+    if (set.size === 0) {
+      this.listeners.delete(key);
     }
   }
-  token(type, value, start) {
-    return {
-      type,
-      value,
-      start,
-      end: this.position()
-    };
+  onAny(handler) {
+    this.anyListeners.add(handler);
   }
-  position() {
-    return { index: this.index, line: this.line, column: this.column };
+  offAny(handler) {
+    this.anyListeners.delete(handler);
   }
-  peek(offset = 0) {
-    return this.input[this.index + offset] ?? "";
-  }
-  next() {
-    const ch = this.input[this.index++] ?? "";
-    if (ch === "\n") {
-      this.line += 1;
-      this.column = 1;
-    } else {
-      this.column += 1;
+  emitChange(path) {
+    const key = path.trim();
+    if (!key) {
+      return;
     }
-    return ch;
+    this.listeners.get(key)?.forEach((fn) => fn());
+    const rootKey = key.split(".")[0];
+    if (rootKey && rootKey !== key) {
+      this.listeners.get(rootKey)?.forEach((fn) => fn());
+    }
+    this.anyListeners.forEach((fn) => fn());
   }
-  eof() {
-    return this.index >= this.input.length;
+  resolveScope(path) {
+    let targetScope = this;
+    let targetPath = path;
+    while (targetPath.startsWith("parent.")) {
+      targetScope = targetScope?.parent;
+      targetPath = targetPath.slice("parent.".length);
+    }
+    if (targetPath.startsWith("root.")) {
+      targetScope = targetScope?.root;
+      targetPath = targetPath.slice("root.".length);
+    }
+    while (targetPath.startsWith("self.")) {
+      targetScope = targetScope ?? this;
+      targetPath = targetPath.slice("self.".length);
+    }
+    return { targetScope, targetPath };
   }
-  isWhitespace(ch) {
-    return ch === " " || ch === "	" || ch === "\n" || ch === "\r";
+  getLocalPathValue(scope, path) {
+    const parts = path.split(".");
+    const root = parts[0];
+    if (!root) {
+      return void 0;
+    }
+    let value = scope.data.get(root);
+    for (let i = 1; i < parts.length; i += 1) {
+      if (value == null) {
+        return void 0;
+      }
+      const key = parts[i];
+      if (!key) {
+        return void 0;
+      }
+      value = value[key];
+    }
+    return value;
   }
-  isAlpha(ch) {
-    return ch >= "a" && ch <= "z" || ch >= "A" && ch <= "Z";
-  }
-  isDigit(ch) {
-    return ch >= "0" && ch <= "9";
-  }
-  isAlphaNumeric(ch) {
-    return this.isAlpha(ch) || this.isDigit(ch);
+  findNearestScopeWithKey(start, path) {
+    const root = path.split(".")[0];
+    if (!root) {
+      return void 0;
+    }
+    let cursor = start;
+    while (cursor) {
+      if (cursor.data.has(root)) {
+        return cursor;
+      }
+      cursor = cursor.parent;
+    }
+    return void 0;
   }
 };
+
+// src/runtime/bindings.ts
+function getElementValue(element) {
+  if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) {
+    return element.value;
+  }
+  if (element instanceof HTMLSelectElement) {
+    return element.value;
+  }
+  return element.textContent ?? "";
+}
+function setElementValue(element, value) {
+  if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) {
+    element.value = value;
+    element.setAttribute("value", value);
+    return;
+  }
+  if (element instanceof HTMLSelectElement) {
+    element.value = value;
+    return;
+  }
+  if (element instanceof HTMLElement && element.querySelector("*")) {
+    return;
+  }
+  element.textContent = value;
+}
+function applyBindToScope(element, expression, scope) {
+  const key = expression.trim();
+  if (!key) {
+    return;
+  }
+  const value = getElementValue(element);
+  scope.set(key, value);
+}
+function applyBindToElement(element, expression, scope) {
+  const key = expression.trim();
+  if (!key) {
+    return;
+  }
+  const value = scope.get(key);
+  if (value == null) {
+    return;
+  }
+  setElementValue(element, String(value));
+}
+
+// src/runtime/conditionals.ts
+function readCondition(expression, scope) {
+  const key = expression.trim();
+  if (!key) {
+    return false;
+  }
+  return !!scope.get(key);
+}
+function applyIf(element, expression, scope) {
+  element.style.display = readCondition(expression, scope) ? "" : "none";
+}
+function applyShow(element, expression, scope) {
+  element.style.display = readCondition(expression, scope) ? "" : "none";
+}
+
+// src/runtime/html.ts
+function sanitizeHtml(value) {
+  return value.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, "");
+}
+function applyHtml(element, expression, scope, trusted) {
+  const key = expression.trim();
+  if (!key) {
+    return;
+  }
+  const value = scope.get(key);
+  const html = value == null ? "" : String(value);
+  element.innerHTML = trusted ? html : sanitizeHtml(html);
+}
+
+// src/runtime/http.ts
+async function applyGet(element, config, scope, onHtmlApplied) {
+  if (!globalThis.fetch) {
+    throw new Error("fetch is not available");
+  }
+  const response = await globalThis.fetch(config.url);
+  if (!response || !response.ok) {
+    return;
+  }
+  const html = await response.text();
+  const target = resolveTarget(element, config.targetSelector);
+  if (!target) {
+    element.dispatchEvent(new CustomEvent("vsn:targetError", { detail: { selector: config.targetSelector } }));
+    return;
+  }
+  if (config.swap === "outer") {
+    const wrapper = document.createElement("div");
+    applyHtml(wrapper, "__html", { get: () => html }, config.trusted);
+    const replacement = wrapper.firstElementChild;
+    if (replacement && target.parentNode) {
+      target.parentNode.replaceChild(replacement, target);
+      onHtmlApplied?.(replacement);
+    }
+    return;
+  }
+  applyHtml(target, "__html", { get: () => html }, config.trusted);
+  onHtmlApplied?.(target);
+}
+function resolveTarget(element, selector) {
+  if (!selector) {
+    return element;
+  }
+  return element.ownerDocument.querySelector(selector);
+}
+
+// src/runtime/debounce.ts
+function debounce(fn, waitMs) {
+  let timer;
+  return (...args) => {
+    if (timer) {
+      clearTimeout(timer);
+    }
+    timer = setTimeout(() => {
+      timer = void 0;
+      fn(...args);
+    }, waitMs);
+  };
+}
 
 // src/ast/nodes.ts
 var BaseNode = class {
@@ -842,14 +729,14 @@ var FunctionExpression = class extends BaseNode {
   }
   async evaluate(context) {
     const scope = context.scope;
-    const globals = context.globals;
+    const globals2 = context.globals;
     const element = context.element;
     return async (...args) => {
       const activeScope = scope?.createChild ? scope.createChild() : scope;
       const inner = {
         scope: activeScope,
         rootScope: context.rootScope,
-        ...globals ? { globals } : {},
+        ...globals2 ? { globals: globals2 } : {},
         ...element ? { element } : {},
         returnValue: void 0,
         returning: false
@@ -1150,11 +1037,11 @@ var MemberExpression = class _MemberExpression extends BaseNode {
     return { value, target, optional: this.optional };
   }
   resolveFromGlobals(context, path) {
-    const globals = context.globals ?? {};
-    if (!path.root || !(path.root in globals)) {
+    const globals2 = context.globals ?? {};
+    if (!path.root || !(path.root in globals2)) {
       return void 0;
     }
-    let value = globals[path.root];
+    let value = globals2[path.root];
     let parent = void 0;
     const parts = path.path.split(".");
     for (let i = 1; i < parts.length; i += 1) {
@@ -1205,10 +1092,10 @@ var CallExpression = class extends BaseNode {
       return void 0;
     }
     const name = this.callee.name;
-    const globals = context.globals ?? {};
+    const globals2 = context.globals ?? {};
     const parts = name.split(".");
     const root = parts[0];
-    if (!root || !(root in globals)) {
+    if (!root || !(root in globals2)) {
       if (parts.length > 1 && context.scope) {
         const parentPath = parts.slice(0, -1).join(".");
         const methodName = parts[parts.length - 1];
@@ -1223,7 +1110,7 @@ var CallExpression = class extends BaseNode {
       }
       return void 0;
     }
-    let value = globals[root];
+    let value = globals2[root];
     let parent = void 0;
     for (let i = 1; i < parts.length; i += 1) {
       parent = value;
@@ -1378,6 +1265,358 @@ var QueryExpression = class extends BaseNode {
       return [];
     }
     return Array.from(root.querySelectorAll(selector));
+  }
+};
+
+// src/parser/lexer.ts
+var KEYWORDS = {
+  behavior: "Behavior" /* Behavior */,
+  use: "Use" /* Use */,
+  state: "State" /* State */,
+  on: "On" /* On */,
+  construct: "Construct" /* Construct */,
+  destruct: "Destruct" /* Destruct */,
+  return: "Return" /* Return */,
+  if: "If" /* If */,
+  else: "Else" /* Else */,
+  for: "For" /* For */,
+  while: "While" /* While */,
+  try: "Try" /* Try */,
+  catch: "Catch" /* Catch */,
+  true: "Boolean" /* Boolean */,
+  false: "Boolean" /* Boolean */,
+  null: "Null" /* Null */
+};
+var Lexer = class {
+  constructor(input) {
+    this.input = input;
+  }
+  index = 0;
+  line = 1;
+  column = 1;
+  pendingTokens = [];
+  templateMode = false;
+  templateExpressionMode = false;
+  templateBraceDepth = 0;
+  tokenize() {
+    const tokens = [];
+    while (!this.eof()) {
+      if (this.pendingTokens.length > 0) {
+        const pending = this.pendingTokens.shift();
+        if (pending) {
+          tokens.push(pending);
+          this.trackTemplateBrace(pending);
+          continue;
+        }
+      }
+      if (this.templateMode) {
+        const chunk = this.readTemplateChunk();
+        tokens.push(chunk);
+        continue;
+      }
+      const ch = this.peek();
+      if (this.isWhitespace(ch)) {
+        tokens.push(this.readWhitespace());
+        continue;
+      }
+      if (ch === "`") {
+        this.next();
+        this.templateMode = true;
+        continue;
+      }
+      if (ch === "/" && this.peek(1) === "/") {
+        this.readLineComment();
+        continue;
+      }
+      if (ch === "/" && this.peek(1) === "*") {
+        this.readBlockComment();
+        continue;
+      }
+      if (this.isAlpha(ch) || ch === "_") {
+        tokens.push(this.readIdentifier());
+        continue;
+      }
+      if (this.isDigit(ch) || ch === "-" && this.isDigit(this.peek(1))) {
+        tokens.push(this.readNumber());
+        continue;
+      }
+      if (ch === '"' || ch === "'") {
+        tokens.push(this.readString());
+        continue;
+      }
+      const punct = this.readPunctuator();
+      if (punct) {
+        tokens.push(punct);
+        this.trackTemplateBrace(punct);
+        continue;
+      }
+      throw new Error(`Unexpected character '${ch}' at ${this.line}:${this.column}`);
+    }
+    return tokens;
+  }
+  readWhitespace() {
+    const start = this.position();
+    let value = "";
+    while (!this.eof() && this.isWhitespace(this.peek())) {
+      value += this.next();
+    }
+    return this.token("Whitespace" /* Whitespace */, value, start);
+  }
+  readLineComment() {
+    this.next();
+    this.next();
+    while (!this.eof() && this.peek() !== "\n") {
+      this.next();
+    }
+  }
+  readBlockComment() {
+    this.next();
+    this.next();
+    while (!this.eof()) {
+      if (this.peek() === "*" && this.peek(1) === "/") {
+        this.next();
+        this.next();
+        return;
+      }
+      this.next();
+    }
+  }
+  readIdentifier() {
+    const start = this.position();
+    let value = "";
+    while (!this.eof() && (this.isAlphaNumeric(this.peek()) || this.peek() === "_" || this.peek() === "-")) {
+      value += this.next();
+    }
+    const keywordType = KEYWORDS[value];
+    if (keywordType) {
+      return this.token(keywordType, value, start);
+    }
+    return this.token("Identifier" /* Identifier */, value, start);
+  }
+  readNumber() {
+    const start = this.position();
+    let value = "";
+    if (this.peek() === "-") {
+      value += this.next();
+    }
+    while (!this.eof() && this.isDigit(this.peek())) {
+      value += this.next();
+    }
+    if (this.peek() === ".") {
+      value += this.next();
+      while (!this.eof() && this.isDigit(this.peek())) {
+        value += this.next();
+      }
+    }
+    return this.token("Number" /* Number */, value, start);
+  }
+  readString() {
+    const quote = this.next();
+    const start = this.position();
+    let value = "";
+    while (!this.eof()) {
+      const ch = this.next();
+      if (ch === "\\") {
+        const escaped = this.next();
+        value += escaped;
+        continue;
+      }
+      if (ch === quote) {
+        return this.token("String" /* String */, value, start);
+      }
+      value += ch;
+    }
+    throw new Error(`Unterminated string at ${start.line}:${start.column}`);
+  }
+  readTemplateChunk() {
+    const start = this.position();
+    let value = "";
+    while (!this.eof()) {
+      const ch = this.peek();
+      if (ch === "`") {
+        this.next();
+        this.templateMode = false;
+        return this.token("Template" /* Template */, value, start);
+      }
+      if (ch === "$" && this.peek(1) === "{") {
+        const dollarStart = this.position();
+        this.next();
+        const braceStart = this.position();
+        this.next();
+        this.templateMode = false;
+        this.templateExpressionMode = true;
+        this.templateBraceDepth = 0;
+        this.pendingTokens.push(this.token("Dollar" /* Dollar */, "$", dollarStart));
+        this.pendingTokens.push(this.token("LBrace" /* LBrace */, "{", braceStart));
+        return this.token("Template" /* Template */, value, start);
+      }
+      if (ch === "\\") {
+        this.next();
+        const escaped = this.next();
+        value += escaped;
+        continue;
+      }
+      value += this.next();
+    }
+    throw new Error(`Unterminated template literal at ${start.line}:${start.column}`);
+  }
+  readPunctuator() {
+    const start = this.position();
+    const ch = this.peek();
+    const next = this.peek(1);
+    if (ch === "=" && next === "=" && this.peek(2) === "=") {
+      this.next();
+      this.next();
+      this.next();
+      return this.token("TripleEquals" /* TripleEquals */, "===", start);
+    }
+    if (ch === "=" && next === "=") {
+      this.next();
+      this.next();
+      return this.token("DoubleEquals" /* DoubleEquals */, "==", start);
+    }
+    if (ch === "=" && next === ">") {
+      this.next();
+      this.next();
+      return this.token("Arrow" /* Arrow */, "=>", start);
+    }
+    if (ch === "!" && next === "=" && this.peek(2) === "=") {
+      this.next();
+      this.next();
+      this.next();
+      return this.token("StrictNotEquals" /* StrictNotEquals */, "!==", start);
+    }
+    if (ch === "!" && next === "=") {
+      this.next();
+      this.next();
+      return this.token("NotEquals" /* NotEquals */, "!=", start);
+    }
+    if (ch === "<" && next === "=") {
+      this.next();
+      this.next();
+      return this.token("LessEqual" /* LessEqual */, "<=", start);
+    }
+    if (ch === ">" && next === "=") {
+      this.next();
+      this.next();
+      return this.token("GreaterEqual" /* GreaterEqual */, ">=", start);
+    }
+    if (ch === "&" && next === "&") {
+      this.next();
+      this.next();
+      return this.token("And" /* And */, "&&", start);
+    }
+    if (ch === "|" && next === "|") {
+      this.next();
+      this.next();
+      return this.token("Or" /* Or */, "||", start);
+    }
+    if (ch === "?" && next === "?") {
+      this.next();
+      this.next();
+      return this.token("NullishCoalesce" /* NullishCoalesce */, "??", start);
+    }
+    if (ch === "?" && next === ".") {
+      this.next();
+      this.next();
+      return this.token("OptionalChain" /* OptionalChain */, "?.", start);
+    }
+    if (ch === "|" && next === ">") {
+      this.next();
+      this.next();
+      return this.token("Pipe" /* Pipe */, "|>", start);
+    }
+    if (ch === "." && next === "." && this.peek(2) === ".") {
+      this.next();
+      this.next();
+      this.next();
+      return this.token("Ellipsis" /* Ellipsis */, "...", start);
+    }
+    const punctMap = {
+      "{": "LBrace" /* LBrace */,
+      "}": "RBrace" /* RBrace */,
+      "(": "LParen" /* LParen */,
+      ")": "RParen" /* RParen */,
+      "[": "LBracket" /* LBracket */,
+      "]": "RBracket" /* RBracket */,
+      ":": "Colon" /* Colon */,
+      ";": "Semicolon" /* Semicolon */,
+      ",": "Comma" /* Comma */,
+      ".": "Dot" /* Dot */,
+      "#": "Hash" /* Hash */,
+      ">": "Greater" /* Greater */,
+      "<": "Less" /* Less */,
+      "+": "Plus" /* Plus */,
+      "-": "Minus" /* Minus */,
+      "~": "Tilde" /* Tilde */,
+      "*": "Star" /* Star */,
+      "/": "Slash" /* Slash */,
+      "%": "Percent" /* Percent */,
+      "=": "Equals" /* Equals */,
+      "!": "Bang" /* Bang */,
+      "@": "At" /* At */,
+      "$": "Dollar" /* Dollar */,
+      "?": "Question" /* Question */
+    };
+    const type = punctMap[ch];
+    if (!type) {
+      return null;
+    }
+    this.next();
+    return this.token(type, ch, start);
+  }
+  trackTemplateBrace(token) {
+    if (!this.templateExpressionMode) {
+      return;
+    }
+    if (token.type === "LBrace" /* LBrace */) {
+      this.templateBraceDepth += 1;
+    } else if (token.type === "RBrace" /* RBrace */) {
+      this.templateBraceDepth -= 1;
+      if (this.templateBraceDepth <= 0) {
+        this.templateExpressionMode = false;
+        this.templateMode = true;
+      }
+    }
+  }
+  token(type, value, start) {
+    return {
+      type,
+      value,
+      start,
+      end: this.position()
+    };
+  }
+  position() {
+    return { index: this.index, line: this.line, column: this.column };
+  }
+  peek(offset = 0) {
+    return this.input[this.index + offset] ?? "";
+  }
+  next() {
+    const ch = this.input[this.index++] ?? "";
+    if (ch === "\n") {
+      this.line += 1;
+      this.column = 1;
+    } else {
+      this.column += 1;
+    }
+    return ch;
+  }
+  eof() {
+    return this.index >= this.input.length;
+  }
+  isWhitespace(ch) {
+    return ch === " " || ch === "	" || ch === "\n" || ch === "\r";
+  }
+  isAlpha(ch) {
+    return ch >= "a" && ch <= "z" || ch >= "A" && ch <= "Z";
+  }
+  isDigit(ch) {
+    return ch >= "0" && ch <= "9";
+  }
+  isAlphaNumeric(ch) {
+    return this.isAlpha(ch) || this.isDigit(ch);
   }
 };
 
@@ -3150,307 +3389,6 @@ ${caret}`;
     return value;
   }
 };
-
-// src/runtime/scope.ts
-var Scope = class _Scope {
-  constructor(parent) {
-    this.parent = parent;
-    this.root = parent ? parent.root : this;
-  }
-  data = /* @__PURE__ */ new Map();
-  root;
-  listeners = /* @__PURE__ */ new Map();
-  anyListeners = /* @__PURE__ */ new Set();
-  isEachItem = false;
-  createChild() {
-    return new _Scope(this);
-  }
-  get(key) {
-    return this.getPath(key);
-  }
-  set(key, value) {
-    this.setPath(key, value);
-  }
-  hasKey(path) {
-    const parts = path.split(".");
-    const root = parts[0];
-    if (!root) {
-      return false;
-    }
-    return this.data.has(root);
-  }
-  getPath(path) {
-    const explicit = path.startsWith("parent.") || path.startsWith("root.") || path.startsWith("self.");
-    const { targetScope, targetPath } = this.resolveScope(path);
-    if (!targetScope || !targetPath) {
-      return void 0;
-    }
-    const localValue = this.getLocalPathValue(targetScope, targetPath);
-    if (explicit || localValue !== void 0) {
-      return localValue;
-    }
-    let cursor = targetScope.parent;
-    while (cursor) {
-      const value = this.getLocalPathValue(cursor, targetPath);
-      if (value !== void 0) {
-        return value;
-      }
-      cursor = cursor.parent;
-    }
-    return void 0;
-  }
-  setPath(path, value) {
-    const explicit = path.startsWith("parent.") || path.startsWith("root.") || path.startsWith("self.");
-    const { targetScope, targetPath } = this.resolveScope(path);
-    if (!targetScope || !targetPath) {
-      return;
-    }
-    const scopeForSet = explicit ? targetScope : this.findNearestScopeWithKey(targetScope, targetPath) ?? targetScope;
-    const parts = targetPath.split(".");
-    const root = parts[0];
-    if (!root) {
-      return;
-    }
-    if (parts.length === 1) {
-      scopeForSet.data.set(root, value);
-      scopeForSet.emitChange(targetPath);
-      return;
-    }
-    let obj = scopeForSet.data.get(root);
-    if (obj == null || typeof obj !== "object") {
-      obj = {};
-      scopeForSet.data.set(root, obj);
-    }
-    let cursor = obj;
-    for (let i = 1; i < parts.length - 1; i += 1) {
-      const key = parts[i];
-      if (!key) {
-        return;
-      }
-      if (cursor[key] == null || typeof cursor[key] !== "object") {
-        cursor[key] = {};
-      }
-      cursor = cursor[key];
-    }
-    const lastKey = parts[parts.length - 1];
-    if (!lastKey) {
-      return;
-    }
-    cursor[lastKey] = value;
-    scopeForSet.emitChange(targetPath);
-  }
-  on(path, handler) {
-    const key = path.trim();
-    if (!key) {
-      return;
-    }
-    const set = this.listeners.get(key) ?? /* @__PURE__ */ new Set();
-    set.add(handler);
-    this.listeners.set(key, set);
-  }
-  off(path, handler) {
-    const key = path.trim();
-    const set = this.listeners.get(key);
-    if (!set) {
-      return;
-    }
-    set.delete(handler);
-    if (set.size === 0) {
-      this.listeners.delete(key);
-    }
-  }
-  onAny(handler) {
-    this.anyListeners.add(handler);
-  }
-  offAny(handler) {
-    this.anyListeners.delete(handler);
-  }
-  emitChange(path) {
-    const key = path.trim();
-    if (!key) {
-      return;
-    }
-    this.listeners.get(key)?.forEach((fn) => fn());
-    const rootKey = key.split(".")[0];
-    if (rootKey && rootKey !== key) {
-      this.listeners.get(rootKey)?.forEach((fn) => fn());
-    }
-    this.anyListeners.forEach((fn) => fn());
-  }
-  resolveScope(path) {
-    let targetScope = this;
-    let targetPath = path;
-    while (targetPath.startsWith("parent.")) {
-      targetScope = targetScope?.parent;
-      targetPath = targetPath.slice("parent.".length);
-    }
-    if (targetPath.startsWith("root.")) {
-      targetScope = targetScope?.root;
-      targetPath = targetPath.slice("root.".length);
-    }
-    while (targetPath.startsWith("self.")) {
-      targetScope = targetScope ?? this;
-      targetPath = targetPath.slice("self.".length);
-    }
-    return { targetScope, targetPath };
-  }
-  getLocalPathValue(scope, path) {
-    const parts = path.split(".");
-    const root = parts[0];
-    if (!root) {
-      return void 0;
-    }
-    let value = scope.data.get(root);
-    for (let i = 1; i < parts.length; i += 1) {
-      if (value == null) {
-        return void 0;
-      }
-      const key = parts[i];
-      if (!key) {
-        return void 0;
-      }
-      value = value[key];
-    }
-    return value;
-  }
-  findNearestScopeWithKey(start, path) {
-    const root = path.split(".")[0];
-    if (!root) {
-      return void 0;
-    }
-    let cursor = start;
-    while (cursor) {
-      if (cursor.data.has(root)) {
-        return cursor;
-      }
-      cursor = cursor.parent;
-    }
-    return void 0;
-  }
-};
-
-// src/runtime/bindings.ts
-function getElementValue(element) {
-  if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) {
-    return element.value;
-  }
-  if (element instanceof HTMLSelectElement) {
-    return element.value;
-  }
-  return element.textContent ?? "";
-}
-function setElementValue(element, value) {
-  if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) {
-    element.value = value;
-    element.setAttribute("value", value);
-    return;
-  }
-  if (element instanceof HTMLSelectElement) {
-    element.value = value;
-    return;
-  }
-  if (element instanceof HTMLElement && element.querySelector("*")) {
-    return;
-  }
-  element.textContent = value;
-}
-function applyBindToScope(element, expression, scope) {
-  const key = expression.trim();
-  if (!key) {
-    return;
-  }
-  const value = getElementValue(element);
-  scope.set(key, value);
-}
-function applyBindToElement(element, expression, scope) {
-  const key = expression.trim();
-  if (!key) {
-    return;
-  }
-  const value = scope.get(key);
-  if (value == null) {
-    return;
-  }
-  setElementValue(element, String(value));
-}
-
-// src/runtime/conditionals.ts
-function readCondition(expression, scope) {
-  const key = expression.trim();
-  if (!key) {
-    return false;
-  }
-  return !!scope.get(key);
-}
-function applyIf(element, expression, scope) {
-  element.style.display = readCondition(expression, scope) ? "" : "none";
-}
-function applyShow(element, expression, scope) {
-  element.style.display = readCondition(expression, scope) ? "" : "none";
-}
-
-// src/runtime/html.ts
-function sanitizeHtml(value) {
-  return value.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, "");
-}
-function applyHtml(element, expression, scope, trusted) {
-  const key = expression.trim();
-  if (!key) {
-    return;
-  }
-  const value = scope.get(key);
-  const html = value == null ? "" : String(value);
-  element.innerHTML = trusted ? html : sanitizeHtml(html);
-}
-
-// src/runtime/http.ts
-async function applyGet(element, config, scope, onHtmlApplied) {
-  if (!globalThis.fetch) {
-    throw new Error("fetch is not available");
-  }
-  const response = await globalThis.fetch(config.url);
-  if (!response || !response.ok) {
-    return;
-  }
-  const html = await response.text();
-  const target = resolveTarget(element, config.targetSelector);
-  if (!target) {
-    element.dispatchEvent(new CustomEvent("vsn:targetError", { detail: { selector: config.targetSelector } }));
-    return;
-  }
-  if (config.swap === "outer") {
-    const wrapper = document.createElement("div");
-    applyHtml(wrapper, "__html", { get: () => html }, config.trusted);
-    const replacement = wrapper.firstElementChild;
-    if (replacement && target.parentNode) {
-      target.parentNode.replaceChild(replacement, target);
-      onHtmlApplied?.(replacement);
-    }
-    return;
-  }
-  applyHtml(target, "__html", { get: () => html }, config.trusted);
-  onHtmlApplied?.(target);
-}
-function resolveTarget(element, selector) {
-  if (!selector) {
-    return element;
-  }
-  return element.ownerDocument.querySelector(selector);
-}
-
-// src/runtime/debounce.ts
-function debounce(fn, waitMs) {
-  let timer;
-  return (...args) => {
-    if (timer) {
-      clearTimeout(timer);
-    }
-    timer = setTimeout(() => {
-      timer = void 0;
-      fn(...args);
-    }, waitMs);
-  };
-}
 
 // src/runtime/engine.ts
 var Engine = class _Engine {
@@ -5554,94 +5492,181 @@ var Engine = class _Engine {
   }
 };
 
-// src/index.ts
-var VERSION = "0.1.0";
-function parseCFS(source) {
-  const parser = new Parser(source);
-  return parser.parseProgram();
+// src/plugins/microdata.ts
+var META_TYPE = "@type";
+var META_ID = "@id";
+function registerMicrodata(engine) {
+  engine.registerBehaviorModifier("microdata", {
+    onBind: ({ element, scope, args }) => {
+      const options = normalizeOptions(args);
+      const root = resolveItemscopeRoot(element);
+      if (!root) {
+        return;
+      }
+      const data = extractMicrodata(root, options);
+      applyMicrodataToScope(scope, data, options);
+    }
+  });
+  engine.registerGlobal("microdata", (target, maybeOptions) => {
+    const options = normalizeOptions(
+      isPlainObject(target) ? target : maybeOptions
+    );
+    const root = resolveTargetElement(engine, target);
+    if (!root) {
+      return void 0;
+    }
+    const data = extractMicrodata(resolveItemscopeRoot(root) ?? root, options);
+    if (typeof target === "string" && !isPlainObject(maybeOptions)) {
+      return data[target];
+    }
+    return data;
+  });
 }
-function autoMount(root = document) {
-  if (typeof document === "undefined") {
-    return null;
+var microdata_default = registerMicrodata;
+var globals = globalThis;
+var plugins = globals.VSNPlugins ?? {};
+plugins.microdata = (instance) => registerMicrodata(instance);
+globals.VSNPlugins = plugins;
+var autoEngine = globals.VSNEngine;
+if (autoEngine instanceof Engine) {
+  registerMicrodata(autoEngine);
+}
+function normalizeOptions(value) {
+  if (!value) {
+    return {};
   }
-  const engine = new Engine();
-  globalThis.VSNEngine = engine;
-  const startTime = typeof performance !== "undefined" && performance.now ? performance.now() : Date.now();
-  const mount = () => {
-    const target = root instanceof Document ? root.body : root;
-    if (target) {
-      const plugins = globalThis.VSNPlugins;
-      if (plugins && typeof plugins === "object") {
-        for (const plugin of Object.values(plugins)) {
-          if (typeof plugin === "function") {
-            plugin(engine);
+  if (typeof value === "string") {
+    return { key: value };
+  }
+  if (isPlainObject(value)) {
+    const options = {};
+    if (typeof value.key === "string") {
+      options.key = value.key;
+    }
+    if (typeof value.flatten === "boolean") {
+      options.flatten = value.flatten;
+    }
+    return options;
+  }
+  return {};
+}
+function isPlainObject(value) {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+function resolveTargetElement(engine, target) {
+  if (!target) {
+    return engine.getCurrentElement();
+  }
+  if (target instanceof Element) {
+    return target;
+  }
+  if (Array.isArray(target) && target[0] instanceof Element) {
+    return target[0];
+  }
+  return engine.getCurrentElement();
+}
+function resolveItemscopeRoot(element) {
+  if (element.hasAttribute("itemscope")) {
+    return element;
+  }
+  return element.querySelector("[itemscope]") ?? void 0;
+}
+function extractMicrodata(root, options) {
+  const result = {};
+  const itemType = root.getAttribute("itemtype");
+  const itemId = root.getAttribute("itemid");
+  if (itemType) {
+    result[META_TYPE] = itemType;
+  }
+  if (itemId) {
+    result[META_ID] = itemId;
+  }
+  collectItemProps(root, result, options);
+  return result;
+}
+function collectItemProps(root, result, options) {
+  const children = Array.from(root.children);
+  for (const child of children) {
+    const hasItemprop = child.hasAttribute("itemprop");
+    const hasItemscope = child.hasAttribute("itemscope");
+    if (hasItemscope && !hasItemprop) {
+      continue;
+    }
+    if (hasItemprop) {
+      const props = (child.getAttribute("itemprop") ?? "").split(/\s+/).map((prop) => prop.trim()).filter(Boolean);
+      const value = hasItemscope ? extractMicrodata(child, options) : readItemValue(child);
+      for (const prop of props) {
+        addValue(result, prop, value);
+      }
+      if (options.flatten && value && typeof value === "object" && !Array.isArray(value)) {
+        for (const [key, nestedValue] of Object.entries(value)) {
+          if (key.startsWith("@")) {
+            continue;
           }
+          addValue(result, key, nestedValue);
         }
       }
-      const sources = Array.from(document.querySelectorAll('script[type="text/vsn"]')).map((script) => script.textContent ?? "").join("\n");
-      if (sources.trim()) {
-        engine.registerBehaviors(sources);
+      if (hasItemscope) {
+        continue;
       }
-      engine.mount(target);
-      const endTime = typeof performance !== "undefined" && performance.now ? performance.now() : Date.now();
-      const elapsedMs = Math.round(endTime - startTime);
-      console.log(`Took ${elapsedMs}ms to start up VSN.js. https://www.vsnjs.com/ v${VERSION}`);
     }
-  };
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", () => setTimeout(mount, 0), { once: true });
-  } else {
-    setTimeout(mount, 0);
+    collectItemProps(child, result, options);
   }
-  return engine;
 }
-if (typeof document !== "undefined") {
-  const scriptTag = document.querySelector("script[auto-mount]");
-  if (scriptTag) {
-    autoMount();
+function readItemValue(element) {
+  if (element instanceof HTMLMetaElement) {
+    return element.content ?? "";
+  }
+  if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) {
+    return element.value ?? "";
+  }
+  if (element instanceof HTMLSelectElement) {
+    return element.value ?? "";
+  }
+  if (element instanceof HTMLTimeElement) {
+    return element.dateTime || element.getAttribute("datetime") || "";
+  }
+  if (element instanceof HTMLAnchorElement || element instanceof HTMLLinkElement) {
+    return element.getAttribute("href") ?? "";
+  }
+  if (element instanceof HTMLImageElement) {
+    return element.getAttribute("src") ?? "";
+  }
+  if (element.hasAttribute("content")) {
+    return element.getAttribute("content") ?? "";
+  }
+  return (element.textContent ?? "").trim();
+}
+function addValue(result, key, value) {
+  if (result[key] === void 0) {
+    result[key] = value;
+    return;
+  }
+  if (Array.isArray(result[key])) {
+    result[key].push(value);
+    return;
+  }
+  result[key] = [result[key], value];
+}
+function applyMicrodataToScope(scope, data, options) {
+  if (options.key) {
+    scope.setPath?.(options.key, data);
+    return;
+  }
+  for (const [key, value] of Object.entries(data)) {
+    if (key === META_TYPE) {
+      scope.setPath?.("itemtype", value);
+      continue;
+    }
+    if (key === META_ID) {
+      scope.setPath?.("itemid", value);
+      continue;
+    }
+    scope.setPath?.(key, value);
   }
 }
 export {
-  ArrayExpression,
-  ArrayPattern,
-  AssignmentNode,
-  AwaitExpression,
-  BaseNode,
-  BehaviorNode,
-  BinaryExpression,
-  BlockNode,
-  CallExpression,
-  DeclarationNode,
-  DirectiveExpression,
-  Engine,
-  ForNode,
-  FunctionDeclarationNode,
-  FunctionExpression,
-  IdentifierExpression,
-  IfNode,
-  IndexExpression,
-  Lexer,
-  LiteralExpression,
-  MemberExpression,
-  ObjectExpression,
-  ObjectPattern,
-  OnBlockNode,
-  Parser,
-  ProgramNode,
-  QueryExpression,
-  RestElement,
-  ReturnNode,
-  SelectorNode,
-  SpreadElement,
-  TemplateExpression,
-  TernaryExpression,
-  TokenType,
-  TryNode,
-  UnaryExpression,
-  UseNode,
-  VERSION,
-  WhileNode,
-  autoMount,
-  parseCFS
+  microdata_default as default,
+  registerMicrodata
 };
-//# sourceMappingURL=index.js.map
+//# sourceMappingURL=microdata.js.map

@@ -36,8 +36,6 @@ import {
   QueryExpression,
   ReturnNode,
   SelectorNode,
-  StateBlockNode,
-  StateEntryNode,
   TernaryExpression,
   UnaryExpression,
   UseNode,
@@ -377,50 +375,6 @@ export class Parser {
     }
 
     throw new Error(`Unexpected token ${next.type}`);
-  }
-
-  private parseStateBlock(): StateBlockNode {
-    this.stream.expect(TokenType.State);
-    this.stream.skipWhitespace();
-    this.stream.expect(TokenType.LBrace);
-
-    const entries: StateEntryNode[] = [];
-    while (true) {
-      this.stream.skipWhitespace();
-      const next = this.stream.peek();
-      if (!next) {
-        throw new Error("Unterminated state block");
-      }
-      if (next.type === TokenType.RBrace) {
-        this.stream.next();
-        break;
-      }
-
-      const nameToken = this.stream.expect(TokenType.Identifier);
-      this.stream.skipWhitespace();
-      this.stream.expect(TokenType.Colon);
-      this.stream.skipWhitespace();
-      const value = this.parseExpression();
-      this.stream.skipWhitespace();
-
-      let important = false;
-      if (this.stream.peek()?.type === TokenType.Bang) {
-        this.stream.next();
-        this.stream.skipWhitespace();
-        const importantToken = this.stream.next();
-        if (importantToken.type === TokenType.Identifier && importantToken.value === "important") {
-          important = true;
-        } else {
-          throw new Error("Expected 'important' after '!'");
-        }
-      }
-
-      this.stream.skipWhitespace();
-      this.stream.expect(TokenType.Semicolon);
-      entries.push(new StateEntryNode(nameToken.value, value, important));
-    }
-
-    return new StateBlockNode(entries);
   }
 
   private parseOnBlock(): OnBlockNode {
@@ -1342,21 +1296,89 @@ export class Parser {
     if (!token) {
       throw new Error("Unterminated flag arguments");
     }
-    let value: any;
-    if (token.type === TokenType.Number) {
-      value = Number(this.stream.next().value);
-    } else if (token.type === TokenType.String) {
-      value = this.stream.next().value;
-    } else if (token.type === TokenType.Boolean) {
-      value = this.stream.next().value === "true";
-    } else if (token.type === TokenType.Identifier) {
-      value = this.stream.next().value;
-    } else {
-      throw new Error(`Unsupported flag argument ${token.type}`);
-    }
+    const value = this.parseCustomFlagLiteral();
     this.stream.skipWhitespace();
     this.stream.expect(TokenType.RParen);
     return value;
+  }
+
+  private parseCustomFlagLiteral(): any {
+    const token = this.stream.peek();
+    if (!token) {
+      throw new Error("Unterminated flag arguments");
+    }
+    if (token.type === TokenType.Number) {
+      return Number(this.stream.next().value);
+    }
+    if (token.type === TokenType.String) {
+      return this.stream.next().value;
+    }
+    if (token.type === TokenType.Boolean) {
+      return this.stream.next().value === "true";
+    }
+    if (token.type === TokenType.Identifier) {
+      return this.stream.next().value;
+    }
+    if (token.type === TokenType.LBracket) {
+      return this.parseCustomFlagArray();
+    }
+    if (token.type === TokenType.LBrace) {
+      return this.parseCustomFlagObject();
+    }
+    throw new Error(`Unsupported flag argument ${token.type}`);
+  }
+
+  private parseCustomFlagArray(): any[] {
+    this.stream.expect(TokenType.LBracket);
+    const items: any[] = [];
+    while (true) {
+      this.stream.skipWhitespace();
+      const next = this.stream.peek();
+      if (!next) {
+        throw new Error("Unterminated flag array");
+      }
+      if (next.type === TokenType.RBracket) {
+        this.stream.next();
+        break;
+      }
+      items.push(this.parseCustomFlagLiteral());
+      this.stream.skipWhitespace();
+      if (this.stream.peek()?.type === TokenType.Comma) {
+        this.stream.next();
+      }
+    }
+    return items;
+  }
+
+  private parseCustomFlagObject(): Record<string, any> {
+    this.stream.expect(TokenType.LBrace);
+    const obj: Record<string, any> = {};
+    while (true) {
+      this.stream.skipWhitespace();
+      const next = this.stream.peek();
+      if (!next) {
+        throw new Error("Unterminated flag object");
+      }
+      if (next.type === TokenType.RBrace) {
+        this.stream.next();
+        break;
+      }
+      let key: string;
+      if (next.type === TokenType.Identifier || next.type === TokenType.String) {
+        key = this.stream.next().value;
+      } else {
+        throw new Error(`Unsupported flag object key ${next.type}`);
+      }
+      this.stream.skipWhitespace();
+      this.stream.expect(TokenType.Colon);
+      this.stream.skipWhitespace();
+      obj[key] = this.parseCustomFlagLiteral();
+      this.stream.skipWhitespace();
+      if (this.stream.peek()?.type === TokenType.Comma) {
+        this.stream.next();
+      }
+    }
+    return obj;
   }
 
   private isDeclarationStart(): boolean {
@@ -1460,21 +1482,6 @@ export class Parser {
       return next?.type === TokenType.Equals;
     }
     return false;
-  }
-
-  private isCallStart(): boolean {
-    const first = this.stream.peekNonWhitespace(0);
-    if (!first || first.type !== TokenType.Identifier) {
-      return false;
-    }
-    let index = 1;
-    while (
-      this.stream.peekNonWhitespace(index)?.type === TokenType.Dot &&
-      this.stream.peekNonWhitespace(index + 1)?.type === TokenType.Identifier
-    ) {
-      index += 2;
-    }
-    return this.stream.peekNonWhitespace(index)?.type === TokenType.LParen;
   }
 
   private isExpressionStatementStart(): boolean {
@@ -1809,10 +1816,6 @@ export class Parser {
     this.stream.skipWhitespace();
     const body = this.parseFunctionBlockWithAwait(isAsync);
     return new FunctionDeclarationNode(name, params, body, isAsync);
-  }
-
-  private parseFunctionBlock(): BlockNode {
-    return this.parseFunctionBlockWithAwait(false);
   }
 
   private parseReturnStatement(): ReturnNode {

@@ -161,16 +161,6 @@ declare class BehaviorNode extends BaseNode {
     flagArgs: BehaviorFlagArgs;
     constructor(selector: SelectorNode, body: BlockNode, flags?: BehaviorFlags, flagArgs?: BehaviorFlagArgs);
 }
-declare class StateEntryNode extends BaseNode {
-    name: string;
-    value: ExpressionNode;
-    important: boolean;
-    constructor(name: string, value: ExpressionNode, important: boolean);
-}
-declare class StateBlockNode extends BaseNode {
-    entries: StateEntryNode[];
-    constructor(entries: StateEntryNode[]);
-}
 declare class OnBlockNode extends BaseNode {
     eventName: string;
     args: string[];
@@ -430,7 +420,6 @@ declare class Parser {
     private getLineSnippet;
     private parseBlock;
     private parseStatement;
-    private parseStateBlock;
     private parseOnBlock;
     private parseAssignment;
     private parseExpression;
@@ -463,10 +452,12 @@ declare class Parser {
     private parseDeclarationOperator;
     private parseFlags;
     private parseCustomFlagArg;
+    private parseCustomFlagLiteral;
+    private parseCustomFlagArray;
+    private parseCustomFlagObject;
     private isDeclarationStart;
     private isAssignmentStart;
     private isAssignmentOperatorStart;
-    private isCallStart;
     private isExpressionStatementStart;
     private isFunctionDeclarationStart;
     private isArrowFunctionStart;
@@ -484,7 +475,6 @@ declare class Parser {
     private parseDestructBlock;
     private parseQueryExpression;
     private parseFunctionDeclaration;
-    private parseFunctionBlock;
     private parseReturnStatement;
     private parseArrowFunctionExpression;
     private parseFunctionParams;
@@ -611,7 +601,6 @@ declare class Engine {
     private codeCache;
     private behaviorCache;
     private observer;
-    private observerRoot;
     private attributeHandlers;
     private globals;
     private importantFlags;
@@ -628,6 +617,7 @@ declare class Engine {
     private pendingUses;
     private pendingAutoBindToScope;
     private scopeWatchers;
+    private executionStack;
     constructor(options?: EngineOptions);
     mount(root: HTMLElement): Promise<void>;
     unmount(element: Element): void;
@@ -698,6 +688,8 @@ declare class Engine {
     private applyEventFlagAfter;
     private applyEventFlagArgTransforms;
     private matchesKeyFlag;
+    private withExecutionElement;
+    getCurrentElement(): Element | undefined;
     private execute;
     private executeBlock;
     private safeExecute;
@@ -743,4 +735,4 @@ declare const VERSION = "0.1.0";
 declare function parseCFS(source: string): ProgramNode;
 declare function autoMount(root?: HTMLElement | Document): Engine | null;
 
-export { type ArrayElement, ArrayExpression, ArrayPattern, type ArrayPatternElement, AssignmentNode, type AssignmentTarget, AwaitExpression, BaseNode, type BehaviorFlagArgs, type BehaviorFlags, BehaviorNode, BinaryExpression, BlockNode, type CFSNode, CallExpression, type DeclarationFlagArgs, type DeclarationFlags, DeclarationNode, type DeclarationTarget, DirectiveExpression, Engine, type ExecutionContext, type ExpressionNode, ForNode, FunctionDeclarationNode, FunctionExpression, type FunctionParam, IdentifierExpression, IfNode, IndexExpression, Lexer, LiteralExpression, MemberExpression, type ObjectEntry, ObjectExpression, ObjectPattern, type ObjectPatternEntry, OnBlockNode, Parser, type PatternNode, ProgramNode, QueryExpression, RestElement, ReturnNode, SelectorNode, SpreadElement, StateBlockNode, StateEntryNode, TemplateExpression, TernaryExpression, TokenType, TryNode, UnaryExpression, type UseFlagArgs, type UseFlags, UseNode, VERSION, WhileNode, autoMount, parseCFS };
+export { type ArrayElement, ArrayExpression, ArrayPattern, type ArrayPatternElement, AssignmentNode, type AssignmentTarget, AwaitExpression, BaseNode, type BehaviorFlagArgs, type BehaviorFlags, BehaviorNode, BinaryExpression, BlockNode, type CFSNode, CallExpression, type DeclarationFlagArgs, type DeclarationFlags, DeclarationNode, type DeclarationTarget, DirectiveExpression, Engine, type ExecutionContext, type ExpressionNode, ForNode, FunctionDeclarationNode, FunctionExpression, type FunctionParam, IdentifierExpression, IfNode, IndexExpression, Lexer, LiteralExpression, MemberExpression, type ObjectEntry, ObjectExpression, ObjectPattern, type ObjectPatternEntry, OnBlockNode, Parser, type PatternNode, ProgramNode, QueryExpression, RestElement, ReturnNode, SelectorNode, SpreadElement, TemplateExpression, TernaryExpression, TokenType, TryNode, UnaryExpression, type UseFlagArgs, type UseFlags, UseNode, VERSION, WhileNode, autoMount, parseCFS };

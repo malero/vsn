@@ -20,9 +20,6 @@ import {
   FunctionDeclarationNode,
   FunctionParam,
   FunctionExpression,
-  ForNode,
-  IfNode,
-  TryNode,
   IdentifierExpression,
   OnBlockNode,
   UseNode
@@ -167,7 +164,6 @@ export class Engine {
   private codeCache = new Map<string, BlockNode>();
   private behaviorCache = new Map<string, CachedBehavior>();
   private observer: MutationObserver | undefined;
-  private observerRoot: HTMLElement | undefined;
   private attributeHandlers: AttributeHandler[] = [];
   private globals: Record<string, any> = {};
   private importantFlags = new WeakMap<Element, Set<string>>();
@@ -184,6 +180,7 @@ export class Engine {
   private pendingUses: Promise<void>[] = [];
   private pendingAutoBindToScope: Array<{ element: Element; expr: string; scope: Scope }> = [];
   private scopeWatchers = new WeakMap<Element, { scope: Scope; kind: "path" | "any"; key?: string; handler: () => void }[]>();
+  private executionStack: Element[] = [];
 
   constructor(options: EngineOptions = {}) {
     this.diagnostics = options.diagnostics ?? false;
@@ -521,7 +518,6 @@ export class Engine {
     if (this.observer) {
       return;
     }
-    this.observerRoot = root;
     this.observerFlush = debounce(() => this.flushObserverQueue(), 10);
     this.observer = new MutationObserver((mutations) => {
       for (const mutation of mutations) {
@@ -552,7 +548,6 @@ export class Engine {
   private disconnectObserver(): void {
     this.observer?.disconnect();
     this.observer = undefined;
-    this.observerRoot = undefined;
     this.pendingAdded.clear();
     this.pendingRemoved.clear();
     this.pendingUpdated.clear();
@@ -817,7 +812,6 @@ export class Engine {
     }
 
     const rendered: Element[] = [];
-    console.log('renderEach list', list);
     list.forEach((item, index) => {
       const fragment = element.content.cloneNode(true) as DocumentFragment;
       const roots = Array.from(fragment.children) as Element[];
@@ -1479,29 +1473,50 @@ export class Engine {
     return key === expectedKey;
   }
 
+  private async withExecutionElement(element: Element | undefined, fn: () => Promise<void>): Promise<void> {
+    if (!element) {
+      await fn();
+      return;
+    }
+    this.executionStack.push(element);
+    try {
+      await fn();
+    } finally {
+      this.executionStack.pop();
+    }
+  }
+
+  getCurrentElement(): Element | undefined {
+    return this.executionStack[this.executionStack.length - 1];
+  }
+
   private async execute(code: string, scope: Scope, element?: Element, rootScope?: Scope): Promise<void> {
     let block = this.codeCache.get(code);
     if (!block) {
       block = Parser.parseInline(code);
       this.codeCache.set(code, block);
     }
-    const context: ExecutionContext = {
-      scope,
-      rootScope,
-      globals: this.globals,
-      ...(element ? { element } : {})
-    };
-    await block.evaluate(context);
+    await this.withExecutionElement(element, async () => {
+      const context: ExecutionContext = {
+        scope,
+        rootScope,
+        globals: this.globals,
+        ...(element ? { element } : {})
+      };
+      await block.evaluate(context);
+    });
   }
 
   private async executeBlock(block: BlockNode, scope: Scope, element?: Element, rootScope?: Scope): Promise<void> {
-    const context: ExecutionContext = {
-      scope,
-      rootScope,
-      globals: this.globals,
-      ...(element ? { element } : {})
-    };
-    await block.evaluate(context);
+    await this.withExecutionElement(element, async () => {
+      const context: ExecutionContext = {
+        scope,
+        rootScope,
+        globals: this.globals,
+        ...(element ? { element } : {})
+      };
+      await block.evaluate(context);
+    });
   }
 
   private async safeExecute(code: string, scope: Scope, element?: Element, rootScope?: Scope): Promise<void> {
@@ -1740,22 +1755,6 @@ export class Engine {
         type,
         target: this.normalizeNode(node.target),
         value: this.normalizeNode(node.value)
-      };
-    }
-    if (type === "StateBlock") {
-      return {
-        type,
-        entries: Array.isArray(node.entries)
-          ? node.entries.map((entry: any) => this.normalizeNode(entry))
-          : []
-      };
-    }
-    if (type === "StateEntry") {
-      return {
-        type,
-        name: node.name ?? "",
-        value: this.normalizeNode(node.value),
-        important: Boolean(node.important)
       };
     }
     if (type === "FunctionDeclaration") {

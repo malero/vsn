@@ -313,11 +313,6 @@
       <div class="products-grid" vsn-show="hasResults">
         <article
           class="product-card"
-          data-tone="red"
-          data-material="ceramic"
-          data-tags="red, ceramic"
-          data-price="18.00"
-          data-currency="USD"
           itemscope
           itemtype="https://schema.org/Product"
         >
@@ -340,11 +335,6 @@
 
         <article
           class="product-card"
-          data-tone="green"
-          data-material="linen"
-          data-tags="green, linen"
-          data-price="36.00"
-          data-currency="USD"
           itemscope
           itemtype="https://schema.org/Product"
         >
@@ -367,11 +357,6 @@
 
         <article
           class="product-card"
-          data-tone="blue"
-          data-material="glass"
-          data-tags="blue, glass"
-          data-price="24.00"
-          data-currency="USD"
           itemscope
           itemtype="https://schema.org/Product"
         >
@@ -394,16 +379,12 @@
 
         <article
           class="product-card"
-          data-tone="amber"
-          data-material="glass"
-          data-tags="amber, glass"
-          data-price="42.00"
-          data-currency="USD"
           itemscope
           itemtype="https://schema.org/Product"
         >
           <meta itemprop="color" content="amber">
           <meta itemprop="material" content="glass">
+          <meta itemprop="tone" content="amber">
           <div class="product-top">
             <div class="product-swatch"></div>
             <div>
@@ -421,11 +402,6 @@
 
         <article
           class="product-card"
-          data-tone="blue"
-          data-material="metal"
-          data-tags="blue, metal"
-          data-price="29.00"
-          data-currency="USD"
           itemscope
           itemtype="https://schema.org/Product"
         >
@@ -448,11 +424,6 @@
 
         <article
           class="product-card"
-          data-tone="green"
-          data-material="ceramic"
-          data-tags="green, ceramic"
-          data-price="52.00"
-          data-currency="USD"
           itemscope
           itemtype="https://schema.org/Product"
         >
@@ -475,11 +446,6 @@
 
         <article
           class="product-card"
-          data-tone="red"
-          data-material="metal"
-          data-tags="red, metal"
-          data-price="22.00"
-          data-currency="USD"
           itemscope
           itemtype="https://schema.org/Product"
         >
@@ -502,11 +468,6 @@
 
         <article
           class="product-card"
-          data-tone="blue"
-          data-material="linen"
-          data-tags="blue, linen"
-          data-price="30.00"
-          data-currency="USD"
           itemscope
           itemtype="https://schema.org/Product"
         >
@@ -572,7 +533,7 @@ behavior #product-filters-app {
   hasResults: true;
   noResults: false;
 
-  updateVisible() {
+  async updateVisible() {
     if (filters.length == 0) {
       visibleProducts = products;
       summary = products.length + " products";
@@ -583,7 +544,7 @@ behavior #product-filters-app {
       return;
     }
 
-    visibleProducts = products.filter((item) => {
+    visibleProducts = await list.filter(products, (item) => {
       for (i = 0; i < filters.length; i = i + 1) {
         if (item.tags.indexOf(filters[i]) > -1) {
           return true;
@@ -599,14 +560,14 @@ behavior #product-filters-app {
     noResults = !hasResults;
   }
 
-  toggleFilter(filter) {
+  async toggleFilter(filter) {
     index = filters.indexOf(filter);
     if (index > -1) {
-      filters = filters.filter((entry) => entry != filter);
+      filters = await list.filter(filters, (entry) => entry != filter);
     } else {
       filters = [...filters, filter];
     }
-    updateVisible();
+    await updateVisible();
   }
 
   behavior .filter {
@@ -624,16 +585,13 @@ behavior #product-filters-app {
     }
   }
 
-  behavior .product-card {
-    tone: @data-tone;
-    material: @data-material;
-    tags: @data-tags;
-    price: @data-price;
-    currency: @data-currency;
-    description: ?>("");
+  behavior .product-card !microdata {
+    tags: [];
 
     construct {
-      console.log(`${tone}, ${material}, ${tags}`);
+      tags.push(color);
+      tags.push(material);
+      @data-tone = color;
     }
   }
 }

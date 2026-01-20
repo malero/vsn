@@ -103,21 +103,6 @@ export class BehaviorNode extends BaseNode {
   }
 }
 
-export class StateEntryNode extends BaseNode {
-  constructor(
-    public name: string,
-    public value: ExpressionNode,
-    public important: boolean
-  ) {
-    super("StateEntry");
-  }
-}
-
-export class StateBlockNode extends BaseNode {
-  constructor(public entries: StateEntryNode[]) {
-    super("StateBlock");
-  }
-}
 
 export class OnBlockNode extends BaseNode {
   constructor(
