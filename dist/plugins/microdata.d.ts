@@ -38,25 +38,25 @@ interface ExecutionContext {
 interface CFSNode {
     type: string;
     prepare(context: ExecutionContext): Promise<void>;
-    evaluate(context: ExecutionContext): Promise<any>;
+    evaluate(context: ExecutionContext): any;
 }
 declare abstract class BaseNode implements CFSNode {
     type: string;
     constructor(type: string);
     prepare(_context: ExecutionContext): Promise<void>;
-    evaluate(_context: ExecutionContext): Promise<any>;
+    evaluate(_context: ExecutionContext): any;
 }
 declare class BlockNode extends BaseNode {
     statements: CFSNode[];
     constructor(statements: CFSNode[]);
-    evaluate(context: ExecutionContext): Promise<any>;
+    evaluate(context: ExecutionContext): any;
 }
 declare class FunctionExpression extends BaseNode {
     params: FunctionParam[];
     body: BlockNode;
     isAsync: boolean;
     constructor(params: FunctionParam[], body: BlockNode, isAsync?: boolean);
-    evaluate(context: ExecutionContext): Promise<any>;
+    evaluate(context: ExecutionContext): any;
     private applyParams;
     private restoreParams;
 }
@@ -94,7 +94,7 @@ type FunctionParam = {
 declare class IdentifierExpression extends BaseNode {
     name: string;
     constructor(name: string);
-    evaluate(context: ExecutionContext): Promise<any>;
+    evaluate(context: ExecutionContext): any;
 }
 declare class SpreadElement extends BaseNode {
     value: ExpressionNode;
@@ -103,40 +103,44 @@ declare class SpreadElement extends BaseNode {
 declare class LiteralExpression extends BaseNode {
     value: string | number | boolean | null;
     constructor(value: string | number | boolean | null);
-    evaluate(): Promise<any>;
+    evaluate(): any;
 }
 declare class TemplateExpression extends BaseNode {
     parts: ExpressionNode[];
     constructor(parts: ExpressionNode[]);
-    evaluate(context: ExecutionContext): Promise<any>;
+    evaluate(context: ExecutionContext): any;
 }
 declare class UnaryExpression extends BaseNode {
     operator: string;
     argument: ExpressionNode;
     constructor(operator: string, argument: ExpressionNode);
-    evaluate(context: ExecutionContext): Promise<any>;
+    evaluate(context: ExecutionContext): any;
 }
 declare class BinaryExpression extends BaseNode {
     operator: string;
     left: ExpressionNode;
     right: ExpressionNode;
     constructor(operator: string, left: ExpressionNode, right: ExpressionNode);
-    evaluate(context: ExecutionContext): Promise<any>;
+    evaluate(context: ExecutionContext): any;
 }
 declare class TernaryExpression extends BaseNode {
     test: ExpressionNode;
     consequent: ExpressionNode;
     alternate: ExpressionNode;
     constructor(test: ExpressionNode, consequent: ExpressionNode, alternate: ExpressionNode);
-    evaluate(context: ExecutionContext): Promise<any>;
+    evaluate(context: ExecutionContext): any;
 }
 declare class MemberExpression extends BaseNode {
     target: ExpressionNode;
     property: string;
     optional: boolean;
     constructor(target: ExpressionNode, property: string, optional?: boolean);
-    evaluate(context: ExecutionContext): Promise<any>;
-    resolve(context: ExecutionContext): Promise<{
+    evaluate(context: ExecutionContext): any;
+    resolve(context: ExecutionContext): {
+        value: any;
+        target?: any;
+        optional?: boolean;
+    } | undefined | Promise<{
         value: any;
         target?: any;
         optional?: boolean;
@@ -154,14 +158,14 @@ declare class CallExpression extends BaseNode {
     callee: ExpressionNode;
     args: ExpressionNode[];
     constructor(callee: ExpressionNode, args: ExpressionNode[]);
-    evaluate(context: ExecutionContext): Promise<any>;
+    evaluate(context: ExecutionContext): any;
     private resolveCallee;
 }
 type ArrayElement = ExpressionNode | SpreadElement;
 declare class ArrayExpression extends BaseNode {
     elements: ArrayElement[];
     constructor(elements: ArrayElement[]);
-    evaluate(context: ExecutionContext): Promise<any>;
+    evaluate(context: ExecutionContext): any;
 }
 type ObjectEntry = {
     key: string;
@@ -177,30 +181,30 @@ type ObjectEntry = {
 declare class ObjectExpression extends BaseNode {
     entries: ObjectEntry[];
     constructor(entries: ObjectEntry[]);
-    evaluate(context: ExecutionContext): Promise<any>;
+    evaluate(context: ExecutionContext): any;
 }
 declare class IndexExpression extends BaseNode {
     target: ExpressionNode;
     index: ExpressionNode;
     constructor(target: ExpressionNode, index: ExpressionNode);
-    evaluate(context: ExecutionContext): Promise<any>;
+    evaluate(context: ExecutionContext): any;
 }
 declare class DirectiveExpression extends BaseNode {
     kind: "attr" | "style";
     name: string;
     constructor(kind: "attr" | "style", name: string);
-    evaluate(context: ExecutionContext): Promise<any>;
+    evaluate(context: ExecutionContext): any;
 }
 declare class AwaitExpression extends BaseNode {
     argument: ExpressionNode;
     constructor(argument: ExpressionNode);
-    evaluate(context: ExecutionContext): Promise<any>;
+    evaluate(context: ExecutionContext): any;
 }
 declare class QueryExpression extends BaseNode {
     direction: "self" | "descendant" | "ancestor";
     selector: string;
     constructor(direction: "self" | "descendant" | "ancestor", selector: string);
-    evaluate(context: ExecutionContext): Promise<any>;
+    evaluate(context: ExecutionContext): any;
 }
 
 interface RegisteredBehavior {

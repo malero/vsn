@@ -13,8 +13,8 @@ export function parseCFS(source: string) {
   return parser.parseProgram();
 }
 
-if (window) {
-  (window as any)['parseCFS'] = parseCFS;
+if (typeof window !== "undefined") {
+  (window as any)["parseCFS"] = parseCFS;
 }
 
 export function autoMount(root: HTMLElement | Document = document): Engine | null {

@@ -15,7 +15,7 @@ export interface ExecutionContext {
 export interface CFSNode {
   type: string;
   prepare(context: ExecutionContext): Promise<void>;
-  evaluate(context: ExecutionContext): Promise<any>;
+  evaluate(context: ExecutionContext): any;
 }
 
 export abstract class BaseNode implements CFSNode {
@@ -25,12 +25,23 @@ export abstract class BaseNode implements CFSNode {
     return;
   }
 
-  async evaluate(_context: ExecutionContext): Promise<any> {
+  evaluate(_context: ExecutionContext): any {
     return undefined;
   }
 }
 
-async function evaluateWithChildScope(context: ExecutionContext, block: BlockNode): Promise<any> {
+function isPromiseLike<T>(value: T | Promise<T>): value is Promise<T> {
+  return Boolean(value) && typeof (value as Promise<T>).then === "function";
+}
+
+function resolveMaybe<T, R>(value: T | Promise<T>, next: (value: T) => R | Promise<R>): R | Promise<R> {
+  if (isPromiseLike(value)) {
+    return value.then(next);
+  }
+  return next(value);
+}
+
+function evaluateWithChildScope(context: ExecutionContext, block: BlockNode): any {
   const scope = context.scope;
   if (!scope || !scope.createChild) {
     return block.evaluate(context);
@@ -38,7 +49,7 @@ async function evaluateWithChildScope(context: ExecutionContext, block: BlockNod
   const previousScope = context.scope;
   context.scope = scope.createChild();
   try {
-    return await block.evaluate(context);
+    return block.evaluate(context);
   } finally {
     context.scope = previousScope;
   }
@@ -74,15 +85,25 @@ export class BlockNode extends BaseNode {
     super("Block");
   }
 
-  async evaluate(context: ExecutionContext): Promise<any> {
-    for (const statement of this.statements) {
-      if (context.returning) {
-        break;
+  evaluate(context: ExecutionContext): any {
+    let index = 0;
+    const run = (): any => {
+      while (index < this.statements.length) {
+        if (context.returning) {
+          break;
+        }
+        const statement = this.statements[index];
+        index += 1;
+        if (statement && typeof statement.evaluate === "function") {
+          const result = statement.evaluate(context);
+          if (isPromiseLike(result)) {
+            return result.then(() => run());
+          }
+        }
       }
-      if (statement && typeof statement.evaluate === "function") {
-        await statement.evaluate(context);
-      }
-    }
+      return undefined;
+    };
+    return run();
   }
 }
 
@@ -125,57 +146,65 @@ export class AssignmentNode extends BaseNode {
     super("Assignment");
   }
 
-  async evaluate(context: ExecutionContext): Promise<any> {
+  evaluate(context: ExecutionContext): any {
     if (!context.scope || !context.scope.setPath) {
       return undefined;
     }
-    const value = await this.value.evaluate(context);
-    if (this.operator !== "=") {
-      return await this.applyCompoundAssignment(context, value);
-    }
-    if (this.target instanceof IdentifierExpression && this.target.name.startsWith("root.") && context.rootScope) {
-      const path = this.target.name.slice("root.".length);
-      context.rootScope.setPath?.(`self.${path}`, value);
-      return value;
-    }
-    if (this.target instanceof MemberExpression || this.target instanceof IndexExpression) {
-      const resolved = await this.resolveAssignmentTarget(context);
-      if (resolved?.scope?.setPath) {
-        resolved.scope.setPath(resolved.path, value);
-        return value;
+    const value = this.value.evaluate(context);
+    return resolveMaybe(value, (resolvedValue) => {
+      if (this.operator !== "=") {
+        return this.applyCompoundAssignment(context, resolvedValue);
       }
-    }
-    this.assignTarget(context, this.target, value);
-    return value;
+      if (this.target instanceof IdentifierExpression && this.target.name.startsWith("root.") && context.rootScope) {
+        const path = this.target.name.slice("root.".length);
+        context.rootScope.setPath?.(`self.${path}`, resolvedValue);
+        return resolvedValue;
+      }
+      if (this.target instanceof MemberExpression || this.target instanceof IndexExpression) {
+        const resolved = this.resolveAssignmentTarget(context);
+        return resolveMaybe(resolved, (resolvedTarget) => {
+          if (resolvedTarget?.scope?.setPath) {
+            resolvedTarget.scope.setPath(resolvedTarget.path, resolvedValue);
+            return resolvedValue;
+          }
+          this.assignTarget(context, this.target, resolvedValue);
+          return resolvedValue;
+        });
+      }
+      this.assignTarget(context, this.target, resolvedValue);
+      return resolvedValue;
+    });
   }
 
-  private async applyCompoundAssignment(context: ExecutionContext, value: any): Promise<any> {
+  private applyCompoundAssignment(context: ExecutionContext, value: any): any {
     if (!context.scope || !context.scope.setPath) {
       return undefined;
     }
-    const resolved = await this.resolveAssignmentTarget(context);
-    if (!resolved) {
-      throw new Error("Compound assignment requires a simple identifier or member path");
-    }
-    const { scope, path } = resolved;
-    const current = scope?.getPath ? scope.getPath(path) : undefined;
-    let result: any;
-    if (this.operator === "+=") {
-      result = current + value;
-    } else if (this.operator === "-=") {
-      result = current - value;
-    } else if (this.operator === "*=") {
-      result = current * value;
-    } else {
-      result = current / value;
-    }
-    scope?.setPath?.(path, result);
-    return result;
+    const resolved = this.resolveAssignmentTarget(context);
+    return resolveMaybe(resolved, (resolvedTarget) => {
+      if (!resolvedTarget) {
+        throw new Error("Compound assignment requires a simple identifier or member path");
+      }
+      const { scope, path } = resolvedTarget;
+      const current = scope?.getPath ? scope.getPath(path) : undefined;
+      let result: any;
+      if (this.operator === "+=") {
+        result = current + value;
+      } else if (this.operator === "-=") {
+        result = current - value;
+      } else if (this.operator === "*=") {
+        result = current * value;
+      } else {
+        result = current / value;
+      }
+      scope?.setPath?.(path, result);
+      return result;
+    });
   }
 
-  private async resolveAssignmentTarget(
+  private resolveAssignmentTarget(
     context: ExecutionContext
-  ): Promise<{ scope: ExecutionContext["scope"]; path: string } | null> {
+  ): { scope: ExecutionContext["scope"]; path: string } | null | Promise<{ scope: ExecutionContext["scope"]; path: string } | null> {
     if (this.target instanceof IdentifierExpression) {
       const isRoot = this.target.name.startsWith("root.");
       const rawPath = isRoot ? this.target.name.slice("root.".length) : this.target.name;
@@ -204,36 +233,42 @@ export class AssignmentNode extends BaseNode {
       return { scope: context.scope, path: rawPath };
     }
     if (this.target instanceof IndexExpression) {
-      const path = await this.resolveIndexPath(context, this.target);
-      if (!path) {
-        return null;
-      }
-      const isRoot = path.startsWith("root.");
-      const rawPath = isRoot ? path.slice("root.".length) : path;
-      if (isRoot) {
-        if (context.rootScope) {
-          return { scope: context.rootScope, path: `self.${rawPath}` };
+      const path = this.resolveIndexPath(context, this.target);
+      return resolveMaybe(path, (resolvedPath) => {
+        if (!resolvedPath) {
+          return null;
         }
-        return { scope: context.scope, path: `root.${rawPath}` };
-      }
-      return { scope: context.scope, path: rawPath };
+        const isRoot = resolvedPath.startsWith("root.");
+        const rawPath = isRoot ? resolvedPath.slice("root.".length) : resolvedPath;
+        if (isRoot) {
+          if (context.rootScope) {
+            return { scope: context.rootScope, path: `self.${rawPath}` };
+          }
+          return { scope: context.scope, path: `root.${rawPath}` };
+        }
+        return { scope: context.scope, path: rawPath };
+      });
     }
     return null;
   }
 
-  private async resolveIndexPath(context: ExecutionContext, expr: IndexExpression): Promise<string | null> {
-    const base = await this.resolveTargetPath(context, expr.target);
-    if (!base) {
-      return null;
-    }
-    const indexValue = await expr.index.evaluate(context);
-    if (indexValue == null) {
-      return null;
-    }
-    return `${base}.${indexValue}`;
+  private resolveIndexPath(context: ExecutionContext, expr: IndexExpression): string | null | Promise<string | null> {
+    const base = this.resolveTargetPath(context, expr.target);
+    return resolveMaybe(base, (resolvedBase) => {
+      if (!resolvedBase) {
+        return null;
+      }
+      const indexValue = expr.index.evaluate(context);
+      return resolveMaybe(indexValue, (resolvedIndex) => {
+        if (resolvedIndex == null) {
+          return null;
+        }
+        return `${resolvedBase}.${resolvedIndex}`;
+      });
+    });
   }
 
-  private async resolveTargetPath(context: ExecutionContext, target: ExpressionNode): Promise<string | null> {
+  private resolveTargetPath(context: ExecutionContext, target: ExpressionNode): string | null | Promise<string | null> {
     if (target instanceof IdentifierExpression) {
       return target.name;
     }
@@ -345,13 +380,16 @@ export class ReturnNode extends BaseNode {
     super("Return");
   }
 
-  async evaluate(context: ExecutionContext): Promise<any> {
+  evaluate(context: ExecutionContext): any {
     if (context.returning) {
       return context.returnValue;
     }
-    context.returnValue = this.value ? await this.value.evaluate(context) : undefined;
-    context.returning = true;
-    return context.returnValue;
+    const nextValue = this.value ? this.value.evaluate(context) : undefined;
+    return resolveMaybe(nextValue, (resolved) => {
+      context.returnValue = resolved;
+      context.returning = true;
+      return context.returnValue;
+    });
   }
 }
 
@@ -367,12 +405,14 @@ export class AssertNode extends BaseNode {
     super("Assert");
   }
 
-  async evaluate(context: ExecutionContext): Promise<any> {
-    const value = await this.test.evaluate(context);
-    if (!value) {
-      throw new AssertError();
-    }
-    return value;
+  evaluate(context: ExecutionContext): any {
+    const value = this.test.evaluate(context);
+    return resolveMaybe(value, (resolved) => {
+      if (!resolved) {
+        throw new AssertError();
+      }
+      return resolved;
+    });
   }
 }
 
@@ -385,14 +425,17 @@ export class IfNode extends BaseNode {
     super("If");
   }
 
-  async evaluate(context: ExecutionContext): Promise<any> {
-    const condition = await this.test.evaluate(context);
-    if (condition) {
-      return evaluateWithChildScope(context, this.consequent);
-    }
-    if (this.alternate) {
-      return evaluateWithChildScope(context, this.alternate);
-    }
+  evaluate(context: ExecutionContext): any {
+    const condition = this.test.evaluate(context);
+    return resolveMaybe(condition, (resolved) => {
+      if (resolved) {
+        return evaluateWithChildScope(context, this.consequent);
+      }
+      if (this.alternate) {
+        return evaluateWithChildScope(context, this.alternate);
+      }
+      return undefined;
+    });
   }
 }
 
@@ -401,21 +444,29 @@ export class WhileNode extends BaseNode {
     super("While");
   }
 
-  async evaluate(context: ExecutionContext): Promise<any> {
+  evaluate(context: ExecutionContext): any {
     const previousScope = context.scope;
     if (context.scope?.createChild) {
       context.scope = context.scope.createChild();
     }
-    try {
-      while (await this.test.evaluate(context)) {
-        await this.body.evaluate(context);
-        if (context.returning) {
-          break;
+    const run = (): any => {
+      const condition = this.test.evaluate(context);
+      return resolveMaybe(condition, (resolved) => {
+        if (!resolved || context.returning) {
+          return undefined;
         }
-      }
-    } finally {
-      context.scope = previousScope;
+        const bodyResult = this.body.evaluate(context);
+        return resolveMaybe(bodyResult, () => run());
+      });
+    };
+    const result = run();
+    if (isPromiseLike(result)) {
+      return result.finally(() => {
+        context.scope = previousScope;
+      });
     }
+    context.scope = previousScope;
+    return result;
   }
 }
 
@@ -429,27 +480,37 @@ export class ForNode extends BaseNode {
     super("For");
   }
 
-  async evaluate(context: ExecutionContext): Promise<any> {
-    if (this.init) {
-      await this.init.evaluate(context);
-    }
-    const previousScope = context.scope;
-    let bodyScope = context.scope;
-    if (context.scope?.createChild) {
-      bodyScope = context.scope.createChild();
-    }
-    while (this.test ? await this.test.evaluate(context) : true) {
-      context.scope = bodyScope;
-      await this.body.evaluate(context);
-      if (context.returning) {
-        break;
+  evaluate(context: ExecutionContext): any {
+    const initResult = this.init ? this.init.evaluate(context) : undefined;
+    const run = (): any => {
+      const previousScope = context.scope;
+      let bodyScope = context.scope;
+      if (context.scope?.createChild) {
+        bodyScope = context.scope.createChild();
       }
-      context.scope = previousScope;
-      if (this.update) {
-        await this.update.evaluate(context);
-      }
-    }
-    context.scope = previousScope;
+      const loop = (): any => {
+        const testResult = this.test ? this.test.evaluate(context) : true;
+        return resolveMaybe(testResult, (passed) => {
+          if (!passed || context.returning) {
+            context.scope = previousScope;
+            return undefined;
+          }
+          context.scope = bodyScope;
+          const bodyResult = this.body.evaluate(context);
+          return resolveMaybe(bodyResult, () => {
+            if (context.returning) {
+              context.scope = previousScope;
+              return undefined;
+            }
+            context.scope = previousScope;
+            const updateResult = this.update ? this.update.evaluate(context) : undefined;
+            return resolveMaybe(updateResult, () => loop());
+          });
+        });
+      };
+      return loop();
+    };
+    return resolveMaybe(initResult, () => run());
   }
 }
 
@@ -462,10 +523,8 @@ export class TryNode extends BaseNode {
     super("Try");
   }
 
-  async evaluate(context: ExecutionContext): Promise<any> {
-    try {
-      return await evaluateWithChildScope(context, this.body);
-    } catch (error) {
+  evaluate(context: ExecutionContext): any {
+    const handleError = (error: any): any => {
       if (context.returning) {
         return context.returnValue;
       }
@@ -483,11 +542,24 @@ export class TryNode extends BaseNode {
           scope.setPath(`self.${this.errorName}`, error);
         }
       }
-      await this.handler.evaluate(context);
-      if (scope && scope.setPath && handlerScope === previousScope) {
-        scope.setPath(this.errorName, previous);
+      const handlerResult = this.handler.evaluate(context);
+      return resolveMaybe(handlerResult, () => {
+        if (scope && scope.setPath && handlerScope === previousScope) {
+          scope.setPath(this.errorName, previous);
+        }
+        context.scope = previousScope;
+        return undefined;
+      });
+    };
+
+    try {
+      const bodyResult = evaluateWithChildScope(context, this.body);
+      if (isPromiseLike(bodyResult)) {
+        return bodyResult.catch((error) => handleError(error));
       }
-      context.scope = previousScope;
+      return bodyResult;
+    } catch (error) {
+      return handleError(error);
     }
   }
 }
@@ -512,12 +584,37 @@ export class FunctionExpression extends BaseNode {
     super("FunctionExpression");
   }
 
-  async evaluate(context: ExecutionContext): Promise<any> {
+  evaluate(context: ExecutionContext): any {
     const scope = context.scope;
     const globals = context.globals;
     const element = context.element;
 
-    return async (...args: any[]) => {
+    if (this.isAsync) {
+      return (...args: any[]) => {
+        const activeScope = scope?.createChild ? scope.createChild() : scope;
+        const inner: ExecutionContext = {
+          scope: activeScope,
+          rootScope: context.rootScope,
+          ...(globals ? { globals } : {}),
+          ...(element ? { element } : {}),
+          returnValue: undefined,
+          returning: false
+        };
+        const previousValues = new Map<string, any>();
+        const applyResult = activeScope
+          ? this.applyParams(activeScope, previousValues, inner, args)
+          : undefined;
+        const bodyResult = resolveMaybe(applyResult, () => this.body.evaluate(inner));
+        const finalResult = resolveMaybe(bodyResult, () => inner.returnValue);
+        return Promise.resolve(finalResult).finally(() => {
+          if (activeScope && activeScope === scope) {
+            this.restoreParams(activeScope, previousValues);
+          }
+        });
+      };
+    }
+
+    return (...args: any[]) => {
       const activeScope = scope?.createChild ? scope.createChild() : scope;
       const inner: ExecutionContext = {
         scope: activeScope,
@@ -527,53 +624,74 @@ export class FunctionExpression extends BaseNode {
         returnValue: undefined,
         returning: false
       };
-
-      if (activeScope) {
-        const previousValues = new Map<string, any>();
-        await this.applyParams(activeScope, previousValues, inner, args);
-        await this.body.evaluate(inner);
-        if (activeScope === scope) {
-          this.restoreParams(activeScope, previousValues);
-        }
-      } else {
-        await this.body.evaluate(inner);
+      const previousValues = new Map<string, any>();
+      const applyResult = activeScope
+        ? this.applyParams(activeScope, previousValues, inner, args)
+        : undefined;
+      const bodyResult = resolveMaybe(applyResult, () => this.body.evaluate(inner));
+      const finalResult = resolveMaybe(bodyResult, () => inner.returnValue);
+      if (isPromiseLike(finalResult)) {
+        return finalResult.finally(() => {
+          if (activeScope && activeScope === scope) {
+            this.restoreParams(activeScope, previousValues);
+          }
+        });
       }
-      return inner.returnValue;
+      if (activeScope && activeScope === scope) {
+        this.restoreParams(activeScope, previousValues);
+      }
+      return finalResult;
     };
   }
 
-  private async applyParams(
+  private applyParams(
     scope: ExecutionContext["scope"],
     previousValues: Map<string, any>,
     context: ExecutionContext,
     args: any[]
-  ): Promise<void> {
-    if (!scope || !scope.setPath) {
+  ): any {
+    if (!scope) {
       return;
     }
-    let argIndex = 0;
-    for (const param of this.params) {
-      const name = param.name;
-      if (!name) {
-        continue;
-      }
-      previousValues.set(name, scope.getPath(name));
-      if (param.rest) {
-        scope.setPath(`self.${name}`, args.slice(argIndex));
-        argIndex = args.length;
-        continue;
-      }
-      let value = args[argIndex];
-      if (value === undefined && param.defaultValue) {
-        value = await param.defaultValue.evaluate(context);
-      }
-      scope.setPath(`self.${name}`, value);
-      argIndex += 1;
+    const setPath = scope.setPath?.bind(scope);
+    if (!setPath) {
+      return;
     }
+    const params = this.params;
+    const applyAt = (paramIndex: number, argIndex: number): any => {
+      for (let i = paramIndex; i < params.length; i += 1) {
+        const param = params[i]!;
+        const name = param.name;
+        if (!name) {
+          continue;
+        }
+        previousValues.set(name, scope.getPath(name));
+        if (param.rest) {
+          setPath(`self.${name}`, args.slice(argIndex));
+          return;
+        }
+        let value = args[argIndex];
+        if (value === undefined && param.defaultValue) {
+          const defaultValue = param.defaultValue.evaluate(context);
+          return resolveMaybe(defaultValue, (resolvedDefault) => {
+            setPath(`self.${name}`, resolvedDefault);
+            return applyAt(i + 1, argIndex + 1);
+          });
+        }
+        setPath(`self.${name}`, value);
+        argIndex += 1;
+      }
+      return;
+    };
+    return applyAt(0, 0);
   }
 
   private restoreParams(scope: ExecutionContext["scope"], previousValues: Map<string, any>): void {
-    if (!scope || !scope.setPath) {
+    if (!scope) {
+      return;
+    }
+    const setPath = scope.setPath?.bind(scope);
+    if (!setPath) {
       return;
     }
     for (const param of this.params) {
@@ -581,7 +699,7 @@ export class FunctionExpression extends BaseNode {
       if (!name) {
         continue;
       }
-      scope.setPath(name, previousValues.get(name));
+      setPath(name, previousValues.get(name));
     }
   }
 }
@@ -657,7 +775,7 @@ export class IdentifierExpression extends BaseNode {
     super("Identifier");
   }
 
-  async evaluate(context: ExecutionContext): Promise<any> {
+  evaluate(context: ExecutionContext): any {
     if (this.name.startsWith("root.") && context.rootScope) {
       const path = this.name.slice("root.".length);
       return context.rootScope.getPath(`self.${path}`);
@@ -711,7 +829,7 @@ export class LiteralExpression extends BaseNode {
     super("Literal");
   }
 
-  async evaluate(): Promise<any> {
+  evaluate(): any {
     return this.value;
   }
 }
@@ -721,13 +839,22 @@ export class TemplateExpression extends BaseNode {
     super("TemplateExpression");
   }
 
-  async evaluate(context: ExecutionContext): Promise<any> {
+  evaluate(context: ExecutionContext): any {
     let result = "";
-    for (const part of this.parts) {
-      const value = await part.evaluate(context);
-      result += value == null ? "" : String(value);
-    }
-    return result;
+    let index = 0;
+    const run = (): any => {
+      while (index < this.parts.length) {
+        const part = this.parts[index]!;
+        index += 1;
+        const value = part.evaluate(context);
+        return resolveMaybe(value, (resolved) => {
+          result += resolved == null ? "" : String(resolved);
+          return run();
+        });
+      }
+      return result;
+    };
+    return run();
   }
 }
 
@@ -736,15 +863,17 @@ export class UnaryExpression extends BaseNode {
     super("UnaryExpression");
   }
 
-  async evaluate(context: ExecutionContext): Promise<any> {
-    const value = await this.argument.evaluate(context);
-    if (this.operator === "!") {
-      return !value;
-    }
-    if (this.operator === "-") {
-      return -(value as any);
-    }
-    return value;
+  evaluate(context: ExecutionContext): any {
+    const value = this.argument.evaluate(context);
+    return resolveMaybe(value, (resolved) => {
+      if (this.operator === "!") {
+        return !resolved;
+      }
+      if (this.operator === "-") {
+        return -(resolved as any);
+      }
+      return resolved;
+    });
   }
 }
 
@@ -757,61 +886,71 @@ export class BinaryExpression extends BaseNode {
     super("BinaryExpression");
   }
 
-  async evaluate(context: ExecutionContext): Promise<any> {
-    if (this.operator === "&&") {
-      const leftValue = await this.left.evaluate(context);
-      return leftValue && (await this.right.evaluate(context));
-    }
-    if (this.operator === "||") {
-      const leftValue = await this.left.evaluate(context);
-      return leftValue || (await this.right.evaluate(context));
-    }
-    if (this.operator === "??") {
-      const leftValue = await this.left.evaluate(context);
-      return leftValue ?? (await this.right.evaluate(context));
-    }
-    const left = await this.left.evaluate(context);
-    const right = await this.right.evaluate(context);
-    if (this.operator === "+") {
-      return (left as any) + (right as any);
-    }
-    if (this.operator === "-") {
-      return (left as any) - (right as any);
-    }
-    if (this.operator === "*") {
-      return (left as any) * (right as any);
-    }
-    if (this.operator === "/") {
-      return (left as any) / (right as any);
-    }
-    if (this.operator === "%") {
-      return (left as any) % (right as any);
-    }
-    if (this.operator === "==") {
-      return left == right;
-    }
-    if (this.operator === "!=") {
-      return left != right;
-    }
-    if (this.operator === "===") {
-      return left === right;
-    }
-    if (this.operator === "!==") {
-      return left !== right;
-    }
-    if (this.operator === "<") {
-      return (left as any) < (right as any);
-    }
-    if (this.operator === ">") {
-      return (left as any) > (right as any);
-    }
-    if (this.operator === "<=") {
-      return (left as any) <= (right as any);
-    }
-    if (this.operator === ">=") {
-      return (left as any) >= (right as any);
-    }
-    return undefined;
+  evaluate(context: ExecutionContext): any {
+    const leftValue = this.left.evaluate(context);
+    return resolveMaybe(leftValue, (resolvedLeft) => {
+      if (this.operator === "&&") {
+        if (!resolvedLeft) {
+          return resolvedLeft;
+        }
+        return this.right.evaluate(context);
+      }
+      if (this.operator === "||") {
+        if (resolvedLeft) {
+          return resolvedLeft;
+        }
+        return this.right.evaluate(context);
+      }
+      if (this.operator === "??") {
+        if (resolvedLeft !== null && resolvedLeft !== undefined) {
+          return resolvedLeft;
+        }
+        return this.right.evaluate(context);
+      }
+      const rightValue = this.right.evaluate(context);
+      return resolveMaybe(rightValue, (resolvedRight) => {
+        if (this.operator === "+") {
+          return (resolvedLeft as any) + (resolvedRight as any);
+        }
+        if (this.operator === "-") {
+          return (resolvedLeft as any) - (resolvedRight as any);
+        }
+        if (this.operator === "*") {
+          return (resolvedLeft as any) * (resolvedRight as any);
+        }
+        if (this.operator === "/") {
+          return (resolvedLeft as any) / (resolvedRight as any);
+        }
+        if (this.operator === "%") {
+          return (resolvedLeft as any) % (resolvedRight as any);
+        }
+        if (this.operator === "==") {
+          return resolvedLeft == resolvedRight;
+        }
+        if (this.operator === "!=") {
+          return resolvedLeft != resolvedRight;
+        }
+        if (this.operator === "===") {
+          return resolvedLeft === resolvedRight;
+        }
+        if (this.operator === "!==") {
+          return resolvedLeft !== resolvedRight;
+        }
+        if (this.operator === "<") {
+          return (resolvedLeft as any) < (resolvedRight as any);
+        }
+        if (this.operator === ">") {
+          return (resolvedLeft as any) > (resolvedRight as any);
+        }
+        if (this.operator === "<=") {
+          return (resolvedLeft as any) <= (resolvedRight as any);
+        }
+        if (this.operator === ">=") {
+          return (resolvedLeft as any) >= (resolvedRight as any);
+        }
+        return undefined;
+      });
+    });
   }
 }
 
@@ -824,12 +963,14 @@ export class TernaryExpression extends BaseNode {
     super("TernaryExpression");
   }
 
-  async evaluate(context: ExecutionContext): Promise<any> {
-    const condition = await this.test.evaluate(context);
-    if (condition) {
-      return this.consequent.evaluate(context);
-    }
-    return this.alternate.evaluate(context);
+  evaluate(context: ExecutionContext): any {
+    const condition = this.test.evaluate(context);
+    return resolveMaybe(condition, (resolved) => {
+      if (resolved) {
+        return this.consequent.evaluate(context);
+      }
+      return this.alternate.evaluate(context);
+    });
   }
 }
 
@@ -842,14 +983,14 @@ export class MemberExpression extends BaseNode {
     super("MemberExpression");
   }
 
-  async evaluate(context: ExecutionContext): Promise<any> {
-    const resolved = await this.resolve(context);
-    return resolved?.value;
+  evaluate(context: ExecutionContext): any {
+    const resolved = this.resolve(context);
+    return resolveMaybe(resolved, (resolvedValue) => resolvedValue?.value);
   }
 
-  async resolve(
+  resolve(
     context: ExecutionContext
-  ): Promise<{ value: any; target?: any; optional?: boolean } | undefined> {
+  ): { value: any; target?: any; optional?: boolean } | undefined | Promise<{ value: any; target?: any; optional?: boolean } | undefined> {
     const path = this.getIdentifierPath();
     if (path) {
       const resolved = this.resolveFromScope(context, path);
@@ -862,11 +1003,13 @@ export class MemberExpression extends BaseNode {
       }
     }
 
-    const target = await this.target.evaluate(context);
-    if (target == null) {
-      return { value: undefined, target, optional: this.optional };
-    }
-    return { value: (target as any)[this.property], target, optional: this.optional };
+    const target = this.target.evaluate(context);
+    return resolveMaybe(target, (resolvedTarget) => {
+      if (resolvedTarget == null) {
+        return { value: undefined, target: resolvedTarget, optional: this.optional };
+      }
+      return { value: (resolvedTarget as any)[this.property], target: resolvedTarget, optional: this.optional };
+    });
   }
 
   getIdentifierPath(): { path: string; root: string } | undefined {
@@ -957,31 +1100,42 @@ export class CallExpression extends BaseNode {
     super("CallExpression");
   }
 
-  async evaluate(context: ExecutionContext): Promise<any> {
-    const resolved = await this.resolveCallee(context);
-    const fn = resolved?.fn ?? (await this.callee.evaluate(context));
-
-    if (typeof fn !== "function") {
-      return undefined;
-    }
-
-    const values = [];
-    for (const arg of this.args) {
-      values.push(await arg.evaluate(context));
-    }
-
-    return fn.apply(resolved?.thisArg, values);
+  evaluate(context: ExecutionContext): any {
+    const resolved = this.resolveCallee(context);
+    return resolveMaybe(resolved, (resolvedCallee) => {
+      const fnValue = resolvedCallee?.fn ?? this.callee.evaluate(context);
+      return resolveMaybe(fnValue, (resolvedFn) => {
+        if (typeof resolvedFn !== "function") {
+          return undefined;
+        }
+        const values: any[] = [];
+        const evalArgs = (index: number): any => {
+          for (let i = index; i < this.args.length; i += 1) {
+            const arg = this.args[i]!;
+            const argValue = arg.evaluate(context);
+            return resolveMaybe(argValue, (resolvedArg) => {
+              values.push(resolvedArg);
+              return evalArgs(i + 1);
+            });
+          }
+          return resolvedFn.apply(resolvedCallee?.thisArg, values);
+        };
+        return evalArgs(0);
+      });
+    });
   }
 
-  private async resolveCallee(
+  private resolveCallee(
     context: ExecutionContext
-  ): Promise<{ fn: any; thisArg?: any } | undefined> {
+  ): { fn: any; thisArg?: any } | undefined | Promise<{ fn: any; thisArg?: any } | undefined> {
     if (this.callee instanceof MemberExpression) {
-      const resolved = await this.callee.resolve(context);
-      if (!resolved) {
-        return undefined;
-      }
-      return { fn: resolved.value, thisArg: resolved.target };
+      const resolved = this.callee.resolve(context);
+      return resolveMaybe(resolved, (resolvedValue) => {
+        if (!resolvedValue) {
+          return undefined;
+        }
+        return { fn: resolvedValue.value, thisArg: resolvedValue.target };
+      });
     }
     if (!(this.callee instanceof IdentifierExpression)) {
       return undefined;
@@ -1026,27 +1180,40 @@ export class ArrayExpression extends BaseNode {
     super("ArrayExpression");
   }
 
-  async evaluate(context: ExecutionContext): Promise<any> {
+  evaluate(context: ExecutionContext): any {
     const values: any[] = [];
-    for (const element of this.elements) {
-      if (element instanceof SpreadElement) {
-        const spreadValue = await element.value.evaluate(context);
-        if (spreadValue == null) {
-          continue;
-        }
-        const iterator = (spreadValue as any)[Symbol.iterator];
-        if (typeof iterator === "function") {
-          for (const entry of spreadValue as any) {
-            values.push(entry);
-          }
-        } else {
-          values.push(spreadValue);
-        }
-        continue;
+    const pushElements = (value: any) => {
+      if (value == null) {
+        return;
       }
-      values.push(await element.evaluate(context));
-    }
-    return values;
+      const iterator = (value as any)[Symbol.iterator];
+      if (typeof iterator === "function") {
+        for (const entry of value as any) {
+          values.push(entry);
+        }
+      } else {
+        values.push(value);
+      }
+    };
+    const evalAt = (index: number): any => {
+      for (let i = index; i < this.elements.length; i += 1) {
+        const element = this.elements[i]!;
+        if (element instanceof SpreadElement) {
+          const spreadValue = element.value.evaluate(context);
+          return resolveMaybe(spreadValue, (resolvedSpread) => {
+            pushElements(resolvedSpread);
+            return evalAt(i + 1);
+          });
+        }
+        const value = element.evaluate(context);
+        return resolveMaybe(value, (resolvedValue) => {
+          values.push(resolvedValue);
+          return evalAt(i + 1);
+        });
+      }
+      return values;
+    };
+    return evalAt(0);
   }
 }
 
@@ -1060,24 +1227,39 @@ export class ObjectExpression extends BaseNode {
     super("ObjectExpression");
   }
 
-  async evaluate(context: ExecutionContext): Promise<any> {
+  evaluate(context: ExecutionContext): any {
     const result: Record<string, any> = {};
-    for (const entry of this.entries) {
-      if ("spread" in entry) {
-        const spreadValue = await entry.spread.evaluate(context);
-        if (spreadValue != null) {
-          Object.assign(result, spreadValue);
+    const evalAt = (index: number): any => {
+      for (let i = index; i < this.entries.length; i += 1) {
+        const entry = this.entries[i]!;
+        if ("spread" in entry) {
+          const spreadValue = entry.spread.evaluate(context);
+          return resolveMaybe(spreadValue, (resolvedSpread) => {
+            if (resolvedSpread != null) {
+              Object.assign(result, resolvedSpread);
+            }
+            return evalAt(i + 1);
+          });
         }
-        continue;
+        if ("computed" in entry && entry.computed) {
+          const keyValue = entry.keyExpr.evaluate(context);
+          return resolveMaybe(keyValue, (resolvedKey) => {
+            const entryValue = entry.value.evaluate(context);
+            return resolveMaybe(entryValue, (resolvedValue) => {
+              result[String(resolvedKey)] = resolvedValue;
+              return evalAt(i + 1);
+            });
+          });
+        }
+        const value = entry.value.evaluate(context);
+        return resolveMaybe(value, (resolvedValue) => {
+          result[entry.key] = resolvedValue;
+          return evalAt(i + 1);
+        });
       }
-      if ("computed" in entry && entry.computed) {
-        const keyValue = await entry.keyExpr.evaluate(context);
-        result[String(keyValue)] = await entry.value.evaluate(context);
-      } else {
-        result[entry.key] = await entry.value.evaluate(context);
-      }
-    }
-    return result;
+      return result;
+    };
+    return evalAt(0);
   }
 }
 
@@ -1086,16 +1268,20 @@ export class IndexExpression extends BaseNode {
     super("IndexExpression");
   }
 
-  async evaluate(context: ExecutionContext): Promise<any> {
-    const target = await this.target.evaluate(context);
-    if (target == null) {
-      return undefined;
-    }
-    const index = await this.index.evaluate(context);
-    if (index == null) {
-      return undefined;
-    }
-    return (target as any)[index as any];
+  evaluate(context: ExecutionContext): any {
+    const target = this.target.evaluate(context);
+    return resolveMaybe(target, (resolvedTarget) => {
+      if (resolvedTarget == null) {
+        return undefined;
+      }
+      const index = this.index.evaluate(context);
+      return resolveMaybe(index, (resolvedIndex) => {
+        if (resolvedIndex == null) {
+          return undefined;
+        }
+        return (resolvedTarget as any)[resolvedIndex as any];
+      });
+    });
   }
 }
 
@@ -1104,7 +1290,7 @@ export class DirectiveExpression extends BaseNode {
     super("Directive");
   }
 
-  async evaluate(context: ExecutionContext): Promise<any> {
+  evaluate(context: ExecutionContext): any {
     const element = context.element;
     if (!element) {
       return `${this.kind}:${this.name}`;
@@ -1138,9 +1324,9 @@ export class AwaitExpression extends BaseNode {
     super("AwaitExpression");
   }
 
-  async evaluate(context: ExecutionContext): Promise<any> {
-    const value = await this.argument.evaluate(context);
-    return await value;
+  evaluate(context: ExecutionContext): any {
+    const value = this.argument.evaluate(context);
+    return Promise.resolve(value);
   }
 }
 
@@ -1149,7 +1335,7 @@ export class QueryExpression extends BaseNode {
     super("Query");
   }
 
-  async evaluate(context: ExecutionContext): Promise<any> {
+  evaluate(context: ExecutionContext): any {
     const selector = this.selector.trim();
     if (!selector) {
       return [];
