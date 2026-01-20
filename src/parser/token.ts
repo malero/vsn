@@ -20,6 +20,7 @@ export enum TokenType {
   While = "While",
   Try = "Try",
   Catch = "Catch",
+  Assert = "Assert",
 
   LBrace = "LBrace",
   RBrace = "RBrace",

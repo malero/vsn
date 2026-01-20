@@ -1792,6 +1792,12 @@ export class Engine {
         value: this.normalizeNode(node.value ?? null)
       };
     }
+    if (type === "Assert") {
+      return {
+        type,
+        test: this.normalizeNode(node.test)
+      };
+    }
     if (type === "If") {
       return {
         type,

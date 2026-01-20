@@ -563,7 +563,7 @@ behavior #product-filters-app {
   async toggleFilter(filter) {
     index = filters.indexOf(filter);
     if (index > -1) {
-      filters = await list.filter(filters, (entry) => entry != filter);
+      filters = list.filter(filters, (entry) => entry != filter);
     } else {
       filters = [...filters, filter];
     }

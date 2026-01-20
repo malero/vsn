@@ -355,6 +355,27 @@ export class ReturnNode extends BaseNode {
   }
 }
 
+export class AssertError extends Error {
+  constructor(message = "Assertion failed") {
+    super(message);
+    this.name = "AssertError";
+  }
+}
+
+export class AssertNode extends BaseNode {
+  constructor(public test: ExpressionNode) {
+    super("Assert");
+  }
+
+  async evaluate(context: ExecutionContext): Promise<any> {
+    const value = await this.test.evaluate(context);
+    if (!value) {
+      throw new AssertError();
+    }
+    return value;
+  }
+}
+
 export class IfNode extends BaseNode {
   constructor(
     public test: ExpressionNode,

@@ -2,6 +2,7 @@ import {
   AssignmentNode,
   ArrayExpression,
   ArrayPattern,
+  AssertNode,
   CFSNode,
   BehaviorNode,
   BehaviorFlags,
@@ -328,6 +329,10 @@ export class Parser {
         throw new Error("Return is only allowed inside functions");
       }
       return this.parseReturnStatement();
+    }
+
+    if (next.type === TokenType.Assert) {
+      return this.parseAssertStatement();
     }
 
     if (allowBlocks && next.type === TokenType.On) {
@@ -1829,6 +1834,14 @@ export class Parser {
     this.stream.skipWhitespace();
     this.stream.expect(TokenType.Semicolon);
     return new ReturnNode(value);
+  }
+
+  private parseAssertStatement(): AssertNode {
+    this.stream.expect(TokenType.Assert);
+    this.stream.skipWhitespace();
+    const test = this.parseExpression();
+    this.consumeStatementTerminator();
+    return new AssertNode(test);
   }
 
   private parseArrowFunctionExpression(isAsync = false): FunctionExpression {

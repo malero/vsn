@@ -14,6 +14,7 @@ const KEYWORDS: Record<string, TokenType> = {
   while: TokenType.While,
   try: TokenType.Try,
   catch: TokenType.Catch,
+  assert: TokenType.Assert,
   true: TokenType.Boolean,
   false: TokenType.Boolean,
   null: TokenType.Null
