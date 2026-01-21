@@ -318,6 +318,7 @@
         >
           <meta itemprop="color" content="red">
           <meta itemprop="material" content="ceramic">
+          <meta itemprop="sku" content="1">
           <div class="product-top">
             <div class="product-swatch"></div>
             <div>
@@ -340,6 +341,7 @@
         >
           <meta itemprop="color" content="green">
           <meta itemprop="material" content="linen">
+          <meta itemprop="sku" content="2">
           <div class="product-top">
             <div class="product-swatch"></div>
             <div>
@@ -362,6 +364,7 @@
         >
           <meta itemprop="color" content="blue">
           <meta itemprop="material" content="glass">
+          <meta itemprop="sku" content="3">
           <div class="product-top">
             <div class="product-swatch"></div>
             <div>
@@ -385,6 +388,7 @@
           <meta itemprop="color" content="amber">
           <meta itemprop="material" content="glass">
           <meta itemprop="tone" content="amber">
+          <meta itemprop="sku" content="4">
           <div class="product-top">
             <div class="product-swatch"></div>
             <div>
@@ -407,6 +411,7 @@
         >
           <meta itemprop="color" content="blue">
           <meta itemprop="material" content="metal">
+          <meta itemprop="sku" content="5">
           <div class="product-top">
             <div class="product-swatch"></div>
             <div>
@@ -429,6 +434,7 @@
         >
           <meta itemprop="color" content="green">
           <meta itemprop="material" content="ceramic">
+          <meta itemprop="sku" content="6">
           <div class="product-top">
             <div class="product-swatch"></div>
             <div>
@@ -451,6 +457,7 @@
         >
           <meta itemprop="color" content="red">
           <meta itemprop="material" content="metal">
+          <meta itemprop="sku" content="7">
           <div class="product-top">
             <div class="product-swatch"></div>
             <div>
@@ -473,6 +480,7 @@
         >
           <meta itemprop="color" content="blue">
           <meta itemprop="material" content="linen">
+          <meta itemprop="sku" content="8">
           <div class="product-top">
             <div class="product-swatch"></div>
             <div>
@@ -487,31 +495,6 @@
           <p class="product-desc" itemprop="description">Two-piece linen set dyed in deep blue.</p>
           <p class="product-tags">blue / linen</p>
         </article>
-
-        <template id="product-template" vsn-each="visibleProducts as product">
-          <article
-            class="product-card"
-            vsn-construct="@data-tone = product.tone; @data-material = product.material; @data-tags = product.tags.join(', '); @data-price = product.priceValue; @data-currency = product.currency;"
-            itemscope
-            itemtype="https://schema.org/Product"
-          >
-            <meta itemprop="color" vsn-construct="@content = product.tone;">
-            <meta itemprop="material" vsn-construct="@content = product.material;">
-            <div class="product-top">
-              <div class="product-swatch"></div>
-              <div>
-                <h3 class="product-name" itemprop="name" vsn-bind:from="product.name"></h3>
-                <p class="product-price" itemprop="offers" itemscope itemtype="https://schema.org/Offer">
-                  <span class="price-display" vsn-bind:from="product.price"></span>
-                  <meta itemprop="price" vsn-construct="@content = product.priceValue;">
-                  <meta itemprop="priceCurrency" vsn-construct="@content = product.currency;">
-                </p>
-              </div>
-            </div>
-            <p class="product-desc" itemprop="description" vsn-bind:from="product.desc"></p>
-            <p class="product-tags" vsn-bind:from="product.tagsLabel"></p>
-          </article>
-        </template>
       </div>
 
       <div class="empty-state" vsn-show="noResults">
@@ -544,7 +527,8 @@ behavior #product-filters-app {
       return;
     }
 
-    visibleProducts = list.filter(products, (item) => {
+    visibleProducts = products.filter((item) => {
+      console.log(item);
       for (i = 0; i < filters.length; i = i + 1) {
         if (item.tags.indexOf(filters[i]) > -1) {
           return true;
@@ -563,7 +547,7 @@ behavior #product-filters-app {
   async toggleFilter(filter) {
     index = filters.indexOf(filter);
     if (index > -1) {
-      filters = filters.filter((entry) => { console.log('filter check'); return entry != filter;});
+      filters = filters.filter((entry) => entry != filter);
     } else {
       filters = [...filters, filter];
     }
@@ -585,11 +569,10 @@ behavior #product-filters-app {
     }
   }
 
-  behavior .product-card !microdata {
+  behavior .product-card !microdata !group("products") {
     tags: [];
 
     construct {
-      console.log(self);
       tags.push(color);
       tags.push(material);
       @data-tone = color;

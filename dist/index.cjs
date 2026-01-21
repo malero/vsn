@@ -3874,6 +3874,38 @@ var Engine = class _Engine {
     this.registerFlag("float", {
       transformValue: (_context, value) => this.coerceFloat(value)
     });
+    this.registerBehaviorModifier("group", {
+      onConstruct: ({ args, scope, rootScope }) => {
+        const key = typeof args === "string" ? args : void 0;
+        if (!key) {
+          return;
+        }
+        const targetScope = rootScope ?? scope;
+        const existing = targetScope.getPath?.(key);
+        const list = Array.isArray(existing) ? existing : [];
+        if (!list.includes(scope)) {
+          list.push(scope);
+          targetScope.setPath?.(key, list);
+        } else if (!Array.isArray(existing)) {
+          targetScope.setPath?.(key, list);
+        }
+      },
+      onUnbind: ({ args, scope, rootScope }) => {
+        const key = typeof args === "string" ? args : void 0;
+        if (!key) {
+          return;
+        }
+        const targetScope = rootScope ?? scope;
+        const existing = targetScope.getPath?.(key);
+        if (!Array.isArray(existing)) {
+          return;
+        }
+        const next = existing.filter((entry) => entry !== scope);
+        if (next.length !== existing.length) {
+          targetScope.setPath?.(key, next);
+        }
+      }
+    });
   }
   async mount(root) {
     const documentRoot = root.ownerDocument;
