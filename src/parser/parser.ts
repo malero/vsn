@@ -3,6 +3,7 @@ import {
   ArrayExpression,
   ArrayPattern,
   AssertNode,
+  BreakNode,
   CFSNode,
   BehaviorNode,
   BehaviorFlags,
@@ -37,6 +38,7 @@ import {
   ProgramNode,
   QueryExpression,
   ReturnNode,
+  ContinueNode,
   SelectorNode,
   TernaryExpression,
   UnaryExpression,
@@ -334,6 +336,14 @@ export class Parser {
 
     if (next.type === TokenType.Assert) {
       return this.parseAssertStatement();
+    }
+
+    if (next.type === TokenType.Break) {
+      return this.parseBreakStatement();
+    }
+
+    if (next.type === TokenType.Continue) {
+      return this.parseContinueStatement();
     }
 
     if (allowBlocks && next.type === TokenType.On) {
@@ -1889,6 +1899,18 @@ export class Parser {
     const test = this.parseExpression();
     this.consumeStatementTerminator();
     return new AssertNode(test);
+  }
+
+  private parseBreakStatement(): BreakNode {
+    this.stream.expect(TokenType.Break);
+    this.consumeStatementTerminator();
+    return new BreakNode();
+  }
+
+  private parseContinueStatement(): ContinueNode {
+    this.stream.expect(TokenType.Continue);
+    this.consumeStatementTerminator();
+    return new ContinueNode();
   }
 
   private parseArrowFunctionExpression(isAsync = false): FunctionExpression {

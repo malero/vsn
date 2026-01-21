@@ -34,6 +34,8 @@ interface ExecutionContext {
     element?: Element;
     returnValue?: any;
     returning?: boolean;
+    breaking?: boolean;
+    continuing?: boolean;
 }
 interface CFSNode {
     type: string;

@@ -1904,6 +1904,9 @@ export class Engine {
         test: this.normalizeNode(node.test)
       };
     }
+    if (type === "Break" || type === "Continue") {
+      return { type };
+    }
     if (type === "If") {
       return {
         type,
@@ -2076,7 +2079,9 @@ export class Engine {
         globals: this.globals,
         element,
         returnValue: undefined,
-        returning: false
+        returning: false,
+        breaking: false,
+        continuing: false
       };
       const previousValues = new Map<string, any>();
       await this.applyFunctionParams(callScope, declaration.params, previousValues, context, args);

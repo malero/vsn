@@ -21,6 +21,8 @@ export enum TokenType {
   Try = "Try",
   Catch = "Catch",
   Assert = "Assert",
+  Break = "Break",
+  Continue = "Continue",
 
   LBrace = "LBrace",
   RBrace = "RBrace",

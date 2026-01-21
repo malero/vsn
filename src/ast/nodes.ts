@@ -10,6 +10,8 @@ export interface ExecutionContext {
   element?: Element;
   returnValue?: any;
   returning?: boolean;
+  breaking?: boolean;
+  continuing?: boolean;
 }
 
 export interface CFSNode {
@@ -89,7 +91,7 @@ export class BlockNode extends BaseNode {
     let index = 0;
     const run = (): any => {
       while (index < this.statements.length) {
-        if (context.returning) {
+        if (context.returning || context.breaking || context.continuing) {
           break;
         }
         const statement = this.statements[index];
@@ -432,6 +434,28 @@ export class ReturnNode extends BaseNode {
   }
 }
 
+export class BreakNode extends BaseNode {
+  constructor() {
+    super("Break");
+  }
+
+  evaluate(context: ExecutionContext): any {
+    context.breaking = true;
+    return undefined;
+  }
+}
+
+export class ContinueNode extends BaseNode {
+  constructor() {
+    super("Continue");
+  }
+
+  evaluate(context: ExecutionContext): any {
+    context.continuing = true;
+    return undefined;
+  }
+}
+
 export class AssertError extends Error {
   constructor(message = "Assertion failed") {
     super(message);
@@ -495,7 +519,16 @@ export class WhileNode extends BaseNode {
           return undefined;
         }
         const bodyResult = this.body.evaluate(context);
-        return resolveMaybe(bodyResult, () => run());
+        return resolveMaybe(bodyResult, () => {
+          if (context.breaking) {
+            context.breaking = false;
+            return undefined;
+          }
+          if (context.continuing) {
+            context.continuing = false;
+          }
+          return run();
+        });
       });
     };
     const result = run();
@@ -540,6 +573,14 @@ export class ForEachNode extends BaseNode {
         context.scope?.setPath?.(this.target.name, value);
         const bodyResult = this.body.evaluate(context);
         return resolveMaybe(bodyResult, () => {
+          if (context.breaking) {
+            context.breaking = false;
+            context.scope = previousScope;
+            return undefined;
+          }
+          if (context.continuing) {
+            context.continuing = false;
+          }
           context.scope = previousScope;
           return loop();
         });
@@ -603,7 +644,15 @@ export class ForNode extends BaseNode {
               context.scope = previousScope;
               return undefined;
             }
+            if (context.breaking) {
+              context.breaking = false;
+              context.scope = previousScope;
+              return undefined;
+            }
             context.scope = previousScope;
+            if (context.continuing) {
+              context.continuing = false;
+            }
             const updateResult = this.update ? this.update.evaluate(context) : undefined;
             return resolveMaybe(updateResult, () => loop());
           });
@@ -699,7 +748,9 @@ export class FunctionExpression extends BaseNode {
           ...(globals ? { globals } : {}),
           ...(element ? { element } : {}),
           returnValue: undefined,
-          returning: false
+          returning: false,
+          breaking: false,
+          continuing: false
         };
         const previousValues = new Map<string, any>();
         const applyResult = activeScope
@@ -723,7 +774,9 @@ export class FunctionExpression extends BaseNode {
         ...(globals ? { globals } : {}),
         ...(element ? { element } : {}),
         returnValue: undefined,
-        returning: false
+        returning: false,
+        breaking: false,
+        continuing: false
       };
       const previousValues = new Map<string, any>();
       const applyResult = activeScope

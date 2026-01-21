@@ -30,7 +30,9 @@ __export(index_exports, {
   BehaviorNode: () => BehaviorNode,
   BinaryExpression: () => BinaryExpression,
   BlockNode: () => BlockNode,
+  BreakNode: () => BreakNode,
   CallExpression: () => CallExpression,
+  ContinueNode: () => ContinueNode,
   DeclarationNode: () => DeclarationNode,
   DirectiveExpression: () => DirectiveExpression,
   Engine: () => Engine,
@@ -90,6 +92,8 @@ var TokenType = /* @__PURE__ */ ((TokenType2) => {
   TokenType2["Try"] = "Try";
   TokenType2["Catch"] = "Catch";
   TokenType2["Assert"] = "Assert";
+  TokenType2["Break"] = "Break";
+  TokenType2["Continue"] = "Continue";
   TokenType2["LBrace"] = "LBrace";
   TokenType2["RBrace"] = "RBrace";
   TokenType2["LParen"] = "LParen";
@@ -148,6 +152,8 @@ var KEYWORDS = {
   try: "Try" /* Try */,
   catch: "Catch" /* Catch */,
   assert: "Assert" /* Assert */,
+  break: "Break" /* Break */,
+  continue: "Continue" /* Continue */,
   true: "Boolean" /* Boolean */,
   false: "Boolean" /* Boolean */,
   null: "Null" /* Null */
@@ -566,7 +572,7 @@ var BlockNode = class extends BaseNode {
     let index = 0;
     const run = () => {
       while (index < this.statements.length) {
-        if (context.returning) {
+        if (context.returning || context.breaking || context.continuing) {
           break;
         }
         const statement = this.statements[index];
@@ -886,6 +892,24 @@ var ReturnNode = class extends BaseNode {
     });
   }
 };
+var BreakNode = class extends BaseNode {
+  constructor() {
+    super("Break");
+  }
+  evaluate(context) {
+    context.breaking = true;
+    return void 0;
+  }
+};
+var ContinueNode = class extends BaseNode {
+  constructor() {
+    super("Continue");
+  }
+  evaluate(context) {
+    context.continuing = true;
+    return void 0;
+  }
+};
 var AssertError = class extends Error {
   constructor(message = "Assertion failed") {
     super(message);
@@ -945,7 +969,16 @@ var WhileNode = class extends BaseNode {
           return void 0;
         }
         const bodyResult = this.body.evaluate(context);
-        return resolveMaybe(bodyResult, () => run());
+        return resolveMaybe(bodyResult, () => {
+          if (context.breaking) {
+            context.breaking = false;
+            return void 0;
+          }
+          if (context.continuing) {
+            context.continuing = false;
+          }
+          return run();
+        });
       });
     };
     const result = run();
@@ -987,6 +1020,14 @@ var ForEachNode = class extends BaseNode {
         context.scope?.setPath?.(this.target.name, value);
         const bodyResult = this.body.evaluate(context);
         return resolveMaybe(bodyResult, () => {
+          if (context.breaking) {
+            context.breaking = false;
+            context.scope = previousScope;
+            return void 0;
+          }
+          if (context.continuing) {
+            context.continuing = false;
+          }
           context.scope = previousScope;
           return loop();
         });
@@ -1046,7 +1087,15 @@ var ForNode = class extends BaseNode {
               context.scope = previousScope;
               return void 0;
             }
+            if (context.breaking) {
+              context.breaking = false;
+              context.scope = previousScope;
+              return void 0;
+            }
             context.scope = previousScope;
+            if (context.continuing) {
+              context.continuing = false;
+            }
             const updateResult = this.update ? this.update.evaluate(context) : void 0;
             return resolveMaybe(updateResult, () => loop());
           });
@@ -1132,7 +1181,9 @@ var FunctionExpression = class extends BaseNode {
           ...globals ? { globals } : {},
           ...element ? { element } : {},
           returnValue: void 0,
-          returning: false
+          returning: false,
+          breaking: false,
+          continuing: false
         };
         const previousValues = /* @__PURE__ */ new Map();
         const applyResult = activeScope ? this.applyParams(activeScope, previousValues, inner, args) : void 0;
@@ -1153,7 +1204,9 @@ var FunctionExpression = class extends BaseNode {
         ...globals ? { globals } : {},
         ...element ? { element } : {},
         returnValue: void 0,
-        returning: false
+        returning: false,
+        breaking: false,
+        continuing: false
       };
       const previousValues = /* @__PURE__ */ new Map();
       const applyResult = activeScope ? this.applyParams(activeScope, previousValues, inner, args) : void 0;
@@ -2125,6 +2178,12 @@ ${caret}`;
     }
     if (next.type === "Assert" /* Assert */) {
       return this.parseAssertStatement();
+    }
+    if (next.type === "Break" /* Break */) {
+      return this.parseBreakStatement();
+    }
+    if (next.type === "Continue" /* Continue */) {
+      return this.parseContinueStatement();
     }
     if (allowBlocks && next.type === "On" /* On */) {
       return this.parseOnBlock();
@@ -3524,6 +3583,16 @@ ${caret}`;
     const test = this.parseExpression();
     this.consumeStatementTerminator();
     return new AssertNode(test);
+  }
+  parseBreakStatement() {
+    this.stream.expect("Break" /* Break */);
+    this.consumeStatementTerminator();
+    return new BreakNode();
+  }
+  parseContinueStatement() {
+    this.stream.expect("Continue" /* Continue */);
+    this.consumeStatementTerminator();
+    return new ContinueNode();
   }
   parseArrowFunctionExpression(isAsync = false) {
     const params = this.parseFunctionParams();
@@ -5496,6 +5565,9 @@ var Engine = class _Engine {
         test: this.normalizeNode(node.test)
       };
     }
+    if (type === "Break" || type === "Continue") {
+      return { type };
+    }
     if (type === "If") {
       return {
         type,
@@ -5651,7 +5723,9 @@ var Engine = class _Engine {
         globals: this.globals,
         element,
         returnValue: void 0,
-        returning: false
+        returning: false,
+        breaking: false,
+        continuing: false
       };
       const previousValues = /* @__PURE__ */ new Map();
       await this.applyFunctionParams(callScope, declaration.params, previousValues, context, args);
@@ -6215,7 +6289,9 @@ if (typeof document !== "undefined") {
   BehaviorNode,
   BinaryExpression,
   BlockNode,
+  BreakNode,
   CallExpression,
+  ContinueNode,
   DeclarationNode,
   DirectiveExpression,
   Engine,

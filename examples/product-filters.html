@@ -524,8 +524,10 @@ behavior #product-filters-app {
       active = true;
 
       for (tag of tags) {
-        if (product.tags.indexOf(tag) === -1)
+        if (product.tags.indexOf(tag) === -1) {
           active = false;
+          break;
+        }
       }
 
       product.active = active;
