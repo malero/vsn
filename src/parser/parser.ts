@@ -26,6 +26,7 @@ import {
   SpreadElement,
   TemplateExpression,
   ForNode,
+  ForEachNode,
   IfNode,
   TryNode,
   WhileNode,
@@ -1634,7 +1635,7 @@ export class Parser {
     const test = this.parseExpression();
     this.stream.skipWhitespace();
     this.stream.expect(TokenType.RParen);
-    const consequent = this.parseBlock({ allowDeclarations: false });
+    const consequent = this.parseConditionalBody();
     this.stream.skipWhitespace();
     let alternate: BlockNode | undefined;
     if (this.stream.peek()?.type === TokenType.Else) {
@@ -1644,10 +1645,19 @@ export class Parser {
         const nested = this.parseIfBlock();
         alternate = new BlockNode([nested]);
       } else {
-        alternate = this.parseBlock({ allowDeclarations: false });
+        alternate = this.parseConditionalBody();
       }
     }
     return new IfNode(test, consequent, alternate);
+  }
+
+  private parseConditionalBody(): BlockNode {
+    this.stream.skipWhitespace();
+    if (this.stream.peek()?.type === TokenType.LBrace) {
+      return this.parseBlock({ allowDeclarations: false });
+    }
+    const statement = this.parseStatement({ allowBlocks: false, allowReturn: this.functionDepth > 0 });
+    return new BlockNode([statement]);
   }
 
   private parseWhileBlock(): WhileNode {
@@ -1662,11 +1672,26 @@ export class Parser {
     return new WhileNode(test, body);
   }
 
-  private parseForBlock(): ForNode {
+  private parseForBlock(): ForNode | ForEachNode {
     this.stream.expect(TokenType.For);
     this.stream.skipWhitespace();
     this.stream.expect(TokenType.LParen);
     this.stream.skipWhitespace();
+    const eachKind = this.detectForEachKind();
+    if (eachKind) {
+      const target = this.parseForEachTarget();
+      this.stream.skipWhitespace();
+      const keyword = this.stream.expect(TokenType.Identifier);
+      if (keyword.value !== eachKind) {
+        throw new Error(`Expected '${eachKind}' but got '${keyword.value}'`);
+      }
+      this.stream.skipWhitespace();
+      const iterable = this.parseExpression();
+      this.stream.skipWhitespace();
+      this.stream.expect(TokenType.RParen);
+      const body = this.parseBlock({ allowDeclarations: false });
+      return new ForEachNode(target, iterable, eachKind, body);
+    }
     let init: CFSNode | undefined;
     if (this.stream.peek()?.type !== TokenType.Semicolon) {
       init = this.parseForClause();
@@ -1689,6 +1714,52 @@ export class Parser {
     this.stream.expect(TokenType.RParen);
     const body = this.parseBlock({ allowDeclarations: false });
     return new ForNode(init, test, update, body);
+  }
+
+  private detectForEachKind(): "in" | "of" | null {
+    let offset = 0;
+    let depth = 0;
+    while (true) {
+      const token = this.stream.peekNonWhitespace(offset);
+      if (!token) {
+        return null;
+      }
+      if (token.type === TokenType.LParen || token.type === TokenType.LBracket || token.type === TokenType.LBrace) {
+        depth += 1;
+      } else if (
+        token.type === TokenType.RParen
+        || token.type === TokenType.RBracket
+        || token.type === TokenType.RBrace
+      ) {
+        if (depth === 0) {
+          return null;
+        }
+        depth -= 1;
+      }
+      if (depth === 0) {
+        if (token.type === TokenType.Semicolon) {
+          return null;
+        }
+        if (
+          token.type === TokenType.Identifier
+          && (token.value === "in" || token.value === "of")
+        ) {
+          return token.value;
+        }
+      }
+      offset += 1;
+    }
+  }
+
+  private parseForEachTarget(): IdentifierExpression {
+    const token = this.stream.peek();
+    if (!token) {
+      throw new Error("Expected for-each target");
+    }
+    if (token.type !== TokenType.Identifier) {
+      throw new Error("for-in/of target must be an identifier");
+    }
+    return new IdentifierExpression(this.stream.next().value);
   }
 
   private parseForClause(): CFSNode {

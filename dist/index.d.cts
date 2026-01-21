@@ -213,6 +213,15 @@ declare class WhileNode extends BaseNode {
     constructor(test: ExpressionNode, body: BlockNode);
     evaluate(context: ExecutionContext): any;
 }
+declare class ForEachNode extends BaseNode {
+    target: IdentifierExpression;
+    iterable: ExpressionNode;
+    kind: "in" | "of";
+    body: BlockNode;
+    constructor(target: IdentifierExpression, iterable: ExpressionNode, kind: "in" | "of", body: BlockNode);
+    evaluate(context: ExecutionContext): any;
+    private getEntries;
+}
 declare class ForNode extends BaseNode {
     init: CFSNode | undefined;
     test: ExpressionNode | undefined;
@@ -485,8 +494,11 @@ declare class Parser {
     private isFunctionExpressionAssignmentStart;
     private parseExpressionStatement;
     private parseIfBlock;
+    private parseConditionalBody;
     private parseWhileBlock;
     private parseForBlock;
+    private detectForEachKind;
+    private parseForEachTarget;
     private parseForClause;
     private parseAssignmentExpression;
     private parseAssignmentOperator;
@@ -762,4 +774,4 @@ declare const VERSION = "0.1.0";
 declare function parseCFS(source: string): ProgramNode;
 declare function autoMount(root?: HTMLElement | Document): Engine | null;
 
-export { type ArrayElement, ArrayExpression, ArrayPattern, type ArrayPatternElement, AssertError, AssertNode, AssignmentNode, type AssignmentTarget, AwaitExpression, BaseNode, type BehaviorFlagArgs, type BehaviorFlags, BehaviorNode, BinaryExpression, BlockNode, type CFSNode, CallExpression, type DeclarationFlagArgs, type DeclarationFlags, DeclarationNode, type DeclarationTarget, DirectiveExpression, Engine, type ExecutionContext, type ExpressionNode, ForNode, FunctionDeclarationNode, FunctionExpression, type FunctionParam, IdentifierExpression, IfNode, IndexExpression, Lexer, LiteralExpression, MemberExpression, type ObjectEntry, ObjectExpression, ObjectPattern, type ObjectPatternEntry, OnBlockNode, Parser, type PatternNode, ProgramNode, QueryExpression, RestElement, ReturnNode, SelectorNode, SpreadElement, TemplateExpression, TernaryExpression, TokenType, TryNode, UnaryExpression, type UseFlagArgs, type UseFlags, UseNode, VERSION, WhileNode, autoMount, parseCFS };
+export { type ArrayElement, ArrayExpression, ArrayPattern, type ArrayPatternElement, AssertError, AssertNode, AssignmentNode, type AssignmentTarget, AwaitExpression, BaseNode, type BehaviorFlagArgs, type BehaviorFlags, BehaviorNode, BinaryExpression, BlockNode, type CFSNode, CallExpression, type DeclarationFlagArgs, type DeclarationFlags, DeclarationNode, type DeclarationTarget, DirectiveExpression, Engine, type ExecutionContext, type ExpressionNode, ForEachNode, ForNode, FunctionDeclarationNode, FunctionExpression, type FunctionParam, IdentifierExpression, IfNode, IndexExpression, Lexer, LiteralExpression, MemberExpression, type ObjectEntry, ObjectExpression, ObjectPattern, type ObjectPatternEntry, OnBlockNode, Parser, type PatternNode, ProgramNode, QueryExpression, RestElement, ReturnNode, SelectorNode, SpreadElement, TemplateExpression, TernaryExpression, TokenType, TryNode, UnaryExpression, type UseFlagArgs, type UseFlags, UseNode, VERSION, WhileNode, autoMount, parseCFS };

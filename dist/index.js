@@ -889,6 +889,64 @@ var WhileNode = class extends BaseNode {
     return result;
   }
 };
+var ForEachNode = class extends BaseNode {
+  constructor(target, iterable, kind, body) {
+    super("ForEach");
+    this.target = target;
+    this.iterable = iterable;
+    this.kind = kind;
+    this.body = body;
+  }
+  evaluate(context) {
+    const iterableValue = this.iterable.evaluate(context);
+    return resolveMaybe(iterableValue, (resolved) => {
+      const entries = this.getEntries(resolved);
+      const previousScope = context.scope;
+      let bodyScope = context.scope;
+      if (context.scope?.createChild) {
+        bodyScope = context.scope.createChild();
+      }
+      let index = 0;
+      const loop = () => {
+        if (index >= entries.length || context.returning) {
+          context.scope = previousScope;
+          return void 0;
+        }
+        const value = entries[index];
+        index += 1;
+        context.scope = bodyScope;
+        context.scope?.setPath?.(this.target.name, value);
+        const bodyResult = this.body.evaluate(context);
+        return resolveMaybe(bodyResult, () => {
+          context.scope = previousScope;
+          return loop();
+        });
+      };
+      return loop();
+    });
+  }
+  getEntries(value) {
+    if (value == null) {
+      return [];
+    }
+    if (this.kind === "in") {
+      if (typeof value === "object") {
+        return Object.keys(value);
+      }
+      return [];
+    }
+    if (typeof value === "string") {
+      return Array.from(value);
+    }
+    if (typeof value[Symbol.iterator] === "function") {
+      return Array.from(value);
+    }
+    if (typeof value === "object") {
+      return Object.values(value);
+    }
+    return [];
+  }
+};
 var ForNode = class extends BaseNode {
   constructor(init, test, update, body) {
     super("For");
@@ -3170,7 +3228,7 @@ ${caret}`;
     const test = this.parseExpression();
     this.stream.skipWhitespace();
     this.stream.expect("RParen" /* RParen */);
-    const consequent = this.parseBlock({ allowDeclarations: false });
+    const consequent = this.parseConditionalBody();
     this.stream.skipWhitespace();
     let alternate;
     if (this.stream.peek()?.type === "Else" /* Else */) {
@@ -3180,10 +3238,18 @@ ${caret}`;
         const nested = this.parseIfBlock();
         alternate = new BlockNode([nested]);
       } else {
-        alternate = this.parseBlock({ allowDeclarations: false });
+        alternate = this.parseConditionalBody();
       }
     }
     return new IfNode(test, consequent, alternate);
+  }
+  parseConditionalBody() {
+    this.stream.skipWhitespace();
+    if (this.stream.peek()?.type === "LBrace" /* LBrace */) {
+      return this.parseBlock({ allowDeclarations: false });
+    }
+    const statement = this.parseStatement({ allowBlocks: false, allowReturn: this.functionDepth > 0 });
+    return new BlockNode([statement]);
   }
   parseWhileBlock() {
     this.stream.expect("While" /* While */);
@@ -3201,6 +3267,21 @@ ${caret}`;
     this.stream.skipWhitespace();
     this.stream.expect("LParen" /* LParen */);
     this.stream.skipWhitespace();
+    const eachKind = this.detectForEachKind();
+    if (eachKind) {
+      const target = this.parseForEachTarget();
+      this.stream.skipWhitespace();
+      const keyword = this.stream.expect("Identifier" /* Identifier */);
+      if (keyword.value !== eachKind) {
+        throw new Error(`Expected '${eachKind}' but got '${keyword.value}'`);
+      }
+      this.stream.skipWhitespace();
+      const iterable = this.parseExpression();
+      this.stream.skipWhitespace();
+      this.stream.expect("RParen" /* RParen */);
+      const body2 = this.parseBlock({ allowDeclarations: false });
+      return new ForEachNode(target, iterable, eachKind, body2);
+    }
     let init;
     if (this.stream.peek()?.type !== "Semicolon" /* Semicolon */) {
       init = this.parseForClause();
@@ -3223,6 +3304,43 @@ ${caret}`;
     this.stream.expect("RParen" /* RParen */);
     const body = this.parseBlock({ allowDeclarations: false });
     return new ForNode(init, test, update, body);
+  }
+  detectForEachKind() {
+    let offset = 0;
+    let depth = 0;
+    while (true) {
+      const token = this.stream.peekNonWhitespace(offset);
+      if (!token) {
+        return null;
+      }
+      if (token.type === "LParen" /* LParen */ || token.type === "LBracket" /* LBracket */ || token.type === "LBrace" /* LBrace */) {
+        depth += 1;
+      } else if (token.type === "RParen" /* RParen */ || token.type === "RBracket" /* RBracket */ || token.type === "RBrace" /* RBrace */) {
+        if (depth === 0) {
+          return null;
+        }
+        depth -= 1;
+      }
+      if (depth === 0) {
+        if (token.type === "Semicolon" /* Semicolon */) {
+          return null;
+        }
+        if (token.type === "Identifier" /* Identifier */ && (token.value === "in" || token.value === "of")) {
+          return token.value;
+        }
+      }
+      offset += 1;
+    }
+  }
+  parseForEachTarget() {
+    const token = this.stream.peek();
+    if (!token) {
+      throw new Error("Expected for-each target");
+    }
+    if (token.type !== "Identifier" /* Identifier */) {
+      throw new Error("for-in/of target must be an identifier");
+    }
+    return new IdentifierExpression(this.stream.next().value);
   }
   parseForClause() {
     if (this.isAssignmentStart()) {
@@ -5333,6 +5451,15 @@ var Engine = class _Engine {
         body: this.normalizeNode(node.body)
       };
     }
+    if (type === "ForEach") {
+      return {
+        type,
+        kind: node.kind ?? "of",
+        target: this.normalizeNode(node.target),
+        iterable: this.normalizeNode(node.iterable),
+        body: this.normalizeNode(node.body)
+      };
+    }
     if (type === "Try") {
       return {
         type,
@@ -6022,6 +6149,7 @@ export {
   DeclarationNode,
   DirectiveExpression,
   Engine,
+  ForEachNode,
   ForNode,
   FunctionDeclarationNode,
   FunctionExpression,

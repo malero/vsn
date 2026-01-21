@@ -514,27 +514,23 @@ behavior #product-filters-app {
     visibleProducts = 0;
     tags = [];
 
-    for (i = 0; i < filterGroups.length; i++) {
-      tag = filterGroups[i].filter;
-      if (tag) {
+    for (group of filterGroups) {
+      tag = group.filter;
+      if (tag)
         tags.push(tag);
-      }
     }
 
-    for (i = 0; i < products.length; i++) {
-      product = products[i];
+    for (product of products) {
       active = true;
 
-      for (j = 0; j < tags.length; j++) {
-        if (product.tags.indexOf(tags[j]) === -1) {
+      for (tag of tags) {
+        if (product.tags.indexOf(tag) === -1)
           active = false;
-        }
       }
 
       product.active = active;
-      if (product.active) {
+      if (product.active)
         visibleProducts++;
-      }
     }
 
     activeFiltersTags = "Filtered by " + tags.join(" / ");
@@ -543,8 +539,8 @@ behavior #product-filters-app {
   }
 
   clearFilters() {
-    for (i = 0; i < filterGroups.length; i++) {
-      filterGroups[i].filter = null;
+    for (group of filterGroups) {
+      group.filter = null;
     }
     updateVisible();
   }

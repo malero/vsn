@@ -1928,6 +1928,15 @@ export class Engine {
         body: this.normalizeNode(node.body)
       };
     }
+    if (type === "ForEach") {
+      return {
+        type,
+        kind: node.kind ?? "of",
+        target: this.normalizeNode(node.target),
+        iterable: this.normalizeNode(node.iterable),
+        body: this.normalizeNode(node.body)
+      };
+    }
     if (type === "Try") {
       return {
         type,

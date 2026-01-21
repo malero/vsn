@@ -509,6 +509,68 @@ export class WhileNode extends BaseNode {
   }
 }
 
+export class ForEachNode extends BaseNode {
+  constructor(
+    public target: IdentifierExpression,
+    public iterable: ExpressionNode,
+    public kind: "in" | "of",
+    public body: BlockNode
+  ) {
+    super("ForEach");
+  }
+
+  evaluate(context: ExecutionContext): any {
+    const iterableValue = this.iterable.evaluate(context);
+    return resolveMaybe(iterableValue, (resolved) => {
+      const entries = this.getEntries(resolved);
+      const previousScope = context.scope;
+      let bodyScope = context.scope;
+      if (context.scope?.createChild) {
+        bodyScope = context.scope.createChild();
+      }
+      let index = 0;
+      const loop = (): any => {
+        if (index >= entries.length || context.returning) {
+          context.scope = previousScope;
+          return undefined;
+        }
+        const value = entries[index]!;
+        index += 1;
+        context.scope = bodyScope;
+        context.scope?.setPath?.(this.target.name, value);
+        const bodyResult = this.body.evaluate(context);
+        return resolveMaybe(bodyResult, () => {
+          context.scope = previousScope;
+          return loop();
+        });
+      };
+      return loop();
+    });
+  }
+
+  private getEntries(value: any): any[] {
+    if (value == null) {
+      return [];
+    }
+    if (this.kind === "in") {
+      if (typeof value === "object") {
+        return Object.keys(value);
+      }
+      return [];
+    }
+    if (typeof value === "string") {
+      return Array.from(value);
+    }
+    if (typeof value[Symbol.iterator] === "function") {
+      return Array.from(value as Iterable<any>);
+    }
+    if (typeof value === "object") {
+      return Object.values(value);
+    }
+    return [];
+  }
+}
+
 export class ForNode extends BaseNode {
   constructor(
     public init: CFSNode | undefined,
