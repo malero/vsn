@@ -9,7 +9,7 @@ describe("parser declarations", () => {
   @aria-pressed := active !debounce(50);
   $background-color :< theme.cardBg;
   @data-id :> id !debounce;
-  @html : response !trusted;
+  @html : response;
 
   construct { }
   on click() { active = !active; }
@@ -35,7 +35,6 @@ describe("parser declarations", () => {
     expect(statements[3].flagArgs.debounce).toBe(undefined);
 
     expect(statements[4].target.type).toBe("Directive");
-    expect(statements[4].flags.trusted).toBe(true);
   });
 
   it("rejects declarations after construct/on blocks", () => {

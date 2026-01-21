@@ -64,7 +64,7 @@ export class Parser {
 
   constructor(input: string, options?: { customFlags?: Set<string>; behaviorFlags?: Set<string> }) {
     this.source = input;
-    this.customFlags = options?.customFlags ?? new Set<string>(["important", "trusted", "debounce"]);
+    this.customFlags = options?.customFlags ?? new Set<string>(["important", "debounce"]);
     this.behaviorFlags = options?.behaviorFlags ?? new Set<string>();
     const lexer = new Lexer(input);
     this.stream = new TokenStream(lexer.tokenize());

@@ -79,7 +79,6 @@ declare class FunctionExpression extends BaseNode {
 }
 interface DeclarationFlags {
     important?: boolean;
-    trusted?: boolean;
     debounce?: boolean;
     [key: string]: boolean | undefined;
 }
@@ -472,7 +471,7 @@ declare class Engine {
     private applyValueBindingToScope;
     private setDirectiveValue;
     private getDirectiveValue;
-    private handleTrustedHtml;
+    private handleHtmlBehaviors;
     private registerDefaultAttributeHandlers;
 }
 

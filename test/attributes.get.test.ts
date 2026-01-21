@@ -74,9 +74,9 @@ describe("vsn-get", () => {
     expect(panel.innerHTML).toContain("<button");
   });
 
-  it("parses behaviors when vsn-get is trusted", async () => {
+  it("parses behaviors from vsn-get html", async () => {
     document.body.innerHTML = `
-      <div id="panel" vsn-get!trusted="/test"></div>
+      <div id="panel" vsn-get="/test"></div>
     `;
 
     const engine = new Engine();
@@ -104,9 +104,9 @@ describe("vsn-get", () => {
     expect(scope.get("ready")).toBe(true);
   });
 
-  it("emits vsn:getError when trusted HTML contains invalid CFS", async () => {
+  it("emits vsn:getError when HTML contains invalid CFS", async () => {
     document.body.innerHTML = `
-      <div id="panel" vsn-get!trusted="/bad"></div>
+      <div id="panel" vsn-get="/bad"></div>
     `;
 
     const engine = new Engine();

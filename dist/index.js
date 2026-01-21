@@ -1862,7 +1862,7 @@ var Parser = class _Parser {
   functionDepth = 0;
   constructor(input, options) {
     this.source = input;
-    this.customFlags = options?.customFlags ?? /* @__PURE__ */ new Set(["important", "trusted", "debounce"]);
+    this.customFlags = options?.customFlags ?? /* @__PURE__ */ new Set(["important", "debounce"]);
     this.behaviorFlags = options?.behaviorFlags ?? /* @__PURE__ */ new Set();
     const lexer = new Lexer(input);
     this.stream = new TokenStream(lexer.tokenize());
@@ -3861,17 +3861,14 @@ function applyShow(element, expression, scope) {
 }
 
 // src/runtime/html.ts
-function sanitizeHtml(value) {
-  return value.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, "");
-}
-function applyHtml(element, expression, scope, trusted) {
+function applyHtml(element, expression, scope) {
   const key = expression.trim();
   if (!key) {
     return;
   }
   const value = scope.get(key);
   const html = value == null ? "" : String(value);
-  element.innerHTML = trusted ? html : sanitizeHtml(html);
+  element.innerHTML = html;
 }
 
 // src/runtime/http.ts
@@ -3891,7 +3888,7 @@ async function applyGet(element, config, scope, onHtmlApplied) {
   }
   if (config.swap === "outer") {
     const wrapper = document.createElement("div");
-    applyHtml(wrapper, "__html", { get: () => html }, config.trusted);
+    applyHtml(wrapper, "__html", { get: () => html });
     const replacement = wrapper.firstElementChild;
     if (replacement && target.parentNode) {
       target.parentNode.replaceChild(replacement, target);
@@ -3899,7 +3896,7 @@ async function applyGet(element, config, scope, onHtmlApplied) {
     }
     return;
   }
-  applyHtml(target, "__html", { get: () => html }, config.trusted);
+  applyHtml(target, "__html", { get: () => html });
   onHtmlApplied?.(target);
 }
 function resolveTarget(element, selector) {
@@ -3965,7 +3962,6 @@ var Engine = class _Engine {
     this.logger = options.logger ?? console;
     this.registerGlobal("console", console);
     this.registerFlag("important");
-    this.registerFlag("trusted");
     this.registerFlag("debounce", {
       onEventBind: ({ args }) => ({
         debounceMs: typeof args === "number" ? args : 200
@@ -4252,7 +4248,7 @@ var Engine = class _Engine {
     this.flagHandlers.set(name, handler);
   }
   registerBehaviorModifier(name, handler = {}) {
-    const reserved = /* @__PURE__ */ new Set(["important", "trusted", "debounce"]);
+    const reserved = /* @__PURE__ */ new Set(["important", "debounce"]);
     if (reserved.has(name)) {
       throw new Error(`Behavior modifier '${name}' is reserved`);
     }
@@ -4354,10 +4350,8 @@ var Engine = class _Engine {
     }
     const htmlBinding = this.htmlBindings.get(element);
     if (htmlBinding && element instanceof HTMLElement) {
-      applyHtml(element, htmlBinding.expr, scope, htmlBinding.trusted);
-      if (htmlBinding.trusted) {
-        this.handleTrustedHtml(element);
-      }
+      applyHtml(element, htmlBinding.expr, scope);
+      this.handleHtmlBehaviors(element);
     }
   }
   attachObserver(root) {
@@ -5036,9 +5030,7 @@ var Engine = class _Engine {
       }
       try {
         await applyGet(element, config, this.getScope(element), (target) => {
-          if (config.trusted) {
-            this.handleTrustedHtml(target);
-          }
+          this.handleHtmlBehaviors(target);
         });
       } catch (error) {
         console.warn("vsn:getError", error);
@@ -5743,7 +5735,7 @@ var Engine = class _Engine {
     if (!exprIdentifier) {
       const value = await declaration.value.evaluate(context);
       const transformed = this.applyCustomFlagTransforms(value, element, scope, declaration);
-      this.setDirectiveValue(element, target, transformed, declaration.flags.trusted);
+      this.setDirectiveValue(element, target, transformed);
       const shouldWatch2 = operator === ":<" || operator === ":=";
       if (shouldWatch2) {
         this.applyDirectiveFromExpression(
@@ -5751,7 +5743,6 @@ var Engine = class _Engine {
           target,
           declaration.value,
           scope,
-          declaration.flags.trusted,
           debounceMs,
           rootScope
         );
@@ -5767,7 +5758,6 @@ var Engine = class _Engine {
       target,
       exprIdentifier,
       scope,
-      declaration.flags.trusted,
       debounceMs,
       shouldWatch,
       rootScope
@@ -5850,18 +5840,16 @@ var Engine = class _Engine {
     }
     return false;
   }
-  applyDirectiveFromScope(element, target, expr, scope, trusted, debounceMs, watch = true, rootScope) {
+  applyDirectiveFromScope(element, target, expr, scope, debounceMs, watch = true, rootScope) {
     if (target.kind === "attr" && target.name === "html" && element instanceof HTMLElement) {
       const handler2 = () => {
         const useRoot = expr.startsWith("root.") && rootScope;
         const sourceScope = useRoot ? rootScope : scope;
         const localExpr = useRoot ? `self.${expr.slice("root.".length)}` : expr;
-        applyHtml(element, localExpr, sourceScope, Boolean(trusted));
+        applyHtml(element, localExpr, sourceScope);
       };
       handler2();
-      if (trusted) {
-        this.handleTrustedHtml(element);
-      }
+      this.handleHtmlBehaviors(element);
       if (watch) {
         const useRoot = expr.startsWith("root.") && rootScope;
         const sourceScope = useRoot ? rootScope : scope;
@@ -5878,7 +5866,7 @@ var Engine = class _Engine {
       if (value == null) {
         return;
       }
-      this.setDirectiveValue(element, target, value, trusted);
+      this.setDirectiveValue(element, target, value);
     };
     handler();
     if (watch) {
@@ -5888,11 +5876,11 @@ var Engine = class _Engine {
       this.watchWithDebounce(sourceScope, watchExpr, handler, debounceMs, element);
     }
   }
-  applyDirectiveFromExpression(element, target, expr, scope, trusted, debounceMs, rootScope) {
+  applyDirectiveFromExpression(element, target, expr, scope, debounceMs, rootScope) {
     const handler = async () => {
       const context = { scope, rootScope, element };
       const value = await expr.evaluate(context);
-      this.setDirectiveValue(element, target, value, trusted);
+      this.setDirectiveValue(element, target, value);
     };
     void handler();
     this.watchAllScopes(scope, () => {
@@ -5946,13 +5934,11 @@ var Engine = class _Engine {
     element.addEventListener("input", effectiveHandler);
     element.addEventListener("change", effectiveHandler);
   }
-  setDirectiveValue(element, target, value, trusted) {
+  setDirectiveValue(element, target, value) {
     if (target.kind === "attr" && target.name === "html" && element instanceof HTMLElement) {
       const html = value == null ? "" : String(value);
-      element.innerHTML = trusted ? html : html.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, "");
-      if (trusted) {
-        this.handleTrustedHtml(element);
-      }
+      element.innerHTML = html;
+      this.handleHtmlBehaviors(element);
       return;
     }
     if (target.kind === "attr") {
@@ -6018,7 +6004,7 @@ var Engine = class _Engine {
     }
     return void 0;
   }
-  handleTrustedHtml(root) {
+  handleHtmlBehaviors(root) {
     const scripts = Array.from(root.querySelectorAll('script[type="text/vsn"]'));
     if (scripts.length === 0) {
       return;
@@ -6084,15 +6070,12 @@ var Engine = class _Engine {
     this.registerAttributeHandler({
       id: "vsn-html",
       match: (name) => name.startsWith("vsn-html"),
-      handle: (element, name, value, scope) => {
-        const trusted = name.includes("!trusted");
-        this.htmlBindings.set(element, { expr: value, trusted });
+      handle: (element, _name, value, scope) => {
+        this.htmlBindings.set(element, { expr: value });
         this.markInlineDeclaration(element, "attr:html");
         if (element instanceof HTMLElement) {
-          applyHtml(element, value, scope, trusted);
-          if (trusted) {
-            this.handleTrustedHtml(element);
-          }
+          applyHtml(element, value, scope);
+          this.handleHtmlBehaviors(element);
         }
         this.watch(scope, value, () => this.evaluate(element), element);
       }
@@ -6114,7 +6097,6 @@ var Engine = class _Engine {
       id: "vsn-get",
       match: (name) => name.startsWith("vsn-get"),
       handle: (element, name) => {
-        const trusted = name.includes("!trusted");
         const autoLoad = name.includes("!load");
         const url = element.getAttribute(name) ?? "";
         const target = element.getAttribute("vsn-target") ?? void 0;
@@ -6122,7 +6104,6 @@ var Engine = class _Engine {
         const config = {
           url,
           swap,
-          trusted,
           ...target ? { targetSelector: target } : {}
         };
         this.getBindings.set(element, config);

@@ -860,7 +860,6 @@ export class FunctionExpression extends BaseNode {
 
 export interface DeclarationFlags {
   important?: boolean;
-  trusted?: boolean;
   debounce?: boolean;
   [key: string]: boolean | undefined;
 }

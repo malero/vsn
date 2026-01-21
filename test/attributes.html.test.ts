@@ -20,33 +20,27 @@ describe("vsn-html", () => {
     expect(element.innerHTML).toBe("<span>Hi</span>");
   });
 
-  it("sanitizes html unless trusted", async () => {
+  it("does not sanitize html by default", async () => {
     document.body.innerHTML = `
-      <div id="safe" vsn-html="content"></div>
-      <div id="trusted" vsn-html!trusted="content"></div>
+      <div id="host" vsn-html="content"></div>
     `;
 
     const engine = new Engine();
     await engine.mount(document.body);
 
-    const safe = document.getElementById("safe") as HTMLDivElement;
-    const trusted = document.getElementById("trusted") as HTMLDivElement;
-    const safeScope = engine.getScope(safe);
-    const trustedScope = engine.getScope(trusted);
+    const host = document.getElementById("host") as HTMLDivElement;
+    const scope = engine.getScope(host);
 
-    safeScope.set("content", "<script>bad()</script><span>Ok</span>");
-    trustedScope.set("content", "<script>bad()</script><span>Ok</span>");
+    scope.set("content", "<script>bad()</script><span>Ok</span>");
 
-    engine.evaluate(safe);
-    engine.evaluate(trusted);
+    engine.evaluate(host);
 
-    expect(safe.innerHTML).toBe("<span>Ok</span>");
-    expect(trusted.innerHTML).toBe("<script>bad()</script><span>Ok</span>");
+    expect(host.innerHTML).toBe("<script>bad()</script><span>Ok</span>");
   });
 
-  it("parses behaviors in trusted html", async () => {
+  it("parses behaviors in html", async () => {
     document.body.innerHTML = `
-      <div id="host" vsn-html!trusted="content"></div>
+      <div id="host" vsn-html="content"></div>
     `;
 
     const engine = new Engine();

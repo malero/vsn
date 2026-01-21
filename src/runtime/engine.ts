@@ -155,7 +155,7 @@ export class Engine {
   private bindBindings = new WeakMap<Element, BindConfig>();
   private ifBindings = new WeakMap<Element, string>();
   private showBindings = new WeakMap<Element, string>();
-  private htmlBindings = new WeakMap<Element, { expr: string; trusted: boolean }>();
+  private htmlBindings = new WeakMap<Element, { expr: string }>();
   private getBindings = new WeakMap<Element, GetConfig>();
   private eachBindings = new WeakMap<Element, EachBinding>();
   private lifecycleBindings = new WeakMap<Element, LifecycleConfig>();
@@ -191,7 +191,6 @@ export class Engine {
     this.logger = options.logger ?? console;
     this.registerGlobal("console", console);
     this.registerFlag("important");
-    this.registerFlag("trusted");
     this.registerFlag("debounce", {
       onEventBind: ({ args }) => ({
         debounceMs: typeof args === "number" ? args : 200
@@ -492,7 +491,7 @@ export class Engine {
   }
 
   registerBehaviorModifier(name: string, handler: BehaviorModifierHandler = {}): void {
-    const reserved = new Set(["important", "trusted", "debounce"]);
+    const reserved = new Set(["important", "debounce"]);
     if (reserved.has(name)) {
       throw new Error(`Behavior modifier '${name}' is reserved`);
     }
@@ -602,10 +601,8 @@ export class Engine {
     }
     const htmlBinding = this.htmlBindings.get(element);
     if (htmlBinding && element instanceof HTMLElement) {
-      applyHtml(element, htmlBinding.expr, scope, htmlBinding.trusted);
-      if (htmlBinding.trusted) {
-        this.handleTrustedHtml(element);
-      }
+      applyHtml(element, htmlBinding.expr, scope);
+      this.handleHtmlBehaviors(element);
     }
   }
 
@@ -1382,9 +1379,7 @@ export class Engine {
       }
       try {
         await applyGet(element, config, this.getScope(element), (target) => {
-          if (config.trusted) {
-            this.handleTrustedHtml(target);
-          }
+          this.handleHtmlBehaviors(target);
         });
       } catch (error) {
         console.warn("vsn:getError", error);
@@ -2203,7 +2198,7 @@ export class Engine {
     if (!exprIdentifier) {
       const value = await declaration.value.evaluate(context);
       const transformed = this.applyCustomFlagTransforms(value, element, scope, declaration);
-      this.setDirectiveValue(element, target, transformed, declaration.flags.trusted);
+      this.setDirectiveValue(element, target, transformed);
       const shouldWatch = operator === ":<" || operator === ":=";
       if (shouldWatch) {
         this.applyDirectiveFromExpression(
@@ -2211,7 +2206,6 @@ export class Engine {
           target,
           declaration.value,
           scope,
-          declaration.flags.trusted,
           debounceMs,
           rootScope
         );
@@ -2228,7 +2222,6 @@ export class Engine {
       target,
       exprIdentifier,
       scope,
-      declaration.flags.trusted,
       debounceMs,
       shouldWatch,
       rootScope
@@ -2332,7 +2325,6 @@ export class Engine {
     target: DirectiveExpression,
     expr: string,
     scope: Scope,
-    trusted: boolean | undefined,
     debounceMs?: number,
     watch = true,
     rootScope?: Scope
@@ -2342,12 +2334,10 @@ export class Engine {
         const useRoot = expr.startsWith("root.") && rootScope;
         const sourceScope = useRoot ? rootScope : scope;
         const localExpr = useRoot ? `self.${expr.slice("root.".length)}` : expr;
-        applyHtml(element, localExpr, sourceScope, Boolean(trusted));
+        applyHtml(element, localExpr, sourceScope);
       };
       handler();
-      if (trusted) {
-        this.handleTrustedHtml(element);
-      }
+      this.handleHtmlBehaviors(element);
       if (watch) {
         const useRoot = expr.startsWith("root.") && rootScope;
         const sourceScope = useRoot ? rootScope : scope;
@@ -2364,7 +2354,7 @@ export class Engine {
       if (value == null) {
         return;
       }
-      this.setDirectiveValue(element, target, value, trusted);
+      this.setDirectiveValue(element, target, value);
     };
     handler();
     if (watch) {
@@ -2380,14 +2370,13 @@ export class Engine {
     target: DirectiveExpression,
     expr: ExpressionNode,
     scope: Scope,
-    trusted: boolean | undefined,
     debounceMs?: number,
     rootScope?: Scope
   ): void {
     const handler = async () => {
       const context: ExecutionContext = { scope, rootScope, element };
       const value = await expr.evaluate(context);
-      this.setDirectiveValue(element, target, value, trusted);
+      this.setDirectiveValue(element, target, value);
     };
     void handler();
     this.watchAllScopes(scope, () => {
@@ -2468,15 +2457,12 @@ export class Engine {
   private setDirectiveValue(
     element: Element,
     target: DirectiveExpression,
-    value: unknown,
-    trusted: boolean | undefined
+    value: unknown
   ): void {
     if (target.kind === "attr" && target.name === "html" && element instanceof HTMLElement) {
       const html = value == null ? "" : String(value);
-      element.innerHTML = trusted ? html : html.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, "");
-      if (trusted) {
-        this.handleTrustedHtml(element);
-      }
+      element.innerHTML = html;
+      this.handleHtmlBehaviors(element);
       return;
     }
     if (target.kind === "attr") {
@@ -2544,7 +2530,7 @@ export class Engine {
     return undefined;
   }
 
-  private handleTrustedHtml(root: Element): void {
+  private handleHtmlBehaviors(root: Element): void {
     const scripts = Array.from(root.querySelectorAll('script[type="text/vsn"]'));
     if (scripts.length === 0) {
       return;
@@ -2614,15 +2600,12 @@ export class Engine {
     this.registerAttributeHandler({
       id: "vsn-html",
       match: (name) => name.startsWith("vsn-html"),
-      handle: (element, name, value, scope) => {
-        const trusted = name.includes("!trusted");
-        this.htmlBindings.set(element, { expr: value, trusted });
+      handle: (element, _name, value, scope) => {
+        this.htmlBindings.set(element, { expr: value });
         this.markInlineDeclaration(element, "attr:html");
         if (element instanceof HTMLElement) {
-          applyHtml(element, value, scope, trusted);
-          if (trusted) {
-            this.handleTrustedHtml(element);
-          }
+          applyHtml(element, value, scope);
+          this.handleHtmlBehaviors(element);
         }
         this.watch(scope, value, () => this.evaluate(element), element);
       }
@@ -2646,7 +2629,6 @@ export class Engine {
       id: "vsn-get",
       match: (name) => name.startsWith("vsn-get"),
       handle: (element, name) => {
-        const trusted = name.includes("!trusted");
         const autoLoad = name.includes("!load");
         const url = element.getAttribute(name) ?? "";
         const target = element.getAttribute("vsn-target") ?? undefined;
@@ -2654,7 +2636,6 @@ export class Engine {
         const config: GetConfig = {
           url,
           swap,
-          trusted,
           ...(target ? { targetSelector: target } : {})
         };
         this.getBindings.set(element, config);
