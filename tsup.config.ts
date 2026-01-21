@@ -26,7 +26,24 @@ export default defineConfig([
     target: "es2022"
   },
   {
+    entry: ["src/plugins/sanitize-html.ts"],
+    format: ["esm"],
+    dts: true,
+    sourcemap: true,
+    outDir: "dist/plugins",
+    target: "es2022"
+  },
+  {
     entry: ["src/plugins/microdata.ts"],
+    format: ["esm"],
+    minify: true,
+    sourcemap: true,
+    outExtension: () => ({ js: ".min.js" }),
+    outDir: "dist/plugins",
+    target: "es2022"
+  },
+  {
+    entry: ["src/plugins/sanitize-html.ts"],
     format: ["esm"],
     minify: true,
     sourcemap: true,
