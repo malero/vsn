@@ -134,8 +134,20 @@ export class Lexer {
   private readIdentifier(): Token {
     const start = this.position();
     let value = "";
-    while (!this.eof() && (this.isAlphaNumeric(this.peek()) || this.peek() === "_" || this.peek() === "-")) {
-      value += this.next();
+    while (!this.eof()) {
+      const ch = this.peek();
+      if (this.isAlphaNumeric(ch) || ch === "_") {
+        value += this.next();
+        continue;
+      }
+      if (ch === "-") {
+        if (this.peek(1) === "-") {
+          break;
+        }
+        value += this.next();
+        continue;
+      }
+      break;
     }
 
     const keywordType = KEYWORDS[value];
@@ -282,6 +294,16 @@ export class Lexer {
       this.next();
       this.next();
       return this.token(TokenType.Pipe, "|>", start);
+    }
+    if (ch === "+" && next === "+") {
+      this.next();
+      this.next();
+      return this.token(TokenType.PlusPlus, "++", start);
+    }
+    if (ch === "-" && next === "-") {
+      this.next();
+      this.next();
+      return this.token(TokenType.MinusMinus, "--", start);
     }
     if (ch === "." && next === "." && this.peek(2) === ".") {
       this.next();

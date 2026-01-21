@@ -644,6 +644,11 @@ export class Parser {
     if (!token) {
       throw new Error("Expected expression");
     }
+    if (token.type === TokenType.PlusPlus || token.type === TokenType.MinusMinus) {
+      this.stream.next();
+      const argument = this.parseUnaryExpression();
+      return this.createIncrementNode(token, argument, true);
+    }
     if (token.type === TokenType.Bang) {
       this.stream.next();
       const argument = this.parseUnaryExpression();
@@ -659,7 +664,38 @@ export class Parser {
       const argument = this.parseUnaryExpression();
       return new AwaitExpression(argument);
     }
-    return this.parseCallExpression();
+    return this.parsePostfixExpression();
+  }
+
+  private parsePostfixExpression(): ExpressionNode {
+    let expr = this.parseCallExpression();
+    while (true) {
+      this.stream.skipWhitespace();
+      const token = this.stream.peek();
+      if (!token) {
+        break;
+      }
+      if (token.type === TokenType.PlusPlus || token.type === TokenType.MinusMinus) {
+        this.stream.next();
+        expr = this.createIncrementNode(token, expr, false);
+        continue;
+      }
+      break;
+    }
+    return expr;
+  }
+
+  private createIncrementNode(token: Token, argument: ExpressionNode, prefix: boolean): ExpressionNode {
+    if (
+      !(argument instanceof IdentifierExpression)
+      && !(argument instanceof MemberExpression)
+      && !(argument instanceof IndexExpression)
+      && !(argument instanceof DirectiveExpression)
+    ) {
+      throw new Error("Increment/decrement requires a mutable target");
+    }
+    const operator = token.type === TokenType.PlusPlus ? "++" : "--";
+    return new AssignmentNode(argument, new LiteralExpression(1), operator, prefix) as ExpressionNode;
   }
 
   private parseCallExpression(): ExpressionNode {
@@ -1414,18 +1450,27 @@ export class Parser {
 
     if (first.type === TokenType.Identifier) {
       let index = 1;
-      while (
-        this.stream.peekNonWhitespace(index)?.type === TokenType.Dot &&
-        this.stream.peekNonWhitespace(index + 1)?.type === TokenType.Identifier
-      ) {
-        index += 2;
-      }
-      while (this.stream.peekNonWhitespace(index)?.type === TokenType.LBracket) {
-        const indexAfter = this.stream.indexAfterDelimited(TokenType.LBracket, TokenType.RBracket, index);
-        if (indexAfter === null) {
+      while (true) {
+        const token = this.stream.peekNonWhitespace(index);
+        if (!token) {
           return false;
         }
-        index = indexAfter;
+        if (
+          token.type === TokenType.Dot &&
+          this.stream.peekNonWhitespace(index + 1)?.type === TokenType.Identifier
+        ) {
+          index += 2;
+          continue;
+        }
+        if (token.type === TokenType.LBracket) {
+          const indexAfter = this.stream.indexAfterDelimited(TokenType.LBracket, TokenType.RBracket, index);
+          if (indexAfter === null) {
+            return false;
+          }
+          index = indexAfter;
+          continue;
+        }
+        break;
       }
       return this.isAssignmentOperatorStart(index);
     }

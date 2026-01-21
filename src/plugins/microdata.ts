@@ -1,4 +1,4 @@
-import { Engine } from "../runtime/engine";
+import type { Engine } from "../runtime/engine";
 
 type MicrodataOptions = {
   key?: string;
@@ -47,8 +47,8 @@ plugins.microdata = (instance: Engine) => registerMicrodata(instance);
 globals.VSNPlugins = plugins;
 
 const autoEngine = globals.VSNEngine;
-if (autoEngine instanceof Engine) {
-  registerMicrodata(autoEngine);
+if (autoEngine && typeof autoEngine.registerBehaviorModifier === "function") {
+  registerMicrodata(autoEngine as Engine);
 }
 
 function normalizeOptions(value: any): MicrodataOptions {

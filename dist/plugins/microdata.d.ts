@@ -51,6 +51,21 @@ declare class BlockNode extends BaseNode {
     constructor(statements: CFSNode[]);
     evaluate(context: ExecutionContext): any;
 }
+declare class AssignmentNode extends BaseNode {
+    target: AssignmentTarget;
+    value: ExpressionNode;
+    operator: "=" | "+=" | "-=" | "*=" | "/=" | "++" | "--";
+    prefix: boolean;
+    constructor(target: AssignmentTarget, value: ExpressionNode, operator?: "=" | "+=" | "-=" | "*=" | "/=" | "++" | "--", prefix?: boolean);
+    evaluate(context: ExecutionContext): any;
+    private applyCompoundAssignment;
+    private applyIncrement;
+    private resolveAssignmentTarget;
+    private resolveIndexPath;
+    private resolveTargetPath;
+    private assignTarget;
+    private assignDirectiveTarget;
+}
 declare class FunctionExpression extends BaseNode {
     params: FunctionParam[];
     body: BlockNode;
@@ -84,13 +99,15 @@ declare class DeclarationNode extends BaseNode {
     flagArgs: DeclarationFlagArgs;
     constructor(target: DeclarationTarget, operator: ":" | ":=" | ":<" | ":>", value: ExpressionNode, flags: DeclarationFlags, flagArgs: DeclarationFlagArgs);
 }
-type ExpressionNode = IdentifierExpression | LiteralExpression | TemplateExpression | UnaryExpression | BinaryExpression | MemberExpression | CallExpression | ArrayExpression | ObjectExpression | IndexExpression | FunctionExpression | AwaitExpression | TernaryExpression | DirectiveExpression | QueryExpression;
+type ExpressionNode = AssignmentNode | IdentifierExpression | LiteralExpression | TemplateExpression | UnaryExpression | BinaryExpression | MemberExpression | CallExpression | ArrayExpression | ObjectExpression | IndexExpression | FunctionExpression | AwaitExpression | TernaryExpression | DirectiveExpression | QueryExpression;
 type DeclarationTarget = IdentifierExpression | DirectiveExpression;
+type AssignmentTarget = IdentifierExpression | MemberExpression | IndexExpression | DirectiveExpression | ArrayPattern | ObjectPattern;
 type FunctionParam = {
     name: string;
     defaultValue?: ExpressionNode;
     rest?: boolean;
 };
+type PatternNode = IdentifierExpression | ArrayPattern | ObjectPattern;
 declare class IdentifierExpression extends BaseNode {
     name: string;
     constructor(name: string);
@@ -99,6 +116,25 @@ declare class IdentifierExpression extends BaseNode {
 declare class SpreadElement extends BaseNode {
     value: ExpressionNode;
     constructor(value: ExpressionNode);
+}
+declare class RestElement extends BaseNode {
+    target: IdentifierExpression;
+    constructor(target: IdentifierExpression);
+}
+type ArrayPatternElement = PatternNode | RestElement | null;
+declare class ArrayPattern extends BaseNode {
+    elements: ArrayPatternElement[];
+    constructor(elements: ArrayPatternElement[]);
+}
+type ObjectPatternEntry = {
+    key: string;
+    target: PatternNode;
+} | {
+    rest: IdentifierExpression;
+};
+declare class ObjectPattern extends BaseNode {
+    entries: ObjectPatternEntry[];
+    constructor(entries: ObjectPatternEntry[]);
 }
 declare class LiteralExpression extends BaseNode {
     value: string | number | boolean | null;
@@ -188,6 +224,7 @@ declare class IndexExpression extends BaseNode {
     index: ExpressionNode;
     constructor(target: ExpressionNode, index: ExpressionNode);
     evaluate(context: ExecutionContext): any;
+    private normalizeIndexKey;
 }
 declare class DirectiveExpression extends BaseNode {
     kind: "attr" | "style";
@@ -209,8 +246,10 @@ declare class QueryExpression extends BaseNode {
 
 interface RegisteredBehavior {
     id: number;
+    hash: string;
     selector: string;
     rootSelector: string;
+    parentSelector?: string;
     specificity: number;
     order: number;
     construct?: BlockNode;
@@ -296,6 +335,7 @@ declare class Engine {
     private eachBindings;
     private lifecycleBindings;
     private behaviorRegistry;
+    private behaviorRegistryHashes;
     private behaviorBindings;
     private behaviorListeners;
     private behaviorId;
@@ -319,7 +359,10 @@ declare class Engine {
     private pendingAutoBindToScope;
     private scopeWatchers;
     private executionStack;
+    private groupProxyCache;
     constructor(options?: EngineOptions);
+    private getGroupTargetScope;
+    private getGroupProxy;
     mount(root: HTMLElement): Promise<void>;
     unmount(element: Element): void;
     registerBehaviors(source: string): void;

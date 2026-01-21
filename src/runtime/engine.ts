@@ -45,8 +45,10 @@ interface LifecycleConfig {
 
 interface RegisteredBehavior {
   id: number;
+  hash: string;
   selector: string;
   rootSelector: string;
+  parentSelector?: string;
   specificity: number;
   order: number;
   construct?: BlockNode;
@@ -158,6 +160,7 @@ export class Engine {
   private eachBindings = new WeakMap<Element, EachBinding>();
   private lifecycleBindings = new WeakMap<Element, LifecycleConfig>();
   private behaviorRegistry: RegisteredBehavior[] = [];
+  private behaviorRegistryHashes = new Set<string>();
   private behaviorBindings = new WeakMap<Element, Set<number>>();
   private behaviorListeners = new WeakMap<Element, Map<number, BehaviorListener[]>>();
   private behaviorId = 0;
@@ -181,6 +184,7 @@ export class Engine {
   private pendingAutoBindToScope: Array<{ element: Element; expr: string; scope: Scope }> = [];
   private scopeWatchers = new WeakMap<Element, { scope: Scope; kind: "path" | "any"; key?: string; handler: () => void }[]>();
   private executionStack: Element[] = [];
+  private groupProxyCache = new WeakMap<Scope, Record<string, any>>();
 
   constructor(options: EngineOptions = {}) {
     this.diagnostics = options.diagnostics ?? false;
@@ -335,37 +339,96 @@ export class Engine {
       transformValue: (_context, value) => this.coerceFloat(value)
     });
     this.registerBehaviorModifier("group", {
-      onConstruct: ({ args, scope, rootScope }) => {
+      onConstruct: ({ args, scope, rootScope, behavior, element }) => {
         const key = typeof args === "string" ? args : undefined;
         if (!key) {
           return;
         }
-        const targetScope = rootScope ?? scope;
+        const targetScope = this.getGroupTargetScope(element, behavior, scope, rootScope);
         const existing = targetScope.getPath?.(key);
         const list = Array.isArray(existing) ? existing : [];
-        if (!list.includes(scope)) {
-          list.push(scope);
+        const proxy = this.getGroupProxy(scope);
+        if (!list.includes(proxy)) {
+          list.push(proxy);
           targetScope.setPath?.(key, list);
         } else if (!Array.isArray(existing)) {
           targetScope.setPath?.(key, list);
         }
       },
-      onUnbind: ({ args, scope, rootScope }) => {
+      onUnbind: ({ args, scope, rootScope, behavior, element }) => {
         const key = typeof args === "string" ? args : undefined;
         if (!key) {
           return;
         }
-        const targetScope = rootScope ?? scope;
+        const targetScope = this.getGroupTargetScope(element, behavior, scope, rootScope);
         const existing = targetScope.getPath?.(key);
         if (!Array.isArray(existing)) {
           return;
         }
-        const next = existing.filter((entry) => entry !== scope);
+        const proxy = this.getGroupProxy(scope);
+        const next = existing.filter((entry) => entry !== proxy);
         if (next.length !== existing.length) {
           targetScope.setPath?.(key, next);
         }
       }
     });
+  }
+
+  private getGroupTargetScope(
+    element: Element,
+    behavior: RegisteredBehavior,
+    scope: Scope,
+    rootScope?: Scope
+  ): Scope {
+    let targetScope = rootScope ?? scope;
+    if (behavior.parentSelector) {
+      const parentElement = element.closest(behavior.parentSelector);
+      if (parentElement) {
+        targetScope = this.getScope(parentElement);
+      }
+    }
+    return targetScope;
+  }
+
+  private getGroupProxy(scope: Scope): Record<string, any> {
+    const cached = this.groupProxyCache.get(scope);
+    if (cached) {
+      return cached;
+    }
+    const proxy = new Proxy(
+      {},
+      {
+        get: (_target, prop) => {
+          if (typeof prop === "symbol") {
+            return undefined;
+          }
+          if (prop === "__scope") {
+            return scope;
+          }
+          return scope.getPath(String(prop));
+        },
+        set: (_target, prop, value) => {
+          if (typeof prop === "symbol") {
+            return false;
+          }
+          scope.setPath(String(prop), value);
+          return true;
+        },
+        has: (_target, prop) => {
+          if (typeof prop === "symbol") {
+            return false;
+          }
+          return scope.getPath(String(prop)) !== undefined;
+        },
+        getOwnPropertyDescriptor: () => ({
+          enumerable: true,
+          configurable: true
+        }),
+        ownKeys: () => []
+      }
+    );
+    this.groupProxyCache.set(scope, proxy);
+    return proxy;
   }
 
   async mount(root: HTMLElement): Promise<void> {
@@ -1581,17 +1644,26 @@ export class Engine {
       ? `${parentSelector} ${behavior.selector.selectorText}`
       : behavior.selector.selectorText;
     const rootSelector = rootSelectorOverride ?? (parentSelector ?? behavior.selector.selectorText);
+    const behaviorHash = this.hashBehavior(behavior);
+    const hash = `${selector}::${rootSelector}::${behaviorHash}`;
+    if (this.behaviorRegistryHashes.has(hash)) {
+      return;
+    }
     const cached = this.getCachedBehavior(behavior);
-    this.behaviorRegistry.push({
+    const entry: RegisteredBehavior = {
       id: this.behaviorId += 1,
+      hash,
       selector,
       rootSelector,
       specificity: this.computeSpecificity(selector),
       order: this.behaviorRegistry.length,
       flags: behavior.flags ?? {},
       flagArgs: behavior.flagArgs ?? {},
-      ...cached
-    });
+      ...cached,
+      ...(parentSelector ? { parentSelector } : {})
+    };
+    this.behaviorRegistry.push(entry);
+    this.behaviorRegistryHashes.add(hash);
     this.collectNestedBehaviors(behavior.body, selector, rootSelector);
   }
 
@@ -1786,7 +1858,9 @@ export class Engine {
       return {
         type,
         target: this.normalizeNode(node.target),
-        value: this.normalizeNode(node.value)
+        value: this.normalizeNode(node.value),
+        operator: node.operator ?? "",
+        prefix: Boolean(node.prefix)
       };
     }
     if (type === "FunctionDeclaration") {
@@ -2392,6 +2466,14 @@ export class Engine {
       return;
     }
     if (target.kind === "attr") {
+      if (target.name === "text" && element instanceof HTMLElement) {
+        element.innerText = value == null ? "" : String(value);
+        return;
+      }
+      if (target.name === "content" && element instanceof HTMLElement) {
+        element.textContent = value == null ? "" : String(value);
+        return;
+      }
       if (target.name === "value") {
         if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) {
           element.value = value == null ? "" : String(value);
@@ -2423,6 +2505,12 @@ export class Engine {
 
   private getDirectiveValue(element: Element, target: DirectiveExpression): unknown {
     if (target.kind === "attr") {
+      if (target.name === "text" && element instanceof HTMLElement) {
+        return element.innerText;
+      }
+      if (target.name === "content" && element instanceof HTMLElement) {
+        return element.textContent ?? "";
+      }
       if (target.name === "value") {
         if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) {
           return element.value;

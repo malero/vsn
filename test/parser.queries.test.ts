@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { Parser } from "../src/index";
+import { OnBlockNode, Parser } from "../src/index";
 
 describe("parser queries", () => {
   it("parses directives and scoped queries", () => {
@@ -14,16 +14,14 @@ describe("parser queries", () => {
 }`;
 
     const program = new Parser(source).parseProgram();
-    const behavior = program.behaviors[0];
+    const behavior = program.behaviors[0]!;
 
-    const firstStatement = behavior.body.statements[0];
+    const firstStatement = behavior.body.statements[0]!;
     expect(firstStatement.type).toBe("Declaration");
 
-    const onBlock = behavior.body.statements[2];
+    const onBlock = behavior.body.statements[2] as OnBlockNode;
     expect(onBlock.type).toBe("OnBlock");
-    if (onBlock.type === "OnBlock") {
-      const assignment = onBlock.body.statements[0];
-      expect(assignment.type).toBe("Assignment");
-    }
+    const assignment = onBlock.body.statements[0]!;
+    expect(assignment.type).toBe("Assignment");
   });
 });

@@ -17,7 +17,7 @@ describe("behavior AST cache", () => {
 
     const stats = engine.getRegistryStats();
     expect(stats.behaviorCacheSize).toBe(1);
-    expect(stats.behaviorCount).toBe(2);
+    expect(stats.behaviorCount).toBe(1);
   });
 
   it("adds cache entries for distinct behaviors", () => {

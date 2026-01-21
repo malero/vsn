@@ -11,8 +11,8 @@ describe("parser use statements", () => {
     const program = new Parser(source).parseProgram();
 
     expect(program.uses).toHaveLength(1);
-    expect(program.uses[0].name).toBe("Math");
-    expect(program.uses[0].alias).toBe("math");
+    expect(program.uses[0]!.name).toBe("Math");
+    expect(program.uses[0]!.alias).toBe("math");
   });
 
   it("parses use statements without alias", () => {
@@ -23,8 +23,8 @@ describe("parser use statements", () => {
     const program = new Parser(source).parseProgram();
 
     expect(program.uses).toHaveLength(1);
-    expect(program.uses[0].name).toBe("console");
-    expect(program.uses[0].alias).toBe("console");
+    expect(program.uses[0]!.name).toBe("console");
+    expect(program.uses[0]!.alias).toBe("console");
   });
 
   it("parses use statements with wait flags", () => {
@@ -35,7 +35,7 @@ describe("parser use statements", () => {
     const program = new Parser(source).parseProgram();
 
     expect(program.uses).toHaveLength(1);
-    expect(program.uses[0].flags.wait).toBe(true);
-    expect(program.uses[0].flagArgs.wait).toEqual({ timeoutMs: 10000, intervalMs: 100 });
+    expect(program.uses[0]!.flags.wait).toBe(true);
+    expect(program.uses[0]!.flagArgs.wait).toEqual({ timeoutMs: 10000, intervalMs: 100 });
   });
 });

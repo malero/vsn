@@ -39,4 +39,20 @@ describe("control flow blocks", () => {
 
     expect(scope.get("sum")).toBe(3);
   });
+
+  it("evaluates index lookups with loop counters", async () => {
+    const block = Parser.parseInline(`
+      items = [{ name: "a" }, { name: "b" }];
+      names = [];
+      for (i = 0; i < items.length; i = i + 1) {
+        item = items[i];
+        names.push(item.name);
+      }
+    `);
+
+    const scope = new Scope();
+    await block.evaluate({ scope, rootScope: scope });
+
+    expect(scope.get("names")).toEqual(["a", "b"]);
+  });
 });

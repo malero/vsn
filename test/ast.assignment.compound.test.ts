@@ -63,4 +63,17 @@ describe("compound assignments", () => {
     expect(scope.getPath("items.1")).toBe(27);
     expect(scope.getPath("user.score")).toBe(5);
   });
+
+  it("supports member assignment after index access", async () => {
+    const block = Parser.parseInline(`
+      i = 0;
+      items = [{ name: "red" }];
+      items[i].name = "blue";
+    `);
+    const scope = new Scope();
+
+    await block.evaluate({ scope, rootScope: scope });
+
+    expect(scope.getPath("items.0.name")).toBe("blue");
+  });
 });

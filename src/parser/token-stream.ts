@@ -47,6 +47,9 @@ export class TokenStream {
     let count = 0;
     for (let i = this.index; i < this.tokens.length; i++) {
       const token = this.tokens[i];
+      if (!token) {
+        continue;
+      }
       if (token.type === TokenType.Whitespace) {
         continue;
       }

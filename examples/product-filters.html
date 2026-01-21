@@ -275,10 +275,9 @@
     <aside class="filters-panel" id="product-filters">
       <div class="panel-header">
         <h3>Filters</h3>
-        <p class="panel-note" vsn-html="activeFiltersLabel"></p>
       </div>
 
-      <div class="filter-group">
+      <div class="filter-group" data-group="color">
         <p class="filter-label">Color</p>
         <div class="filter-buttons">
           <button class="filter" type="button" data-filter="red">Red</button>
@@ -288,7 +287,7 @@
         </div>
       </div>
 
-      <div class="filter-group">
+      <div class="filter-group" data-group="material">
         <p class="filter-label">Material</p>
         <div class="filter-buttons">
           <button class="filter" type="button" data-filter="ceramic">Ceramic</button>
@@ -507,70 +506,74 @@
 
 <script type="text/vsn">
 behavior #product-filters-app {
-  filters: [];
-  products: [];
-  visibleProducts: [];
-  summary: "";
-  activeFiltersLabel: "";
   activeFiltersTags: "";
   hasResults: true;
   noResults: false;
 
-  async updateVisible() {
-    if (filters.length == 0) {
-      visibleProducts = products;
-      summary = products.length + " products";
-      activeFiltersLabel = "All items";
-      activeFiltersTags = "All tones and materials";
-      hasResults = products.length > 0;
-      noResults = !hasResults;
-      return;
+  updateVisible() {
+    visibleProducts = 0;
+    tags = [];
+
+    for (i = 0; i < filterGroups.length; i++) {
+      tag = filterGroups[i].filter;
+      if (tag) {
+        tags.push(tag);
+      }
     }
 
-    visibleProducts = products.filter((item) => {
-      console.log(item);
-      for (i = 0; i < filters.length; i = i + 1) {
-        if (item.tags.indexOf(filters[i]) > -1) {
-          return true;
+    for (i = 0; i < products.length; i++) {
+      product = products[i];
+      active = true;
+
+      for (j = 0; j < tags.length; j++) {
+        if (product.tags.indexOf(tags[j]) === -1) {
+          active = false;
         }
       }
-      return false;
-    });
 
-    summary = visibleProducts.length + " products";
-    activeFiltersLabel = "Active: " + filters.join(", ");
-    activeFiltersTags = "Filtered by " + filters.join(" / ");
-    hasResults = visibleProducts.length > 0;
+      product.active = active;
+      if (product.active) {
+        visibleProducts++;
+      }
+    }
+
+    activeFiltersTags = "Filtered by " + tags.join(" / ");
+    hasResults = visibleProducts > 0;
     noResults = !hasResults;
   }
 
-  async toggleFilter(filter) {
-    index = filters.indexOf(filter);
-    if (index > -1) {
-      filters = filters.filter((entry) => entry != filter);
-    } else {
-      filters = [...filters, filter];
+  clearFilters() {
+    for (i = 0; i < filterGroups.length; i++) {
+      filterGroups[i].filter = null;
     }
-    await updateVisible();
+    updateVisible();
   }
 
-  behavior .filter {
-    @aria-current:< filters.indexOf(@data-filter) > -1;
+  behavior .filter-group !group('filterGroups') {
+    group: @data-group;
+    filter: null;
 
-    on click(event) !prevent {
-      toggleFilter(@data-filter);
+    behavior .filter !group('filters') {
+      tag: @data-filter;
+      @aria-current:< filter == tag;
+
+      on click(event) !prevent {
+        filter = filter == tag ? null : tag;
+        updateVisible();
+      }
     }
   }
 
   behavior .clear-filters {
     on click(event) {
-      filters = [];
-      updateVisible();
+      clearFilters();
     }
   }
 
   behavior .product-card !microdata !group("products") {
     tags: [];
+    active: true;
+    $display:< active ? "block" : "none";
 
     construct {
       tags.push(color);

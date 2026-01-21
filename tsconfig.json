@@ -15,7 +15,7 @@
     "exactOptionalPropertyTypes": true,
     "isolatedModules": true,
     "resolveJsonModule": true,
-    "rootDir": "src",
+    "rootDir": ".",
     "outDir": "dist"
   },
   "include": ["src", "test"]

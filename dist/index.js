@@ -36,7 +36,9 @@ var TokenType = /* @__PURE__ */ ((TokenType2) => {
   TokenType2["Greater"] = "Greater";
   TokenType2["Less"] = "Less";
   TokenType2["Plus"] = "Plus";
+  TokenType2["PlusPlus"] = "PlusPlus";
   TokenType2["Minus"] = "Minus";
+  TokenType2["MinusMinus"] = "MinusMinus";
   TokenType2["Tilde"] = "Tilde";
   TokenType2["Star"] = "Star";
   TokenType2["Slash"] = "Slash";
@@ -178,8 +180,20 @@ var Lexer = class {
   readIdentifier() {
     const start = this.position();
     let value = "";
-    while (!this.eof() && (this.isAlphaNumeric(this.peek()) || this.peek() === "_" || this.peek() === "-")) {
-      value += this.next();
+    while (!this.eof()) {
+      const ch = this.peek();
+      if (this.isAlphaNumeric(ch) || ch === "_") {
+        value += this.next();
+        continue;
+      }
+      if (ch === "-") {
+        if (this.peek(1) === "-") {
+          break;
+        }
+        value += this.next();
+        continue;
+      }
+      break;
     }
     const keywordType = KEYWORDS[value];
     if (keywordType) {
@@ -319,6 +333,16 @@ var Lexer = class {
       this.next();
       this.next();
       return this.token("Pipe" /* Pipe */, "|>", start);
+    }
+    if (ch === "+" && next === "+") {
+      this.next();
+      this.next();
+      return this.token("PlusPlus" /* PlusPlus */, "++", start);
+    }
+    if (ch === "-" && next === "-") {
+      this.next();
+      this.next();
+      return this.token("MinusMinus" /* MinusMinus */, "--", start);
     }
     if (ch === "." && next === "." && this.peek(2) === ".") {
       this.next();
@@ -516,15 +540,19 @@ var OnBlockNode = class extends BaseNode {
   }
 };
 var AssignmentNode = class extends BaseNode {
-  constructor(target, value, operator = "=") {
+  constructor(target, value, operator = "=", prefix = false) {
     super("Assignment");
     this.target = target;
     this.value = value;
     this.operator = operator;
+    this.prefix = prefix;
   }
   evaluate(context) {
     if (!context.scope || !context.scope.setPath) {
       return void 0;
+    }
+    if (this.operator === "++" || this.operator === "--") {
+      return this.applyIncrement(context);
     }
     const value = this.value.evaluate(context);
     return resolveMaybe(value, (resolvedValue) => {
@@ -576,6 +604,24 @@ var AssignmentNode = class extends BaseNode {
       return result;
     });
   }
+  applyIncrement(context) {
+    if (!context.scope || !context.scope.setPath) {
+      return void 0;
+    }
+    const resolved = this.resolveAssignmentTarget(context);
+    return resolveMaybe(resolved, (resolvedTarget) => {
+      if (!resolvedTarget) {
+        throw new Error("Increment/decrement requires a simple identifier or member path");
+      }
+      const { scope, path } = resolvedTarget;
+      const current = scope?.getPath ? scope.getPath(path) : void 0;
+      const numeric = typeof current === "number" ? current : Number(current);
+      const delta = this.operator === "++" ? 1 : -1;
+      const next = (Number.isNaN(numeric) ? 0 : numeric) + delta;
+      scope?.setPath?.(path, next);
+      return this.prefix ? next : numeric;
+    });
+  }
   resolveAssignmentTarget(context) {
     if (this.target instanceof IdentifierExpression) {
       const isRoot = this.target.name.startsWith("root.");
@@ -590,19 +636,35 @@ var AssignmentNode = class extends BaseNode {
     }
     if (this.target instanceof MemberExpression) {
       const resolvedPath = this.target.getIdentifierPath();
-      if (!resolvedPath) {
-        return null;
-      }
-      const path = resolvedPath.path;
-      const isRoot = path.startsWith("root.");
-      const rawPath = isRoot ? path.slice("root.".length) : path;
-      if (isRoot) {
-        if (context.rootScope) {
-          return { scope: context.rootScope, path: `self.${rawPath}` };
+      if (resolvedPath) {
+        const path = resolvedPath.path;
+        const isRoot = path.startsWith("root.");
+        const rawPath = isRoot ? path.slice("root.".length) : path;
+        if (isRoot) {
+          if (context.rootScope) {
+            return { scope: context.rootScope, path: `self.${rawPath}` };
+          }
+          return { scope: context.scope, path: `root.${rawPath}` };
         }
-        return { scope: context.scope, path: `root.${rawPath}` };
+        return { scope: context.scope, path: rawPath };
       }
-      return { scope: context.scope, path: rawPath };
+      const targetExpr = this.target;
+      const basePath = this.resolveTargetPath(context, targetExpr.target);
+      return resolveMaybe(basePath, (resolvedBase) => {
+        if (!resolvedBase) {
+          return null;
+        }
+        const path = `${resolvedBase}.${targetExpr.property}`;
+        const isRoot = path.startsWith("root.");
+        const rawPath = isRoot ? path.slice("root.".length) : path;
+        if (isRoot) {
+          if (context.rootScope) {
+            return { scope: context.rootScope, path: `self.${rawPath}` };
+          }
+          return { scope: context.scope, path: `root.${rawPath}` };
+        }
+        return { scope: context.scope, path: rawPath };
+      });
     }
     if (this.target instanceof IndexExpression) {
       const path = this.resolveIndexPath(context, this.target);
@@ -1505,9 +1567,19 @@ var IndexExpression = class extends BaseNode {
         if (resolvedIndex == null) {
           return void 0;
         }
-        return resolvedTarget[resolvedIndex];
+        const key = this.normalizeIndexKey(resolvedTarget, resolvedIndex);
+        return resolvedTarget[key];
       });
     });
+  }
+  normalizeIndexKey(target, index) {
+    if (Array.isArray(target) && typeof index === "string" && index.trim() !== "") {
+      const numeric = Number(index);
+      if (!Number.isNaN(numeric)) {
+        return numeric;
+      }
+    }
+    return index;
   }
 };
 var DirectiveExpression = class extends BaseNode {
@@ -1529,6 +1601,12 @@ var DirectiveExpression = class extends BaseNode {
         if (element instanceof HTMLSelectElement) {
           return element.value;
         }
+      }
+      if (this.name === "text" && element instanceof HTMLElement) {
+        return element.innerText;
+      }
+      if (this.name === "content" && element instanceof HTMLElement) {
+        return element.textContent ?? "";
       }
       if (this.name === "checked" && element instanceof HTMLInputElement) {
         return element.checked;
@@ -1626,6 +1704,9 @@ var TokenStream = class {
     let count = 0;
     for (let i = this.index; i < this.tokens.length; i++) {
       const token = this.tokens[i];
+      if (!token) {
+        continue;
+      }
       if (token.type === "Whitespace" /* Whitespace */) {
         continue;
       }
@@ -2192,6 +2273,11 @@ ${caret}`;
     if (!token) {
       throw new Error("Expected expression");
     }
+    if (token.type === "PlusPlus" /* PlusPlus */ || token.type === "MinusMinus" /* MinusMinus */) {
+      this.stream.next();
+      const argument = this.parseUnaryExpression();
+      return this.createIncrementNode(token, argument, true);
+    }
     if (token.type === "Bang" /* Bang */) {
       this.stream.next();
       const argument = this.parseUnaryExpression();
@@ -2207,7 +2293,31 @@ ${caret}`;
       const argument = this.parseUnaryExpression();
       return new AwaitExpression(argument);
     }
-    return this.parseCallExpression();
+    return this.parsePostfixExpression();
+  }
+  parsePostfixExpression() {
+    let expr = this.parseCallExpression();
+    while (true) {
+      this.stream.skipWhitespace();
+      const token = this.stream.peek();
+      if (!token) {
+        break;
+      }
+      if (token.type === "PlusPlus" /* PlusPlus */ || token.type === "MinusMinus" /* MinusMinus */) {
+        this.stream.next();
+        expr = this.createIncrementNode(token, expr, false);
+        continue;
+      }
+      break;
+    }
+    return expr;
+  }
+  createIncrementNode(token, argument, prefix) {
+    if (!(argument instanceof IdentifierExpression) && !(argument instanceof MemberExpression) && !(argument instanceof IndexExpression) && !(argument instanceof DirectiveExpression)) {
+      throw new Error("Increment/decrement requires a mutable target");
+    }
+    const operator = token.type === "PlusPlus" /* PlusPlus */ ? "++" : "--";
+    return new AssignmentNode(argument, new LiteralExpression(1), operator, prefix);
   }
   parseCallExpression() {
     let expr = this.parsePrimaryExpression();
@@ -2906,15 +3016,24 @@ ${caret}`;
     }
     if (first.type === "Identifier" /* Identifier */) {
       let index = 1;
-      while (this.stream.peekNonWhitespace(index)?.type === "Dot" /* Dot */ && this.stream.peekNonWhitespace(index + 1)?.type === "Identifier" /* Identifier */) {
-        index += 2;
-      }
-      while (this.stream.peekNonWhitespace(index)?.type === "LBracket" /* LBracket */) {
-        const indexAfter = this.stream.indexAfterDelimited("LBracket" /* LBracket */, "RBracket" /* RBracket */, index);
-        if (indexAfter === null) {
+      while (true) {
+        const token = this.stream.peekNonWhitespace(index);
+        if (!token) {
           return false;
         }
-        index = indexAfter;
+        if (token.type === "Dot" /* Dot */ && this.stream.peekNonWhitespace(index + 1)?.type === "Identifier" /* Identifier */) {
+          index += 2;
+          continue;
+        }
+        if (token.type === "LBracket" /* LBracket */) {
+          const indexAfter = this.stream.indexAfterDelimited("LBracket" /* LBracket */, "RBracket" /* RBracket */, index);
+          if (indexAfter === null) {
+            return false;
+          }
+          index = indexAfter;
+          continue;
+        }
+        break;
       }
       return this.isAssignmentOperatorStart(index);
     }
@@ -3631,6 +3750,7 @@ var Engine = class _Engine {
   eachBindings = /* @__PURE__ */ new WeakMap();
   lifecycleBindings = /* @__PURE__ */ new WeakMap();
   behaviorRegistry = [];
+  behaviorRegistryHashes = /* @__PURE__ */ new Set();
   behaviorBindings = /* @__PURE__ */ new WeakMap();
   behaviorListeners = /* @__PURE__ */ new WeakMap();
   behaviorId = 0;
@@ -3654,6 +3774,7 @@ var Engine = class _Engine {
   pendingAutoBindToScope = [];
   scopeWatchers = /* @__PURE__ */ new WeakMap();
   executionStack = [];
+  groupProxyCache = /* @__PURE__ */ new WeakMap();
   constructor(options = {}) {
     this.diagnostics = options.diagnostics ?? false;
     this.logger = options.logger ?? console;
@@ -3807,37 +3928,89 @@ var Engine = class _Engine {
       transformValue: (_context, value) => this.coerceFloat(value)
     });
     this.registerBehaviorModifier("group", {
-      onConstruct: ({ args, scope, rootScope }) => {
+      onConstruct: ({ args, scope, rootScope, behavior, element }) => {
         const key = typeof args === "string" ? args : void 0;
         if (!key) {
           return;
         }
-        const targetScope = rootScope ?? scope;
+        const targetScope = this.getGroupTargetScope(element, behavior, scope, rootScope);
         const existing = targetScope.getPath?.(key);
         const list = Array.isArray(existing) ? existing : [];
-        if (!list.includes(scope)) {
-          list.push(scope);
+        const proxy = this.getGroupProxy(scope);
+        if (!list.includes(proxy)) {
+          list.push(proxy);
           targetScope.setPath?.(key, list);
         } else if (!Array.isArray(existing)) {
           targetScope.setPath?.(key, list);
         }
       },
-      onUnbind: ({ args, scope, rootScope }) => {
+      onUnbind: ({ args, scope, rootScope, behavior, element }) => {
         const key = typeof args === "string" ? args : void 0;
         if (!key) {
           return;
         }
-        const targetScope = rootScope ?? scope;
+        const targetScope = this.getGroupTargetScope(element, behavior, scope, rootScope);
         const existing = targetScope.getPath?.(key);
         if (!Array.isArray(existing)) {
           return;
         }
-        const next = existing.filter((entry) => entry !== scope);
+        const proxy = this.getGroupProxy(scope);
+        const next = existing.filter((entry) => entry !== proxy);
         if (next.length !== existing.length) {
           targetScope.setPath?.(key, next);
         }
       }
     });
+  }
+  getGroupTargetScope(element, behavior, scope, rootScope) {
+    let targetScope = rootScope ?? scope;
+    if (behavior.parentSelector) {
+      const parentElement = element.closest(behavior.parentSelector);
+      if (parentElement) {
+        targetScope = this.getScope(parentElement);
+      }
+    }
+    return targetScope;
+  }
+  getGroupProxy(scope) {
+    const cached = this.groupProxyCache.get(scope);
+    if (cached) {
+      return cached;
+    }
+    const proxy = new Proxy(
+      {},
+      {
+        get: (_target, prop) => {
+          if (typeof prop === "symbol") {
+            return void 0;
+          }
+          if (prop === "__scope") {
+            return scope;
+          }
+          return scope.getPath(String(prop));
+        },
+        set: (_target, prop, value) => {
+          if (typeof prop === "symbol") {
+            return false;
+          }
+          scope.setPath(String(prop), value);
+          return true;
+        },
+        has: (_target, prop) => {
+          if (typeof prop === "symbol") {
+            return false;
+          }
+          return scope.getPath(String(prop)) !== void 0;
+        },
+        getOwnPropertyDescriptor: () => ({
+          enumerable: true,
+          configurable: true
+        }),
+        ownKeys: () => []
+      }
+    );
+    this.groupProxyCache.set(scope, proxy);
+    return proxy;
   }
   async mount(root) {
     const documentRoot = root.ownerDocument;
@@ -4898,17 +5071,26 @@ var Engine = class _Engine {
   collectBehavior(behavior, parentSelector, rootSelectorOverride) {
     const selector = parentSelector ? `${parentSelector} ${behavior.selector.selectorText}` : behavior.selector.selectorText;
     const rootSelector = rootSelectorOverride ?? (parentSelector ?? behavior.selector.selectorText);
+    const behaviorHash = this.hashBehavior(behavior);
+    const hash = `${selector}::${rootSelector}::${behaviorHash}`;
+    if (this.behaviorRegistryHashes.has(hash)) {
+      return;
+    }
     const cached = this.getCachedBehavior(behavior);
-    this.behaviorRegistry.push({
+    const entry = {
       id: this.behaviorId += 1,
+      hash,
       selector,
       rootSelector,
       specificity: this.computeSpecificity(selector),
       order: this.behaviorRegistry.length,
       flags: behavior.flags ?? {},
       flagArgs: behavior.flagArgs ?? {},
-      ...cached
-    });
+      ...cached,
+      ...parentSelector ? { parentSelector } : {}
+    };
+    this.behaviorRegistry.push(entry);
+    this.behaviorRegistryHashes.add(hash);
     this.collectNestedBehaviors(behavior.body, selector, rootSelector);
   }
   collectNestedBehaviors(block, parentSelector, rootSelector) {
@@ -5085,7 +5267,9 @@ var Engine = class _Engine {
       return {
         type,
         target: this.normalizeNode(node.target),
-        value: this.normalizeNode(node.value)
+        value: this.normalizeNode(node.value),
+        operator: node.operator ?? "",
+        prefix: Boolean(node.prefix)
       };
     }
     if (type === "FunctionDeclaration") {
@@ -5573,6 +5757,14 @@ var Engine = class _Engine {
       return;
     }
     if (target.kind === "attr") {
+      if (target.name === "text" && element instanceof HTMLElement) {
+        element.innerText = value == null ? "" : String(value);
+        return;
+      }
+      if (target.name === "content" && element instanceof HTMLElement) {
+        element.textContent = value == null ? "" : String(value);
+        return;
+      }
       if (target.name === "value") {
         if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) {
           element.value = value == null ? "" : String(value);
@@ -5603,6 +5795,12 @@ var Engine = class _Engine {
   }
   getDirectiveValue(element, target) {
     if (target.kind === "attr") {
+      if (target.name === "text" && element instanceof HTMLElement) {
+        return element.innerText;
+      }
+      if (target.name === "content" && element instanceof HTMLElement) {
+        return element.textContent ?? "";
+      }
       if (target.name === "value") {
         if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) {
           return element.value;

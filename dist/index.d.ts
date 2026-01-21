@@ -35,7 +35,9 @@ declare enum TokenType {
     Greater = "Greater",
     Less = "Less",
     Plus = "Plus",
+    PlusPlus = "PlusPlus",
     Minus = "Minus",
+    MinusMinus = "MinusMinus",
     Tilde = "Tilde",
     Star = "Star",
     Slash = "Slash",
@@ -173,10 +175,12 @@ declare class OnBlockNode extends BaseNode {
 declare class AssignmentNode extends BaseNode {
     target: AssignmentTarget;
     value: ExpressionNode;
-    operator: "=" | "+=" | "-=" | "*=" | "/=";
-    constructor(target: AssignmentTarget, value: ExpressionNode, operator?: "=" | "+=" | "-=" | "*=" | "/=");
+    operator: "=" | "+=" | "-=" | "*=" | "/=" | "++" | "--";
+    prefix: boolean;
+    constructor(target: AssignmentTarget, value: ExpressionNode, operator?: "=" | "+=" | "-=" | "*=" | "/=" | "++" | "--", prefix?: boolean);
     evaluate(context: ExecutionContext): any;
     private applyCompoundAssignment;
+    private applyIncrement;
     private resolveAssignmentTarget;
     private resolveIndexPath;
     private resolveTargetPath;
@@ -264,7 +268,7 @@ declare class DeclarationNode extends BaseNode {
     flagArgs: DeclarationFlagArgs;
     constructor(target: DeclarationTarget, operator: ":" | ":=" | ":<" | ":>", value: ExpressionNode, flags: DeclarationFlags, flagArgs: DeclarationFlagArgs);
 }
-type ExpressionNode = IdentifierExpression | LiteralExpression | TemplateExpression | UnaryExpression | BinaryExpression | MemberExpression | CallExpression | ArrayExpression | ObjectExpression | IndexExpression | FunctionExpression | AwaitExpression | TernaryExpression | DirectiveExpression | QueryExpression;
+type ExpressionNode = AssignmentNode | IdentifierExpression | LiteralExpression | TemplateExpression | UnaryExpression | BinaryExpression | MemberExpression | CallExpression | ArrayExpression | ObjectExpression | IndexExpression | FunctionExpression | AwaitExpression | TernaryExpression | DirectiveExpression | QueryExpression;
 type DeclarationTarget = IdentifierExpression | DirectiveExpression;
 type AssignmentTarget = IdentifierExpression | MemberExpression | IndexExpression | DirectiveExpression | ArrayPattern | ObjectPattern;
 type FunctionParam = {
@@ -389,6 +393,7 @@ declare class IndexExpression extends BaseNode {
     index: ExpressionNode;
     constructor(target: ExpressionNode, index: ExpressionNode);
     evaluate(context: ExecutionContext): any;
+    private normalizeIndexKey;
 }
 declare class DirectiveExpression extends BaseNode {
     kind: "attr" | "style";
@@ -447,6 +452,8 @@ declare class Parser {
     private parseMultiplicativeExpression;
     private parseAdditiveExpression;
     private parseUnaryExpression;
+    private parsePostfixExpression;
+    private createIncrementNode;
     private parseCallExpression;
     private parsePrimaryExpression;
     private parseArrayExpression;
@@ -522,8 +529,10 @@ declare class Scope {
 
 interface RegisteredBehavior {
     id: number;
+    hash: string;
     selector: string;
     rootSelector: string;
+    parentSelector?: string;
     specificity: number;
     order: number;
     construct?: BlockNode;
@@ -609,6 +618,7 @@ declare class Engine {
     private eachBindings;
     private lifecycleBindings;
     private behaviorRegistry;
+    private behaviorRegistryHashes;
     private behaviorBindings;
     private behaviorListeners;
     private behaviorId;
@@ -632,7 +642,10 @@ declare class Engine {
     private pendingAutoBindToScope;
     private scopeWatchers;
     private executionStack;
+    private groupProxyCache;
     constructor(options?: EngineOptions);
+    private getGroupTargetScope;
+    private getGroupProxy;
     mount(root: HTMLElement): Promise<void>;
     unmount(element: Element): void;
     registerBehaviors(source: string): void;

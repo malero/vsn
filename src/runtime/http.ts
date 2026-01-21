@@ -32,7 +32,7 @@ export async function applyGet(
 
   if (config.swap === "outer") {
     const wrapper = document.createElement("div");
-    applyHtml(wrapper, "__html", { get: () => html } as Scope, config.trusted);
+    applyHtml(wrapper, "__html", { get: () => html } as unknown as Scope, config.trusted);
     const replacement = wrapper.firstElementChild;
     if (replacement && target.parentNode) {
       target.parentNode.replaceChild(replacement, target);
@@ -41,7 +41,7 @@ export async function applyGet(
     return;
   }
 
-  applyHtml(target as HTMLElement, "__html", { get: () => html } as Scope, config.trusted);
+  applyHtml(target as HTMLElement, "__html", { get: () => html } as unknown as Scope, config.trusted);
   onHtmlApplied?.(target);
 }
 

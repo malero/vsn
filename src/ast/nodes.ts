@@ -141,7 +141,8 @@ export class AssignmentNode extends BaseNode {
   constructor(
     public target: AssignmentTarget,
     public value: ExpressionNode,
-    public operator: "=" | "+=" | "-=" | "*=" | "/=" = "="
+    public operator: "=" | "+=" | "-=" | "*=" | "/=" | "++" | "--" = "=",
+    public prefix = false
   ) {
     super("Assignment");
   }
@@ -149,6 +150,9 @@ export class AssignmentNode extends BaseNode {
   evaluate(context: ExecutionContext): any {
     if (!context.scope || !context.scope.setPath) {
       return undefined;
+    }
+    if (this.operator === "++" || this.operator === "--") {
+      return this.applyIncrement(context);
     }
     const value = this.value.evaluate(context);
     return resolveMaybe(value, (resolvedValue) => {
@@ -202,6 +206,25 @@ export class AssignmentNode extends BaseNode {
     });
   }
 
+  private applyIncrement(context: ExecutionContext): any {
+    if (!context.scope || !context.scope.setPath) {
+      return undefined;
+    }
+    const resolved = this.resolveAssignmentTarget(context);
+    return resolveMaybe(resolved, (resolvedTarget) => {
+      if (!resolvedTarget) {
+        throw new Error("Increment/decrement requires a simple identifier or member path");
+      }
+      const { scope, path } = resolvedTarget;
+      const current = scope?.getPath ? scope.getPath(path) : undefined;
+      const numeric = typeof current === "number" ? current : Number(current);
+      const delta = this.operator === "++" ? 1 : -1;
+      const next = (Number.isNaN(numeric) ? 0 : numeric) + delta;
+      scope?.setPath?.(path, next);
+      return this.prefix ? next : numeric;
+    });
+  }
+
   private resolveAssignmentTarget(
     context: ExecutionContext
   ): { scope: ExecutionContext["scope"]; path: string } | null | Promise<{ scope: ExecutionContext["scope"]; path: string } | null> {
@@ -218,19 +241,35 @@ export class AssignmentNode extends BaseNode {
     }
     if (this.target instanceof MemberExpression) {
       const resolvedPath = this.target.getIdentifierPath();
-      if (!resolvedPath) {
-        return null;
-      }
-      const path = resolvedPath.path;
-      const isRoot = path.startsWith("root.");
-      const rawPath = isRoot ? path.slice("root.".length) : path;
-      if (isRoot) {
-        if (context.rootScope) {
-          return { scope: context.rootScope, path: `self.${rawPath}` };
+      if (resolvedPath) {
+        const path = resolvedPath.path;
+        const isRoot = path.startsWith("root.");
+        const rawPath = isRoot ? path.slice("root.".length) : path;
+        if (isRoot) {
+          if (context.rootScope) {
+            return { scope: context.rootScope, path: `self.${rawPath}` };
+          }
+          return { scope: context.scope, path: `root.${rawPath}` };
         }
-        return { scope: context.scope, path: `root.${rawPath}` };
+        return { scope: context.scope, path: rawPath };
       }
-      return { scope: context.scope, path: rawPath };
+      const targetExpr = this.target;
+      const basePath = this.resolveTargetPath(context, targetExpr.target);
+      return resolveMaybe(basePath, (resolvedBase) => {
+        if (!resolvedBase) {
+          return null;
+        }
+        const path = `${resolvedBase}.${targetExpr.property}`;
+        const isRoot = path.startsWith("root.");
+        const rawPath = isRoot ? path.slice("root.".length) : path;
+        if (isRoot) {
+          if (context.rootScope) {
+            return { scope: context.rootScope, path: `self.${rawPath}` };
+          }
+          return { scope: context.scope, path: `root.${rawPath}` };
+        }
+        return { scope: context.scope, path: rawPath };
+      });
     }
     if (this.target instanceof IndexExpression) {
       const path = this.resolveIndexPath(context, this.target);
@@ -737,6 +776,7 @@ export class DeclarationNode extends BaseNode {
 }
 
 export type ExpressionNode =
+  | AssignmentNode
   | IdentifierExpression
   | LiteralExpression
   | TemplateExpression
@@ -1279,9 +1319,20 @@ export class IndexExpression extends BaseNode {
         if (resolvedIndex == null) {
           return undefined;
         }
-        return (resolvedTarget as any)[resolvedIndex as any];
+        const key = this.normalizeIndexKey(resolvedTarget, resolvedIndex);
+        return (resolvedTarget as any)[key as any];
       });
     });
+  }
+
+  private normalizeIndexKey(target: unknown, index: unknown): unknown {
+    if (Array.isArray(target) && typeof index === "string" && index.trim() !== "") {
+      const numeric = Number(index);
+      if (!Number.isNaN(numeric)) {
+        return numeric;
+      }
+    }
+    return index;
   }
 }
 
@@ -1303,6 +1354,12 @@ export class DirectiveExpression extends BaseNode {
         if (element instanceof HTMLSelectElement) {
           return element.value;
         }
+      }
+      if (this.name === "text" && element instanceof HTMLElement) {
+        return element.innerText;
+      }
+      if (this.name === "content" && element instanceof HTMLElement) {
+        return element.textContent ?? "";
       }
       if (this.name === "checked" && element instanceof HTMLInputElement) {
         return element.checked;
