@@ -56,9 +56,9 @@ declare class BlockNode extends BaseNode {
 declare class AssignmentNode extends BaseNode {
     target: AssignmentTarget;
     value: ExpressionNode;
-    operator: "=" | "+=" | "-=" | "*=" | "/=" | "++" | "--";
+    operator: "=" | "+=" | "-=" | "*=" | "/=" | "~=" | "++" | "--";
     prefix: boolean;
-    constructor(target: AssignmentTarget, value: ExpressionNode, operator?: "=" | "+=" | "-=" | "*=" | "/=" | "++" | "--", prefix?: boolean);
+    constructor(target: AssignmentTarget, value: ExpressionNode, operator?: "=" | "+=" | "-=" | "*=" | "/=" | "~=" | "++" | "--", prefix?: boolean);
     evaluate(context: ExecutionContext): any;
     private applyCompoundAssignment;
     private applyIncrement;

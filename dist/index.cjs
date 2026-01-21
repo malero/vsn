@@ -623,6 +623,14 @@ var AssignmentNode = class extends BaseNode {
     this.prefix = prefix;
   }
   evaluate(context) {
+    const target = this.target;
+    if (target instanceof DirectiveExpression) {
+      const value2 = this.value.evaluate(context);
+      return resolveMaybe(value2, (resolvedValue) => {
+        this.assignDirectiveTarget(context, target, resolvedValue, this.operator);
+        return resolvedValue;
+      });
+    }
     if (!context.scope || !context.scope.setPath) {
       return void 0;
     }
@@ -650,7 +658,7 @@ var AssignmentNode = class extends BaseNode {
           return resolvedValue;
         });
       }
-      this.assignTarget(context, this.target, resolvedValue);
+      this.assignTarget(context, this.target, resolvedValue, this.operator);
       return resolvedValue;
     });
   }
@@ -787,12 +795,12 @@ var AssignmentNode = class extends BaseNode {
     }
     return null;
   }
-  assignTarget(context, target, value) {
+  assignTarget(context, target, value, operator = "=") {
     if (!context.scope || !context.scope.setPath) {
       return;
     }
     if (target instanceof DirectiveExpression) {
-      this.assignDirectiveTarget(context, target, value);
+      this.assignDirectiveTarget(context, target, value, operator);
       return;
     }
     if (target instanceof IdentifierExpression) {
@@ -811,7 +819,7 @@ var AssignmentNode = class extends BaseNode {
           index += 1;
           continue;
         }
-        this.assignTarget(context, element, source[index]);
+        this.assignTarget(context, element, source[index], operator);
         index += 1;
       }
       return;
@@ -831,17 +839,37 @@ var AssignmentNode = class extends BaseNode {
           continue;
         }
         usedKeys.add(entry.key);
-        this.assignTarget(context, entry.target, source[entry.key]);
+        this.assignTarget(context, entry.target, source[entry.key], operator);
       }
       return;
     }
   }
-  assignDirectiveTarget(context, target, value) {
+  assignDirectiveTarget(context, target, value, operator = "=") {
     const element = context.element;
     if (!element) {
       return;
     }
     if (target.kind === "attr") {
+      if (target.name === "class" && element instanceof HTMLElement && operator !== "=") {
+        const classes = normalizeClassList(value);
+        if (classes.length === 0) {
+          return;
+        }
+        if (operator === "+=") {
+          element.classList.add(...classes);
+          return;
+        }
+        if (operator === "-=") {
+          element.classList.remove(...classes);
+          return;
+        }
+        if (operator === "~=") {
+          for (const name of classes) {
+            element.classList.toggle(name);
+          }
+          return;
+        }
+      }
       if (target.name === "value") {
         if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) {
           element.value = value == null ? "" : String(value);
@@ -875,6 +903,15 @@ var AssignmentNode = class extends BaseNode {
     }
   }
 };
+function normalizeClassList(value) {
+  if (value == null) {
+    return [];
+  }
+  if (Array.isArray(value)) {
+    return value.flatMap((entry) => String(entry).split(/\s+/)).map((entry) => entry.trim()).filter(Boolean);
+  }
+  return String(value).split(/\s+/).map((entry) => entry.trim()).filter(Boolean);
+}
 var ReturnNode = class extends BaseNode {
   constructor(value) {
     super("Return");
@@ -3256,6 +3293,10 @@ ${caret}`;
     if (token.type === "Equals" /* Equals */) {
       return true;
     }
+    if (token.type === "Tilde" /* Tilde */) {
+      const next = this.stream.peekNonWhitespace(index + 1);
+      return next?.type === "Equals" /* Equals */;
+    }
     if (token.type === "Plus" /* Plus */ || token.type === "Minus" /* Minus */ || token.type === "Star" /* Star */ || token.type === "Slash" /* Slash */) {
       const next = this.stream.peekNonWhitespace(index + 1);
       return next?.type === "Equals" /* Equals */;
@@ -3492,6 +3533,11 @@ ${caret}`;
     if (next.type === "Equals" /* Equals */) {
       this.stream.next();
       return "=";
+    }
+    if (next.type === "Tilde" /* Tilde */) {
+      this.stream.next();
+      this.stream.expect("Equals" /* Equals */);
+      return "~=";
     }
     if (next.type === "Plus" /* Plus */ || next.type === "Minus" /* Minus */ || next.type === "Star" /* Star */ || next.type === "Slash" /* Slash */) {
       const op = this.stream.next();

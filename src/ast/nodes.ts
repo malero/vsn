@@ -143,13 +143,21 @@ export class AssignmentNode extends BaseNode {
   constructor(
     public target: AssignmentTarget,
     public value: ExpressionNode,
-    public operator: "=" | "+=" | "-=" | "*=" | "/=" | "++" | "--" = "=",
+    public operator: "=" | "+=" | "-=" | "*=" | "/=" | "~=" | "++" | "--" = "=",
     public prefix = false
   ) {
     super("Assignment");
   }
 
   evaluate(context: ExecutionContext): any {
+    const target = this.target;
+    if (target instanceof DirectiveExpression) {
+      const value = this.value.evaluate(context);
+      return resolveMaybe(value, (resolvedValue) => {
+        this.assignDirectiveTarget(context, target, resolvedValue, this.operator);
+        return resolvedValue;
+      });
+    }
     if (!context.scope || !context.scope.setPath) {
       return undefined;
     }
@@ -177,7 +185,7 @@ export class AssignmentNode extends BaseNode {
           return resolvedValue;
         });
       }
-      this.assignTarget(context, this.target, resolvedValue);
+      this.assignTarget(context, this.target, resolvedValue, this.operator);
       return resolvedValue;
     });
   }
@@ -322,12 +330,17 @@ export class AssignmentNode extends BaseNode {
     return null;
   }
 
-  private assignTarget(context: ExecutionContext, target: AssignmentTarget, value: any): void {
+  private assignTarget(
+    context: ExecutionContext,
+    target: AssignmentTarget,
+    value: any,
+    operator: AssignmentNode["operator"] = "="
+  ): void {
     if (!context.scope || !context.scope.setPath) {
       return;
     }
     if (target instanceof DirectiveExpression) {
-      this.assignDirectiveTarget(context, target, value);
+      this.assignDirectiveTarget(context, target, value, operator);
       return;
     }
     if (target instanceof IdentifierExpression) {
@@ -346,7 +359,7 @@ export class AssignmentNode extends BaseNode {
           index += 1;
           continue;
         }
-        this.assignTarget(context, element, source[index]);
+        this.assignTarget(context, element, source[index], operator);
         index += 1;
       }
       return;
@@ -366,7 +379,7 @@ export class AssignmentNode extends BaseNode {
           continue;
         }
         usedKeys.add(entry.key);
-        this.assignTarget(context, entry.target, (source as any)[entry.key]);
+        this.assignTarget(context, entry.target, (source as any)[entry.key], operator);
       }
       return;
     }
@@ -375,13 +388,34 @@ export class AssignmentNode extends BaseNode {
   private assignDirectiveTarget(
     context: ExecutionContext,
     target: DirectiveExpression,
-    value: any
+    value: any,
+    operator: AssignmentNode["operator"] = "="
   ): void {
     const element = context.element;
     if (!element) {
       return;
     }
     if (target.kind === "attr") {
+      if (target.name === "class" && element instanceof HTMLElement && operator !== "=") {
+        const classes = normalizeClassList(value);
+        if (classes.length === 0) {
+          return;
+        }
+        if (operator === "+=") {
+          element.classList.add(...classes);
+          return;
+        }
+        if (operator === "-=") {
+          element.classList.remove(...classes);
+          return;
+        }
+        if (operator === "~=") {
+          for (const name of classes) {
+            element.classList.toggle(name);
+          }
+          return;
+        }
+      }
       if (target.name === "value") {
         if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) {
           element.value = value == null ? "" : String(value);
@@ -414,6 +448,22 @@ export class AssignmentNode extends BaseNode {
       element.style.setProperty(target.name, value == null ? "" : String(value));
     }
   }
+}
+
+function normalizeClassList(value: any): string[] {
+  if (value == null) {
+    return [];
+  }
+  if (Array.isArray(value)) {
+    return value
+      .flatMap((entry) => String(entry).split(/\s+/))
+      .map((entry) => entry.trim())
+      .filter(Boolean);
+  }
+  return String(value)
+    .split(/\s+/)
+    .map((entry) => entry.trim())
+    .filter(Boolean);
 }
 
 export class ReturnNode extends BaseNode {

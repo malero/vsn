@@ -1522,6 +1522,10 @@ export class Parser {
     if (token.type === TokenType.Equals) {
       return true;
     }
+    if (token.type === TokenType.Tilde) {
+      const next = this.stream.peekNonWhitespace(index + 1);
+      return next?.type === TokenType.Equals;
+    }
     if (token.type === TokenType.Plus ||
         token.type === TokenType.Minus ||
         token.type === TokenType.Star ||
@@ -1788,7 +1792,7 @@ export class Parser {
     return new AssignmentNode(target, value, operator);
   }
 
-  private parseAssignmentOperator(): "=" | "+=" | "-=" | "*=" | "/=" {
+  private parseAssignmentOperator(): "=" | "+=" | "-=" | "*=" | "/=" | "~=" {
     const next = this.stream.peek();
     if (!next) {
       throw new Error("Expected assignment operator");
@@ -1796,6 +1800,11 @@ export class Parser {
     if (next.type === TokenType.Equals) {
       this.stream.next();
       return "=";
+    }
+    if (next.type === TokenType.Tilde) {
+      this.stream.next();
+      this.stream.expect(TokenType.Equals);
+      return "~=";
     }
     if (next.type === TokenType.Plus ||
         next.type === TokenType.Minus ||
