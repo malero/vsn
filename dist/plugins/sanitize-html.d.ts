@@ -100,9 +100,9 @@ declare class DeclarationNode extends BaseNode {
     flagArgs: DeclarationFlagArgs;
     constructor(target: DeclarationTarget, operator: ":" | ":=" | ":<" | ":>", value: ExpressionNode, flags: DeclarationFlags, flagArgs: DeclarationFlagArgs);
 }
-type ExpressionNode = AssignmentNode | IdentifierExpression | LiteralExpression | TemplateExpression | UnaryExpression | BinaryExpression | MemberExpression | CallExpression | ArrayExpression | ObjectExpression | IndexExpression | FunctionExpression | AwaitExpression | TernaryExpression | DirectiveExpression | QueryExpression;
+type ExpressionNode = AssignmentNode | IdentifierExpression | ElementRefExpression | LiteralExpression | TemplateExpression | UnaryExpression | BinaryExpression | MemberExpression | CallExpression | ArrayExpression | ObjectExpression | IndexExpression | FunctionExpression | AwaitExpression | TernaryExpression | DirectiveExpression | ElementDirectiveExpression | ElementPropertyExpression | QueryExpression;
 type DeclarationTarget = IdentifierExpression | DirectiveExpression;
-type AssignmentTarget = IdentifierExpression | MemberExpression | IndexExpression | DirectiveExpression | ArrayPattern | ObjectPattern;
+type AssignmentTarget = IdentifierExpression | MemberExpression | IndexExpression | DirectiveExpression | ElementDirectiveExpression | ElementPropertyExpression | ArrayPattern | ObjectPattern;
 type FunctionParam = {
     name: string;
     defaultValue?: ExpressionNode;
@@ -112,6 +112,11 @@ type PatternNode = IdentifierExpression | ArrayPattern | ObjectPattern;
 declare class IdentifierExpression extends BaseNode {
     name: string;
     constructor(name: string);
+    evaluate(context: ExecutionContext): any;
+}
+declare class ElementRefExpression extends BaseNode {
+    id: string;
+    constructor(id: string);
     evaluate(context: ExecutionContext): any;
 }
 declare class SpreadElement extends BaseNode {
@@ -231,6 +236,18 @@ declare class DirectiveExpression extends BaseNode {
     kind: "attr" | "style";
     name: string;
     constructor(kind: "attr" | "style", name: string);
+    evaluate(context: ExecutionContext): any;
+}
+declare class ElementDirectiveExpression extends BaseNode {
+    element: ExpressionNode;
+    directive: DirectiveExpression;
+    constructor(element: ExpressionNode, directive: DirectiveExpression);
+    evaluate(context: ExecutionContext): any;
+}
+declare class ElementPropertyExpression extends BaseNode {
+    element: ExpressionNode;
+    property: string;
+    constructor(element: ExpressionNode, property: string);
     evaluate(context: ExecutionContext): any;
 }
 declare class AwaitExpression extends BaseNode {

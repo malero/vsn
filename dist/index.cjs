@@ -35,6 +35,9 @@ __export(index_exports, {
   ContinueNode: () => ContinueNode,
   DeclarationNode: () => DeclarationNode,
   DirectiveExpression: () => DirectiveExpression,
+  ElementDirectiveExpression: () => ElementDirectiveExpression,
+  ElementPropertyExpression: () => ElementPropertyExpression,
+  ElementRefExpression: () => ElementRefExpression,
   Engine: () => Engine,
   ForEachNode: () => ForEachNode,
   ForNode: () => ForNode,
@@ -631,6 +634,25 @@ var AssignmentNode = class extends BaseNode {
         return resolvedValue;
       });
     }
+    if (target instanceof ElementDirectiveExpression) {
+      const elementValue = target.element.evaluate(context);
+      return resolveMaybe(elementValue, (resolvedElement) => {
+        const element = resolveElementFromReference(resolvedElement);
+        if (!element) {
+          return void 0;
+        }
+        const value2 = this.value.evaluate(context);
+        return resolveMaybe(value2, (resolvedValue) => {
+          this.assignDirectiveTarget(
+            { ...context, element },
+            target.directive,
+            resolvedValue,
+            this.operator
+          );
+          return resolvedValue;
+        });
+      });
+    }
     if (!context.scope || !context.scope.setPath) {
       return void 0;
     }
@@ -803,6 +825,43 @@ var AssignmentNode = class extends BaseNode {
       this.assignDirectiveTarget(context, target, value, operator);
       return;
     }
+    if (target instanceof ElementDirectiveExpression) {
+      const elementValue = target.element.evaluate(context);
+      const next = resolveMaybe(elementValue, (resolvedElement) => {
+        const element = resolveElementFromReference(resolvedElement);
+        if (!element) {
+          return;
+        }
+        this.assignDirectiveTarget(
+          { ...context, element },
+          target.directive,
+          value,
+          operator
+        );
+      });
+      if (isPromiseLike(next)) {
+        void next;
+      }
+      return;
+    }
+    if (target instanceof ElementPropertyExpression) {
+      const elementValue = target.element.evaluate(context);
+      const next = resolveMaybe(elementValue, (resolvedElement) => {
+        if (resolvedElement && typeof resolvedElement === "object" && resolvedElement.__scope) {
+          resolvedElement.__scope.setPath?.(target.property, value);
+          return;
+        }
+        const element = resolveElementFromReference(resolvedElement);
+        if (!element) {
+          return;
+        }
+        element[target.property] = value;
+      });
+      if (isPromiseLike(next)) {
+        void next;
+      }
+      return;
+    }
     if (target instanceof IdentifierExpression) {
       context.scope.setPath(target.name, value);
       return;
@@ -850,7 +909,7 @@ var AssignmentNode = class extends BaseNode {
       return;
     }
     if (target.kind === "attr") {
-      if (target.name === "class" && element instanceof HTMLElement && operator !== "=") {
+      if (target.name === "class" && "classList" in element && operator !== "=") {
         const classes = normalizeClassList(value);
         if (classes.length === 0) {
           return;
@@ -1346,6 +1405,25 @@ var IdentifierExpression = class extends BaseNode {
     return context.globals ? context.globals[this.name] : void 0;
   }
 };
+var ElementRefExpression = class extends BaseNode {
+  constructor(id) {
+    super("ElementRef");
+    this.id = id;
+  }
+  evaluate(context) {
+    const doc = context.element?.ownerDocument ?? (typeof document !== "undefined" ? document : void 0);
+    if (!doc) {
+      return void 0;
+    }
+    const element = doc.getElementById(this.id);
+    if (!element) {
+      return void 0;
+    }
+    const engine = globalThis.VSNEngine;
+    const scope = engine?.getScope ? engine.getScope(element) : void 0;
+    return { __element: element, __scope: scope };
+  }
+};
 var SpreadElement = class extends BaseNode {
   constructor(value) {
     super("SpreadElement");
@@ -1839,6 +1917,56 @@ var DirectiveExpression = class extends BaseNode {
     return void 0;
   }
 };
+var ElementDirectiveExpression = class extends BaseNode {
+  constructor(element, directive) {
+    super("ElementDirective");
+    this.element = element;
+    this.directive = directive;
+  }
+  evaluate(context) {
+    const elementValue = this.element.evaluate(context);
+    return resolveMaybe(elementValue, (resolvedElement) => {
+      const element = resolveElementFromReference(resolvedElement);
+      if (!element) {
+        return void 0;
+      }
+      const nextContext = { ...context, element };
+      return this.directive.evaluate(nextContext);
+    });
+  }
+};
+var ElementPropertyExpression = class extends BaseNode {
+  constructor(element, property) {
+    super("ElementProperty");
+    this.element = element;
+    this.property = property;
+  }
+  evaluate(context) {
+    const elementValue = this.element.evaluate(context);
+    return resolveMaybe(elementValue, (resolvedElement) => {
+      if (resolvedElement && typeof resolvedElement === "object" && resolvedElement.__scope) {
+        return resolvedElement.__scope.getPath?.(this.property);
+      }
+      const element = resolveElementFromReference(resolvedElement);
+      if (!element) {
+        return void 0;
+      }
+      return element[this.property];
+    });
+  }
+};
+function resolveElementFromReference(value) {
+  if (value && typeof value === "object") {
+    if (value.nodeType === 1) {
+      return value;
+    }
+    const candidate = value.__element;
+    if (candidate && typeof candidate === "object" && candidate.nodeType === 1) {
+      return candidate;
+    }
+  }
+  return void 0;
+}
 var AwaitExpression = class extends BaseNode {
   constructor(argument) {
     super("AwaitExpression");
@@ -2536,7 +2664,7 @@ ${caret}`;
     return expr;
   }
   createIncrementNode(token, argument, prefix) {
-    if (!(argument instanceof IdentifierExpression) && !(argument instanceof MemberExpression) && !(argument instanceof IndexExpression) && !(argument instanceof DirectiveExpression)) {
+    if (!(argument instanceof IdentifierExpression) && !(argument instanceof MemberExpression) && !(argument instanceof IndexExpression) && !(argument instanceof DirectiveExpression) && !(argument instanceof ElementDirectiveExpression)) {
       throw new Error("Increment/decrement requires a mutable target");
     }
     const operator = token.type === "PlusPlus" /* PlusPlus */ ? "++" : "--";
@@ -2622,8 +2750,18 @@ ${caret}`;
       }
       if (next.type === "Dot" /* Dot */) {
         this.stream.next();
-        const name = this.stream.expect("Identifier" /* Identifier */);
-        expr = new MemberExpression(expr, name.value);
+        const chained = this.stream.peek();
+        if (chained?.type === "At" /* At */ || chained?.type === "Dollar" /* Dollar */) {
+          const directive = this.parseDirectiveExpression();
+          expr = new ElementDirectiveExpression(expr, directive);
+        } else {
+          const name = this.stream.expect("Identifier" /* Identifier */);
+          if (expr instanceof ElementRefExpression) {
+            expr = new ElementPropertyExpression(expr, name.value);
+          } else {
+            expr = new MemberExpression(expr, name.value);
+          }
+        }
         continue;
       }
       if (next.type === "LBracket" /* LBracket */) {
@@ -2646,10 +2784,10 @@ ${caret}`;
       throw new Error("Expected expression");
     }
     if (token.type === "At" /* At */ || token.type === "Dollar" /* Dollar */) {
-      const kind = token.type === "At" /* At */ ? "attr" : "style";
-      this.stream.next();
-      const name = this.stream.expect("Identifier" /* Identifier */);
-      return new DirectiveExpression(kind, name.value);
+      return this.parseDirectiveExpression();
+    }
+    if (token.type === "Hash" /* Hash */) {
+      return this.parseElementRefExpression();
     }
     if (token.type === "Question" /* Question */) {
       return this.parseQueryExpression();
@@ -2695,6 +2833,21 @@ ${caret}`;
       return this.parseTemplateExpression();
     }
     throw new Error(`Unsupported expression token ${token.type}`);
+  }
+  parseDirectiveExpression() {
+    const token = this.stream.peek();
+    if (!token || token.type !== "At" /* At */ && token.type !== "Dollar" /* Dollar */) {
+      throw new Error("Expected directive");
+    }
+    const kind = token.type === "At" /* At */ ? "attr" : "style";
+    this.stream.next();
+    const name = this.stream.expect("Identifier" /* Identifier */);
+    return new DirectiveExpression(kind, name.value);
+  }
+  parseElementRefExpression() {
+    this.stream.expect("Hash" /* Hash */);
+    const id = this.stream.expect("Identifier" /* Identifier */).value;
+    return new ElementRefExpression(id);
   }
   parseArrayExpression() {
     this.stream.expect("LBracket" /* LBracket */);
@@ -2912,7 +3065,14 @@ ${caret}`;
       if (expr instanceof CallExpression) {
         throw new Error("Invalid assignment target CallExpression");
       }
-      if (expr instanceof IdentifierExpression || expr instanceof MemberExpression || expr instanceof IndexExpression) {
+      if (expr instanceof IdentifierExpression || expr instanceof MemberExpression || expr instanceof IndexExpression || expr instanceof ElementDirectiveExpression) {
+        return expr;
+      }
+      throw new Error("Invalid assignment target");
+    }
+    if (token.type === "Hash" /* Hash */) {
+      const expr = this.parseCallExpression();
+      if (expr instanceof ElementDirectiveExpression) {
         return expr;
       }
       throw new Error("Invalid assignment target");
@@ -3264,6 +3424,45 @@ ${caret}`;
       const second = this.stream.peekNonWhitespace(1);
       return second?.type === "Identifier" /* Identifier */ && this.isAssignmentOperatorStart(2);
     }
+    if (first.type === "Hash" /* Hash */) {
+      let index = 1;
+      if (this.stream.peekNonWhitespace(index)?.type !== "Identifier" /* Identifier */) {
+        return false;
+      }
+      index += 1;
+      while (true) {
+        const token = this.stream.peekNonWhitespace(index);
+        if (!token) {
+          return false;
+        }
+        if (token.type === "Dot" /* Dot */) {
+          const next = this.stream.peekNonWhitespace(index + 1);
+          if (next?.type === "Identifier" /* Identifier */) {
+            index += 2;
+            continue;
+          }
+          if (next?.type === "At" /* At */ || next?.type === "Dollar" /* Dollar */) {
+            const afterDirective = this.stream.peekNonWhitespace(index + 2);
+            if (afterDirective?.type !== "Identifier" /* Identifier */) {
+              return false;
+            }
+            index += 3;
+            continue;
+          }
+          return false;
+        }
+        if (token.type === "LBracket" /* LBracket */) {
+          const indexAfter = this.stream.indexAfterDelimited("LBracket" /* LBracket */, "RBracket" /* RBracket */, index);
+          if (indexAfter === null) {
+            return false;
+          }
+          index = indexAfter;
+          continue;
+        }
+        break;
+      }
+      return this.isAssignmentOperatorStart(index);
+    }
     if (first.type === "LBrace" /* LBrace */ || first.type === "LBracket" /* LBracket */) {
       const stack = [];
       let index = 0;
@@ -3311,7 +3510,7 @@ ${caret}`;
     if (first.type === "Identifier" /* Identifier */) {
       return true;
     }
-    return first.type === "Number" /* Number */ || first.type === "String" /* String */ || first.type === "Boolean" /* Boolean */ || first.type === "Null" /* Null */ || first.type === "LParen" /* LParen */ || first.type === "LBracket" /* LBracket */ || first.type === "LBrace" /* LBrace */ || first.type === "At" /* At */ || first.type === "Dollar" /* Dollar */ || first.type === "Question" /* Question */ || first.type === "Bang" /* Bang */ || first.type === "Minus" /* Minus */;
+    return first.type === "Number" /* Number */ || first.type === "String" /* String */ || first.type === "Boolean" /* Boolean */ || first.type === "Null" /* Null */ || first.type === "LParen" /* LParen */ || first.type === "LBracket" /* LBracket */ || first.type === "LBrace" /* LBrace */ || first.type === "At" /* At */ || first.type === "Dollar" /* Dollar */ || first.type === "Hash" /* Hash */ || first.type === "Question" /* Question */ || first.type === "Bang" /* Bang */ || first.type === "Minus" /* Minus */;
   }
   isFunctionDeclarationStart() {
     const first = this.stream.peekNonWhitespace(0);
@@ -5650,6 +5849,9 @@ var Engine = class _Engine {
     if (type === "Identifier") {
       return { type, name: node.name ?? "" };
     }
+    if (type === "ElementRef") {
+      return { type, id: node.id ?? "" };
+    }
     if (type === "Literal") {
       return { type, value: node.value };
     }
@@ -5705,6 +5907,20 @@ var Engine = class _Engine {
     }
     if (type === "Directive") {
       return { type, kind: node.kind ?? "", name: node.name ?? "" };
+    }
+    if (type === "ElementDirective") {
+      return {
+        type,
+        element: this.normalizeNode(node.element),
+        directive: this.normalizeNode(node.directive)
+      };
+    }
+    if (type === "ElementProperty") {
+      return {
+        type,
+        element: this.normalizeNode(node.element),
+        property: node.property ?? ""
+      };
     }
     if (type === "Query") {
       return { type, direction: node.direction ?? "", selector: node.selector ?? "" };
@@ -6321,6 +6537,9 @@ if (typeof document !== "undefined") {
   ContinueNode,
   DeclarationNode,
   DirectiveExpression,
+  ElementDirectiveExpression,
+  ElementPropertyExpression,
+  ElementRefExpression,
   Engine,
   ForEachNode,
   ForNode,

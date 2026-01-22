@@ -18,11 +18,14 @@ import {
   DeclarationFlagArgs,
   MemberExpression,
   DirectiveExpression,
+  ElementDirectiveExpression,
   FunctionDeclarationNode,
   FunctionExpression,
   FunctionParam,
   IdentifierExpression,
+  ElementRefExpression,
   LiteralExpression,
+  ElementPropertyExpression,
   RestElement,
   SpreadElement,
   TemplateExpression,
@@ -702,6 +705,7 @@ export class Parser {
       && !(argument instanceof MemberExpression)
       && !(argument instanceof IndexExpression)
       && !(argument instanceof DirectiveExpression)
+      && !(argument instanceof ElementDirectiveExpression)
     ) {
       throw new Error("Increment/decrement requires a mutable target");
     }
@@ -789,8 +793,18 @@ export class Parser {
       }
       if (next.type === TokenType.Dot) {
         this.stream.next();
-        const name = this.stream.expect(TokenType.Identifier);
-        expr = new MemberExpression(expr, name.value);
+        const chained = this.stream.peek();
+        if (chained?.type === TokenType.At || chained?.type === TokenType.Dollar) {
+          const directive = this.parseDirectiveExpression();
+          expr = new ElementDirectiveExpression(expr, directive);
+        } else {
+          const name = this.stream.expect(TokenType.Identifier);
+          if (expr instanceof ElementRefExpression) {
+            expr = new ElementPropertyExpression(expr, name.value);
+          } else {
+            expr = new MemberExpression(expr, name.value);
+          }
+        }
         continue;
       }
       if (next.type === TokenType.LBracket) {
@@ -815,10 +829,11 @@ export class Parser {
     }
 
     if (token.type === TokenType.At || token.type === TokenType.Dollar) {
-      const kind = token.type === TokenType.At ? "attr" : "style";
-      this.stream.next();
-      const name = this.stream.expect(TokenType.Identifier);
-      return new DirectiveExpression(kind, name.value);
+      return this.parseDirectiveExpression();
+    }
+
+    if (token.type === TokenType.Hash) {
+      return this.parseElementRefExpression();
     }
 
     if (token.type === TokenType.Question) {
@@ -875,6 +890,23 @@ export class Parser {
     }
 
     throw new Error(`Unsupported expression token ${token.type}`);
+  }
+
+  private parseDirectiveExpression(): DirectiveExpression {
+    const token = this.stream.peek();
+    if (!token || (token.type !== TokenType.At && token.type !== TokenType.Dollar)) {
+      throw new Error("Expected directive");
+    }
+    const kind = token.type === TokenType.At ? "attr" : "style";
+    this.stream.next();
+    const name = this.stream.expect(TokenType.Identifier);
+    return new DirectiveExpression(kind, name.value);
+  }
+
+  private parseElementRefExpression(): ElementRefExpression {
+    this.stream.expect(TokenType.Hash);
+    const id = this.stream.expect(TokenType.Identifier).value;
+    return new ElementRefExpression(id);
   }
 
   private parseArrayExpression(): ExpressionNode {
@@ -1108,7 +1140,20 @@ export class Parser {
       if (expr instanceof CallExpression) {
         throw new Error("Invalid assignment target CallExpression");
       }
-      if (expr instanceof IdentifierExpression || expr instanceof MemberExpression || expr instanceof IndexExpression) {
+      if (
+        expr instanceof IdentifierExpression
+        || expr instanceof MemberExpression
+        || expr instanceof IndexExpression
+        || expr instanceof ElementDirectiveExpression
+      ) {
+        return expr;
+      }
+      throw new Error("Invalid assignment target");
+    }
+
+    if (token.type === TokenType.Hash) {
+      const expr = this.parseCallExpression();
+      if (expr instanceof ElementDirectiveExpression) {
         return expr;
       }
       throw new Error("Invalid assignment target");
@@ -1491,6 +1536,46 @@ export class Parser {
       return second?.type === TokenType.Identifier && this.isAssignmentOperatorStart(2);
     }
 
+    if (first.type === TokenType.Hash) {
+      let index = 1;
+      if (this.stream.peekNonWhitespace(index)?.type !== TokenType.Identifier) {
+        return false;
+      }
+      index += 1;
+      while (true) {
+        const token = this.stream.peekNonWhitespace(index);
+        if (!token) {
+          return false;
+        }
+        if (token.type === TokenType.Dot) {
+          const next = this.stream.peekNonWhitespace(index + 1);
+          if (next?.type === TokenType.Identifier) {
+            index += 2;
+            continue;
+          }
+          if (next?.type === TokenType.At || next?.type === TokenType.Dollar) {
+            const afterDirective = this.stream.peekNonWhitespace(index + 2);
+            if (afterDirective?.type !== TokenType.Identifier) {
+              return false;
+            }
+            index += 3;
+            continue;
+          }
+          return false;
+        }
+        if (token.type === TokenType.LBracket) {
+          const indexAfter = this.stream.indexAfterDelimited(TokenType.LBracket, TokenType.RBracket, index);
+          if (indexAfter === null) {
+            return false;
+          }
+          index = indexAfter;
+          continue;
+        }
+        break;
+      }
+      return this.isAssignmentOperatorStart(index);
+    }
+
     if (first.type === TokenType.LBrace || first.type === TokenType.LBracket) {
       const stack: TokenType[] = [];
       let index = 0;
@@ -1554,6 +1639,7 @@ export class Parser {
       || first.type === TokenType.LBrace
       || first.type === TokenType.At
       || first.type === TokenType.Dollar
+      || first.type === TokenType.Hash
       || first.type === TokenType.Question
       || first.type === TokenType.Bang
       || first.type === TokenType.Minus

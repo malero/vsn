@@ -1946,6 +1946,9 @@ export class Engine {
     if (type === "Identifier") {
       return { type, name: node.name ?? "" };
     }
+    if (type === "ElementRef") {
+      return { type, id: node.id ?? "" };
+    }
     if (type === "Literal") {
       return { type, value: node.value };
     }
@@ -2001,6 +2004,20 @@ export class Engine {
     }
     if (type === "Directive") {
       return { type, kind: node.kind ?? "", name: node.name ?? "" };
+    }
+    if (type === "ElementDirective") {
+      return {
+        type,
+        element: this.normalizeNode(node.element),
+        directive: this.normalizeNode(node.directive)
+      };
+    }
+    if (type === "ElementProperty") {
+      return {
+        type,
+        element: this.normalizeNode(node.element),
+        property: node.property ?? ""
+      };
     }
     if (type === "Query") {
       return { type, direction: node.direction ?? "", selector: node.selector ?? "" };

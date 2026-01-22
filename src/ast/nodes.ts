@@ -158,6 +158,25 @@ export class AssignmentNode extends BaseNode {
         return resolvedValue;
       });
     }
+    if (target instanceof ElementDirectiveExpression) {
+      const elementValue = target.element.evaluate(context);
+      return resolveMaybe(elementValue, (resolvedElement) => {
+        const element = resolveElementFromReference(resolvedElement);
+        if (!element) {
+          return undefined;
+        }
+        const value = this.value.evaluate(context);
+        return resolveMaybe(value, (resolvedValue) => {
+          this.assignDirectiveTarget(
+            { ...context, element },
+            target.directive,
+            resolvedValue,
+            this.operator
+          );
+          return resolvedValue;
+        });
+      });
+    }
     if (!context.scope || !context.scope.setPath) {
       return undefined;
     }
@@ -343,6 +362,43 @@ export class AssignmentNode extends BaseNode {
       this.assignDirectiveTarget(context, target, value, operator);
       return;
     }
+    if (target instanceof ElementDirectiveExpression) {
+      const elementValue = target.element.evaluate(context);
+      const next = resolveMaybe(elementValue, (resolvedElement) => {
+        const element = resolveElementFromReference(resolvedElement);
+        if (!element) {
+          return;
+        }
+        this.assignDirectiveTarget(
+          { ...context, element },
+          target.directive,
+          value,
+          operator
+        );
+      });
+      if (isPromiseLike(next)) {
+        void next;
+      }
+      return;
+    }
+    if (target instanceof ElementPropertyExpression) {
+      const elementValue = target.element.evaluate(context);
+      const next = resolveMaybe(elementValue, (resolvedElement) => {
+        if (resolvedElement && typeof resolvedElement === "object" && resolvedElement.__scope) {
+          resolvedElement.__scope.setPath?.(target.property, value);
+          return;
+        }
+        const element = resolveElementFromReference(resolvedElement);
+        if (!element) {
+          return;
+        }
+        (element as any)[target.property] = value;
+      });
+      if (isPromiseLike(next)) {
+        void next;
+      }
+      return;
+    }
     if (target instanceof IdentifierExpression) {
       context.scope.setPath(target.name, value);
       return;
@@ -396,7 +452,7 @@ export class AssignmentNode extends BaseNode {
       return;
     }
     if (target.kind === "attr") {
-      if (target.name === "class" && element instanceof HTMLElement && operator !== "=") {
+      if (target.name === "class" && "classList" in element && operator !== "=") {
         const classes = normalizeClassList(value);
         if (classes.length === 0) {
           return;
@@ -942,6 +998,7 @@ export class DeclarationNode extends BaseNode {
 export type ExpressionNode =
   | AssignmentNode
   | IdentifierExpression
+  | ElementRefExpression
   | LiteralExpression
   | TemplateExpression
   | UnaryExpression
@@ -955,6 +1012,8 @@ export type ExpressionNode =
   | AwaitExpression
   | TernaryExpression
   | DirectiveExpression
+  | ElementDirectiveExpression
+  | ElementPropertyExpression
   | QueryExpression;
 
 export type DeclarationTarget = IdentifierExpression | DirectiveExpression;
@@ -963,6 +1022,8 @@ export type AssignmentTarget =
   | MemberExpression
   | IndexExpression
   | DirectiveExpression
+  | ElementDirectiveExpression
+  | ElementPropertyExpression
   | ArrayPattern
   | ObjectPattern;
 
@@ -995,6 +1056,26 @@ export class IdentifierExpression extends BaseNode {
       }
     }
     return context.globals ? context.globals[this.name] : undefined;
+  }
+}
+
+export class ElementRefExpression extends BaseNode {
+  constructor(public id: string) {
+    super("ElementRef");
+  }
+
+  evaluate(context: ExecutionContext): any {
+    const doc = context.element?.ownerDocument ?? (typeof document !== "undefined" ? document : undefined);
+    if (!doc) {
+      return undefined;
+    }
+    const element = doc.getElementById(this.id);
+    if (!element) {
+      return undefined;
+    }
+    const engine = (globalThis as any).VSNEngine;
+    const scope = engine?.getScope ? engine.getScope(element) : undefined;
+    return { __element: element, __scope: scope };
   }
 }
 
@@ -1538,6 +1619,57 @@ export class DirectiveExpression extends BaseNode {
     }
     return undefined;
   }
+}
+
+export class ElementDirectiveExpression extends BaseNode {
+  constructor(public element: ExpressionNode, public directive: DirectiveExpression) {
+    super("ElementDirective");
+  }
+
+  evaluate(context: ExecutionContext): any {
+    const elementValue = this.element.evaluate(context);
+    return resolveMaybe(elementValue, (resolvedElement) => {
+      const element = resolveElementFromReference(resolvedElement);
+      if (!element) {
+        return undefined;
+      }
+      const nextContext: ExecutionContext = { ...context, element };
+      return this.directive.evaluate(nextContext);
+    });
+  }
+}
+
+export class ElementPropertyExpression extends BaseNode {
+  constructor(public element: ExpressionNode, public property: string) {
+    super("ElementProperty");
+  }
+
+  evaluate(context: ExecutionContext): any {
+    const elementValue = this.element.evaluate(context);
+    return resolveMaybe(elementValue, (resolvedElement) => {
+      if (resolvedElement && typeof resolvedElement === "object" && resolvedElement.__scope) {
+        return resolvedElement.__scope.getPath?.(this.property);
+      }
+      const element = resolveElementFromReference(resolvedElement);
+      if (!element) {
+        return undefined;
+      }
+      return (element as any)[this.property];
+    });
+  }
+}
+
+function resolveElementFromReference(value: any): Element | undefined {
+  if (value && typeof value === "object") {
+    if (value.nodeType === 1) {
+      return value as Element;
+    }
+    const candidate = value.__element;
+    if (candidate && typeof candidate === "object" && candidate.nodeType === 1) {
+      return candidate as Element;
+    }
+  }
+  return undefined;
 }
 
 export class AwaitExpression extends BaseNode {
