@@ -1276,6 +1276,7 @@ var FunctionExpression = class extends BaseNode {
           rootScope: context.rootScope,
           ...globals ? { globals } : {},
           ...element ? { element } : {},
+          ...context.self ? { self: context.self } : {},
           returnValue: void 0,
           returning: false,
           breaking: false,
@@ -1299,6 +1300,7 @@ var FunctionExpression = class extends BaseNode {
         rootScope: context.rootScope,
         ...globals ? { globals } : {},
         ...element ? { element } : {},
+        ...context.self ? { self: context.self } : {},
         returnValue: void 0,
         returning: false,
         breaking: false,
@@ -1391,7 +1393,7 @@ var IdentifierExpression = class extends BaseNode {
   }
   evaluate(context) {
     if (this.name === "self") {
-      return context.element ?? context.scope;
+      return context.self ?? context.element ?? context.scope;
     }
     if (this.name.startsWith("root.") && context.rootScope) {
       const path = this.name.slice("root.".length);
@@ -4328,6 +4330,7 @@ var Engine = class _Engine {
   scopeWatchers = /* @__PURE__ */ new WeakMap();
   executionStack = [];
   groupProxyCache = /* @__PURE__ */ new WeakMap();
+  scopeElements = /* @__PURE__ */ new WeakMap();
   constructor(options = {}) {
     this.diagnostics = options.diagnostics ?? false;
     this.logger = options.logger ?? console;
@@ -4529,6 +4532,7 @@ var Engine = class _Engine {
     if (cached) {
       return cached;
     }
+    const element = this.scopeElements.get(scope);
     const proxy = new Proxy(
       {},
       {
@@ -4536,10 +4540,27 @@ var Engine = class _Engine {
           if (typeof prop === "symbol") {
             return void 0;
           }
+          if (prop === "__element") {
+            return element;
+          }
           if (prop === "__scope") {
             return scope;
           }
-          return scope.getPath(String(prop));
+          const key = String(prop);
+          const value = scope.getPath(key);
+          const rootKey = key.split(".")[0];
+          const hasKey = rootKey ? scope.hasKey?.(rootKey) : false;
+          if (value !== void 0 || hasKey) {
+            return value;
+          }
+          if (element && key in element) {
+            const elementValue = element[key];
+            if (typeof elementValue === "function") {
+              return elementValue.bind(element);
+            }
+            return elementValue;
+          }
+          return void 0;
         },
         set: (_target, prop, value) => {
           if (typeof prop === "symbol") {
@@ -4702,10 +4723,14 @@ var Engine = class _Engine {
       if (parentScope) {
         existing.setParent(parentScope);
       }
+      if (!this.scopeElements.has(existing)) {
+        this.scopeElements.set(existing, element);
+      }
       return existing;
     }
     const scope = new Scope(parentScope ?? this.findParentScope(element));
     this.scopes.set(element, scope);
+    this.scopeElements.set(scope, element);
     return scope;
   }
   evaluate(element) {
@@ -5581,22 +5606,26 @@ var Engine = class _Engine {
       this.codeCache.set(code, block);
     }
     await this.withExecutionElement(element, async () => {
+      const selfRef = this.getGroupProxy(scope);
       const context = {
         scope,
         rootScope,
         globals: this.globals,
-        ...element ? { element } : {}
+        ...element ? { element } : {},
+        self: selfRef
       };
       await block.evaluate(context);
     });
   }
   async executeBlock(block, scope, element, rootScope) {
     await this.withExecutionElement(element, async () => {
+      const selfRef = this.getGroupProxy(scope);
       const context = {
         scope,
         rootScope,
         globals: this.globals,
-        ...element ? { element } : {}
+        ...element ? { element } : {},
+        self: selfRef
       };
       await block.evaluate(context);
     });
@@ -6027,6 +6056,7 @@ var Engine = class _Engine {
     if (existing !== void 0 && typeof existing !== "function") {
       throw new Error(`Cannot override non-function '${declaration.name}' with a function`);
     }
+    const selfRef = this.getGroupProxy(scope);
     const fn = async (...args) => {
       const callScope = scope.createChild ? scope.createChild() : scope;
       const context = {
@@ -6034,6 +6064,7 @@ var Engine = class _Engine {
         rootScope: rootScope ?? callScope,
         globals: this.globals,
         element,
+        self: selfRef,
         returnValue: void 0,
         returning: false,
         breaking: false,
@@ -6085,7 +6116,8 @@ var Engine = class _Engine {
     }
   }
   async applyBehaviorDeclaration(element, scope, declaration, rootScope) {
-    const context = { scope, rootScope, element };
+    const selfRef = this.getGroupProxy(scope);
+    const context = { scope, rootScope, element, self: selfRef };
     const operator = declaration.operator;
     const debounceMs = declaration.flags.debounce ? declaration.flagArgs.debounce ?? 200 : void 0;
     const transform = (value) => this.applyCustomFlagTransforms(value, element, scope, declaration);
@@ -6269,7 +6301,8 @@ var Engine = class _Engine {
   }
   applyDirectiveFromExpression(element, target, expr, scope, debounceMs, rootScope) {
     const handler = async () => {
-      const context = { scope, rootScope, element };
+      const selfRef = this.getGroupProxy(scope);
+      const context = { scope, rootScope, element, self: selfRef };
       const value = await expr.evaluate(context);
       this.setDirectiveValue(element, target, value);
     };
@@ -6529,7 +6562,7 @@ var Engine = class _Engine {
 };
 
 // src/index.ts
-var VERSION = "0.1.0";
+var VERSION = true ? "1.0.8" : "0.1.0";
 function parseCFS(source) {
   const parser = new Parser(source);
   return parser.parseProgram();

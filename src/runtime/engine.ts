@@ -185,6 +185,7 @@ export class Engine {
   private scopeWatchers = new WeakMap<Element, { scope: Scope; kind: "path" | "any"; key?: string; handler: () => void }[]>();
   private executionStack: Element[] = [];
   private groupProxyCache = new WeakMap<Scope, Record<string, any>>();
+  private scopeElements = new WeakMap<Scope, Element>();
 
   constructor(options: EngineOptions = {}) {
     this.diagnostics = options.diagnostics ?? false;
@@ -394,6 +395,7 @@ export class Engine {
     if (cached) {
       return cached;
     }
+    const element = this.scopeElements.get(scope);
     const proxy = new Proxy(
       {},
       {
@@ -401,10 +403,27 @@ export class Engine {
           if (typeof prop === "symbol") {
             return undefined;
           }
+          if (prop === "__element") {
+            return element;
+          }
           if (prop === "__scope") {
             return scope;
           }
-          return scope.getPath(String(prop));
+          const key = String(prop);
+          const value = scope.getPath(key);
+          const rootKey = key.split(".")[0];
+          const hasKey = rootKey ? scope.hasKey?.(rootKey) : false;
+          if (value !== undefined || hasKey) {
+            return value;
+          }
+          if (element && key in element) {
+            const elementValue = (element as any)[key];
+            if (typeof elementValue === "function") {
+              return elementValue.bind(element);
+            }
+            return elementValue;
+          }
+          return undefined;
         },
         set: (_target, prop, value) => {
           if (typeof prop === "symbol") {
@@ -581,10 +600,14 @@ export class Engine {
       if (parentScope) {
         existing.setParent(parentScope);
       }
+      if (!this.scopeElements.has(existing)) {
+        this.scopeElements.set(existing, element);
+      }
       return existing;
     }
     const scope = new Scope(parentScope ?? this.findParentScope(element));
     this.scopes.set(element, scope);
+    this.scopeElements.set(scope, element);
     return scope;
   }
 
@@ -1590,11 +1613,13 @@ export class Engine {
       this.codeCache.set(code, block);
     }
     await this.withExecutionElement(element, async () => {
+      const selfRef = this.getGroupProxy(scope);
       const context: ExecutionContext = {
         scope,
         rootScope,
         globals: this.globals,
-        ...(element ? { element } : {})
+        ...(element ? { element } : {}),
+        self: selfRef
       };
       await block.evaluate(context);
     });
@@ -1602,11 +1627,13 @@ export class Engine {
 
   private async executeBlock(block: BlockNode, scope: Scope, element?: Element, rootScope?: Scope): Promise<void> {
     await this.withExecutionElement(element, async () => {
+      const selfRef = this.getGroupProxy(scope);
       const context: ExecutionContext = {
         scope,
         rootScope,
         globals: this.globals,
-        ...(element ? { element } : {})
+        ...(element ? { element } : {}),
+        self: selfRef
       };
       await block.evaluate(context);
     });
@@ -2086,6 +2113,7 @@ export class Engine {
     if (existing !== undefined && typeof existing !== "function") {
       throw new Error(`Cannot override non-function '${declaration.name}' with a function`);
     }
+    const selfRef = this.getGroupProxy(scope);
     const fn = async (...args: any[]) => {
       const callScope = scope.createChild ? scope.createChild() : scope;
       const context: ExecutionContext = {
@@ -2093,6 +2121,7 @@ export class Engine {
         rootScope: rootScope ?? callScope,
         globals: this.globals,
         element,
+        self: selfRef,
         returnValue: undefined,
         returning: false,
         breaking: false,
@@ -2168,7 +2197,8 @@ export class Engine {
     declaration: DeclarationNode,
     rootScope?: Scope
   ): Promise<void> {
-    const context: ExecutionContext = { scope, rootScope, element };
+    const selfRef = this.getGroupProxy(scope);
+    const context: ExecutionContext = { scope, rootScope, element, self: selfRef };
     const operator = declaration.operator;
     const debounceMs = declaration.flags.debounce
       ? declaration.flagArgs.debounce ?? 200
@@ -2394,7 +2424,8 @@ export class Engine {
     rootScope?: Scope
   ): void {
     const handler = async () => {
-      const context: ExecutionContext = { scope, rootScope, element };
+      const selfRef = this.getGroupProxy(scope);
+      const context: ExecutionContext = { scope, rootScope, element, self: selfRef };
       const value = await expr.evaluate(context);
       this.setDirectiveValue(element, target, value);
     };

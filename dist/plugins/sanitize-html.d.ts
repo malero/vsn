@@ -33,6 +33,7 @@ interface ExecutionContext {
     rootScope: ExecutionContext["scope"];
     globals?: Record<string, any>;
     element?: Element;
+    self?: any;
     returnValue?: any;
     returning?: boolean;
     breaking?: boolean;
@@ -379,6 +380,7 @@ declare class Engine {
     private scopeWatchers;
     private executionStack;
     private groupProxyCache;
+    private scopeElements;
     constructor(options?: EngineOptions);
     private getGroupTargetScope;
     private getGroupProxy;

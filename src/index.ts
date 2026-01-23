@@ -1,4 +1,6 @@
-export const VERSION = "0.1.0";
+declare const __VSN_VERSION__: string;
+
+export const VERSION = typeof __VSN_VERSION__ !== "undefined" ? __VSN_VERSION__ : "0.1.0";
 
 export { Lexer } from "./parser/lexer";
 import { Parser } from "./parser/parser";

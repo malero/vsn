@@ -8,6 +8,7 @@ export interface ExecutionContext {
   rootScope: ExecutionContext["scope"];
   globals?: Record<string, any>;
   element?: Element;
+  self?: any;
   returnValue?: any;
   returning?: boolean;
   breaking?: boolean;
@@ -853,6 +854,7 @@ export class FunctionExpression extends BaseNode {
           rootScope: context.rootScope,
           ...(globals ? { globals } : {}),
           ...(element ? { element } : {}),
+          ...(context.self ? { self: context.self } : {}),
           returnValue: undefined,
           returning: false,
           breaking: false,
@@ -879,6 +881,7 @@ export class FunctionExpression extends BaseNode {
         rootScope: context.rootScope,
         ...(globals ? { globals } : {}),
         ...(element ? { element } : {}),
+        ...(context.self ? { self: context.self } : {}),
         returnValue: undefined,
         returning: false,
         breaking: false,
@@ -1042,7 +1045,7 @@ export class IdentifierExpression extends BaseNode {
 
   evaluate(context: ExecutionContext): any {
     if (this.name === "self") {
-      return context.element ?? context.scope;
+      return context.self ?? context.element ?? context.scope;
     }
     if (this.name.startsWith("root.") && context.rootScope) {
       const path = this.name.slice("root.".length);

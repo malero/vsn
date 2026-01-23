@@ -1,4 +1,8 @@
+import { readFileSync } from "node:fs";
 import { defineConfig } from "tsup";
+
+const pkg = JSON.parse(readFileSync("package.json", "utf8"));
+const version = JSON.stringify(pkg.version ?? "0.1.0");
 
 export default defineConfig([
   {
@@ -7,7 +11,10 @@ export default defineConfig([
     dts: true,
     sourcemap: true,
     clean: true,
-    target: "es2022"
+    target: "es2022",
+    define: {
+      __VSN_VERSION__: version
+    }
   },
   {
     entry: ["src/index.ts"],
@@ -15,7 +22,10 @@ export default defineConfig([
     minify: true,
     sourcemap: true,
     outExtension: () => ({ js: ".min.js" }),
-    target: "es2022"
+    target: "es2022",
+    define: {
+      __VSN_VERSION__: version
+    }
   },
   {
     entry: ["src/plugins/microdata.ts"],

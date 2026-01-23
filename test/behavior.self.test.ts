@@ -22,6 +22,7 @@ describe("behavior self", () => {
     const element = document.querySelector(".item") as HTMLDivElement;
     const scope = engine.getScope(element);
 
-    expect(scope.get("menu")).toBe(element);
+    const menu = scope.get("menu");
+    expect(menu?.__element).toBe(element);
   });
 });
