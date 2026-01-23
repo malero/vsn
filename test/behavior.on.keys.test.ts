@@ -11,7 +11,7 @@ describe("behavior on key modifiers", () => {
       behavior .field {
         count: 0;
 
-        on keyup() !enter {
+        on keyup!enter() {
           count = count + 1;
         }
       }
@@ -40,7 +40,7 @@ describe("behavior on key modifiers", () => {
 
     const source = `
       behavior .panel {
-        on click() !outside {
+        on click!outside() {
           closed = true;
         }
       }
@@ -73,7 +73,7 @@ describe("behavior on key modifiers", () => {
 
     const source = `
       behavior .panel {
-        on click() !self {
+        on click!self() {
           clicked = true;
         }
       }

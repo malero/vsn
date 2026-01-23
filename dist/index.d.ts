@@ -476,6 +476,7 @@ declare class Parser {
     private parseBlock;
     private parseStatement;
     private parseOnBlock;
+    private parseOnFlags;
     private parseAssignment;
     private parseExpression;
     private parsePipeExpression;
@@ -548,7 +549,7 @@ declare class Parser {
 }
 
 declare class Scope {
-    readonly parent?: Scope | undefined;
+    parent?: Scope | undefined;
     private data;
     private root;
     private listeners;
@@ -556,6 +557,7 @@ declare class Scope {
     isEachItem: boolean;
     constructor(parent?: Scope | undefined);
     createChild(): Scope;
+    setParent(parent: Scope): void;
     get(key: string): any;
     set(key: string, value: any): void;
     hasKey(path: string): boolean;

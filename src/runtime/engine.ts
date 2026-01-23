@@ -578,6 +578,9 @@ export class Engine {
   getScope(element: Element, parentScope?: Scope): Scope {
     const existing = this.scopes.get(element);
     if (existing) {
+      if (parentScope) {
+        existing.setParent(parentScope);
+      }
       return existing;
     }
     const scope = new Scope(parentScope ?? this.findParentScope(element));

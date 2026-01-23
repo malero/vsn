@@ -2315,6 +2315,7 @@ ${caret}`;
     this.stream.expect("On" /* On */);
     this.stream.skipWhitespace();
     const event = this.parseIdentifierPath();
+    const leadingFlags = this.parseOnFlags();
     this.stream.skipWhitespace();
     this.stream.expect("LParen" /* LParen */);
     const args = [];
@@ -2338,9 +2339,41 @@ ${caret}`;
       }
       throw new Error(`Unexpected token in on() args: ${next.type}`);
     }
-    const { flags, flagArgs } = this.parseFlags(this.customFlags, "flag");
+    const trailingFlags = this.parseOnFlags();
+    const flags = { ...leadingFlags.flags, ...trailingFlags.flags };
+    const flagArgs = { ...leadingFlags.flagArgs, ...trailingFlags.flagArgs };
     const body = this.parseBlock({ allowDeclarations: false });
     return new OnBlockNode(event, args, body, flags, flagArgs);
+  }
+  parseOnFlags() {
+    const flags = {};
+    const flagArgs = {};
+    while (true) {
+      this.stream.skipWhitespace();
+      if (this.stream.peek()?.type !== "Bang" /* Bang */) {
+        break;
+      }
+      this.stream.next();
+      const name = this.stream.expect("Identifier" /* Identifier */).value;
+      if (this.customFlags && !this.customFlags.has(name)) {
+        throw new Error(`Unknown flag ${name}`);
+      }
+      flags[name] = true;
+      this.stream.skipWhitespace();
+      const next = this.stream.peekNonWhitespace(0);
+      if (next?.type !== "LParen" /* LParen */) {
+        continue;
+      }
+      const afterParen = this.stream.peekNonWhitespace(1);
+      if (afterParen?.type === "Identifier" /* Identifier */ || afterParen?.type === "RParen" /* RParen */) {
+        continue;
+      }
+      const customArg = this.parseCustomFlagArg();
+      if (customArg !== void 0) {
+        flagArgs[name] = customArg;
+      }
+    }
+    return { flags, flagArgs };
   }
   parseAssignment() {
     const target = this.parseAssignmentTarget();
@@ -3878,6 +3911,13 @@ var Scope = class _Scope {
   createChild() {
     return new _Scope(this);
   }
+  setParent(parent) {
+    if (this.parent) {
+      return;
+    }
+    this.parent = parent;
+    this.root = parent.root;
+  }
   get(key) {
     return this.getPath(key);
   }
@@ -4570,6 +4610,9 @@ var Engine = class _Engine {
   getScope(element, parentScope) {
     const existing = this.scopes.get(element);
     if (existing) {
+      if (parentScope) {
+        existing.setParent(parentScope);
+      }
       return existing;
     }
     const scope = new Scope(parentScope ?? this.findParentScope(element));

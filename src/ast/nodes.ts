@@ -1041,6 +1041,9 @@ export class IdentifierExpression extends BaseNode {
   }
 
   evaluate(context: ExecutionContext): any {
+    if (this.name === "self") {
+      return context.element ?? context.scope;
+    }
     if (this.name.startsWith("root.") && context.rootScope) {
       const path = this.name.slice("root.".length);
       return context.rootScope.getPath(`self.${path}`);

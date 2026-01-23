@@ -5,12 +5,20 @@ export class Scope {
   private anyListeners = new Set<() => void>();
   public isEachItem = false;
 
-  constructor(public readonly parent?: Scope) {
+  constructor(public parent?: Scope) {
     this.root = parent ? parent.root : this;
   }
 
   createChild(): Scope {
     return new Scope(this);
+  }
+
+  setParent(parent: Scope): void {
+    if (this.parent) {
+      return;
+    }
+    this.parent = parent;
+    this.root = parent.root;
   }
 
   get(key: string): any {

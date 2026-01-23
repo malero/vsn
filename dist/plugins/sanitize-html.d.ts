@@ -1,5 +1,5 @@
 declare class Scope {
-    readonly parent?: Scope | undefined;
+    parent?: Scope | undefined;
     private data;
     private root;
     private listeners;
@@ -7,6 +7,7 @@ declare class Scope {
     isEachItem: boolean;
     constructor(parent?: Scope | undefined);
     createChild(): Scope;
+    setParent(parent: Scope): void;
     get(key: string): any;
     set(key: string, value: any): void;
     hasKey(path: string): boolean;

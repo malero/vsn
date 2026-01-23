@@ -400,6 +400,7 @@ export class Parser {
     this.stream.expect(TokenType.On);
     this.stream.skipWhitespace();
     const event = this.parseIdentifierPath();
+    const leadingFlags = this.parseOnFlags();
     this.stream.skipWhitespace();
     this.stream.expect(TokenType.LParen);
     const args: string[] = [];
@@ -425,9 +426,45 @@ export class Parser {
       throw new Error(`Unexpected token in on() args: ${next.type}`);
     }
 
-    const { flags, flagArgs } = this.parseFlags(this.customFlags, "flag");
+    const trailingFlags = this.parseOnFlags();
+    const flags = { ...leadingFlags.flags, ...trailingFlags.flags };
+    const flagArgs = { ...leadingFlags.flagArgs, ...trailingFlags.flagArgs };
     const body = this.parseBlock({ allowDeclarations: false });
     return new OnBlockNode(event, args, body, flags, flagArgs);
+  }
+
+  private parseOnFlags(): { flags: DeclarationFlags; flagArgs: DeclarationFlagArgs } {
+    const flags: DeclarationFlags = {};
+    const flagArgs: DeclarationFlagArgs = {};
+
+    while (true) {
+      this.stream.skipWhitespace();
+      if (this.stream.peek()?.type !== TokenType.Bang) {
+        break;
+      }
+      this.stream.next();
+      const name = this.stream.expect(TokenType.Identifier).value;
+      if (this.customFlags && !this.customFlags.has(name)) {
+        throw new Error(`Unknown flag ${name}`);
+      }
+      (flags as Record<string, boolean>)[name] = true;
+
+      this.stream.skipWhitespace();
+      const next = this.stream.peekNonWhitespace(0);
+      if (next?.type !== TokenType.LParen) {
+        continue;
+      }
+      const afterParen = this.stream.peekNonWhitespace(1);
+      if (afterParen?.type === TokenType.Identifier || afterParen?.type === TokenType.RParen) {
+        continue;
+      }
+      const customArg = this.parseCustomFlagArg();
+      if (customArg !== undefined) {
+        (flagArgs as Record<string, any>)[name] = customArg;
+      }
+    }
+
+    return { flags, flagArgs };
   }
 
   private parseAssignment(): AssignmentNode {

@@ -11,7 +11,7 @@ describe("behavior on modifiers", () => {
 
     const source = `
       behavior #link {
-        on click() !prevent !stop {
+        on click!prevent!stop() {
           clicked = true;
         }
       }
@@ -40,7 +40,7 @@ describe("behavior on modifiers", () => {
 
     const source = `
       behavior #btn {
-        on click() !once {
+        on click!once() {
           count = (count || 0) + 1;
         }
       }
