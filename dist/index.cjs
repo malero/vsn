@@ -1390,6 +1390,9 @@ var IdentifierExpression = class extends BaseNode {
     this.name = name;
   }
   evaluate(context) {
+    if (this.name === "self") {
+      return context.element ?? context.scope;
+    }
     if (this.name.startsWith("root.") && context.rootScope) {
       const path = this.name.slice("root.".length);
       return context.rootScope.getPath(`self.${path}`);
@@ -3437,9 +3440,21 @@ ${caret}`;
         if (!token) {
           return false;
         }
-        if (token.type === "Dot" /* Dot */ && this.stream.peekNonWhitespace(index + 1)?.type === "Identifier" /* Identifier */) {
-          index += 2;
-          continue;
+        if (token.type === "Dot" /* Dot */) {
+          const next = this.stream.peekNonWhitespace(index + 1);
+          if (next?.type === "Identifier" /* Identifier */) {
+            index += 2;
+            continue;
+          }
+          if (next?.type === "At" /* At */ || next?.type === "Dollar" /* Dollar */) {
+            const afterDirective = this.stream.peekNonWhitespace(index + 2);
+            if (afterDirective?.type !== "Identifier" /* Identifier */) {
+              return false;
+            }
+            index += 3;
+            continue;
+          }
+          return false;
         }
         if (token.type === "LBracket" /* LBracket */) {
           const indexAfter = this.stream.indexAfterDelimited("LBracket" /* LBracket */, "RBracket" /* RBracket */, index);

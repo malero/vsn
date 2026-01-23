@@ -1548,12 +1548,21 @@ export class Parser {
         if (!token) {
           return false;
         }
-        if (
-          token.type === TokenType.Dot &&
-          this.stream.peekNonWhitespace(index + 1)?.type === TokenType.Identifier
-        ) {
-          index += 2;
-          continue;
+        if (token.type === TokenType.Dot) {
+          const next = this.stream.peekNonWhitespace(index + 1);
+          if (next?.type === TokenType.Identifier) {
+            index += 2;
+            continue;
+          }
+          if (next?.type === TokenType.At || next?.type === TokenType.Dollar) {
+            const afterDirective = this.stream.peekNonWhitespace(index + 2);
+            if (afterDirective?.type !== TokenType.Identifier) {
+              return false;
+            }
+            index += 3;
+            continue;
+          }
+          return false;
         }
         if (token.type === TokenType.LBracket) {
           const indexAfter = this.stream.indexAfterDelimited(TokenType.LBracket, TokenType.RBracket, index);
