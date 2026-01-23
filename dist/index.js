@@ -1888,12 +1888,12 @@ var ElementPropertyExpression = class extends BaseNode {
 };
 function resolveElementFromReference(value) {
   if (value && typeof value === "object") {
-    if (value.nodeType === 1) {
-      return value;
-    }
     const candidate = value.__element;
     if (candidate && typeof candidate === "object" && candidate.nodeType === 1) {
       return candidate;
+    }
+    if (value.nodeType === 1) {
+      return value;
     }
   }
   return void 0;
@@ -6488,7 +6488,7 @@ var Engine = class _Engine {
 };
 
 // src/index.ts
-var VERSION = true ? "1.0.8" : "0.1.0";
+var VERSION = true ? "1.0.9" : "0.1.0";
 function parseCFS(source) {
   const parser = new Parser(source);
   return parser.parseProgram();

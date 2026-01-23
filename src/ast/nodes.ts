@@ -1667,12 +1667,12 @@ export class ElementPropertyExpression extends BaseNode {
 
 function resolveElementFromReference(value: any): Element | undefined {
   if (value && typeof value === "object") {
-    if (value.nodeType === 1) {
-      return value as Element;
-    }
     const candidate = value.__element;
     if (candidate && typeof candidate === "object" && candidate.nodeType === 1) {
       return candidate as Element;
+    }
+    if (value.nodeType === 1) {
+      return value as Element;
     }
   }
   return undefined;
