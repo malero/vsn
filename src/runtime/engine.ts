@@ -295,6 +295,14 @@ export class Engine {
     this.registerFlag("backspace", {
       onEventBefore: ({ event }) => this.matchesKeyFlag(event, "backspace")
     });
+    this.registerFlag("minwidth", {
+      onEventBefore: ({ args }) => this.matchesMinWidth(args)
+    });
+    this.registerFlag("maxwidth", {
+      onEventBefore: ({ args }) => this.matchesMaxWidth(args)
+    });
+    this.registerGlobal("minwidth", (value: any) => this.matchesMinWidth(value));
+    this.registerGlobal("maxwidth", (value: any) => this.matchesMaxWidth(value));
     this.registerGlobal("list", {
       async map(items: any[], fn: (item: any, index: number) => any) {
         if (!Array.isArray(items) || typeof fn !== "function") {
@@ -372,6 +380,45 @@ export class Engine {
         }
       }
     });
+  }
+
+  private matchesMinWidth(value: any): boolean {
+    const px = this.parseWidthArg(value);
+    if (px === undefined) {
+      return false;
+    }
+    return this.mediaMatches(`(min-width: ${px}px)`);
+  }
+
+  private matchesMaxWidth(value: any): boolean {
+    const px = this.parseWidthArg(value);
+    if (px === undefined) {
+      return false;
+    }
+    return this.mediaMatches(`(max-width: ${px}px)`);
+  }
+
+  private parseWidthArg(value: any): number | undefined {
+    if (typeof value === "number" && Number.isFinite(value)) {
+      return value;
+    }
+    if (typeof value === "string") {
+      const match = value.match(/-?\d+(\.\d+)?/);
+      if (!match) {
+        return undefined;
+      }
+      const parsed = Number(match[0]);
+      return Number.isFinite(parsed) ? parsed : undefined;
+    }
+    return undefined;
+  }
+
+  private mediaMatches(query: string): boolean {
+    const matcher = (globalThis as any).matchMedia;
+    if (typeof matcher !== "function") {
+      return false;
+    }
+    return Boolean(matcher(query)?.matches);
   }
 
   private getGroupTargetScope(

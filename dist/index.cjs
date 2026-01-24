@@ -4439,6 +4439,14 @@ var Engine = class _Engine {
     this.registerFlag("backspace", {
       onEventBefore: ({ event }) => this.matchesKeyFlag(event, "backspace")
     });
+    this.registerFlag("minwidth", {
+      onEventBefore: ({ args }) => this.matchesMinWidth(args)
+    });
+    this.registerFlag("maxwidth", {
+      onEventBefore: ({ args }) => this.matchesMaxWidth(args)
+    });
+    this.registerGlobal("minwidth", (value) => this.matchesMinWidth(value));
+    this.registerGlobal("maxwidth", (value) => this.matchesMaxWidth(value));
     this.registerGlobal("list", {
       async map(items, fn) {
         if (!Array.isArray(items) || typeof fn !== "function") {
@@ -4516,6 +4524,41 @@ var Engine = class _Engine {
         }
       }
     });
+  }
+  matchesMinWidth(value) {
+    const px = this.parseWidthArg(value);
+    if (px === void 0) {
+      return false;
+    }
+    return this.mediaMatches(`(min-width: ${px}px)`);
+  }
+  matchesMaxWidth(value) {
+    const px = this.parseWidthArg(value);
+    if (px === void 0) {
+      return false;
+    }
+    return this.mediaMatches(`(max-width: ${px}px)`);
+  }
+  parseWidthArg(value) {
+    if (typeof value === "number" && Number.isFinite(value)) {
+      return value;
+    }
+    if (typeof value === "string") {
+      const match = value.match(/-?\d+(\.\d+)?/);
+      if (!match) {
+        return void 0;
+      }
+      const parsed = Number(match[0]);
+      return Number.isFinite(parsed) ? parsed : void 0;
+    }
+    return void 0;
+  }
+  mediaMatches(query) {
+    const matcher = globalThis.matchMedia;
+    if (typeof matcher !== "function") {
+      return false;
+    }
+    return Boolean(matcher(query)?.matches);
   }
   getGroupTargetScope(element, behavior, scope, rootScope) {
     let targetScope = rootScope ?? scope;

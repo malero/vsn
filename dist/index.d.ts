@@ -692,6 +692,10 @@ declare class Engine {
     private groupProxyCache;
     private scopeElements;
     constructor(options?: EngineOptions);
+    private matchesMinWidth;
+    private matchesMaxWidth;
+    private parseWidthArg;
+    private mediaMatches;
     private getGroupTargetScope;
     private getGroupProxy;
     mount(root: HTMLElement): Promise<void>;
