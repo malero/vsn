@@ -2035,6 +2035,13 @@ export class Engine {
         parts: Array.isArray(node.parts) ? node.parts.map((part: any) => this.normalizeNode(part)) : []
       };
     }
+    if (type === "TaggedTemplateExpression") {
+      return {
+        type,
+        tag: this.normalizeNode(node.tag),
+        template: this.normalizeNode(node.template)
+      };
+    }
     if (type === "UnaryExpression") {
       return {
         type,

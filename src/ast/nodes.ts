@@ -1004,6 +1004,7 @@ export type ExpressionNode =
   | ElementRefExpression
   | LiteralExpression
   | TemplateExpression
+  | TaggedTemplateExpression
   | UnaryExpression
   | BinaryExpression
   | MemberExpression
@@ -1146,6 +1147,36 @@ export class TemplateExpression extends BaseNode {
       return result;
     };
     return run();
+  }
+
+  getTemplateParts(context: ExecutionContext): { strings: string[]; values: any[] } {
+    const strings: string[] = [];
+    const values: any[] = [];
+    for (const part of this.parts) {
+      if (part instanceof LiteralExpression) {
+        strings.push(String(part.value ?? ""));
+        continue;
+      }
+      values.push(part?.evaluate(context));
+    }
+    return { strings, values };
+  }
+}
+
+export class TaggedTemplateExpression extends BaseNode {
+  constructor(public tag: ExpressionNode, public template: TemplateExpression) {
+    super("TaggedTemplateExpression");
+  }
+
+  evaluate(context: ExecutionContext): any {
+    const tagValue = this.tag.evaluate(context);
+    return resolveMaybe(tagValue, (resolvedTag) => {
+      if (typeof resolvedTag !== "function") {
+        return undefined;
+      }
+      const { strings, values } = this.template.getTemplateParts(context);
+      return resolvedTag(strings, ...values);
+    });
   }
 }
 

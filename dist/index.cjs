@@ -59,6 +59,7 @@ __export(index_exports, {
   ReturnNode: () => ReturnNode,
   SelectorNode: () => SelectorNode,
   SpreadElement: () => SpreadElement,
+  TaggedTemplateExpression: () => TaggedTemplateExpression,
   TemplateExpression: () => TemplateExpression,
   TernaryExpression: () => TernaryExpression,
   TokenType: () => TokenType,
@@ -1484,6 +1485,35 @@ var TemplateExpression = class extends BaseNode {
     };
     return run();
   }
+  getTemplateParts(context) {
+    const strings = [];
+    const values = [];
+    for (const part of this.parts) {
+      if (part instanceof LiteralExpression) {
+        strings.push(String(part.value ?? ""));
+        continue;
+      }
+      values.push(part?.evaluate(context));
+    }
+    return { strings, values };
+  }
+};
+var TaggedTemplateExpression = class extends BaseNode {
+  constructor(tag, template) {
+    super("TaggedTemplateExpression");
+    this.tag = tag;
+    this.template = template;
+  }
+  evaluate(context) {
+    const tagValue = this.tag.evaluate(context);
+    return resolveMaybe(tagValue, (resolvedTag) => {
+      if (typeof resolvedTag !== "function") {
+        return void 0;
+      }
+      const { strings, values } = this.template.getTemplateParts(context);
+      return resolvedTag(strings, ...values);
+    });
+  }
 };
 var UnaryExpression = class extends BaseNode {
   constructor(operator, argument) {
@@ -2716,6 +2746,14 @@ ${caret}`;
       if (!next) {
         break;
       }
+      if (next.type === "Template" /* Template */) {
+        const template = this.parseTemplateExpression();
+        if (!(template instanceof TemplateExpression)) {
+          throw new Error("Expected template literal");
+        }
+        expr = new TaggedTemplateExpression(expr, template);
+        continue;
+      }
       if (next.type === "LParen" /* LParen */) {
         this.stream.next();
         const args = [];
@@ -2937,9 +2975,7 @@ ${caret}`;
         throw new Error("Expected template literal");
       }
       const literal = this.stream.next().value;
-      if (literal) {
-        parts.push(new LiteralExpression(literal));
-      }
+      parts.push(new LiteralExpression(literal));
       const next = this.stream.peek();
       if (!next || next.type !== "Dollar" /* Dollar */) {
         break;
@@ -5991,6 +6027,13 @@ var Engine = class _Engine {
         parts: Array.isArray(node.parts) ? node.parts.map((part) => this.normalizeNode(part)) : []
       };
     }
+    if (type === "TaggedTemplateExpression") {
+      return {
+        type,
+        tag: this.normalizeNode(node.tag),
+        template: this.normalizeNode(node.template)
+      };
+    }
     if (type === "UnaryExpression") {
       return {
         type,
@@ -6605,7 +6648,7 @@ var Engine = class _Engine {
 };
 
 // src/index.ts
-var VERSION = true ? "1.0.9" : "0.1.0";
+var VERSION = true ? "1.0.10" : "0.1.0";
 function parseCFS(source) {
   const parser = new Parser(source);
   return parser.parseProgram();
@@ -6695,6 +6738,7 @@ if (typeof document !== "undefined") {
   ReturnNode,
   SelectorNode,
   SpreadElement,
+  TaggedTemplateExpression,
   TemplateExpression,
   TernaryExpression,
   TokenType,

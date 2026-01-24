@@ -29,6 +29,7 @@ import {
   RestElement,
   SpreadElement,
   TemplateExpression,
+  TaggedTemplateExpression,
   ForNode,
   ForEachNode,
   IfNode,
@@ -758,6 +759,14 @@ export class Parser {
       if (!next) {
         break;
       }
+      if (next.type === TokenType.Template) {
+        const template = this.parseTemplateExpression();
+        if (!(template instanceof TemplateExpression)) {
+          throw new Error("Expected template literal");
+        }
+        expr = new TaggedTemplateExpression(expr, template);
+        continue;
+      }
       if (next.type === TokenType.LParen) {
         this.stream.next();
         const args: ExpressionNode[] = [];
@@ -997,9 +1006,7 @@ export class Parser {
         throw new Error("Expected template literal");
       }
       const literal = this.stream.next().value;
-      if (literal) {
-        parts.push(new LiteralExpression(literal));
-      }
+      parts.push(new LiteralExpression(literal));
       const next = this.stream.peek();
       if (!next || next.type !== TokenType.Dollar) {
         break;

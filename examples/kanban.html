@@ -42,20 +42,7 @@
         <h2>Backlog</h2>
         <span class="pill" vsn-bind:from="backlogCount">0</span>
       </header>
-      <ul class="kanban-list">
-        <template vsn-each="backlog as task">
-          <li class="kanban-card">
-            <div class="card-head">
-              <span class="card-title"></span>
-              <span class="priority"></span>
-            </div>
-            <div class="card-actions">
-              <button class="btn secondary" vsn-on:click="moveTask(task[0], 'progress');">Start</button>
-              <button class="ghost" vsn-on:click="removeTask(task[0]);">Remove</button>
-            </div>
-          </li>
-        </template>
-      </ul>
+      <ul class="kanban-list" vsn-html="backlogView"></ul>
     </section>
 
     <section class="kanban-column" data-status="progress">
@@ -63,20 +50,7 @@
         <h2>In Progress</h2>
         <span class="pill" vsn-bind:from="progressCount">0</span>
       </header>
-      <ul class="kanban-list">
-        <template vsn-each="progress as task">
-          <li class="kanban-card">
-            <div class="card-head">
-              <span class="card-title"></span>
-              <span class="priority"></span>
-            </div>
-            <div class="card-actions">
-              <button class="btn secondary" vsn-on:click="moveTask(task[0], 'backlog');">Back</button>
-              <button class="btn" vsn-on:click="moveTask(task[0], 'done');">Finish</button>
-            </div>
-          </li>
-        </template>
-      </ul>
+      <ul class="kanban-list" vsn-html="progressView"></ul>
     </section>
 
     <section class="kanban-column" data-status="done">
@@ -84,20 +58,7 @@
         <h2>Done</h2>
         <span class="pill" vsn-bind:from="doneCount">0</span>
       </header>
-      <ul class="kanban-list">
-        <template vsn-each="done as task">
-          <li class="kanban-card">
-            <div class="card-head">
-              <span class="card-title"></span>
-              <span class="priority"></span>
-            </div>
-            <div class="card-actions">
-              <button class="btn secondary" vsn-on:click="moveTask(task[0], 'progress');">Reopen</button>
-              <button class="ghost" vsn-on:click="removeTask(task[0]);">Remove</button>
-            </div>
-          </li>
-        </template>
-      </ul>
+      <ul class="kanban-list" vsn-html="doneView"></ul>
     </section>
   </div>
 </section>
@@ -118,6 +79,9 @@
     backlog: [];
     progress: [];
     done: [];
+    backlogView: "";
+    progressView: "";
+    doneView: "";
     total: 0;
     backlogCount: 0;
     progressCount: 0;
@@ -141,6 +105,9 @@
       backlog = await list.filter(tasks, (task) => task[2] == "backlog");
       progress = await list.filter(tasks, (task) => task[2] == "progress");
       done = await list.filter(tasks, (task) => task[2] == "done");
+      backlogView = renderCards(backlog, "Start", "progress", "Remove", "remove");
+      progressView = renderCards(progress, "Back", "backlog", "Finish", "done");
+      doneView = renderCards(done, "Reopen", "progress", "Remove", "remove");
       backlogCount = backlog.length;
       progressCount = progress.length;
       doneCount = done.length;
@@ -174,14 +141,40 @@
       await sync();
     }
 
-    behavior .kanban-card {
-      @data-id :< task[0];
-      @data-priority :< task[3];
-      @draggable :< "true";
+    renderCards(list, primaryLabel, primaryTarget, secondaryLabel, secondaryTarget) {
+      cards = [];
+      for (task of list) {
+        id = task[0];
+        title = task[1];
+        status = task[2];
+        priority = task[3];
+        secondaryHtml = secondaryTarget == "remove"
+          ? '<button class="ghost" data-id="' + id + '" vsn-on:click="removeTask(@data-id);">' + secondaryLabel + '</button>'
+          : '<button class="btn" data-id="' + id + '" data-target="' + secondaryTarget
+            + '" vsn-on:click="moveTask(@data-id, @data-target);">' + secondaryLabel + '</button>';
 
+        card = html`
+          <li class="kanban-card" data-id="${id}" data-status="${status}" data-priority="${priority}" draggable="true">
+            <div class="card-head">
+              <span class="card-title">${title}</span>
+              <span class="priority">${priority}</span>
+            </div>
+            <div class="card-actions">
+              <button class="btn secondary" data-id="${id}" data-target="${primaryTarget}"
+                vsn-on:click="moveTask(@data-id, @data-target);">${primaryLabel}</button>
+              ${secondaryHtml}
+            </div>
+          </li>
+        `;
+        cards = cards.concat([card]);
+      }
+      return html`${cards}`;
+    }
+
+    behavior .kanban-card {
       on dragstart(event) {
-        root.dragId = task[0];
-        root.dragFrom = task[2];
+        root.dragId = @data-id;
+        root.dragFrom = @data-status;
         event.dataTransfer && event.dataTransfer.setData("text/plain", root.dragId);
       }
 
@@ -192,28 +185,19 @@
       }
     }
 
-    behavior .card-title {
-      @html :< task[1];
-    }
-
-    behavior .priority {
-      @html :< task[3];
-    }
-
     behavior .kanban-column {
       @data-status :> status;
       @class :< (root.dropStatus == status ? "kanban-column is-drop" : "kanban-column");
 
       construct {
-        console.log("Construct");
+
       }
 
-      on dragover(event) !prevent {
+      on dragover!prevent(event) {
         root.dropStatus = status;
       }
 
-      on drop(event) !prevent {
-        console.log(`Prevent ${dropStatus}`);
+      on drop!prevent(event) {
         root.dropStatus = "";
         root.dragId == "" ? null : moveTask(root.dragId, status);
       }

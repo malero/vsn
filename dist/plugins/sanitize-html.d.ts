@@ -102,7 +102,7 @@ declare class DeclarationNode extends BaseNode {
     flagArgs: DeclarationFlagArgs;
     constructor(target: DeclarationTarget, operator: ":" | ":=" | ":<" | ":>", value: ExpressionNode, flags: DeclarationFlags, flagArgs: DeclarationFlagArgs);
 }
-type ExpressionNode = AssignmentNode | IdentifierExpression | ElementRefExpression | LiteralExpression | TemplateExpression | UnaryExpression | BinaryExpression | MemberExpression | CallExpression | ArrayExpression | ObjectExpression | IndexExpression | FunctionExpression | AwaitExpression | TernaryExpression | DirectiveExpression | ElementDirectiveExpression | ElementPropertyExpression | QueryExpression;
+type ExpressionNode = AssignmentNode | IdentifierExpression | ElementRefExpression | LiteralExpression | TemplateExpression | TaggedTemplateExpression | UnaryExpression | BinaryExpression | MemberExpression | CallExpression | ArrayExpression | ObjectExpression | IndexExpression | FunctionExpression | AwaitExpression | TernaryExpression | DirectiveExpression | ElementDirectiveExpression | ElementPropertyExpression | QueryExpression;
 type DeclarationTarget = IdentifierExpression | DirectiveExpression;
 type AssignmentTarget = IdentifierExpression | MemberExpression | IndexExpression | DirectiveExpression | ElementDirectiveExpression | ElementPropertyExpression | ArrayPattern | ObjectPattern;
 type FunctionParam = {
@@ -152,6 +152,16 @@ declare class LiteralExpression extends BaseNode {
 declare class TemplateExpression extends BaseNode {
     parts: ExpressionNode[];
     constructor(parts: ExpressionNode[]);
+    evaluate(context: ExecutionContext): any;
+    getTemplateParts(context: ExecutionContext): {
+        strings: string[];
+        values: any[];
+    };
+}
+declare class TaggedTemplateExpression extends BaseNode {
+    tag: ExpressionNode;
+    template: TemplateExpression;
+    constructor(tag: ExpressionNode, template: TemplateExpression);
     evaluate(context: ExecutionContext): any;
 }
 declare class UnaryExpression extends BaseNode {
