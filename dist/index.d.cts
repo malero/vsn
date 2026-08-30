@@ -778,7 +778,12 @@ declare class Engine {
     private findParentScope;
     private watch;
     private watchWithDebounce;
-    private watchAllScopes;
+    private watchExpression;
+    private getExpressionDependencies;
+    private watchExpressionDependency;
+    private watchDirectScope;
+    private hasScopeKey;
+    private getRootScope;
     private trackScopeWatcher;
     private cleanupScopeWatchers;
     private trackBehaviorClassMapBinding;

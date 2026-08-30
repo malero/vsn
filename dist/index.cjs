@@ -5469,16 +5469,166 @@ var Engine = class _Engine {
     const effectiveHandler = debounceMs ? debounce(handler, debounceMs) : handler;
     this.watch(scope, expr, effectiveHandler, element, behaviorId);
   }
-  watchAllScopes(scope, handler, debounceMs, element, behaviorId) {
+  watchExpression(scope, rootScope, expression, handler, debounceMs, element, behaviorId) {
+    const dependencies = this.getExpressionDependencies(expression);
+    if (dependencies.length === 0) {
+      return;
+    }
     const effectiveHandler = debounceMs ? debounce(handler, debounceMs) : handler;
+    for (const dependency of dependencies) {
+      this.watchExpressionDependency(
+        scope,
+        rootScope,
+        dependency,
+        effectiveHandler,
+        element,
+        behaviorId
+      );
+    }
+  }
+  getExpressionDependencies(expression) {
+    const dependencies = /* @__PURE__ */ new Set();
+    const visit = (node) => {
+      if (!node || typeof node !== "object") {
+        return;
+      }
+      if (node instanceof IdentifierExpression) {
+        if (node.name !== "self") {
+          dependencies.add(node.name);
+        }
+        return;
+      }
+      if (node.type === "MemberExpression") {
+        const path = node.getIdentifierPath?.()?.path;
+        if (path) {
+          dependencies.add(path);
+          return;
+        }
+        visit(node.target);
+        return;
+      }
+      switch (node.type) {
+        case "Assignment":
+          visit(node.target);
+          visit(node.value);
+          return;
+        case "ArrayExpression":
+          for (const element of node.elements ?? []) {
+            visit(element);
+          }
+          return;
+        case "ObjectExpression":
+          for (const entry of node.entries ?? []) {
+            if (entry?.spread) {
+              visit(entry.spread);
+              continue;
+            }
+            if (entry?.computed) {
+              visit(entry.keyExpr);
+            }
+            visit(entry?.value);
+          }
+          return;
+        case "ElementDirective":
+        case "ElementProperty":
+          visit(node.element);
+          return;
+        case "TemplateExpression":
+          for (const part of node.parts ?? []) {
+            visit(part);
+          }
+          return;
+        case "TaggedTemplateExpression":
+          visit(node.tag);
+          visit(node.template);
+          return;
+        case "UnaryExpression":
+        case "AwaitExpression":
+          visit(node.argument);
+          return;
+        case "BinaryExpression":
+          visit(node.left);
+          visit(node.right);
+          return;
+        case "TernaryExpression":
+          visit(node.test);
+          visit(node.consequent);
+          visit(node.alternate);
+          return;
+        case "CallExpression":
+          visit(node.callee);
+          for (const arg of node.args ?? []) {
+            visit(arg);
+          }
+          return;
+        case "IndexExpression":
+          visit(node.target);
+          visit(node.index);
+          return;
+        default:
+          return;
+      }
+    };
+    visit(expression);
+    return Array.from(dependencies);
+  }
+  watchExpressionDependency(scope, rootScope, dependency, handler, element, behaviorId) {
+    const path = dependency.trim();
+    if (!path) {
+      return;
+    }
+    if (path.startsWith("root.")) {
+      const target = rootScope ?? this.getRootScope(scope);
+      this.watchDirectScope(target, path.slice("root.".length), handler, element, behaviorId);
+      return;
+    }
+    if (path.startsWith("parent.")) {
+      let target = scope;
+      let targetPath = path;
+      while (targetPath.startsWith("parent.")) {
+        target = target?.parent;
+        targetPath = targetPath.slice("parent.".length);
+      }
+      if (target) {
+        this.watchDirectScope(target, targetPath, handler, element, behaviorId);
+      }
+      return;
+    }
+    if (path.startsWith("self.")) {
+      this.watchDirectScope(scope, path.slice("self.".length), handler, element, behaviorId);
+      return;
+    }
+    const root = path.split(".")[0];
+    if (!root || !this.hasScopeKey(scope, root) && root in this.globals) {
+      return;
+    }
+    this.watch(scope, path, handler, element, behaviorId);
+  }
+  watchDirectScope(scope, path, handler, element, behaviorId) {
+    if (!scope || !path) {
+      return;
+    }
+    scope.on(path, handler);
+    if (element) {
+      this.trackScopeWatcher(element, scope, "path", handler, path, behaviorId);
+    }
+  }
+  hasScopeKey(scope, key) {
     let cursor = scope;
     while (cursor) {
-      cursor.onAny(effectiveHandler);
-      if (element) {
-        this.trackScopeWatcher(element, cursor, "any", effectiveHandler, void 0, behaviorId);
+      if (cursor.hasKey(key)) {
+        return true;
       }
       cursor = cursor.parent;
     }
+    return false;
+  }
+  getRootScope(scope) {
+    let root = scope;
+    while (root.parent) {
+      root = root.parent;
+    }
+    return root;
   }
   trackScopeWatcher(element, scope, kind, handler, key, behaviorId) {
     const watchers = this.scopeWatchers.get(element) ?? [];
@@ -6733,9 +6883,17 @@ var Engine = class _Engine {
       this.setDirectiveValue(element, target, value, binding);
     };
     void handler();
-    this.watchAllScopes(scope, () => {
-      void handler();
-    }, debounceMs, element, behaviorId);
+    this.watchExpression(
+      scope,
+      rootScope,
+      expr,
+      () => {
+        void handler();
+      },
+      debounceMs,
+      element,
+      behaviorId
+    );
   }
   applyDirectiveToScope(element, target, expr, scope, debounceMs, rootScope, transform) {
     const useRoot = expr.startsWith("root.") && rootScope;
