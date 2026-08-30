@@ -52,7 +52,7 @@
   use JSON as json;
   use Date as date;
 
-  behavior #todo-app {
+  #todo-app {
     key: "vsn:todos";
     newTitle: "";
     filter: "all";
@@ -118,7 +118,7 @@
       await sync();
     }
 
-    behavior .chip {
+    .chip {
       @data-filter :> value;
       @aria-pressed :< (filter == value);
 
@@ -127,7 +127,7 @@
       }
     }
 
-    behavior .todo-item {
+    .todo-item {
       @class :< {
         done: todo[2]
       };
@@ -138,11 +138,11 @@
       ? "grid" : "none");
     }
 
-    behavior .todo-title {
+    .todo-title {
       @html :< todo[1];
     }
 
-    behavior .todo-check {
+    .todo-check {
       @html :< (todo[2] ? "Undo" : "Done");
     }
   }

@@ -11,6 +11,25 @@ import {
 } from "../src/index";
 
 describe("parser behavior", () => {
+  it("parses bare root and nested selectors, including IDs", () => {
+    const source = `.card {
+  #dropdown { }
+}
+
+button.primary { }
+`;
+
+    const program = new Parser(source).parseProgram();
+
+    expect(program.behaviors).toHaveLength(2);
+    expect(program.behaviors[0]!.selector.selectorText).toBe(".card");
+    expect(program.behaviors[1]!.selector.selectorText).toBe("button.primary");
+
+    const nestedBehavior = program.behaviors[0]!.body.statements[0] as BehaviorNode;
+    expect(nestedBehavior.type).toBe("Behavior");
+    expect(nestedBehavior.selector.selectorText).toBe("#dropdown");
+  });
+
   it("parses nested behavior blocks", () => {
     const source = `behavior .card {
   active: false;

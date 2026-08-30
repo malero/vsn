@@ -2080,7 +2080,7 @@ var Parser = class _Parser {
         if (next.type === "Use" /* Use */) {
           uses.push(this.parseUseStatement());
         } else {
-          behaviors.push(this.parseBehavior());
+          behaviors.push(this.parseBehavior(true));
         }
         this.stream.skipWhitespace();
       }
@@ -2094,10 +2094,14 @@ var Parser = class _Parser {
       return this.parseBlock({ allowDeclarations: false });
     });
   }
-  parseBehavior() {
+  parseBehavior(optionalKeyword = false) {
     return this.wrapErrors(() => {
       this.stream.skipWhitespace();
-      this.stream.expect("Behavior" /* Behavior */);
+      if (this.stream.peek()?.type === "Behavior" /* Behavior */) {
+        this.stream.next();
+      } else if (!optionalKeyword) {
+        this.stream.expect("Behavior" /* Behavior */);
+      }
       const selector = this.parseSelector();
       const { flags, flagArgs } = this.parseBehaviorFlags();
       const body = this.parseBlock({ allowDeclarations: true });
@@ -2238,13 +2242,18 @@ ${caret}`;
         this.stream.next();
         break;
       }
-      if (allowDeclarations && next.type === "Behavior" /* Behavior */) {
+      const explicitBehaviorStart = allowDeclarations && next.type === "Behavior" /* Behavior */;
+      const isFunctionDeclaration = allowDeclarations && this.isFunctionDeclarationStart();
+      const isFunctionExpressionAssignment = allowDeclarations && this.isFunctionExpressionAssignmentStart();
+      const isDeclaration = this.isDeclarationStart();
+      const implicitBehaviorStart = allowDeclarations && !explicitBehaviorStart && !isFunctionDeclaration && !isFunctionExpressionAssignment && !isDeclaration && this.isImplicitBehaviorStart();
+      const isNestedBehavior = explicitBehaviorStart || implicitBehaviorStart;
+      if (allowDeclarations && isNestedBehavior) {
         sawNestedBehavior = true;
       }
-      if (allowDeclarations && sawNestedBehavior && next.type !== "Behavior" /* Behavior */) {
+      if (allowDeclarations && sawNestedBehavior && !isNestedBehavior) {
         throw new Error("Nested behaviors must appear after construct, function, and on blocks");
       }
-      const isFunctionDeclaration = allowDeclarations && this.isFunctionDeclarationStart();
       if (isFunctionDeclaration) {
         if (!sawConstruct) {
           sawFunctionOrOn = true;
@@ -2252,7 +2261,6 @@ ${caret}`;
         statements.push(this.parseFunctionDeclaration());
         continue;
       }
-      const isFunctionExpressionAssignment = allowDeclarations && this.isFunctionExpressionAssignmentStart();
       if (isFunctionExpressionAssignment) {
         if (!declarationsOpen) {
           throw new Error("Declarations must appear before blocks");
@@ -2260,8 +2268,12 @@ ${caret}`;
         statements.push(this.parseAssignment());
         continue;
       }
-      const isDeclaration = this.isDeclarationStart();
-      if (isDeclaration) {
+      if (isNestedBehavior) {
+        if (declarationsOpen) {
+          declarationsOpen = false;
+        }
+        statements.push(this.parseBehavior(true));
+      } else if (isDeclaration) {
         if (!allowDeclarations) {
           throw new Error("Declarations are only allowed at the behavior root");
         }
@@ -2333,6 +2345,9 @@ ${caret}`;
     }
     if (allowBlocks && next.type === "Behavior" /* Behavior */) {
       return this.parseBehavior();
+    }
+    if (allowBlocks && this.isImplicitBehaviorStart()) {
+      return this.parseBehavior(true);
     }
     if (this.isAwaitAllowed() && next.type === "Identifier" /* Identifier */ && next.value === "await") {
       return this.parseExpressionStatement();
@@ -3522,6 +3537,61 @@ ${caret}`;
       return true;
     }
     return first.type === "Number" /* Number */ || first.type === "String" /* String */ || first.type === "Boolean" /* Boolean */ || first.type === "Null" /* Null */ || first.type === "LParen" /* LParen */ || first.type === "LBracket" /* LBracket */ || first.type === "LBrace" /* LBrace */ || first.type === "At" /* At */ || first.type === "Dollar" /* Dollar */ || first.type === "Hash" /* Hash */ || first.type === "Question" /* Question */ || first.type === "Bang" /* Bang */ || first.type === "Minus" /* Minus */;
+  }
+  isImplicitBehaviorStart() {
+    const first = this.stream.peekNonWhitespace(0);
+    if (!first || !this.isSelectorStartToken(first)) {
+      return false;
+    }
+    let index = 0;
+    let parenthesisDepth = 0;
+    let bracketDepth = 0;
+    let sawTopLevelColon = false;
+    while (true) {
+      const token = this.stream.peekNonWhitespace(index);
+      if (!token) {
+        return false;
+      }
+      if (token.type === "LBrace" /* LBrace */ && parenthesisDepth === 0 && bracketDepth === 0) {
+        return true;
+      }
+      if (token.type === "Semicolon" /* Semicolon */ || token.type === "RBrace" /* RBrace */) {
+        return false;
+      }
+      if (parenthesisDepth === 0 && bracketDepth === 0) {
+        if (token.type === "Equals" /* Equals */ || token.type === "Arrow" /* Arrow */ || token.type === "DoubleEquals" /* DoubleEquals */ || token.type === "TripleEquals" /* TripleEquals */ || token.type === "NotEquals" /* NotEquals */ || token.type === "StrictNotEquals" /* StrictNotEquals */ || token.type === "And" /* And */ || token.type === "Or" /* Or */ || token.type === "Pipe" /* Pipe */ || token.type === "Question" /* Question */) {
+          return false;
+        }
+        if (token.type === "Colon" /* Colon */) {
+          sawTopLevelColon = true;
+        }
+        if (token.type === "LParen" /* LParen */ && !sawTopLevelColon) {
+          return false;
+        }
+        if ((token.type === "Plus" /* Plus */ || token.type === "Minus" /* Minus */ || token.type === "Star" /* Star */ || token.type === "Slash" /* Slash */ || token.type === "Tilde" /* Tilde */) && this.stream.peekNonWhitespace(index + 1)?.type === "Equals" /* Equals */) {
+          return false;
+        }
+      }
+      if (token.type === "LParen" /* LParen */) {
+        parenthesisDepth += 1;
+      } else if (token.type === "RParen" /* RParen */) {
+        if (parenthesisDepth === 0) {
+          return false;
+        }
+        parenthesisDepth -= 1;
+      } else if (token.type === "LBracket" /* LBracket */) {
+        bracketDepth += 1;
+      } else if (token.type === "RBracket" /* RBracket */) {
+        if (bracketDepth === 0) {
+          return false;
+        }
+        bracketDepth -= 1;
+      }
+      index += 1;
+    }
+  }
+  isSelectorStartToken(token) {
+    return token.type === "Identifier" /* Identifier */ || token.type === "Dot" /* Dot */ || token.type === "Hash" /* Hash */ || token.type === "LBracket" /* LBracket */ || token.type === "Colon" /* Colon */ || token.type === "Star" /* Star */ || token.type === "Greater" /* Greater */ || token.type === "Less" /* Less */ || token.type === "Plus" /* Plus */ || token.type === "Minus" /* Minus */ || token.type === "Tilde" /* Tilde */;
   }
   isFunctionDeclarationStart() {
     const first = this.stream.peekNonWhitespace(0);

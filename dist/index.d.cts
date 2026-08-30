@@ -530,6 +530,8 @@ declare class Parser {
     private isAssignmentStart;
     private isAssignmentOperatorStart;
     private isExpressionStatementStart;
+    private isImplicitBehaviorStart;
+    private isSelectorStartToken;
     private isFunctionDeclarationStart;
     private isArrowFunctionStart;
     private isAsyncArrowFunctionStart;

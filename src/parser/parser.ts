@@ -92,7 +92,7 @@ export class Parser {
         if (next.type === TokenType.Use) {
           uses.push(this.parseUseStatement());
         } else {
-          behaviors.push(this.parseBehavior());
+          behaviors.push(this.parseBehavior(true));
         }
         this.stream.skipWhitespace();
       }
@@ -108,10 +108,14 @@ export class Parser {
     });
   }
 
-  private parseBehavior(): BehaviorNode {
+  private parseBehavior(optionalKeyword = false): BehaviorNode {
     return this.wrapErrors(() => {
       this.stream.skipWhitespace();
-      this.stream.expect(TokenType.Behavior);
+      if (this.stream.peek()?.type === TokenType.Behavior) {
+        this.stream.next();
+      } else if (!optionalKeyword) {
+        this.stream.expect(TokenType.Behavior);
+      }
       const selector = this.parseSelector();
       const { flags, flagArgs } = this.parseBehaviorFlags();
       const body = this.parseBlock({ allowDeclarations: true });
@@ -268,15 +272,26 @@ export class Parser {
         break;
       }
 
-      if (allowDeclarations && next.type === TokenType.Behavior) {
+      const explicitBehaviorStart = allowDeclarations && next.type === TokenType.Behavior;
+      const isFunctionDeclaration = allowDeclarations && this.isFunctionDeclarationStart();
+      const isFunctionExpressionAssignment = allowDeclarations && this.isFunctionExpressionAssignmentStart();
+      const isDeclaration = this.isDeclarationStart();
+      const implicitBehaviorStart = allowDeclarations
+        && !explicitBehaviorStart
+        && !isFunctionDeclaration
+        && !isFunctionExpressionAssignment
+        && !isDeclaration
+        && this.isImplicitBehaviorStart();
+      const isNestedBehavior = explicitBehaviorStart || implicitBehaviorStart;
+
+      if (allowDeclarations && isNestedBehavior) {
         sawNestedBehavior = true;
       }
 
-      if (allowDeclarations && sawNestedBehavior && next.type !== TokenType.Behavior) {
+      if (allowDeclarations && sawNestedBehavior && !isNestedBehavior) {
         throw new Error("Nested behaviors must appear after construct, function, and on blocks");
       }
 
-      const isFunctionDeclaration = allowDeclarations && this.isFunctionDeclarationStart();
       if (isFunctionDeclaration) {
         if (!sawConstruct) {
           sawFunctionOrOn = true;
@@ -284,7 +299,6 @@ export class Parser {
         statements.push(this.parseFunctionDeclaration());
         continue;
       }
-      const isFunctionExpressionAssignment = allowDeclarations && this.isFunctionExpressionAssignmentStart();
       if (isFunctionExpressionAssignment) {
         if (!declarationsOpen) {
           throw new Error("Declarations must appear before blocks");
@@ -292,8 +306,12 @@ export class Parser {
         statements.push(this.parseAssignment());
         continue;
       }
-      const isDeclaration = this.isDeclarationStart();
-      if (isDeclaration) {
+      if (isNestedBehavior) {
+        if (declarationsOpen) {
+          declarationsOpen = false;
+        }
+        statements.push(this.parseBehavior(true));
+      } else if (isDeclaration) {
         if (!allowDeclarations) {
           throw new Error("Declarations are only allowed at the behavior root");
         }
@@ -380,6 +398,10 @@ export class Parser {
 
     if (allowBlocks && next.type === TokenType.Behavior) {
       return this.parseBehavior();
+    }
+
+    if (allowBlocks && this.isImplicitBehaviorStart()) {
+      return this.parseBehavior(true);
     }
 
     if (this.isAwaitAllowed() && next.type === TokenType.Identifier && next.value === "await") {
@@ -1697,6 +1719,97 @@ export class Parser {
       || first.type === TokenType.Bang
       || first.type === TokenType.Minus
     );
+  }
+
+  private isImplicitBehaviorStart(): boolean {
+    const first = this.stream.peekNonWhitespace(0);
+    if (!first || !this.isSelectorStartToken(first)) {
+      return false;
+    }
+
+    let index = 0;
+    let parenthesisDepth = 0;
+    let bracketDepth = 0;
+    let sawTopLevelColon = false;
+
+    while (true) {
+      const token = this.stream.peekNonWhitespace(index);
+      if (!token) {
+        return false;
+      }
+
+      if (token.type === TokenType.LBrace && parenthesisDepth === 0 && bracketDepth === 0) {
+        return true;
+      }
+      if (token.type === TokenType.Semicolon || token.type === TokenType.RBrace) {
+        return false;
+      }
+
+      if (parenthesisDepth === 0 && bracketDepth === 0) {
+        if (
+          token.type === TokenType.Equals
+          || token.type === TokenType.Arrow
+          || token.type === TokenType.DoubleEquals
+          || token.type === TokenType.TripleEquals
+          || token.type === TokenType.NotEquals
+          || token.type === TokenType.StrictNotEquals
+          || token.type === TokenType.And
+          || token.type === TokenType.Or
+          || token.type === TokenType.Pipe
+          || token.type === TokenType.Question
+        ) {
+          return false;
+        }
+        if (token.type === TokenType.Colon) {
+          sawTopLevelColon = true;
+        }
+        if (token.type === TokenType.LParen && !sawTopLevelColon) {
+          return false;
+        }
+        if (
+          (token.type === TokenType.Plus
+            || token.type === TokenType.Minus
+            || token.type === TokenType.Star
+            || token.type === TokenType.Slash
+            || token.type === TokenType.Tilde)
+          && this.stream.peekNonWhitespace(index + 1)?.type === TokenType.Equals
+        ) {
+          return false;
+        }
+      }
+
+      if (token.type === TokenType.LParen) {
+        parenthesisDepth += 1;
+      } else if (token.type === TokenType.RParen) {
+        if (parenthesisDepth === 0) {
+          return false;
+        }
+        parenthesisDepth -= 1;
+      } else if (token.type === TokenType.LBracket) {
+        bracketDepth += 1;
+      } else if (token.type === TokenType.RBracket) {
+        if (bracketDepth === 0) {
+          return false;
+        }
+        bracketDepth -= 1;
+      }
+
+      index += 1;
+    }
+  }
+
+  private isSelectorStartToken(token: Token): boolean {
+    return token.type === TokenType.Identifier
+      || token.type === TokenType.Dot
+      || token.type === TokenType.Hash
+      || token.type === TokenType.LBracket
+      || token.type === TokenType.Colon
+      || token.type === TokenType.Star
+      || token.type === TokenType.Greater
+      || token.type === TokenType.Less
+      || token.type === TokenType.Plus
+      || token.type === TokenType.Minus
+      || token.type === TokenType.Tilde;
   }
 
   private isFunctionDeclarationStart(): boolean {
