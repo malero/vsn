@@ -393,6 +393,7 @@ declare class Engine {
     private scopeElements;
     private classMapBindings;
     private behaviorClassMapBindings;
+    private behaviorInvalidators;
     constructor(options?: EngineOptions);
     private matchesMinWidth;
     private matchesMaxWidth;
@@ -456,6 +457,8 @@ declare class Engine {
     private cleanupScopeWatchers;
     private trackBehaviorClassMapBinding;
     private cleanupBehaviorClassMapBindings;
+    private trackBehaviorInvalidator;
+    private cleanupBehaviorInvalidators;
     private cleanupBehaviorResources;
     private cleanupBehaviorListeners;
     private parseOnAttribute;

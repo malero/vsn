@@ -196,6 +196,7 @@ export class Engine {
   private scopeElements = new WeakMap<Scope, Element>();
   private classMapBindings = new WeakMap<Element, Map<object, Set<string>>>();
   private behaviorClassMapBindings = new WeakMap<Element, Map<number, Set<object>>>();
+  private behaviorInvalidators = new WeakMap<Element, Map<number, Set<() => void>>>();
 
   constructor(options: EngineOptions = {}) {
     this.diagnostics = options.diagnostics ?? false;
@@ -1289,8 +1290,34 @@ export class Engine {
     }
   }
 
+  private trackBehaviorInvalidator(element: Element, behaviorId: number, invalidator: () => void): void {
+    const invalidators = this.behaviorInvalidators.get(element) ?? new Map<number, Set<() => void>>();
+    const behaviorInvalidators = invalidators.get(behaviorId) ?? new Set<() => void>();
+    behaviorInvalidators.add(invalidator);
+    invalidators.set(behaviorId, behaviorInvalidators);
+    this.behaviorInvalidators.set(element, invalidators);
+  }
+
+  private cleanupBehaviorInvalidators(element: Element, behaviorId?: number): void {
+    const invalidators = this.behaviorInvalidators.get(element);
+    if (!invalidators) {
+      return;
+    }
+    const ids = behaviorId === undefined ? Array.from(invalidators.keys()) : [behaviorId];
+    for (const id of ids) {
+      for (const invalidate of invalidators.get(id) ?? []) {
+        invalidate();
+      }
+      invalidators.delete(id);
+    }
+    if (invalidators.size === 0) {
+      this.behaviorInvalidators.delete(element);
+    }
+  }
+
   private cleanupBehaviorResources(element: Element, behaviorId?: number): void {
     this.cleanupScopeWatchers(element, behaviorId);
+    this.cleanupBehaviorInvalidators(element, behaviorId);
     if (behaviorId !== undefined) {
       this.cleanupBehaviorClassMapBindings(element, behaviorId);
       return;
@@ -2558,10 +2585,20 @@ export class Engine {
     binding?: object,
     behaviorId?: number
   ): void {
+    let version = 0;
+    if (behaviorId !== undefined) {
+      this.trackBehaviorInvalidator(element, behaviorId, () => {
+        version += 1;
+      });
+    }
     const handler = async () => {
+      const currentVersion = ++version;
       const selfRef = this.getGroupProxy(scope);
       const context: ExecutionContext = { scope, rootScope, globals: this.globals, element, self: selfRef };
       const value = await expr.evaluate(context);
+      if (currentVersion !== version) {
+        return;
+      }
       this.setDirectiveValue(element, target, value, binding);
     };
     void handler();

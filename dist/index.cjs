@@ -4461,6 +4461,7 @@ var Engine = class _Engine {
   scopeElements = /* @__PURE__ */ new WeakMap();
   classMapBindings = /* @__PURE__ */ new WeakMap();
   behaviorClassMapBindings = /* @__PURE__ */ new WeakMap();
+  behaviorInvalidators = /* @__PURE__ */ new WeakMap();
   constructor(options = {}) {
     this.diagnostics = options.diagnostics ?? false;
     this.logger = options.logger ?? console;
@@ -5440,8 +5441,32 @@ var Engine = class _Engine {
       this.behaviorClassMapBindings.delete(element);
     }
   }
+  trackBehaviorInvalidator(element, behaviorId, invalidator) {
+    const invalidators = this.behaviorInvalidators.get(element) ?? /* @__PURE__ */ new Map();
+    const behaviorInvalidators = invalidators.get(behaviorId) ?? /* @__PURE__ */ new Set();
+    behaviorInvalidators.add(invalidator);
+    invalidators.set(behaviorId, behaviorInvalidators);
+    this.behaviorInvalidators.set(element, invalidators);
+  }
+  cleanupBehaviorInvalidators(element, behaviorId) {
+    const invalidators = this.behaviorInvalidators.get(element);
+    if (!invalidators) {
+      return;
+    }
+    const ids = behaviorId === void 0 ? Array.from(invalidators.keys()) : [behaviorId];
+    for (const id of ids) {
+      for (const invalidate of invalidators.get(id) ?? []) {
+        invalidate();
+      }
+      invalidators.delete(id);
+    }
+    if (invalidators.size === 0) {
+      this.behaviorInvalidators.delete(element);
+    }
+  }
   cleanupBehaviorResources(element, behaviorId) {
     this.cleanupScopeWatchers(element, behaviorId);
+    this.cleanupBehaviorInvalidators(element, behaviorId);
     if (behaviorId !== void 0) {
       this.cleanupBehaviorClassMapBindings(element, behaviorId);
       return;
@@ -6533,10 +6558,20 @@ var Engine = class _Engine {
     }
   }
   applyDirectiveFromExpression(element, target, expr, scope, debounceMs, rootScope, binding, behaviorId) {
+    let version = 0;
+    if (behaviorId !== void 0) {
+      this.trackBehaviorInvalidator(element, behaviorId, () => {
+        version += 1;
+      });
+    }
     const handler = async () => {
+      const currentVersion = ++version;
       const selfRef = this.getGroupProxy(scope);
       const context = { scope, rootScope, globals: this.globals, element, self: selfRef };
       const value = await expr.evaluate(context);
+      if (currentVersion !== version) {
+        return;
+      }
       this.setDirectiveValue(element, target, value, binding);
     };
     void handler();
