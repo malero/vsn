@@ -6827,14 +6827,21 @@ function autoMount(root = document) {
           }
         }
       }
-      const sources = Array.from(document.querySelectorAll('script[type="text/vsn"]')).map((script) => script.textContent ?? "").join("\n");
+      const sources = Array.from(root.querySelectorAll('script[type="text/vsn"]')).map((script) => script.textContent ?? "").join("\n");
       if (sources.trim()) {
         engine.registerBehaviors(sources);
       }
-      engine.mount(target);
-      const endTime = typeof performance !== "undefined" && performance.now ? performance.now() : Date.now();
-      const elapsedMs = Math.round(endTime - startTime);
-      console.log(`Took ${elapsedMs}ms to start up VSN.js. https://www.vsnjs.com/ v${VERSION}`);
+      void engine.mount(target).then(() => {
+        const endTime = typeof performance !== "undefined" && performance.now ? performance.now() : Date.now();
+        const elapsedMs = Math.round(endTime - startTime);
+        console.log(`Took ${elapsedMs}ms to start up VSN.js. https://www.vsnjs.com/ v${VERSION}`);
+      }).catch((error) => {
+        console.warn("vsn:mountError", error);
+        target.dispatchEvent(new CustomEvent("vsn:error", {
+          detail: { error, selector: "mount" },
+          bubbles: true
+        }));
+      });
     }
   };
   if (document.readyState === "loading") {
