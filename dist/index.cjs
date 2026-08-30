@@ -4441,6 +4441,7 @@ var Engine = class _Engine {
   behaviorRegistryHashes = /* @__PURE__ */ new Set();
   behaviorBindings = /* @__PURE__ */ new WeakMap();
   behaviorListeners = /* @__PURE__ */ new WeakMap();
+  inlineListeners = /* @__PURE__ */ new WeakMap();
   behaviorId = 0;
   codeCache = /* @__PURE__ */ new Map();
   behaviorCache = /* @__PURE__ */ new Map();
@@ -5044,6 +5045,7 @@ var Engine = class _Engine {
     }
     this.cleanupBehaviorResources(element);
     this.cleanupBehaviorListeners(element);
+    this.cleanupInlineListeners(element);
   }
   handleAddedNode(node) {
     if (this.isInactive(node)) {
@@ -5556,6 +5558,16 @@ var Engine = class _Engine {
     }
     this.behaviorBindings.delete(element);
   }
+  cleanupInlineListeners(element) {
+    const listeners = this.inlineListeners.get(element);
+    if (!listeners) {
+      return;
+    }
+    for (const listener of listeners) {
+      listener.target.removeEventListener(listener.event, listener.handler, listener.options);
+    }
+    this.inlineListeners.delete(element);
+  }
   parseOnAttribute(name, value) {
     if (!name.startsWith("vsn-on:")) {
       return null;
@@ -5682,6 +5694,9 @@ var Engine = class _Engine {
     };
     effectiveHandler = debounceMs ? debounce(handler, debounceMs) : handler;
     listenerTarget.addEventListener(config.event, effectiveHandler, options);
+    const listeners = this.inlineListeners.get(element) ?? [];
+    listeners.push({ target: listenerTarget, event: config.event, handler: effectiveHandler, options });
+    this.inlineListeners.set(element, listeners);
   }
   attachBehaviorOnHandler(element, event, body, flags, flagArgs, args, behaviorId, rootScope) {
     if (event.includes(".")) {

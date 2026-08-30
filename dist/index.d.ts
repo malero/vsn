@@ -681,6 +681,7 @@ declare class Engine {
     private behaviorRegistryHashes;
     private behaviorBindings;
     private behaviorListeners;
+    private inlineListeners;
     private behaviorId;
     private codeCache;
     private behaviorCache;
@@ -780,6 +781,7 @@ declare class Engine {
     private cleanupBehaviorInvalidators;
     private cleanupBehaviorResources;
     private cleanupBehaviorListeners;
+    private cleanupInlineListeners;
     private parseOnAttribute;
     private parseInlineFlags;
     private parseInlineFlagArg;

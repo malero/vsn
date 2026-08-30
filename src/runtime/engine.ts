@@ -171,6 +171,7 @@ export class Engine {
   private behaviorRegistryHashes = new Set<string>();
   private behaviorBindings = new WeakMap<Element, Set<number>>();
   private behaviorListeners = new WeakMap<Element, Map<number, BehaviorListener[]>>();
+  private inlineListeners = new WeakMap<Element, BehaviorListener[]>();
   private behaviorId = 0;
   private codeCache = new Map<string, BlockNode>();
   private behaviorCache = new Map<string, CachedBehavior>();
@@ -811,6 +812,7 @@ export class Engine {
     }
     this.cleanupBehaviorResources(element);
     this.cleanupBehaviorListeners(element);
+    this.cleanupInlineListeners(element);
   }
 
   private handleAddedNode(node: Element): void {
@@ -1410,6 +1412,17 @@ export class Engine {
     this.behaviorBindings.delete(element);
   }
 
+  private cleanupInlineListeners(element: Element): void {
+    const listeners = this.inlineListeners.get(element);
+    if (!listeners) {
+      return;
+    }
+    for (const listener of listeners) {
+      listener.target.removeEventListener(listener.event, listener.handler, listener.options);
+    }
+    this.inlineListeners.delete(element);
+  }
+
   private parseOnAttribute(name: string, value: string): OnConfig | null {
     if (!name.startsWith("vsn-on:")) {
       return null;
@@ -1546,6 +1559,9 @@ export class Engine {
     };
     effectiveHandler = debounceMs ? debounce(handler, debounceMs) : handler;
     listenerTarget.addEventListener(config.event, effectiveHandler, options);
+    const listeners = this.inlineListeners.get(element) ?? [];
+    listeners.push({ target: listenerTarget, event: config.event, handler: effectiveHandler, options });
+    this.inlineListeners.set(element, listeners);
   }
 
   private attachBehaviorOnHandler(
