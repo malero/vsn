@@ -10,10 +10,19 @@ export { TokenType } from "./parser/token";
 export * from "./ast/nodes";
 export { Engine } from "./runtime/engine";
 export type {
+  AttributeHandler,
+  BehaviorModifierContext,
+  BehaviorModifierHandler,
+  EngineOptions,
+  EventBindPatch,
+  EventFlagContext,
+  FlagApplyContext,
+  FlagHandler,
   HtmlSetOptions,
   HtmlTransformContext,
   HtmlTransformer,
-  HtmlTransformOptions
+  HtmlTransformOptions,
+  RegisteredBehavior
 } from "./runtime/engine";
 
 export function parseCFS(source: string) {

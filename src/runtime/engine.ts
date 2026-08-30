@@ -42,7 +42,7 @@ interface LifecycleConfig {
   destruct?: string;
 }
 
-interface RegisteredBehavior {
+export interface RegisteredBehavior {
   id: number;
   hash: string;
   selector: string;
@@ -72,7 +72,7 @@ function isPromiseLike(value: unknown): value is PromiseLike<unknown> {
   return Boolean(value) && typeof (value as PromiseLike<unknown>).then === "function";
 }
 
-type AttributeHandler = {
+export type AttributeHandler = {
   id: string;
   match: (name: string) => boolean;
   handle: (element: Element, name: string, value: string, scope: Scope) => boolean | void;
@@ -129,7 +129,7 @@ type ScopeWatcher = {
   behaviorId?: number;
 };
 
-type FlagApplyContext = {
+export type FlagApplyContext = {
   name: string;
   args: any;
   element: Element;
@@ -137,7 +137,7 @@ type FlagApplyContext = {
   declaration: DeclarationNode;
 };
 
-type FlagHandler = {
+export type FlagHandler = {
   onApply?: (context: FlagApplyContext) => void;
   transformValue?: (context: FlagApplyContext, value: any) => any;
   onEventBind?: (context: EventFlagContext) => EventBindPatch | void;
@@ -146,14 +146,14 @@ type FlagHandler = {
   transformEventArgs?: (context: EventFlagContext, args: any[]) => any[];
 };
 
-type BehaviorModifierHandler = {
+export type BehaviorModifierHandler = {
   onBind?: (context: BehaviorModifierContext) => void | Promise<void>;
   onConstruct?: (context: BehaviorModifierContext) => void | Promise<void>;
   onDestruct?: (context: BehaviorModifierContext) => void | Promise<void>;
   onUnbind?: (context: BehaviorModifierContext) => void | Promise<void>;
 };
 
-type BehaviorModifierContext = {
+export type BehaviorModifierContext = {
   name: string;
   args: any;
   element: Element;
@@ -163,13 +163,13 @@ type BehaviorModifierContext = {
   engine: Engine;
 };
 
-type EventBindPatch = {
+export type EventBindPatch = {
   listenerTarget?: EventTarget;
   options?: AddEventListenerOptions;
   debounceMs?: number;
 };
 
-type EventFlagContext = {
+export type EventFlagContext = {
   name: string;
   args: any;
   element: Element;
@@ -179,7 +179,7 @@ type EventFlagContext = {
   engine: Engine;
 };
 
-type EngineOptions = {
+export type EngineOptions = {
   diagnostics?: boolean;
   logger?: Partial<Pick<Console, "info" | "warn">>;
 };
