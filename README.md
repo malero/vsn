@@ -26,3 +26,5 @@ Named functions are synchronous unless declared with the `async` keyword. Async 
 HTML extensions can register composable transforms with `engine.registerHtmlTransformer(transform, { priority })`. Lower priorities run first, and the returned disposer removes the transform. The templates plugin runs before the sanitizer plugin so template output can be sanitized regardless of registration order.
 
 The sanitizer plugin uses DOMPurify when it is available. Its built-in fallback removes scripts, inline event attributes, and `javascript:` URLs; use DOMPurify or provide a custom sanitizer for hostile or complex HTML.
+
+`vsn-if` and `vsn-show` are visibility-only aliases: both toggle `display` and keep the element in the DOM.

@@ -4326,11 +4326,14 @@ function readCondition(expression, scope) {
   }
   return !!scope.get(key);
 }
-function applyIf(element, expression, scope) {
+function applyDisplay(element, expression, scope) {
   element.style.display = readCondition(expression, scope) ? "" : "none";
 }
+function applyIf(element, expression, scope) {
+  applyDisplay(element, expression, scope);
+}
 function applyShow(element, expression, scope) {
-  element.style.display = readCondition(expression, scope) ? "" : "none";
+  applyDisplay(element, expression, scope);
 }
 
 // src/runtime/html.ts

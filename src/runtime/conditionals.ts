@@ -8,10 +8,15 @@ function readCondition(expression: string, scope: Scope): boolean {
   return !!scope.get(key);
 }
 
-export function applyIf(element: HTMLElement, expression: string, scope: Scope): void {
+function applyDisplay(element: HTMLElement, expression: string, scope: Scope): void {
   element.style.display = readCondition(expression, scope) ? "" : "none";
 }
 
+// `vsn-if` and `vsn-show` intentionally share visibility-only semantics.
+export function applyIf(element: HTMLElement, expression: string, scope: Scope): void {
+  applyDisplay(element, expression, scope);
+}
+
 export function applyShow(element: HTMLElement, expression: string, scope: Scope): void {
-  element.style.display = readCondition(expression, scope) ? "" : "none";
+  applyDisplay(element, expression, scope);
 }
