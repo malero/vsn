@@ -14,3 +14,7 @@ npm i vsn
 
 ## Usage
 Please visit the [docs](https://www.vsnjs.org/docs/) for more information.
+
+## CFS syntax
+
+Identifiers may contain hyphens so CSS-style names such as `data-value` remain intact. To subtract numbers, include whitespace around the operator: use `count - 1`, not `count-1`.
