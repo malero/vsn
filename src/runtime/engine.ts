@@ -72,6 +72,312 @@ function isPromiseLike(value: unknown): value is PromiseLike<unknown> {
   return Boolean(value) && typeof (value as PromiseLike<unknown>).then === "function";
 }
 
+type SpecificityCounts = {
+  ids: number;
+  classes: number;
+  elements: number;
+};
+
+function emptySpecificity(): SpecificityCounts {
+  return { ids: 0, classes: 0, elements: 0 };
+}
+
+function compareSpecificity(a: SpecificityCounts, b: SpecificityCounts): number {
+  return a.ids - b.ids || a.classes - b.classes || a.elements - b.elements;
+}
+
+function maxSpecificity(a: SpecificityCounts, b: SpecificityCounts): SpecificityCounts {
+  return compareSpecificity(a, b) >= 0 ? a : b;
+}
+
+function addSpecificity(target: SpecificityCounts, addition: SpecificityCounts): void {
+  target.ids += addition.ids;
+  target.classes += addition.classes;
+  target.elements += addition.elements;
+}
+
+function specificityScore(counts: SpecificityCounts): number {
+  // Keep the three CSS specificity columns ordered without letting a large
+  // number of type selectors outweigh a class or ID selector.
+  return counts.ids * 1_000_000 + counts.classes * 1_000 + counts.elements;
+}
+
+function maxSelectorSpecificity(selectors: string[]): SpecificityCounts {
+  return selectors.reduce(
+    (best, selector) => maxSpecificity(best, computeSelectorSpecificity(selector)),
+    emptySpecificity()
+  );
+}
+
+function splitSelectorList(selector: string): string[] {
+  const groups: string[] = [];
+  let start = 0;
+  let quote = "";
+  let escaped = false;
+  let bracketDepth = 0;
+  let parenDepth = 0;
+
+  for (let i = 0; i < selector.length; i += 1) {
+    const char = selector[i] ?? "";
+    if (quote) {
+      if (escaped) {
+        escaped = false;
+      } else if (char === "\\") {
+        escaped = true;
+      } else if (char === quote) {
+        quote = "";
+      }
+      continue;
+    }
+    if (char === "\"" || char === "'") {
+      quote = char;
+      continue;
+    }
+    if (char === "[") {
+      bracketDepth += 1;
+      continue;
+    }
+    if (char === "]") {
+      bracketDepth = Math.max(0, bracketDepth - 1);
+      continue;
+    }
+    if (char === "(") {
+      parenDepth += 1;
+      continue;
+    }
+    if (char === ")") {
+      parenDepth = Math.max(0, parenDepth - 1);
+      continue;
+    }
+    if (char === "," && bracketDepth === 0 && parenDepth === 0) {
+      const group = selector.slice(start, i).trim();
+      if (group) {
+        groups.push(group);
+      }
+      start = i + 1;
+    }
+  }
+
+  const finalGroup = selector.slice(start).trim();
+  if (finalGroup) {
+    groups.push(finalGroup);
+  }
+  return groups;
+}
+
+function isSelectorNameChar(char: string | undefined): boolean {
+  return Boolean(char && /[A-Za-z0-9_-]/.test(char));
+}
+
+function readSelectorName(selector: string, start: number): number {
+  let end = start;
+  while (end < selector.length) {
+    const char = selector[end];
+    if (isSelectorNameChar(char)) {
+      end += 1;
+      continue;
+    }
+    if (char === "\\" && end + 1 < selector.length) {
+      end += 2;
+      continue;
+    }
+    break;
+  }
+  return end;
+}
+
+function readBalancedSelector(
+  selector: string,
+  start: number,
+  open: string,
+  close: string
+): { content: string; end: number } {
+  let depth = 0;
+  let quote = "";
+  let escaped = false;
+
+  for (let i = start; i < selector.length; i += 1) {
+    const char = selector[i] ?? "";
+    if (quote) {
+      if (escaped) {
+        escaped = false;
+      } else if (char === "\\") {
+        escaped = true;
+      } else if (char === quote) {
+        quote = "";
+      }
+      continue;
+    }
+    if (char === "\"" || char === "'") {
+      quote = char;
+      continue;
+    }
+    if (char === open) {
+      depth += 1;
+      continue;
+    }
+    if (char === close) {
+      depth -= 1;
+      if (depth === 0) {
+        return { content: selector.slice(start + 1, i), end: i + 1 };
+      }
+    }
+  }
+
+  return { content: selector.slice(start + 1), end: selector.length };
+}
+
+function findSelectorKeyword(selector: string, keyword: string): number {
+  let quote = "";
+  let escaped = false;
+  let bracketDepth = 0;
+  let parenDepth = 0;
+
+  for (let i = 0; i <= selector.length - keyword.length; i += 1) {
+    const char = selector[i] ?? "";
+    if (quote) {
+      if (escaped) {
+        escaped = false;
+      } else if (char === "\\") {
+        escaped = true;
+      } else if (char === quote) {
+        quote = "";
+      }
+      continue;
+    }
+    if (char === "\"" || char === "'") {
+      quote = char;
+      continue;
+    }
+    if (char === "[") {
+      bracketDepth += 1;
+      continue;
+    }
+    if (char === "]") {
+      bracketDepth = Math.max(0, bracketDepth - 1);
+      continue;
+    }
+    if (char === "(") {
+      parenDepth += 1;
+      continue;
+    }
+    if (char === ")") {
+      parenDepth = Math.max(0, parenDepth - 1);
+      continue;
+    }
+    if (bracketDepth !== 0 || parenDepth !== 0) {
+      continue;
+    }
+    if (selector.slice(i, i + keyword.length).toLowerCase() !== keyword.toLowerCase()) {
+      continue;
+    }
+    const before = selector[i - 1];
+    const after = selector[i + keyword.length];
+    if (!isSelectorNameChar(before) && !isSelectorNameChar(after)) {
+      return i;
+    }
+  }
+  return -1;
+}
+
+function computeSelectorSpecificity(selector: string): SpecificityCounts {
+  const counts = emptySpecificity();
+  let compoundStart = true;
+
+  for (let i = 0; i < selector.length;) {
+    const char = selector[i] ?? "";
+    if (/\s/.test(char) || char === ">" || char === "+" || char === "~") {
+      compoundStart = true;
+      i += 1;
+      continue;
+    }
+    if (char === "*") {
+      compoundStart = false;
+      i += 1;
+      continue;
+    }
+    if (char === "[") {
+      counts.classes += 1;
+      const balanced = readBalancedSelector(selector, i, "[", "]");
+      i = balanced.end;
+      compoundStart = false;
+      continue;
+    }
+    if (char === "#") {
+      const end = readSelectorName(selector, i + 1);
+      if (end > i + 1) {
+        counts.ids += 1;
+      }
+      i = end;
+      compoundStart = false;
+      continue;
+    }
+    if (char === ".") {
+      const end = readSelectorName(selector, i + 1);
+      if (end > i + 1) {
+        counts.classes += 1;
+      }
+      i = end;
+      compoundStart = false;
+      continue;
+    }
+    if (char === ":") {
+      const pseudoElement = selector[i + 1] === ":";
+      const nameStart = i + (pseudoElement ? 2 : 1);
+      const nameEnd = readSelectorName(selector, nameStart);
+      const name = selector.slice(nameStart, nameEnd).toLowerCase();
+      i = nameEnd;
+      if (pseudoElement) {
+        counts.elements += 1;
+      } else if (name === "where" && selector[i] === "(") {
+        const balanced = readBalancedSelector(selector, i, "(", ")");
+        i = balanced.end;
+      } else if (name === "is" || name === "not" || name === "has") {
+        if (selector[i] === "(") {
+          const balanced = readBalancedSelector(selector, i, "(", ")");
+          const argumentSpecificity = maxSelectorSpecificity(splitSelectorList(balanced.content));
+          addSpecificity(counts, argumentSpecificity);
+          i = balanced.end;
+        }
+      } else {
+        counts.classes += 1;
+        if (selector[i] === "(") {
+          const balanced = readBalancedSelector(selector, i, "(", ")");
+          if (name === "nth-child" || name === "nth-last-child") {
+            const ofIndex = findSelectorKeyword(balanced.content, "of");
+            if (ofIndex >= 0) {
+              const argumentSpecificity = maxSelectorSpecificity(
+                splitSelectorList(balanced.content.slice(ofIndex + 2))
+              );
+              addSpecificity(counts, argumentSpecificity);
+            }
+          }
+          i = balanced.end;
+        }
+      }
+      compoundStart = false;
+      continue;
+    }
+    if (char === "|" && selector[i + 1] !== "|") {
+      compoundStart = true;
+      i += 1;
+      continue;
+    }
+    const end = readSelectorName(selector, i);
+    if (end > i) {
+      if (compoundStart) {
+        counts.elements += 1;
+      }
+      i = end;
+      compoundStart = false;
+      continue;
+    }
+    compoundStart = false;
+    i += 1;
+  }
+  return counts;
+}
+
 export type AttributeHandler = {
   id: string;
   match: (name: string) => boolean;
@@ -954,20 +1260,24 @@ export class Engine {
     const scope = this.getScope(element);
     const matched = this.behaviorRegistry
       .filter((behavior) => element.matches(behavior.selector))
+      .map((behavior) => ({
+        behavior,
+        specificity: this.computeSpecificityForElement(behavior.selector, element)
+      }))
       .sort((a, b) => {
         if (a.specificity !== b.specificity) {
           return a.specificity - b.specificity;
         }
-        return a.order - b.order;
+        return a.behavior.order - b.behavior.order;
       });
 
-    for (const behavior of matched) {
+    for (const { behavior } of matched) {
       if (!bound.has(behavior.id)) {
         await this.applyBehaviorForElement(behavior, element, scope, bound);
       }
     }
 
-    const matchedIds = new Set(matched.map((behavior) => behavior.id));
+    const matchedIds = new Set(matched.map(({ behavior }) => behavior.id));
     for (const behavior of this.behaviorRegistry) {
       if (bound.has(behavior.id) && !matchedIds.has(behavior.id)) {
         this.unbindBehaviorForElement(behavior, element, scope, bound);
@@ -2258,12 +2568,13 @@ export class Engine {
   }
 
   private computeSpecificity(selector: string): number {
-    const idMatches = selector.match(/#[\w-]+/g)?.length ?? 0;
-    const classMatches = selector.match(/\.[\w-]+/g)?.length ?? 0;
-    const attrMatches = selector.match(/\[[^\]]+\]/g)?.length ?? 0;
-    const pseudoMatches = selector.match(/:[\w-]+/g)?.length ?? 0;
-    const elementMatches = selector.match(/(^|[\s>+~])([a-zA-Z][\w-]*)/g)?.length ?? 0;
-    return idMatches * 100 + (classMatches + attrMatches + pseudoMatches) * 10 + elementMatches;
+    return specificityScore(maxSelectorSpecificity(splitSelectorList(selector)));
+  }
+
+  private computeSpecificityForElement(selector: string, element: Element): number {
+    const groups = splitSelectorList(selector);
+    const matchingGroups = groups.filter((group) => element.matches(group));
+    return specificityScore(maxSelectorSpecificity(matchingGroups.length > 0 ? matchingGroups : groups));
   }
 
   private getBehaviorRootScope(element: Element, behavior: RegisteredBehavior): Scope {

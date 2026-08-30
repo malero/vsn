@@ -44,4 +44,52 @@ describe("behavior specificity ordering", () => {
 
     expect(scope.get("count")).toBe(2);
   });
+
+  it("does not count class-like text inside quoted attribute values", async () => {
+    document.body.innerHTML = `<div class="card" data-label=".foo"></div>`;
+
+    const source = `
+      behavior [data-label=".foo"] { winner: "attribute"; }
+      behavior .card { winner: "class"; }
+    `;
+
+    const engine = new Engine();
+    engine.registerBehaviors(source);
+    await engine.mount(document.body);
+
+    const element = document.querySelector("div") as HTMLDivElement;
+    expect(engine.getScope(element).get("winner")).toBe("class");
+  });
+
+  it("honors zero-specificity :where arguments", async () => {
+    document.body.innerHTML = `<div class="foo bar"></div>`;
+
+    const source = `
+      behavior .bar { winner: "class"; }
+      behavior :where(.foo) { winner: "where"; }
+    `;
+
+    const engine = new Engine();
+    engine.registerBehaviors(source);
+    await engine.mount(document.body);
+
+    const element = document.querySelector("div") as HTMLDivElement;
+    expect(engine.getScope(element).get("winner")).toBe("class");
+  });
+
+  it("uses the specificity of the matching comma-group selector", async () => {
+    document.body.innerHTML = `<div id="target" class="card"></div>`;
+
+    const source = `
+      behavior #target { winner: "id"; }
+      behavior .card, #other { winner: "group"; }
+    `;
+
+    const engine = new Engine();
+    engine.registerBehaviors(source);
+    await engine.mount(document.body);
+
+    const element = document.querySelector("div") as HTMLDivElement;
+    expect(engine.getScope(element).get("winner")).toBe("id");
+  });
 });

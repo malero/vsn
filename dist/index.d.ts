@@ -846,6 +846,7 @@ declare class Engine {
     private trackDynamicBehavior;
     private disposeDynamicBehaviors;
     private computeSpecificity;
+    private computeSpecificityForElement;
     private getBehaviorRootScope;
     private getImportantKey;
     private isImportant;
