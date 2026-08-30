@@ -1523,7 +1523,17 @@ export class Parser {
       this.stream.skipWhitespace();
       if (this.stream.peek()?.type === TokenType.Comma) {
         this.stream.next();
+        this.stream.skipWhitespace();
+        if (this.stream.peek()?.type === TokenType.RBracket) {
+          throw new Error("Trailing comma in flag array");
+        }
+        continue;
       }
+      if (this.stream.peek()?.type === TokenType.RBracket) {
+        this.stream.next();
+        break;
+      }
+      throw new Error("Expected comma in flag array");
     }
     return items;
   }
@@ -1554,7 +1564,17 @@ export class Parser {
       this.stream.skipWhitespace();
       if (this.stream.peek()?.type === TokenType.Comma) {
         this.stream.next();
+        this.stream.skipWhitespace();
+        if (this.stream.peek()?.type === TokenType.RBrace) {
+          throw new Error("Trailing comma in flag object");
+        }
+        continue;
       }
+      if (this.stream.peek()?.type === TokenType.RBrace) {
+        this.stream.next();
+        break;
+      }
+      throw new Error("Expected comma in flag object");
     }
     return obj;
   }

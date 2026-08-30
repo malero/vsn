@@ -3457,7 +3457,17 @@ ${caret}`;
       this.stream.skipWhitespace();
       if (this.stream.peek()?.type === "Comma" /* Comma */) {
         this.stream.next();
+        this.stream.skipWhitespace();
+        if (this.stream.peek()?.type === "RBracket" /* RBracket */) {
+          throw new Error("Trailing comma in flag array");
+        }
+        continue;
       }
+      if (this.stream.peek()?.type === "RBracket" /* RBracket */) {
+        this.stream.next();
+        break;
+      }
+      throw new Error("Expected comma in flag array");
     }
     return items;
   }
@@ -3487,7 +3497,17 @@ ${caret}`;
       this.stream.skipWhitespace();
       if (this.stream.peek()?.type === "Comma" /* Comma */) {
         this.stream.next();
+        this.stream.skipWhitespace();
+        if (this.stream.peek()?.type === "RBrace" /* RBrace */) {
+          throw new Error("Trailing comma in flag object");
+        }
+        continue;
       }
+      if (this.stream.peek()?.type === "RBrace" /* RBrace */) {
+        this.stream.next();
+        break;
+      }
+      throw new Error("Expected comma in flag object");
     }
     return obj;
   }
