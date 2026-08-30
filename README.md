@@ -18,3 +18,5 @@ Please visit the [docs](https://www.vsnjs.org/docs/) for more information.
 ## CFS syntax
 
 Identifiers may contain hyphens so CSS-style names such as `data-value` remain intact. To subtract numbers, include whitespace around the operator: use `count - 1`, not `count-1`.
+
+Named functions are synchronous unless declared with the `async` keyword. Async named functions return promises and may use `await` in their bodies.

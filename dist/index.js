@@ -4395,6 +4395,9 @@ function debounce(fn, waitMs) {
 }
 
 // src/runtime/engine.ts
+function isPromiseLike2(value) {
+  return Boolean(value) && typeof value.then === "function";
+}
 var Engine = class _Engine {
   static activeEngines = /* @__PURE__ */ new WeakMap();
   scopes = /* @__PURE__ */ new WeakMap();
@@ -6274,7 +6277,12 @@ var Engine = class _Engine {
     const functions = [];
     for (const statement of body.statements) {
       if (statement instanceof FunctionDeclarationNode) {
-        functions.push({ name: statement.name, params: statement.params, body: statement.body });
+        functions.push({
+          name: statement.name,
+          params: statement.params,
+          body: statement.body,
+          isAsync: statement.isAsync
+        });
         continue;
       }
       if (statement instanceof AssignmentNode) {
@@ -6282,7 +6290,8 @@ var Engine = class _Engine {
           functions.push({
             name: statement.target.name,
             params: statement.value.params,
-            body: statement.value.body
+            body: statement.value.body,
+            isAsync: statement.value.isAsync
           });
         }
       }
@@ -6574,7 +6583,7 @@ var Engine = class _Engine {
       throw new Error(`Cannot override non-function '${declaration.name}' with a function`);
     }
     const selfRef = this.getGroupProxy(scope);
-    const fn = async (...args) => {
+    const fn = (...args) => {
       const callScope = scope.createChild ? scope.createChild() : scope;
       const context = {
         scope: callScope,
@@ -6589,35 +6598,66 @@ var Engine = class _Engine {
         continuing: false
       };
       const previousValues = /* @__PURE__ */ new Map();
-      await this.applyFunctionParams(callScope, declaration.params, previousValues, context, args);
-      await declaration.body.evaluate(context);
-      if (callScope === scope) {
-        this.restoreFunctionParams(callScope, declaration.params, previousValues);
+      const restore = () => {
+        if (callScope === scope) {
+          this.restoreFunctionParams(callScope, declaration.params, previousValues);
+        }
+      };
+      let result;
+      try {
+        const paramsResult = this.applyFunctionParams(callScope, declaration.params, previousValues, context, args);
+        if (isPromiseLike2(paramsResult)) {
+          result = Promise.resolve(paramsResult).then(() => declaration.body.evaluate(context));
+        } else {
+          result = declaration.body.evaluate(context);
+        }
+      } catch (error) {
+        restore();
+        throw error;
       }
+      if (declaration.isAsync) {
+        return Promise.resolve(result).then(() => context.returnValue).finally(restore);
+      }
+      if (isPromiseLike2(result)) {
+        return Promise.resolve(result).then(() => context.returnValue).finally(restore);
+      }
+      restore();
       return context.returnValue;
     };
     scope.setPath(declaration.name, fn);
   }
-  async applyFunctionParams(scope, params, previousValues, context, args) {
+  applyFunctionParams(scope, params, previousValues, context, args) {
     let argIndex = 0;
-    for (const param of params) {
-      const name = param.name;
-      if (!name) {
-        continue;
+    const apply = (index) => {
+      for (let i = index; i < params.length; i += 1) {
+        const param = params[i];
+        const name = param.name;
+        if (!name) {
+          continue;
+        }
+        previousValues.set(name, scope.getPath(name));
+        if (param.rest) {
+          scope.setPath(`self.${name}`, args.slice(argIndex));
+          argIndex = args.length;
+          continue;
+        }
+        let value = args[argIndex];
+        argIndex += 1;
+        if (value === void 0 && param.defaultValue) {
+          const defaultValue = param.defaultValue.evaluate(context);
+          if (isPromiseLike2(defaultValue)) {
+            return Promise.resolve(defaultValue).then((resolved) => {
+              scope.setPath(`self.${name}`, resolved);
+              return apply(i + 1);
+            });
+          }
+          value = defaultValue;
+        }
+        scope.setPath(`self.${name}`, value);
       }
-      previousValues.set(name, scope.getPath(name));
-      if (param.rest) {
-        scope.setPath(`self.${name}`, args.slice(argIndex));
-        argIndex = args.length;
-        continue;
-      }
-      let value = args[argIndex];
-      if (value === void 0 && param.defaultValue) {
-        value = await param.defaultValue.evaluate(context);
-      }
-      scope.setPath(`self.${name}`, value);
-      argIndex += 1;
-    }
+      return void 0;
+    };
+    return apply(0);
   }
   restoreFunctionParams(scope, params, previousValues) {
     for (const param of params) {

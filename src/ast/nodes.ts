@@ -18,6 +18,10 @@ export interface ExecutionContext {
 
 export interface CFSNode {
   type: string;
+  /**
+   * @deprecated CFS evaluation has no preparation phase; this hook is retained
+   * for compatibility and is not invoked by the runtime.
+   */
   prepare(context: ExecutionContext): Promise<void>;
   evaluate(context: ExecutionContext): any;
 }

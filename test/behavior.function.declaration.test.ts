@@ -35,6 +35,31 @@ describe("behavior function declarations", () => {
     expect(scope.get("count")).toBe(3);
   });
 
+  it("honors async metadata for named behavior functions", async () => {
+    document.body.innerHTML = `<button class="card"></button>`;
+
+    const engine = new Engine();
+    engine.registerBehaviors(`
+      behavior .card {
+        add(a, b) { return a + b; }
+        async asyncAdd(a, b) { return a + b; }
+      }
+    `);
+    await engine.mount(document.body);
+
+    const card = document.querySelector(".card") as HTMLButtonElement;
+    const scope = engine.getScope(card);
+    const add = scope.get("add") as ((a: number, b: number) => unknown) | undefined;
+    const asyncAdd = scope.get("asyncAdd") as ((a: number, b: number) => unknown) | undefined;
+
+    const syncResult = add?.(1, 2);
+    const asyncResult = asyncAdd?.(1, 2);
+
+    expect(syncResult).toBe(3);
+    expect(asyncResult).toBeInstanceOf(Promise);
+    await expect(asyncResult as Promise<unknown>).resolves.toBe(3);
+  });
+
   it("overrides functions with more specific behaviors", async () => {
     document.body.innerHTML = `<button class="card active"></button>`;
 

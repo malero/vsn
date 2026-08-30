@@ -44,6 +44,10 @@ interface ExecutionContext {
 }
 interface CFSNode {
     type: string;
+    /**
+     * @deprecated CFS evaluation has no preparation phase; this hook is retained
+     * for compatibility and is not invoked by the runtime.
+     */
     prepare(context: ExecutionContext): Promise<void>;
     evaluate(context: ExecutionContext): any;
 }
@@ -305,6 +309,7 @@ type FunctionBinding = {
     name: string;
     params: FunctionParam[];
     body: BlockNode;
+    isAsync: boolean;
 };
 type AttributeHandler = {
     id: string;
