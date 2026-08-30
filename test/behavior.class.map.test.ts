@@ -70,6 +70,26 @@ describe("behavior class maps", () => {
     expect(item.classList.contains("item")).toBe(true);
   });
 
+  it("preserves static classes when an expression-backed map becomes null", async () => {
+    document.body.innerHTML = `<div class="card server-rendered"></div>`;
+
+    const source = `
+      behavior .card {
+        selected: false;
+        @class :< selected ? { "is-selected": true } : null;
+      }
+    `;
+
+    const engine = new Engine();
+    engine.registerBehaviors(source);
+    await engine.mount(document.body);
+
+    const card = document.querySelector(".card") as HTMLDivElement;
+    expect(card.classList.contains("card")).toBe(true);
+    expect(card.classList.contains("server-rendered")).toBe(true);
+    expect(card.classList.contains("is-selected")).toBe(false);
+  });
+
   it("allows mapped classes to participate in behavior selectors", async () => {
     document.body.innerHTML = `<div class="card"></div>`;
 

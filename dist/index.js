@@ -6877,6 +6877,10 @@ var Engine = class _Engine {
     if (target.kind === "attr") {
       if (target.name === "class") {
         const bindingKey = binding ?? target;
+        if (value == null) {
+          this.clearClassMapBinding(element, bindingKey);
+          return;
+        }
         if (this.isClassMapValue(value)) {
           this.applyClassMap(element, value, bindingKey);
           return;
