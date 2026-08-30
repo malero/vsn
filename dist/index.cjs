@@ -549,11 +549,20 @@ function evaluateWithChildScope(context, block) {
   }
   const previousScope = context.scope;
   context.scope = scope.createChild();
+  let result;
   try {
-    return block.evaluate(context);
-  } finally {
+    result = block.evaluate(context);
+  } catch (error) {
     context.scope = previousScope;
+    throw error;
   }
+  if (isPromiseLike(result)) {
+    return result.finally(() => {
+      context.scope = previousScope;
+    });
+  }
+  context.scope = previousScope;
+  return result;
 }
 var ProgramNode = class extends BaseNode {
   constructor(behaviors, uses = []) {
