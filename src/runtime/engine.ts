@@ -720,7 +720,7 @@ export class Engine {
       }
       this.observerFlush?.();
     });
-    this.observer.observe(root, { childList: true, subtree: true, attributes: true, attributeFilter: ["class"] });
+    this.observer.observe(root, { childList: true, subtree: true, attributes: true });
   }
 
   private disconnectObserver(): void {

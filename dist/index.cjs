@@ -4935,7 +4935,7 @@ var Engine = class _Engine {
       }
       this.observerFlush?.();
     });
-    this.observer.observe(root, { childList: true, subtree: true, attributes: true, attributeFilter: ["class"] });
+    this.observer.observe(root, { childList: true, subtree: true, attributes: true });
   }
   disconnectObserver() {
     this.observer?.disconnect();
