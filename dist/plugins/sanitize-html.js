@@ -171,14 +171,19 @@ async function applyGetWithSanitize(engine, element, config, sanitizer, handleHt
   }
   const output = config.trusted ? html : sanitizer(html);
   if (config.swap === "outer") {
-    const wrapper = document.createElement("div");
+    const wrapper = target.ownerDocument.createElement("div");
     wrapper.innerHTML = output;
-    const replacement = wrapper.firstElementChild;
-    if (replacement && target.parentNode) {
-      target.parentNode.replaceChild(replacement, target);
+    const replacements = Array.from(wrapper.childNodes);
+    const elements = Array.from(wrapper.children);
+    if (replacements.length > 0 && target.parentNode) {
+      const fragment = target.ownerDocument.createDocumentFragment();
+      fragment.append(...replacements);
+      target.parentNode.replaceChild(fragment, target);
       if (config.trusted) {
-        trustedElements?.add(replacement);
-        handleHtmlBehaviors?.(replacement);
+        for (const element2 of elements) {
+          trustedElements?.add(element2);
+          handleHtmlBehaviors?.(element2);
+        }
       }
     }
     return;

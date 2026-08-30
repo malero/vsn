@@ -4313,12 +4313,17 @@ async function applyGet(element, config, scope, onHtmlApplied) {
     return;
   }
   if (config.swap === "outer") {
-    const wrapper = document.createElement("div");
+    const wrapper = target.ownerDocument.createElement("div");
     applyHtml(wrapper, "__html", { get: () => html });
-    const replacement = wrapper.firstElementChild;
-    if (replacement && target.parentNode) {
-      target.parentNode.replaceChild(replacement, target);
-      onHtmlApplied?.(replacement);
+    const replacements = Array.from(wrapper.childNodes);
+    const elements = Array.from(wrapper.children);
+    if (replacements.length > 0 && target.parentNode) {
+      const fragment = target.ownerDocument.createDocumentFragment();
+      fragment.append(...replacements);
+      target.parentNode.replaceChild(fragment, target);
+      for (const element2 of elements) {
+        onHtmlApplied?.(element2);
+      }
     }
     return;
   }
