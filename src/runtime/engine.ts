@@ -2319,7 +2319,7 @@ export class Engine {
     behaviorId?: number
   ): Promise<void> {
     const selfRef = this.getGroupProxy(scope);
-    const context: ExecutionContext = { scope, rootScope, element, self: selfRef };
+    const context: ExecutionContext = { scope, rootScope, globals: this.globals, element, self: selfRef };
     const operator = declaration.operator;
     const debounceMs = declaration.flags.debounce
       ? declaration.flagArgs.debounce ?? 200
@@ -2560,7 +2560,7 @@ export class Engine {
   ): void {
     const handler = async () => {
       const selfRef = this.getGroupProxy(scope);
-      const context: ExecutionContext = { scope, rootScope, element, self: selfRef };
+      const context: ExecutionContext = { scope, rootScope, globals: this.globals, element, self: selfRef };
       const value = await expr.evaluate(context);
       this.setDirectiveValue(element, target, value, binding);
     };

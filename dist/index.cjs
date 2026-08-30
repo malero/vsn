@@ -6340,7 +6340,7 @@ var Engine = class _Engine {
   }
   async applyBehaviorDeclaration(element, scope, declaration, rootScope, behaviorId) {
     const selfRef = this.getGroupProxy(scope);
-    const context = { scope, rootScope, element, self: selfRef };
+    const context = { scope, rootScope, globals: this.globals, element, self: selfRef };
     const operator = declaration.operator;
     const debounceMs = declaration.flags.debounce ? declaration.flagArgs.debounce ?? 200 : void 0;
     const transform = (value) => this.applyCustomFlagTransforms(value, element, scope, declaration);
@@ -6535,7 +6535,7 @@ var Engine = class _Engine {
   applyDirectiveFromExpression(element, target, expr, scope, debounceMs, rootScope, binding, behaviorId) {
     const handler = async () => {
       const selfRef = this.getGroupProxy(scope);
-      const context = { scope, rootScope, element, self: selfRef };
+      const context = { scope, rootScope, globals: this.globals, element, self: selfRef };
       const value = await expr.evaluate(context);
       this.setDirectiveValue(element, target, value, binding);
     };
