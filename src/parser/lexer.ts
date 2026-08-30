@@ -121,6 +121,7 @@ export class Lexer {
   }
 
   private readBlockComment(): void {
+    const start = this.position();
     this.next();
     this.next();
     while (!this.eof()) {
@@ -131,6 +132,7 @@ export class Lexer {
       }
       this.next();
     }
+    throw new Error(`Unterminated block comment at ${start.line}:${start.column}`);
   }
 
   private readIdentifier(): Token {

@@ -245,6 +245,7 @@ var Lexer = class {
     }
   }
   readBlockComment() {
+    const start = this.position();
     this.next();
     this.next();
     while (!this.eof()) {
@@ -255,6 +256,7 @@ var Lexer = class {
       }
       this.next();
     }
+    throw new Error(`Unterminated block comment at ${start.line}:${start.column}`);
   }
   readIdentifier() {
     const start = this.position();
