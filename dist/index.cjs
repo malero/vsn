@@ -298,18 +298,21 @@ var Lexer = class {
     return this.token("Number" /* Number */, value, start);
   }
   readString() {
-    const quote = this.next();
     const start = this.position();
+    const quote = this.next();
     let value = "";
+    let raw = quote;
     while (!this.eof()) {
       const ch = this.next();
+      raw += ch;
       if (ch === "\\") {
         const escaped = this.next();
+        raw += escaped;
         value += escaped;
         continue;
       }
       if (ch === quote) {
-        return this.token("String" /* String */, value, start);
+        return this.token("String" /* String */, value, start, raw);
       }
       value += ch;
     }
@@ -476,10 +479,11 @@ var Lexer = class {
       }
     }
   }
-  token(type, value, start) {
+  token(type, value, start, raw) {
     return {
       type,
       value,
+      ...raw !== void 0 ? { raw } : {},
       start,
       end: this.position()
     };
@@ -2205,7 +2209,8 @@ var Parser = class _Parser {
         continue;
       }
       sawNonWhitespace = true;
-      selectorText += this.stream.next().value;
+      const selectorToken = this.stream.next();
+      selectorText += selectorToken.raw ?? selectorToken.value;
     }
     if (!selectorText.trim()) {
       throw new Error("Behavior selector is required");

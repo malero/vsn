@@ -179,18 +179,21 @@ export class Lexer {
   }
 
   private readString(): Token {
-    const quote = this.next();
     const start = this.position();
+    const quote = this.next();
     let value = "";
+    let raw = quote;
     while (!this.eof()) {
       const ch = this.next();
+      raw += ch;
       if (ch === "\\") {
         const escaped = this.next();
+        raw += escaped;
         value += escaped;
         continue;
       }
       if (ch === quote) {
-        return this.token(TokenType.String, value, start);
+        return this.token(TokenType.String, value, start, raw);
       }
       value += ch;
     }
@@ -364,10 +367,16 @@ export class Lexer {
     }
   }
 
-  private token(type: TokenType, value: string, start: { index: number; line: number; column: number }): Token {
+  private token(
+    type: TokenType,
+    value: string,
+    start: { index: number; line: number; column: number },
+    raw?: string
+  ): Token {
     return {
       type,
       value,
+      ...(raw !== undefined ? { raw } : {}),
       start,
       end: this.position()
     };

@@ -149,7 +149,8 @@ export class Parser {
       }
 
       sawNonWhitespace = true;
-      selectorText += this.stream.next().value;
+      const selectorToken = this.stream.next();
+      selectorText += selectorToken.raw ?? selectorToken.value;
     }
 
     if (!selectorText.trim()) {

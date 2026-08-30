@@ -78,6 +78,7 @@ export interface Position {
 export interface Token {
   type: TokenType;
   value: string;
+  raw?: string;
   start: Position;
   end: Position;
 }
