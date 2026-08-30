@@ -4858,14 +4858,15 @@ var Engine = class _Engine {
   waitForUseGlobal(use) {
     const config = use.flagArgs?.wait ?? {};
     const timeoutMs = config.timeoutMs ?? 1e4;
-    const initialDelayMs = config.intervalMs ?? 100;
+    const configuredDelayMs = config.intervalMs ?? 100;
+    const initialDelayMs = Number.isFinite(configuredDelayMs) && configuredDelayMs > 0 ? configuredDelayMs : 1;
     const maxDelayMs = 1e3;
     const existing = this.resolveGlobalPath(use.name);
     if (existing !== void 0) {
       this.registerGlobal(use.alias, existing);
       return Promise.resolve();
     }
-    if (timeoutMs <= 0) {
+    if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) {
       this.emitUseError(use.name, new Error(`vsn: global '${use.name}' not found`));
       return Promise.resolve();
     }
