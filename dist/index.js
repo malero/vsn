@@ -2380,29 +2380,33 @@ ${caret}`;
     this.stream.expect("On" /* On */);
     this.stream.skipWhitespace();
     const event = this.parseIdentifierPath();
-    const leadingFlags = this.parseOnFlags();
+    const leadingFlags = this.parseOnFlags(true);
     this.stream.skipWhitespace();
-    this.stream.expect("LParen" /* LParen */);
     const args = [];
-    while (true) {
-      this.stream.skipWhitespace();
-      const next = this.stream.peek();
-      if (!next) {
-        throw new Error("Unterminated on() arguments");
-      }
-      if (next.type === "RParen" /* RParen */) {
-        this.stream.next();
-        break;
-      }
-      if (next.type === "Identifier" /* Identifier */) {
-        args.push(this.stream.next().value);
+    if (this.stream.peek()?.type === "LParen" /* LParen */) {
+      this.stream.next();
+      while (true) {
         this.stream.skipWhitespace();
-        if (this.stream.peek()?.type === "Comma" /* Comma */) {
-          this.stream.next();
+        const next = this.stream.peek();
+        if (!next) {
+          throw new Error("Unterminated on() arguments");
         }
-        continue;
+        if (next.type === "RParen" /* RParen */) {
+          this.stream.next();
+          break;
+        }
+        if (next.type === "Identifier" /* Identifier */) {
+          args.push(this.stream.next().value);
+          this.stream.skipWhitespace();
+          if (this.stream.peek()?.type === "Comma" /* Comma */) {
+            this.stream.next();
+          }
+          continue;
+        }
+        throw new Error(`Unexpected token in on() args: ${next.type}`);
       }
-      throw new Error(`Unexpected token in on() args: ${next.type}`);
+    } else if (!leadingFlags.consumedArgument) {
+      this.stream.expect("LParen" /* LParen */);
     }
     const trailingFlags = this.parseOnFlags();
     const flags = { ...leadingFlags.flags, ...trailingFlags.flags };
@@ -2410,9 +2414,10 @@ ${caret}`;
     const body = this.parseBlock({ allowDeclarations: false });
     return new OnBlockNode(event, args, body, flags, flagArgs);
   }
-  parseOnFlags() {
+  parseOnFlags(preserveEmptyArgument = false) {
     const flags = {};
     const flagArgs = {};
+    let consumedArgument = false;
     while (true) {
       this.stream.skipWhitespace();
       if (this.stream.peek()?.type !== "Bang" /* Bang */) {
@@ -2430,15 +2435,16 @@ ${caret}`;
         continue;
       }
       const afterParen = this.stream.peekNonWhitespace(1);
-      if (afterParen?.type === "Identifier" /* Identifier */ || afterParen?.type === "RParen" /* RParen */) {
+      if (preserveEmptyArgument && afterParen?.type === "RParen" /* RParen */) {
         continue;
       }
       const customArg = this.parseCustomFlagArg();
+      consumedArgument = true;
       if (customArg !== void 0) {
         flagArgs[name] = customArg;
       }
     }
-    return { flags, flagArgs };
+    return { flags, flagArgs, consumedArgument };
   }
   parseAssignment() {
     const target = this.parseAssignmentTarget();
@@ -3324,6 +3330,10 @@ ${caret}`;
     const token = this.stream.peek();
     if (!token) {
       throw new Error("Unterminated flag arguments");
+    }
+    if (token.type === "RParen" /* RParen */) {
+      this.stream.next();
+      return void 0;
     }
     const value = this.parseCustomFlagLiteral();
     this.stream.skipWhitespace();

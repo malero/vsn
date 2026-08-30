@@ -424,30 +424,34 @@ export class Parser {
     this.stream.expect(TokenType.On);
     this.stream.skipWhitespace();
     const event = this.parseIdentifierPath();
-    const leadingFlags = this.parseOnFlags();
+    const leadingFlags = this.parseOnFlags(true);
     this.stream.skipWhitespace();
-    this.stream.expect(TokenType.LParen);
     const args: string[] = [];
 
-    while (true) {
-      this.stream.skipWhitespace();
-      const next = this.stream.peek();
-      if (!next) {
-        throw new Error("Unterminated on() arguments");
-      }
-      if (next.type === TokenType.RParen) {
-        this.stream.next();
-        break;
-      }
-      if (next.type === TokenType.Identifier) {
-        args.push(this.stream.next().value);
+    if (this.stream.peek()?.type === TokenType.LParen) {
+      this.stream.next();
+      while (true) {
         this.stream.skipWhitespace();
-        if (this.stream.peek()?.type === TokenType.Comma) {
-          this.stream.next();
+        const next = this.stream.peek();
+        if (!next) {
+          throw new Error("Unterminated on() arguments");
         }
-        continue;
+        if (next.type === TokenType.RParen) {
+          this.stream.next();
+          break;
+        }
+        if (next.type === TokenType.Identifier) {
+          args.push(this.stream.next().value);
+          this.stream.skipWhitespace();
+          if (this.stream.peek()?.type === TokenType.Comma) {
+            this.stream.next();
+          }
+          continue;
+        }
+        throw new Error(`Unexpected token in on() args: ${next.type}`);
       }
-      throw new Error(`Unexpected token in on() args: ${next.type}`);
+    } else if (!leadingFlags.consumedArgument) {
+      this.stream.expect(TokenType.LParen);
     }
 
     const trailingFlags = this.parseOnFlags();
@@ -457,9 +461,14 @@ export class Parser {
     return new OnBlockNode(event, args, body, flags, flagArgs);
   }
 
-  private parseOnFlags(): { flags: DeclarationFlags; flagArgs: DeclarationFlagArgs } {
+  private parseOnFlags(preserveEmptyArgument = false): {
+    flags: DeclarationFlags;
+    flagArgs: DeclarationFlagArgs;
+    consumedArgument: boolean;
+  } {
     const flags: DeclarationFlags = {};
     const flagArgs: DeclarationFlagArgs = {};
+    let consumedArgument = false;
 
     while (true) {
       this.stream.skipWhitespace();
@@ -479,16 +488,17 @@ export class Parser {
         continue;
       }
       const afterParen = this.stream.peekNonWhitespace(1);
-      if (afterParen?.type === TokenType.Identifier || afterParen?.type === TokenType.RParen) {
+      if (preserveEmptyArgument && afterParen?.type === TokenType.RParen) {
         continue;
       }
       const customArg = this.parseCustomFlagArg();
+      consumedArgument = true;
       if (customArg !== undefined) {
         (flagArgs as Record<string, any>)[name] = customArg;
       }
     }
 
-    return { flags, flagArgs };
+    return { flags, flagArgs, consumedArgument };
   }
 
   private parseAssignment(): AssignmentNode {
@@ -1459,6 +1469,10 @@ export class Parser {
     const token = this.stream.peek();
     if (!token) {
       throw new Error("Unterminated flag arguments");
+    }
+    if (token.type === TokenType.RParen) {
+      this.stream.next();
+      return undefined;
     }
     const value = this.parseCustomFlagLiteral();
     this.stream.skipWhitespace();
