@@ -37,6 +37,24 @@ describe("parser declarations", () => {
     expect(statements[4].target.type).toBe("Directive");
   });
 
+  it("parses object-valued class declarations", () => {
+    const source = `behavior .card {
+  @class:< {
+    "is-active": active,
+    disabled: !enabled
+  };
+}`;
+
+    const program = new Parser(source).parseProgram();
+    const declaration = program.behaviors[0]?.body.statements[0] as any;
+
+    expect(declaration.type).toBe("Declaration");
+    expect(declaration.target.name).toBe("class");
+    expect(declaration.operator).toBe(":<");
+    expect(declaration.value.type).toBe("ObjectExpression");
+    expect(declaration.value.entries.map((entry: any) => entry.key)).toEqual(["is-active", "disabled"]);
+  });
+
   it("rejects declarations after construct/on blocks", () => {
     const source = `behavior .card {
   on click() { active = !active; }

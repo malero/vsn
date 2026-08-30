@@ -361,12 +361,12 @@ function patchDirectiveSetter(
   if (!originalSet) {
     return;
   }
-  (engine as any).setDirectiveValue = (element: Element, target: any, value: any) => {
+  (engine as any).setDirectiveValue = (element: Element, target: any, value: any, binding?: object) => {
     if (target?.kind === "attr" && target?.name === "html") {
       renderHtml(element, value, instances, handleHtmlBehaviors);
       return;
     }
-    return originalSet(element, target, value);
+    return originalSet(element, target, value, binding);
   };
 }
 

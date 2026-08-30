@@ -104,7 +104,7 @@ function patchDirectiveSetter(engine, trustedElements, sanitizer, handleHtmlBeha
   if (!originalSet) {
     return;
   }
-  engine.setDirectiveValue = (element, target, value) => {
+  engine.setDirectiveValue = (element, target, value, binding) => {
     if (target?.kind === "attr" && target?.name === "html" && element instanceof HTMLElement) {
       const { html, trusted } = unwrapTrustedHtml(value, element, trustedElements);
       element.innerHTML = trusted ? html : sanitizer(html);
@@ -113,7 +113,7 @@ function patchDirectiveSetter(engine, trustedElements, sanitizer, handleHtmlBeha
       }
       return;
     }
-    return originalSet(element, target, value);
+    return originalSet(element, target, value, binding);
   };
 }
 function patchEvaluate(engine, htmlBindings, trustedElements, sanitizer, handleHtmlBehaviors) {

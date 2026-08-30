@@ -391,6 +391,7 @@ declare class Engine {
     private executionStack;
     private groupProxyCache;
     private scopeElements;
+    private classMapBindings;
     constructor(options?: EngineOptions);
     private matchesMinWidth;
     private matchesMaxWidth;
@@ -504,6 +505,9 @@ declare class Engine {
     private applyCheckedBindingToScope;
     private applyValueBindingToScope;
     private setDirectiveValue;
+    private isClassMapValue;
+    private applyClassMap;
+    private clearClassMapBinding;
     private getDirectiveValue;
     private handleHtmlBehaviors;
     private registerDefaultAttributeHandlers;

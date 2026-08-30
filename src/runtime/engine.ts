@@ -186,6 +186,7 @@ export class Engine {
   private executionStack: Element[] = [];
   private groupProxyCache = new WeakMap<Scope, Record<string, any>>();
   private scopeElements = new WeakMap<Scope, Element>();
+  private classMapBindings = new WeakMap<Element, Map<object, Set<string>>>();
 
   constructor(options: EngineOptions = {}) {
     this.diagnostics = options.diagnostics ?? false;
@@ -2302,7 +2303,7 @@ export class Engine {
     if (!exprIdentifier) {
       const value = await declaration.value.evaluate(context);
       const transformed = this.applyCustomFlagTransforms(value, element, scope, declaration);
-      this.setDirectiveValue(element, target, transformed);
+      this.setDirectiveValue(element, target, transformed, declaration);
       const shouldWatch = operator === ":<" || operator === ":=";
       if (shouldWatch) {
         this.applyDirectiveFromExpression(
@@ -2311,7 +2312,8 @@ export class Engine {
           declaration.value,
           scope,
           debounceMs,
-          rootScope
+          rootScope,
+          declaration
         );
       }
       if (declaration.flags.important && importantKey) {
@@ -2328,7 +2330,8 @@ export class Engine {
       scope,
       debounceMs,
       shouldWatch,
-      rootScope
+      rootScope,
+      declaration
     );
     if (declaration.flags.important && importantKey) {
       this.markImportant(element, importantKey);
@@ -2431,7 +2434,8 @@ export class Engine {
     scope: Scope,
     debounceMs?: number,
     watch = true,
-    rootScope?: Scope
+    rootScope?: Scope,
+    binding?: object
   ): void {
     if (target.kind === "attr" && target.name === "html" && element instanceof HTMLElement) {
       const handler = () => {
@@ -2456,9 +2460,12 @@ export class Engine {
       const localExpr = useRoot ? `self.${expr.slice("root.".length)}` : expr;
       const value = sourceScope.get(localExpr);
       if (value == null) {
+        if (target.kind === "attr" && target.name === "class") {
+          this.clearClassMapBinding(element, binding ?? target);
+        }
         return;
       }
-      this.setDirectiveValue(element, target, value);
+      this.setDirectiveValue(element, target, value, binding);
     };
     handler();
     if (watch) {
@@ -2475,13 +2482,14 @@ export class Engine {
     expr: ExpressionNode,
     scope: Scope,
     debounceMs?: number,
-    rootScope?: Scope
+    rootScope?: Scope,
+    binding?: object
   ): void {
     const handler = async () => {
       const selfRef = this.getGroupProxy(scope);
       const context: ExecutionContext = { scope, rootScope, element, self: selfRef };
       const value = await expr.evaluate(context);
-      this.setDirectiveValue(element, target, value);
+      this.setDirectiveValue(element, target, value, binding);
     };
     void handler();
     this.watchAllScopes(scope, () => {
@@ -2562,7 +2570,8 @@ export class Engine {
   private setDirectiveValue(
     element: Element,
     target: DirectiveExpression,
-    value: unknown
+    value: unknown,
+    binding?: object
   ): void {
     if (target.kind === "attr" && target.name === "html" && element instanceof HTMLElement) {
       const html = value == null ? "" : String(value);
@@ -2571,6 +2580,14 @@ export class Engine {
       return;
     }
     if (target.kind === "attr") {
+      if (target.name === "class") {
+        const bindingKey = binding ?? target;
+        if (this.isClassMapValue(value)) {
+          this.applyClassMap(element, value, bindingKey);
+          return;
+        }
+        this.clearClassMapBinding(element, bindingKey);
+      }
       if (target.name === "text" && element instanceof HTMLElement) {
         element.innerText = value == null ? "" : String(value);
         return;
@@ -2606,6 +2623,44 @@ export class Engine {
     if (target.kind === "style" && element instanceof HTMLElement) {
       element.style.setProperty(target.name, value == null ? "" : String(value));
     }
+  }
+
+  private isClassMapValue(value: unknown): value is Record<string, unknown> {
+    return value !== null && typeof value === "object" && !Array.isArray(value);
+  }
+
+  private applyClassMap(element: Element, value: Record<string, unknown>, binding: object): void {
+    const bindings = this.classMapBindings.get(element) ?? new Map<object, Set<string>>();
+    const previousKeys = bindings.get(binding) ?? new Set<string>();
+    const nextKeys = new Set(Object.keys(value));
+
+    for (const className of nextKeys) {
+      if (!className || /\s/.test(className)) {
+        throw new Error(`Invalid @class map key '${className}'; keys must be single class names`);
+      }
+      element.classList.toggle(className, Boolean(value[className]));
+    }
+
+    for (const className of previousKeys) {
+      if (!nextKeys.has(className)) {
+        element.classList.remove(className);
+      }
+    }
+
+    bindings.set(binding, nextKeys);
+    this.classMapBindings.set(element, bindings);
+  }
+
+  private clearClassMapBinding(element: Element, binding: object): void {
+    const bindings = this.classMapBindings.get(element);
+    const previousKeys = bindings?.get(binding);
+    if (!previousKeys) {
+      return;
+    }
+    for (const className of previousKeys) {
+      element.classList.remove(className);
+    }
+    bindings?.delete(binding);
   }
 
   private getDirectiveValue(element: Element, target: DirectiveExpression): unknown {

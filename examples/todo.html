@@ -128,7 +128,9 @@
     }
 
     behavior .todo-item {
-      @class :< (todo[2] ? "todo-item done" : "todo-item");
+      @class :< {
+        done: todo[2]
+      };
       $display :< (
         filter == "all" ||
         (filter == "active" && !todo[2]) ||

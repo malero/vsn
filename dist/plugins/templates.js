@@ -285,12 +285,12 @@ function patchDirectiveSetter(engine, instances, handleHtmlBehaviors) {
   if (!originalSet) {
     return;
   }
-  engine.setDirectiveValue = (element, target, value) => {
+  engine.setDirectiveValue = (element, target, value, binding) => {
     if (target?.kind === "attr" && target?.name === "html") {
       renderHtml(element, value, instances, handleHtmlBehaviors);
       return;
     }
-    return originalSet(element, target, value);
+    return originalSet(element, target, value, binding);
   };
 }
 function patchEvaluate(engine, htmlBindings, instances, handleHtmlBehaviors) {
