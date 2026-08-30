@@ -26,6 +26,18 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
+    },
+    "./plugins/microdata": {
+      "types": "./dist/plugins/microdata.d.ts",
+      "import": "./dist/plugins/microdata.js"
+    },
+    "./plugins/templates": {
+      "types": "./dist/plugins/templates.d.ts",
+      "import": "./dist/plugins/templates.js"
+    },
+    "./plugins/sanitize-html": {
+      "types": "./dist/plugins/sanitize-html.d.ts",
+      "import": "./dist/plugins/sanitize-html.js"
     }
   },
   "files": [
