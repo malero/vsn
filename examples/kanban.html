@@ -68,7 +68,7 @@
   use JSON as json;
   use Date as date;
 
-  behavior #kanban-app {
+  #kanban-app {
     key: "vsn:kanban";
     newTitle: "";
     newPriority: "medium";
@@ -171,7 +171,7 @@
       return html`${cards}`;
     }
 
-    behavior .kanban-card {
+    .kanban-card {
       on dragstart(event) {
         root.dragId = @data-id;
         root.dragFrom = @data-status;
@@ -185,7 +185,7 @@
       }
     }
 
-    behavior .kanban-column {
+    .kanban-column {
       @data-status :> status;
       @class :< (root.dropStatus == status ? "kanban-column is-drop" : "kanban-column");
 
