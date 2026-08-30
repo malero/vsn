@@ -528,7 +528,10 @@ export class Engine {
   }
 
   unmount(element: Element): void {
-    this.runDestruct(element);
+    const elements = [element, ...Array.from(element.querySelectorAll("*"))];
+    for (const current of elements) {
+      this.teardownElement(current);
+    }
     this.disconnectObserver();
   }
 
@@ -747,24 +750,21 @@ export class Engine {
   }
 
   private handleRemovedNode(node: Element): void {
-    if (this.lifecycleBindings.has(node)) {
-      this.runDestruct(node);
+    const elements = [node, ...Array.from(node.querySelectorAll("*"))];
+    for (const element of elements) {
+      this.teardownElement(element);
     }
-    if (this.behaviorBindings.has(node)) {
-      this.runBehaviorDestruct(node);
+  }
+
+  private teardownElement(element: Element): void {
+    if (this.lifecycleBindings.has(element)) {
+      this.runDestruct(element);
     }
-    this.cleanupScopeWatchers(node);
-    this.cleanupBehaviorListeners(node);
-    for (const child of Array.from(node.querySelectorAll("*"))) {
-      if (this.lifecycleBindings.has(child)) {
-        this.runDestruct(child);
-      }
-      if (this.behaviorBindings.has(child)) {
-        this.runBehaviorDestruct(child);
-      }
-      this.cleanupScopeWatchers(child);
-      this.cleanupBehaviorListeners(child);
+    if (this.behaviorBindings.has(element)) {
+      this.runBehaviorDestruct(element);
     }
+    this.cleanupBehaviorResources(element);
+    this.cleanupBehaviorListeners(element);
   }
 
   private handleAddedNode(node: Element): void {
@@ -1289,23 +1289,32 @@ export class Engine {
     }
   }
 
-  private cleanupBehaviorResources(element: Element, behaviorId: number): void {
+  private cleanupBehaviorResources(element: Element, behaviorId?: number): void {
     this.cleanupScopeWatchers(element, behaviorId);
-    this.cleanupBehaviorClassMapBindings(element, behaviorId);
+    if (behaviorId !== undefined) {
+      this.cleanupBehaviorClassMapBindings(element, behaviorId);
+      return;
+    }
+    const bindings = this.behaviorClassMapBindings.get(element);
+    if (!bindings) {
+      return;
+    }
+    for (const id of Array.from(bindings.keys())) {
+      this.cleanupBehaviorClassMapBindings(element, id);
+    }
   }
 
   private cleanupBehaviorListeners(element: Element): void {
     const listenerMap = this.behaviorListeners.get(element);
-    if (!listenerMap) {
-      return;
-    }
-    for (const listeners of listenerMap.values()) {
-      for (const listener of listeners) {
-        listener.target.removeEventListener(listener.event, listener.handler, listener.options);
+    if (listenerMap) {
+      for (const listeners of listenerMap.values()) {
+        for (const listener of listeners) {
+          listener.target.removeEventListener(listener.event, listener.handler, listener.options);
+        }
       }
+      listenerMap.clear();
+      this.behaviorListeners.delete(element);
     }
-    listenerMap.clear();
-    this.behaviorListeners.delete(element);
     this.behaviorBindings.delete(element);
   }
 

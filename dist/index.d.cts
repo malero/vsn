@@ -733,6 +733,7 @@ declare class Engine {
     private disconnectObserver;
     private flushObserverQueue;
     private handleRemovedNode;
+    private teardownElement;
     private handleAddedNode;
     private handleUpdatedNode;
     private applyBehaviors;
