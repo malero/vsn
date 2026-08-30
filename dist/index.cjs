@@ -4467,6 +4467,8 @@ var Engine = class _Engine {
   classMapBindings = /* @__PURE__ */ new WeakMap();
   behaviorClassMapBindings = /* @__PURE__ */ new WeakMap();
   behaviorInvalidators = /* @__PURE__ */ new WeakMap();
+  mountedRoots = /* @__PURE__ */ new Set();
+  inactiveSubtrees = /* @__PURE__ */ new WeakSet();
   constructor(options = {}) {
     this.diagnostics = options.diagnostics ?? false;
     this.logger = options.logger ?? console;
@@ -4768,10 +4770,13 @@ var Engine = class _Engine {
     const documentRoot = root.ownerDocument;
     const active = _Engine.activeEngines.get(documentRoot);
     if (active && active !== this) {
-      active.disconnectObserver();
+      active.disposeMountedRoots();
     }
     _Engine.activeEngines.set(documentRoot, this);
     const elements = [root, ...Array.from(root.querySelectorAll("*"))];
+    for (const element of elements) {
+      this.inactiveSubtrees.delete(element);
+    }
     for (const element of elements) {
       if (!this.hasVsnAttributes(element)) {
         continue;
@@ -4785,11 +4790,15 @@ var Engine = class _Engine {
     this.attachObserver(root);
   }
   unmount(element) {
+    const isMountedRoot = element instanceof HTMLElement && this.mountedRoots.delete(element);
+    this.inactiveSubtrees.add(element);
+    if (isMountedRoot) {
+      this.reconnectObserver();
+    }
     const elements = [element, ...Array.from(element.querySelectorAll("*"))];
     for (const current of elements) {
       this.teardownElement(current);
     }
-    this.disconnectObserver();
   }
   registerBehaviors(source) {
     const program = new Parser(source, {
@@ -4937,34 +4946,64 @@ var Engine = class _Engine {
     }
   }
   attachObserver(root) {
-    if (this.observer) {
+    if (!this.observer) {
+      this.observerFlush = debounce(() => this.flushObserverQueue(), 10);
+      this.observer = new MutationObserver((mutations) => {
+        for (const mutation of mutations) {
+          if (mutation.type === "attributes" && mutation.target instanceof Element) {
+            if (!this.isInactive(mutation.target)) {
+              this.pendingUpdated.add(mutation.target);
+            }
+          }
+          for (const node of Array.from(mutation.addedNodes)) {
+            if (node && node.nodeType === 1) {
+              const element = node;
+              if (this.ignoredAdded.has(element)) {
+                this.ignoredAdded.delete(element);
+                continue;
+              }
+              if (!this.isInactive(element)) {
+                this.pendingAdded.add(element);
+              }
+            }
+          }
+          for (const node of Array.from(mutation.removedNodes)) {
+            if (node && node.nodeType === 1) {
+              this.pendingRemoved.add(node);
+            }
+          }
+        }
+        this.observerFlush?.();
+      });
+    }
+    this.mountedRoots.add(root);
+    this.observeRoot(root);
+  }
+  observeRoot(root) {
+    this.observer?.observe(root, { childList: true, subtree: true, attributes: true });
+  }
+  reconnectObserver() {
+    if (!this.observer) {
       return;
     }
-    this.observerFlush = debounce(() => this.flushObserverQueue(), 10);
-    this.observer = new MutationObserver((mutations) => {
-      for (const mutation of mutations) {
-        if (mutation.type === "attributes" && mutation.target instanceof Element) {
-          this.pendingUpdated.add(mutation.target);
-        }
-        for (const node of Array.from(mutation.addedNodes)) {
-          if (node && node.nodeType === 1) {
-            const element = node;
-            if (this.ignoredAdded.has(element)) {
-              this.ignoredAdded.delete(element);
-              continue;
-            }
-            this.pendingAdded.add(element);
-          }
-        }
-        for (const node of Array.from(mutation.removedNodes)) {
-          if (node && node.nodeType === 1) {
-            this.pendingRemoved.add(node);
-          }
-        }
+    this.observer.disconnect();
+    if (this.mountedRoots.size === 0) {
+      this.disconnectObserver();
+      return;
+    }
+    for (const root of this.mountedRoots) {
+      this.observeRoot(root);
+    }
+  }
+  disposeMountedRoots() {
+    const roots = Array.from(this.mountedRoots);
+    this.disconnectObserver();
+    this.mountedRoots.clear();
+    for (const root of roots) {
+      for (const element of [root, ...Array.from(root.querySelectorAll("*"))]) {
+        this.teardownElement(element);
       }
-      this.observerFlush?.();
-    });
-    this.observer.observe(root, { childList: true, subtree: true, attributes: true });
+    }
   }
   disconnectObserver() {
     this.observer?.disconnect();
@@ -5007,6 +5046,9 @@ var Engine = class _Engine {
     this.cleanupBehaviorListeners(element);
   }
   handleAddedNode(node) {
+    if (this.isInactive(node)) {
+      return;
+    }
     const elements = [node, ...Array.from(node.querySelectorAll("*"))];
     for (const element of elements) {
       if (!this.hasVsnAttributes(element)) {
@@ -5020,12 +5062,18 @@ var Engine = class _Engine {
     void this.applyBehaviors(node);
   }
   handleUpdatedNode(node) {
+    if (this.isInactive(node)) {
+      return;
+    }
     const elements = [node, ...Array.from(node.querySelectorAll("*"))];
     for (const element of elements) {
       void this.reapplyBehaviorsForElement(element);
     }
   }
   async applyBehaviors(root) {
+    if (this.isInactive(root)) {
+      return;
+    }
     await this.waitForUses();
     if (this.behaviorRegistry.length > 0) {
       const elements = [root, ...Array.from(root.querySelectorAll("*"))];
@@ -5034,6 +5082,16 @@ var Engine = class _Engine {
       }
     }
     this.flushAutoBindQueue();
+  }
+  isInactive(element) {
+    let current = element;
+    while (current) {
+      if (this.inactiveSubtrees.has(current)) {
+        return true;
+      }
+      current = current.parentElement;
+    }
+    return false;
   }
   async reapplyBehaviorsForElement(element) {
     if (this.behaviorRegistry.length === 0) {

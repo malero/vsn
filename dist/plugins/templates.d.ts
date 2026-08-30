@@ -394,6 +394,8 @@ declare class Engine {
     private classMapBindings;
     private behaviorClassMapBindings;
     private behaviorInvalidators;
+    private mountedRoots;
+    private inactiveSubtrees;
     constructor(options?: EngineOptions);
     private matchesMinWidth;
     private matchesMaxWidth;
@@ -419,6 +421,9 @@ declare class Engine {
     getScope(element: Element, parentScope?: Scope): Scope;
     evaluate(element: Element): void;
     private attachObserver;
+    private observeRoot;
+    private reconnectObserver;
+    private disposeMountedRoots;
     private disconnectObserver;
     private flushObserverQueue;
     private handleRemovedNode;
@@ -426,6 +431,7 @@ declare class Engine {
     private handleAddedNode;
     private handleUpdatedNode;
     private applyBehaviors;
+    private isInactive;
     private reapplyBehaviorsForElement;
     private applyBehaviorForElement;
     private unbindBehaviorForElement;

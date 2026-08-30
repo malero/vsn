@@ -197,6 +197,8 @@ export class Engine {
   private classMapBindings = new WeakMap<Element, Map<object, Set<string>>>();
   private behaviorClassMapBindings = new WeakMap<Element, Map<number, Set<object>>>();
   private behaviorInvalidators = new WeakMap<Element, Map<number, Set<() => void>>>();
+  private mountedRoots = new Set<HTMLElement>();
+  private inactiveSubtrees = new WeakSet<Element>();
 
   constructor(options: EngineOptions = {}) {
     this.diagnostics = options.diagnostics ?? false;
@@ -511,10 +513,13 @@ export class Engine {
     const documentRoot = root.ownerDocument;
     const active = Engine.activeEngines.get(documentRoot);
     if (active && active !== this) {
-      active.disconnectObserver();
+      active.disposeMountedRoots();
     }
     Engine.activeEngines.set(documentRoot, this);
     const elements: Element[] = [root, ...Array.from(root.querySelectorAll("*"))];
+    for (const element of elements) {
+      this.inactiveSubtrees.delete(element);
+    }
     for (const element of elements) {
       if (!this.hasVsnAttributes(element)) {
         continue;
@@ -529,11 +534,15 @@ export class Engine {
   }
 
   unmount(element: Element): void {
+    const isMountedRoot = element instanceof HTMLElement && this.mountedRoots.delete(element);
+    this.inactiveSubtrees.add(element);
+    if (isMountedRoot) {
+      this.reconnectObserver();
+    }
     const elements = [element, ...Array.from(element.querySelectorAll("*"))];
     for (const current of elements) {
       this.teardownElement(current);
     }
-    this.disconnectObserver();
   }
 
   registerBehaviors(source: string): void {
@@ -697,34 +706,67 @@ export class Engine {
   }
 
   private attachObserver(root: HTMLElement): void {
-    if (this.observer) {
+    if (!this.observer) {
+      this.observerFlush = debounce(() => this.flushObserverQueue(), 10);
+      this.observer = new MutationObserver((mutations) => {
+        for (const mutation of mutations) {
+          if (mutation.type === "attributes" && mutation.target instanceof Element) {
+            if (!this.isInactive(mutation.target)) {
+              this.pendingUpdated.add(mutation.target);
+            }
+          }
+          for (const node of Array.from(mutation.addedNodes)) {
+            if (node && node.nodeType === 1) {
+              const element = node as Element;
+              if (this.ignoredAdded.has(element)) {
+                this.ignoredAdded.delete(element);
+                continue;
+              }
+              if (!this.isInactive(element)) {
+                this.pendingAdded.add(element);
+              }
+            }
+          }
+          for (const node of Array.from(mutation.removedNodes)) {
+            if (node && node.nodeType === 1) {
+              this.pendingRemoved.add(node as Element);
+            }
+          }
+        }
+        this.observerFlush?.();
+      });
+    }
+    this.mountedRoots.add(root);
+    this.observeRoot(root);
+  }
+
+  private observeRoot(root: HTMLElement): void {
+    this.observer?.observe(root, { childList: true, subtree: true, attributes: true });
+  }
+
+  private reconnectObserver(): void {
+    if (!this.observer) {
       return;
     }
-    this.observerFlush = debounce(() => this.flushObserverQueue(), 10);
-    this.observer = new MutationObserver((mutations) => {
-      for (const mutation of mutations) {
-        if (mutation.type === "attributes" && mutation.target instanceof Element) {
-          this.pendingUpdated.add(mutation.target);
-        }
-        for (const node of Array.from(mutation.addedNodes)) {
-          if (node && node.nodeType === 1) {
-            const element = node as Element;
-            if (this.ignoredAdded.has(element)) {
-              this.ignoredAdded.delete(element);
-              continue;
-            }
-            this.pendingAdded.add(element);
-          }
-        }
-        for (const node of Array.from(mutation.removedNodes)) {
-          if (node && node.nodeType === 1) {
-            this.pendingRemoved.add(node as Element);
-          }
-        }
+    this.observer.disconnect();
+    if (this.mountedRoots.size === 0) {
+      this.disconnectObserver();
+      return;
+    }
+    for (const root of this.mountedRoots) {
+      this.observeRoot(root);
+    }
+  }
+
+  private disposeMountedRoots(): void {
+    const roots = Array.from(this.mountedRoots);
+    this.disconnectObserver();
+    this.mountedRoots.clear();
+    for (const root of roots) {
+      for (const element of [root, ...Array.from(root.querySelectorAll("*"))]) {
+        this.teardownElement(element);
       }
-      this.observerFlush?.();
-    });
-    this.observer.observe(root, { childList: true, subtree: true, attributes: true });
+    }
   }
 
   private disconnectObserver(): void {
@@ -772,6 +814,9 @@ export class Engine {
   }
 
   private handleAddedNode(node: Element): void {
+    if (this.isInactive(node)) {
+      return;
+    }
     const elements = [node, ...Array.from(node.querySelectorAll("*"))];
     for (const element of elements) {
       if (!this.hasVsnAttributes(element)) {
@@ -786,6 +831,9 @@ export class Engine {
   }
 
   private handleUpdatedNode(node: Element): void {
+    if (this.isInactive(node)) {
+      return;
+    }
     const elements = [node, ...Array.from(node.querySelectorAll("*"))];
     for (const element of elements) {
       void this.reapplyBehaviorsForElement(element);
@@ -793,6 +841,9 @@ export class Engine {
   }
 
   private async applyBehaviors(root: Element): Promise<void> {
+    if (this.isInactive(root)) {
+      return;
+    }
     await this.waitForUses();
     if (this.behaviorRegistry.length > 0) {
       const elements: Element[] = [root, ...Array.from(root.querySelectorAll("*"))];
@@ -801,6 +852,17 @@ export class Engine {
       }
     }
     this.flushAutoBindQueue();
+  }
+
+  private isInactive(element: Element): boolean {
+    let current: Element | null = element;
+    while (current) {
+      if (this.inactiveSubtrees.has(current)) {
+        return true;
+      }
+      current = current.parentElement;
+    }
+    return false;
   }
 
   private async reapplyBehaviorsForElement(element: Element): Promise<void> {
