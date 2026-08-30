@@ -115,6 +115,9 @@ interface ExecutionContext {
     } | undefined;
     rootScope: ExecutionContext["scope"];
     globals?: Record<string, any>;
+    engine?: {
+        getScope?(element: Element): ExecutionContext["scope"];
+    };
     element?: Element;
     self?: any;
     returnValue?: any;

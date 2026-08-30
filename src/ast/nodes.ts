@@ -7,6 +7,7 @@ export interface ExecutionContext {
   } | undefined;
   rootScope: ExecutionContext["scope"];
   globals?: Record<string, any>;
+  engine?: { getScope?(element: Element): ExecutionContext["scope"] };
   element?: Element;
   self?: any;
   returnValue?: any;
@@ -862,6 +863,7 @@ export class FunctionExpression extends BaseNode {
           scope: activeScope,
           rootScope: context.rootScope,
           ...(globals ? { globals } : {}),
+          ...(context.engine ? { engine: context.engine } : {}),
           ...(element ? { element } : {}),
           ...(context.self ? { self: context.self } : {}),
           returnValue: undefined,
@@ -889,6 +891,7 @@ export class FunctionExpression extends BaseNode {
         scope: activeScope,
         rootScope: context.rootScope,
         ...(globals ? { globals } : {}),
+        ...(context.engine ? { engine: context.engine } : {}),
         ...(element ? { element } : {}),
         ...(context.self ? { self: context.self } : {}),
         returnValue: undefined,
@@ -1089,7 +1092,7 @@ export class ElementRefExpression extends BaseNode {
     if (!element) {
       return undefined;
     }
-    const engine = (globalThis as any).VSNEngine;
+    const engine = context.engine ?? (globalThis as any).VSNEngine;
     const scope = engine?.getScope ? engine.getScope(element) : undefined;
     return { __element: element, __scope: scope };
   }

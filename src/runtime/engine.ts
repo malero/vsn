@@ -2036,6 +2036,7 @@ export class Engine {
         scope,
         rootScope,
         globals: this.globals,
+        engine: this,
         ...(element ? { element } : {}),
         self: selfRef
       };
@@ -2050,6 +2051,7 @@ export class Engine {
         scope,
         rootScope,
         globals: this.globals,
+        engine: this,
         ...(element ? { element } : {}),
         self: selfRef
       };
@@ -2605,6 +2607,7 @@ export class Engine {
         scope: callScope,
         rootScope: rootScope ?? callScope,
         globals: this.globals,
+        engine: this,
         element,
         self: selfRef,
         returnValue: undefined,
@@ -2685,7 +2688,7 @@ export class Engine {
     behaviorId?: number
   ): Promise<void> {
     const selfRef = this.getGroupProxy(scope);
-    const context: ExecutionContext = { scope, rootScope, globals: this.globals, element, self: selfRef };
+    const context: ExecutionContext = { scope, rootScope, globals: this.globals, engine: this, element, self: selfRef };
     const operator = declaration.operator;
     const debounceMs = declaration.flags.debounce
       ? declaration.flagArgs.debounce ?? 200
@@ -2933,7 +2936,7 @@ export class Engine {
     const handler = async () => {
       const currentVersion = ++version;
       const selfRef = this.getGroupProxy(scope);
-      const context: ExecutionContext = { scope, rootScope, globals: this.globals, element, self: selfRef };
+      const context: ExecutionContext = { scope, rootScope, globals: this.globals, engine: this, element, self: selfRef };
       const value = await expr.evaluate(context);
       if (currentVersion !== version) {
         return;
