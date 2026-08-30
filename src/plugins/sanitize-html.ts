@@ -5,16 +5,19 @@ type SanitizerOptions = {
   sanitizer?: (html: string) => string;
 };
 
-type HtmlBinding = { expr: string; trusted: boolean };
 type TrustedHtmlValue = { __vsnTrustedHtml: true; value: any };
 
 const TRUSTED_HTML_KEY = "__vsnTrustedHtml";
 
 export function registerSanitizeHtml(engine: Engine, options: SanitizerOptions = {}): void {
-  const htmlBindings = new WeakMap<Element, HtmlBinding>();
   const trustedElements = new WeakSet<Element>();
   const sanitizer = resolveSanitizer(options);
-  const handleHtmlBehaviors = (engine as any).handleHtmlBehaviors?.bind(engine);
+
+  engine.registerHtmlTransformer((value, context) => {
+    const { html, trusted } = unwrapTrustedHtml(value, context.element, trustedElements);
+    context.trusted = context.trusted || trusted;
+    return context.trusted ? html : sanitizer(html);
+  }, { priority: 200 });
 
   engine.registerFlag("trusted", {
     transformValue: ({ declaration }, value) => {
@@ -23,60 +26,6 @@ export function registerSanitizeHtml(engine: Engine, options: SanitizerOptions =
         return { [TRUSTED_HTML_KEY]: true, value } as TrustedHtmlValue;
       }
       return value;
-    }
-  });
-
-  patchAttributeHandlers(engine, htmlBindings, trustedElements, sanitizer, handleHtmlBehaviors);
-  patchDirectiveSetter(engine, trustedElements, sanitizer, handleHtmlBehaviors);
-  patchEvaluate(engine, htmlBindings, trustedElements, sanitizer, handleHtmlBehaviors);
-  patchBehaviorDeclarations(engine, trustedElements);
-}
-
-export default registerSanitizeHtml;
-
-const globals = globalThis as Record<string, any>;
-const plugins = globals.VSNPlugins ?? {};
-plugins.sanitizeHtml = (instance: Engine) => registerSanitizeHtml(instance);
-globals.VSNPlugins = plugins;
-
-const autoEngine = globals.VSNEngine;
-if (autoEngine && typeof autoEngine.registerFlag === "function") {
-  registerSanitizeHtml(autoEngine as Engine);
-}
-
-function patchAttributeHandlers(
-  engine: Engine,
-  htmlBindings: WeakMap<Element, HtmlBinding>,
-  trustedElements: WeakSet<Element>,
-  sanitizer: (html: string) => string,
-  handleHtmlBehaviors?: (root: Element) => void
-): void {
-  const handlers: any[] = (engine as any).attributeHandlers ?? [];
-  (engine as any).attributeHandlers = handlers.filter((handler) => handler?.id !== "vsn-html" && handler?.id !== "vsn-get");
-
-  engine.registerAttributeHandler({
-    id: "vsn-html",
-    match: (name) => name.startsWith("vsn-html"),
-    handle: (element, name, value, scope) => {
-      const trusted = name.includes("!trusted");
-      htmlBindings.set(element, { expr: value, trusted });
-      if ((engine as any).markInlineDeclaration) {
-        (engine as any).markInlineDeclaration(element, "attr:html");
-      }
-      const apply = () => {
-        const html = scope.get(value);
-        const raw = html == null ? "" : String(html);
-        element.innerHTML = trusted ? raw : sanitizer(raw);
-        if (trusted) {
-          trustedElements.add(element);
-          handleHtmlBehaviors?.(element);
-        }
-      };
-      apply();
-      if ((engine as any).watch) {
-        (engine as any).watch(scope, value, apply, element);
-      }
-      return true;
     }
   });
 
@@ -103,7 +52,6 @@ function patchAttributeHandlers(
               ...(targetSelector ? { targetSelector } : {})
             },
             sanitizer,
-            handleHtmlBehaviors,
             trustedElements
           );
         } catch (error) {
@@ -126,71 +74,16 @@ function patchAttributeHandlers(
   });
 }
 
-function patchDirectiveSetter(
-  engine: Engine,
-  trustedElements: WeakSet<Element>,
-  sanitizer: (html: string) => string,
-  handleHtmlBehaviors?: (root: Element) => void
-): void {
-  const originalSet = (engine as any).setDirectiveValue?.bind(engine);
-  if (!originalSet) {
-    return;
-  }
-  (engine as any).setDirectiveValue = (element: Element, target: any, value: any, binding?: object) => {
-    if (target?.kind === "attr" && target?.name === "html" && element instanceof HTMLElement) {
-      const { html, trusted } = unwrapTrustedHtml(value, element, trustedElements);
-      element.innerHTML = trusted ? html : sanitizer(html);
-      if (trusted) {
-        handleHtmlBehaviors?.(element);
-      }
-      return;
-    }
-    return originalSet(element, target, value, binding);
-  };
-}
+export default registerSanitizeHtml;
 
-function patchEvaluate(
-  engine: Engine,
-  htmlBindings: WeakMap<Element, HtmlBinding>,
-  trustedElements: WeakSet<Element>,
-  sanitizer: (html: string) => string,
-  handleHtmlBehaviors?: (root: Element) => void
-): void {
-  const originalEvaluate = engine.evaluate.bind(engine);
-  engine.evaluate = (element: Element) => {
-    originalEvaluate(element);
-    const binding = htmlBindings.get(element);
-    if (!binding || !(element instanceof HTMLElement)) {
-      return;
-    }
-    const scope = engine.getScope(element);
-    const html = scope.get(binding.expr);
-    const raw = html == null ? "" : String(html);
-    element.innerHTML = binding.trusted ? raw : sanitizer(raw);
-    if (binding.trusted) {
-      trustedElements.add(element);
-      handleHtmlBehaviors?.(element);
-    }
-  };
-}
+const globals = globalThis as Record<string, any>;
+const plugins = globals.VSNPlugins ?? {};
+plugins.sanitizeHtml = (instance: Engine) => registerSanitizeHtml(instance);
+globals.VSNPlugins = plugins;
 
-function patchBehaviorDeclarations(engine: Engine, trustedElements: WeakSet<Element>): void {
-  const originalApply = (engine as any).applyBehaviorDeclaration?.bind(engine);
-  if (!originalApply) {
-    return;
-  }
-  (engine as any).applyBehaviorDeclaration = async (
-    element: Element,
-    scope: any,
-    declaration: any,
-    rootScope?: any
-  ) => {
-    const target = declaration?.target;
-    if (declaration?.flags?.trusted && target?.type === "Directive" && target?.name === "html") {
-      trustedElements.add(element);
-    }
-    return originalApply(element, scope, declaration, rootScope);
-  };
+const autoEngine = globals.VSNEngine;
+if (autoEngine && typeof autoEngine.registerFlag === "function") {
+  registerSanitizeHtml(autoEngine as Engine);
 }
 
 function unwrapTrustedHtml(
@@ -211,8 +104,7 @@ async function applyGetWithSanitize(
   element: Element,
   config: { url: string; targetSelector?: string; swap?: "inner" | "outer"; trusted: boolean },
   sanitizer: (html: string) => string,
-  handleHtmlBehaviors?: (root: Element) => void,
-  trustedElements?: WeakSet<Element>
+  trustedElements: WeakSet<Element>
 ): Promise<void> {
   if (!globalThis.fetch) {
     throw new Error("fetch is not available");
@@ -242,8 +134,8 @@ async function applyGetWithSanitize(
       target.parentNode.replaceChild(fragment, target);
       if (config.trusted) {
         for (const element of elements) {
-          trustedElements?.add(element);
-          handleHtmlBehaviors?.(element);
+          trustedElements.add(element);
+          engine.processHtml(element);
         }
       }
     }
@@ -252,9 +144,9 @@ async function applyGetWithSanitize(
 
   (target as HTMLElement).innerHTML = output;
   if (config.trusted) {
-    trustedElements?.add(target);
-    handleHtmlBehaviors?.(target);
+    trustedElements.add(target);
   }
+  engine.processHtml(target);
 }
 
 function resolveTarget(element: Element, selector?: string): Element | null {

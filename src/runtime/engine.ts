@@ -1,7 +1,6 @@
 import { Scope } from "./scope";
 import { applyBindToElement, applyBindToScope, BindDirection } from "./bindings";
 import { applyIf, applyShow } from "./conditionals";
-import { applyHtml } from "./html";
 import { applyGet, GetConfig } from "./http";
 import { debounce } from "./debounce";
 import { Parser } from "../parser/parser";
@@ -77,6 +76,27 @@ type AttributeHandler = {
   id: string;
   match: (name: string) => boolean;
   handle: (element: Element, name: string, value: string, scope: Scope) => boolean | void;
+};
+
+export type HtmlTransformContext = {
+  element: HTMLElement;
+  trusted: boolean;
+};
+
+export type HtmlTransformer = (value: unknown, context: HtmlTransformContext) => unknown;
+
+export type HtmlTransformOptions = {
+  priority?: number;
+};
+
+export type HtmlSetOptions = {
+  trusted?: boolean;
+};
+
+type RegisteredHtmlTransformer = {
+  transform: HtmlTransformer;
+  priority: number;
+  order: number;
 };
 
 type EachBinding = {
@@ -170,7 +190,7 @@ export class Engine {
   private bindBindings = new WeakMap<Element, BindConfig>();
   private ifBindings = new WeakMap<Element, string>();
   private showBindings = new WeakMap<Element, string>();
-  private htmlBindings = new WeakMap<Element, { expr: string }>();
+  private htmlBindings = new WeakMap<Element, { expr: string; trusted: boolean }>();
   private getBindings = new WeakMap<Element, GetConfig>();
   private eachBindings = new WeakMap<Element, EachBinding>();
   private lifecycleBindings = new WeakMap<Element, LifecycleConfig>();
@@ -187,6 +207,8 @@ export class Engine {
   private behaviorCache = new Map<string, CachedBehavior>();
   private observer: MutationObserver | undefined;
   private attributeHandlers: AttributeHandler[] = [];
+  private htmlTransformers: RegisteredHtmlTransformer[] = [];
+  private htmlTransformerOrder = 0;
   private globals: Record<string, any> = {};
   private importantFlags = new WeakMap<Element, Set<string>>();
   private inlineDeclarations = new WeakMap<Element, Set<string>>();
@@ -602,6 +624,25 @@ export class Engine {
     this.behaviorModifiers.set(name, handler);
   }
 
+  registerHtmlTransformer(
+    transform: HtmlTransformer,
+    options: HtmlTransformOptions = {}
+  ): () => void {
+    const entry: RegisteredHtmlTransformer = {
+      transform,
+      priority: options.priority ?? 0,
+      order: this.htmlTransformerOrder += 1
+    };
+    this.htmlTransformers.push(entry);
+    this.htmlTransformers.sort((a, b) => a.priority - b.priority || a.order - b.order);
+    return () => {
+      const index = this.htmlTransformers.indexOf(entry);
+      if (index >= 0) {
+        this.htmlTransformers.splice(index, 1);
+      }
+    };
+  }
+
   getRegistryStats(): { behaviorCount: number; behaviorCacheSize: number } {
     return {
       behaviorCount: this.behaviorRegistry.length,
@@ -610,6 +651,10 @@ export class Engine {
   }
 
   registerAttributeHandler(handler: AttributeHandler): void {
+    const existingIndex = this.attributeHandlers.findIndex((existing) => existing.id === handler.id);
+    if (existingIndex >= 0) {
+      this.attributeHandlers.splice(existingIndex, 1);
+    }
     this.attributeHandlers.push(handler);
   }
 
@@ -699,6 +744,26 @@ export class Engine {
     return scope;
   }
 
+  setHtml(element: Element, value: unknown, options: HtmlSetOptions = {}): void {
+    if (!(element instanceof HTMLElement)) {
+      return;
+    }
+    const context: HtmlTransformContext = {
+      element,
+      trusted: options.trusted ?? false
+    };
+    let transformed = value;
+    for (const entry of this.htmlTransformers) {
+      transformed = entry.transform(transformed, context);
+    }
+    element.innerHTML = transformed == null ? "" : String(transformed);
+    this.processHtml(element);
+  }
+
+  processHtml(root: Element): void {
+    this.handleHtmlBehaviors(root);
+  }
+
   evaluate(element: Element): void {
     const scope = this.getScope(element);
     const bindConfig = this.bindBindings.get(element);
@@ -715,8 +780,7 @@ export class Engine {
     }
     const htmlBinding = this.htmlBindings.get(element);
     if (htmlBinding && element instanceof HTMLElement) {
-      applyHtml(element, htmlBinding.expr, scope);
-      this.handleHtmlBehaviors(element);
+      this.setHtml(element, scope.get(htmlBinding.expr.trim()), { trusted: htmlBinding.trusted });
     }
   }
 
@@ -2925,10 +2989,11 @@ export class Engine {
         const useRoot = expr.startsWith("root.") && rootScope;
         const sourceScope = useRoot ? rootScope : scope;
         const localExpr = useRoot ? `self.${expr.slice("root.".length)}` : expr;
-        applyHtml(element, localExpr, sourceScope);
+        this.setHtml(element, sourceScope.get(localExpr.trim()), {
+          trusted: Boolean((binding as { flags?: { trusted?: boolean } } | undefined)?.flags?.trusted)
+        });
       };
       handler();
-      this.handleHtmlBehaviors(element);
       if (watch) {
         const useRoot = expr.startsWith("root.") && rootScope;
         const sourceScope = useRoot ? rootScope : scope;
@@ -3076,9 +3141,9 @@ export class Engine {
     binding?: object
   ): void {
     if (target.kind === "attr" && target.name === "html" && element instanceof HTMLElement) {
-      const html = value == null ? "" : String(value);
-      element.innerHTML = html;
-      this.handleHtmlBehaviors(element);
+      this.setHtml(element, value, {
+        trusted: Boolean((binding as { flags?: { trusted?: boolean } } | undefined)?.flags?.trusted)
+      });
       return;
     }
     if (target.kind === "attr") {
@@ -3268,11 +3333,10 @@ export class Engine {
       id: "vsn-html",
       match: (name) => name.startsWith("vsn-html"),
       handle: (element, _name, value, scope) => {
-        this.htmlBindings.set(element, { expr: value });
+        this.htmlBindings.set(element, { expr: value, trusted: _name.includes("!trusted") });
         this.markInlineDeclaration(element, "attr:html");
         if (element instanceof HTMLElement) {
-          applyHtml(element, value, scope);
-          this.handleHtmlBehaviors(element);
+          this.setHtml(element, scope.get(value.trim()), { trusted: _name.includes("!trusted") });
         }
         this.watch(scope, value, () => this.evaluate(element), element);
       }

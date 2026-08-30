@@ -4,6 +4,28 @@ import { describe, expect, it } from "vitest";
 import { Engine } from "../src/index";
 
 describe("engine extensions", () => {
+  it("runs HTML transformers by priority and supports disposal", () => {
+    document.body.innerHTML = `<div id="node"></div>`;
+
+    const engine = new Engine();
+    const node = document.getElementById("node") as HTMLDivElement;
+    const disposeLate = engine.registerHtmlTransformer(
+      (value) => `${value}-late`,
+      { priority: 20 }
+    );
+    engine.registerHtmlTransformer(
+      (value) => `${value}-early`,
+      { priority: 10 }
+    );
+
+    engine.setHtml(node, "value");
+    expect(node.innerHTML).toBe("value-early-late");
+
+    disposeLate();
+    engine.setHtml(node, "value");
+    expect(node.innerHTML).toBe("value-early");
+  });
+
   it("supports custom attribute handlers", async () => {
     document.body.innerHTML = `<div id="node" vsn-test="hello"></div>`;
 

@@ -34,6 +34,9 @@ interface ExecutionContext {
     globals?: Record<string, any>;
     engine?: {
         getScope?(element: Element): ExecutionContext["scope"];
+        setHtml?(element: Element, value: unknown, options?: {
+            trusted?: boolean;
+        }): void;
     };
     element?: Element;
     self?: any;
@@ -316,6 +319,17 @@ type AttributeHandler = {
     match: (name: string) => boolean;
     handle: (element: Element, name: string, value: string, scope: Scope) => boolean | void;
 };
+type HtmlTransformContext = {
+    element: HTMLElement;
+    trusted: boolean;
+};
+type HtmlTransformer = (value: unknown, context: HtmlTransformContext) => unknown;
+type HtmlTransformOptions = {
+    priority?: number;
+};
+type HtmlSetOptions = {
+    trusted?: boolean;
+};
 type FlagApplyContext = {
     name: string;
     args: any;
@@ -387,6 +401,8 @@ declare class Engine {
     private behaviorCache;
     private observer;
     private attributeHandlers;
+    private htmlTransformers;
+    private htmlTransformerOrder;
     private globals;
     private importantFlags;
     private inlineDeclarations;
@@ -425,6 +441,7 @@ declare class Engine {
     registerGlobals(values: Record<string, any>): void;
     registerFlag(name: string, handler?: FlagHandler): void;
     registerBehaviorModifier(name: string, handler?: BehaviorModifierHandler): void;
+    registerHtmlTransformer(transform: HtmlTransformer, options?: HtmlTransformOptions): () => void;
     getRegistryStats(): {
         behaviorCount: number;
         behaviorCacheSize: number;
@@ -434,6 +451,8 @@ declare class Engine {
     private waitForUses;
     private waitForUseGlobal;
     getScope(element: Element, parentScope?: Scope): Scope;
+    setHtml(element: Element, value: unknown, options?: HtmlSetOptions): void;
+    processHtml(root: Element): void;
     evaluate(element: Element): void;
     private attachObserver;
     private observeRoot;

@@ -9,6 +9,12 @@ export { Parser };
 export { TokenType } from "./parser/token";
 export * from "./ast/nodes";
 export { Engine } from "./runtime/engine";
+export type {
+  HtmlSetOptions,
+  HtmlTransformContext,
+  HtmlTransformer,
+  HtmlTransformOptions
+} from "./runtime/engine";
 
 export function parseCFS(source: string) {
   const parser = new Parser(source);

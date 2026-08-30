@@ -892,6 +892,10 @@ var AssignmentNode = class extends BaseNode {
         return;
       }
       if (target.name === "html" && element instanceof HTMLElement) {
+        if (context.engine?.setHtml) {
+          context.engine.setHtml(element, value);
+          return;
+        }
         element.innerHTML = value == null ? "" : String(value);
         return;
       }
@@ -4421,6 +4425,8 @@ var Engine = class _Engine {
   behaviorCache = /* @__PURE__ */ new Map();
   observer;
   attributeHandlers = [];
+  htmlTransformers = [];
+  htmlTransformerOrder = 0;
   globals = {};
   importantFlags = /* @__PURE__ */ new WeakMap();
   inlineDeclarations = /* @__PURE__ */ new WeakMap();
@@ -4815,6 +4821,21 @@ var Engine = class _Engine {
     }
     this.behaviorModifiers.set(name, handler);
   }
+  registerHtmlTransformer(transform, options = {}) {
+    const entry = {
+      transform,
+      priority: options.priority ?? 0,
+      order: this.htmlTransformerOrder += 1
+    };
+    this.htmlTransformers.push(entry);
+    this.htmlTransformers.sort((a, b) => a.priority - b.priority || a.order - b.order);
+    return () => {
+      const index = this.htmlTransformers.indexOf(entry);
+      if (index >= 0) {
+        this.htmlTransformers.splice(index, 1);
+      }
+    };
+  }
   getRegistryStats() {
     return {
       behaviorCount: this.behaviorRegistry.length,
@@ -4822,6 +4843,10 @@ var Engine = class _Engine {
     };
   }
   registerAttributeHandler(handler) {
+    const existingIndex = this.attributeHandlers.findIndex((existing) => existing.id === handler.id);
+    if (existingIndex >= 0) {
+      this.attributeHandlers.splice(existingIndex, 1);
+    }
     this.attributeHandlers.push(handler);
   }
   resolveGlobalPath(name) {
@@ -4903,6 +4928,24 @@ var Engine = class _Engine {
     this.scopeElements.set(scope, element);
     return scope;
   }
+  setHtml(element, value, options = {}) {
+    if (!(element instanceof HTMLElement)) {
+      return;
+    }
+    const context = {
+      element,
+      trusted: options.trusted ?? false
+    };
+    let transformed = value;
+    for (const entry of this.htmlTransformers) {
+      transformed = entry.transform(transformed, context);
+    }
+    element.innerHTML = transformed == null ? "" : String(transformed);
+    this.processHtml(element);
+  }
+  processHtml(root) {
+    this.handleHtmlBehaviors(root);
+  }
   evaluate(element) {
     const scope = this.getScope(element);
     const bindConfig = this.bindBindings.get(element);
@@ -4919,8 +4962,7 @@ var Engine = class _Engine {
     }
     const htmlBinding = this.htmlBindings.get(element);
     if (htmlBinding && element instanceof HTMLElement) {
-      applyHtml(element, htmlBinding.expr, scope);
-      this.handleHtmlBehaviors(element);
+      this.setHtml(element, scope.get(htmlBinding.expr.trim()), { trusted: htmlBinding.trusted });
     }
   }
   attachObserver(root) {
@@ -6834,10 +6876,11 @@ var Engine = class _Engine {
         const useRoot = expr.startsWith("root.") && rootScope;
         const sourceScope = useRoot ? rootScope : scope;
         const localExpr = useRoot ? `self.${expr.slice("root.".length)}` : expr;
-        applyHtml(element, localExpr, sourceScope);
+        this.setHtml(element, sourceScope.get(localExpr.trim()), {
+          trusted: Boolean(binding?.flags?.trusted)
+        });
       };
       handler2();
-      this.handleHtmlBehaviors(element);
       if (watch) {
         const useRoot = expr.startsWith("root.") && rootScope;
         const sourceScope = useRoot ? rootScope : scope;
@@ -6946,9 +6989,9 @@ var Engine = class _Engine {
   }
   setDirectiveValue(element, target, value, binding) {
     if (target.kind === "attr" && target.name === "html" && element instanceof HTMLElement) {
-      const html = value == null ? "" : String(value);
-      element.innerHTML = html;
-      this.handleHtmlBehaviors(element);
+      this.setHtml(element, value, {
+        trusted: Boolean(binding?.flags?.trusted)
+      });
       return;
     }
     if (target.kind === "attr") {
@@ -7126,11 +7169,10 @@ var Engine = class _Engine {
       id: "vsn-html",
       match: (name) => name.startsWith("vsn-html"),
       handle: (element, _name, value, scope) => {
-        this.htmlBindings.set(element, { expr: value });
+        this.htmlBindings.set(element, { expr: value, trusted: _name.includes("!trusted") });
         this.markInlineDeclaration(element, "attr:html");
         if (element instanceof HTMLElement) {
-          applyHtml(element, value, scope);
-          this.handleHtmlBehaviors(element);
+          this.setHtml(element, scope.get(value.trim()), { trusted: _name.includes("!trusted") });
         }
         this.watch(scope, value, () => this.evaluate(element), element);
       }

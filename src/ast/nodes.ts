@@ -7,7 +7,10 @@ export interface ExecutionContext {
   } | undefined;
   rootScope: ExecutionContext["scope"];
   globals?: Record<string, any>;
-  engine?: { getScope?(element: Element): ExecutionContext["scope"] };
+  engine?: {
+    getScope?(element: Element): ExecutionContext["scope"];
+    setHtml?(element: Element, value: unknown, options?: { trusted?: boolean }): void;
+  };
   element?: Element;
   self?: any;
   returnValue?: any;
@@ -509,6 +512,10 @@ export class AssignmentNode extends BaseNode {
         return;
       }
       if (target.name === "html" && element instanceof HTMLElement) {
+        if (context.engine?.setHtml) {
+          context.engine.setHtml(element, value);
+          return;
+        }
         element.innerHTML = value == null ? "" : String(value);
         return;
       }

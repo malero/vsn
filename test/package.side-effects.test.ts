@@ -1,9 +1,6 @@
-import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
-const packageJson = JSON.parse(
-  readFileSync(new URL("../package.json", import.meta.url), "utf8")
-) as { sideEffects?: unknown };
+import packageJson from "../package.json";
 
 describe("package side-effect metadata", () => {
   it("marks plugin entry points that register themselves at import time", () => {
