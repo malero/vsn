@@ -58,4 +58,31 @@ describe("vsn-bind input", () => {
 
     expect(scope.get("priority")).toBe("high");
   });
+
+  it("binds checkbox checked state instead of its value payload", async () => {
+    document.body.innerHTML = `
+      <input id="done-to" type="checkbox" value="payload" vsn-bind:to="done" />
+      <input id="done-from" type="checkbox" value="payload" vsn-bind:from="done" />
+    `;
+
+    const engine = new Engine();
+    await engine.mount(document.body);
+
+    const toInput = document.getElementById("done-to") as HTMLInputElement;
+    const toScope = engine.getScope(toInput);
+
+    expect(toScope.get("done")).toBe(false);
+
+    toInput.checked = true;
+    toInput.dispatchEvent(new Event("change", { bubbles: true }));
+    expect(toScope.get("done")).toBe(true);
+
+    const fromInput = document.getElementById("done-from") as HTMLInputElement;
+    const fromScope = engine.getScope(fromInput);
+    fromScope.set("done", true);
+    engine.evaluate(fromInput);
+
+    expect(fromInput.checked).toBe(true);
+    expect(fromInput.value).toBe("payload");
+  });
 });
