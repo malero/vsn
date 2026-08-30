@@ -4150,13 +4150,13 @@ var Scope = class _Scope {
       return void 0;
     }
     const localValue = this.getLocalPathValue(targetScope, targetPath);
-    if (explicit || localValue !== void 0) {
+    if (explicit || targetScope.hasKey(targetPath)) {
       return localValue;
     }
     let cursor = targetScope.parent;
     while (cursor) {
       const value = this.getLocalPathValue(cursor, targetPath);
-      if (value !== void 0) {
+      if (cursor.hasKey(targetPath)) {
         return value;
       }
       cursor = cursor.parent;

@@ -46,13 +46,13 @@ export class Scope {
     }
 
     const localValue = this.getLocalPathValue(targetScope, targetPath);
-    if (explicit || localValue !== undefined) {
+    if (explicit || targetScope.hasKey(targetPath)) {
       return localValue;
     }
     let cursor = targetScope.parent;
     while (cursor) {
       const value = this.getLocalPathValue(cursor, targetPath);
-      if (value !== undefined) {
+      if (cursor.hasKey(targetPath)) {
         return value;
       }
       cursor = cursor.parent;
