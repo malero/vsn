@@ -4373,6 +4373,9 @@ var Engine = class _Engine {
   lifecycleBindings = /* @__PURE__ */ new WeakMap();
   behaviorRegistry = [];
   behaviorRegistryHashes = /* @__PURE__ */ new Set();
+  behaviorEntriesById = /* @__PURE__ */ new Map();
+  dynamicBehaviorIds = /* @__PURE__ */ new WeakMap();
+  behaviorBoundElements = /* @__PURE__ */ new Map();
   behaviorBindings = /* @__PURE__ */ new WeakMap();
   behaviorListeners = /* @__PURE__ */ new WeakMap();
   inlineListeners = /* @__PURE__ */ new WeakMap();
@@ -4736,6 +4739,9 @@ var Engine = class _Engine {
     }
   }
   registerBehaviors(source) {
+    this.registerBehaviorSource(source);
+  }
+  registerBehaviorSource(source, dynamicOwner) {
     const program = new Parser(source, {
       customFlags: new Set(this.flagHandlers.keys()),
       behaviorFlags: new Set(this.behaviorModifiers.keys())
@@ -4753,7 +4759,7 @@ var Engine = class _Engine {
       this.registerGlobal(use.alias, value);
     }
     for (const behavior of program.behaviors) {
-      this.collectBehavior(behavior);
+      this.collectBehavior(behavior, void 0, void 0, dynamicOwner);
     }
   }
   registerGlobal(name, value) {
@@ -4980,6 +4986,7 @@ var Engine = class _Engine {
     this.cleanupBehaviorResources(element);
     this.cleanupBehaviorListeners(element);
     this.cleanupInlineListeners(element);
+    this.disposeDynamicBehaviors(element);
   }
   handleAddedNode(node) {
     if (this.isInactive(node)) {
@@ -5056,6 +5063,9 @@ var Engine = class _Engine {
   }
   async applyBehaviorForElement(behavior, element, scope, bound) {
     bound.add(behavior.id);
+    const boundElements = this.behaviorBoundElements.get(behavior.id) ?? /* @__PURE__ */ new Set();
+    boundElements.add(element);
+    this.behaviorBoundElements.set(behavior.id, boundElements);
     const rootScope = this.getBehaviorRootScope(element, behavior);
     this.applyBehaviorFunctions(element, scope, behavior.functions, rootScope);
     await this.applyBehaviorDeclarations(element, scope, behavior.declarations, rootScope, behavior.id);
@@ -5080,6 +5090,11 @@ var Engine = class _Engine {
   }
   unbindBehaviorForElement(behavior, element, scope, bound) {
     bound.delete(behavior.id);
+    const boundElements = this.behaviorBoundElements.get(behavior.id);
+    boundElements?.delete(element);
+    if (boundElements?.size === 0) {
+      this.behaviorBoundElements.delete(behavior.id);
+    }
     this.cleanupBehaviorResources(element, behavior.id);
     const rootScope = this.getBehaviorRootScope(element, behavior);
     if (behavior.destruct) {
@@ -5489,6 +5504,16 @@ var Engine = class _Engine {
       }
       listenerMap.clear();
       this.behaviorListeners.delete(element);
+    }
+    const bound = this.behaviorBindings.get(element);
+    if (bound) {
+      for (const behaviorId of bound) {
+        const boundElements = this.behaviorBoundElements.get(behaviorId);
+        boundElements?.delete(element);
+        if (boundElements?.size === 0) {
+          this.behaviorBoundElements.delete(behaviorId);
+        }
+      }
     }
     this.behaviorBindings.delete(element);
   }
@@ -5902,12 +5927,19 @@ var Engine = class _Engine {
       }
     }
   }
-  collectBehavior(behavior, parentSelector, rootSelectorOverride) {
+  collectBehavior(behavior, parentSelector, rootSelectorOverride, dynamicOwner) {
     const selector = parentSelector ? `${parentSelector} ${behavior.selector.selectorText}` : behavior.selector.selectorText;
     const rootSelector = rootSelectorOverride ?? (parentSelector ?? behavior.selector.selectorText);
     const behaviorHash = this.hashBehavior(behavior);
     const hash = `${selector}::${rootSelector}::${behaviorHash}`;
     if (this.behaviorRegistryHashes.has(hash)) {
+      const existing = this.behaviorRegistry.find((entry2) => entry2.hash === hash);
+      if (existing && dynamicOwner) {
+        existing.dynamicOwners.add(dynamicOwner);
+        this.trackDynamicBehavior(dynamicOwner, existing.id);
+      } else if (existing) {
+        existing.persistent = true;
+      }
       return;
     }
     const cached = this.getCachedBehavior(behavior);
@@ -5921,26 +5953,64 @@ var Engine = class _Engine {
       flags: behavior.flags ?? {},
       flagArgs: behavior.flagArgs ?? {},
       ...cached,
-      ...parentSelector ? { parentSelector } : {}
+      ...parentSelector ? { parentSelector } : {},
+      persistent: dynamicOwner === void 0,
+      dynamicOwners: dynamicOwner ? /* @__PURE__ */ new Set([dynamicOwner]) : /* @__PURE__ */ new Set()
     };
     this.behaviorRegistry.push(entry);
     this.behaviorRegistryHashes.add(hash);
-    this.collectNestedBehaviors(behavior.body, selector, rootSelector);
+    this.behaviorEntriesById.set(entry.id, entry);
+    if (dynamicOwner) {
+      this.trackDynamicBehavior(dynamicOwner, entry.id);
+    }
+    this.collectNestedBehaviors(behavior.body, selector, rootSelector, dynamicOwner);
   }
-  collectNestedBehaviors(block, parentSelector, rootSelector) {
+  collectNestedBehaviors(block, parentSelector, rootSelector, dynamicOwner) {
     for (const statement of block.statements) {
       if (statement instanceof BehaviorNode) {
-        this.collectBehavior(statement, parentSelector, rootSelector);
+        this.collectBehavior(statement, parentSelector, rootSelector, dynamicOwner);
         continue;
       }
       if (statement instanceof OnBlockNode) {
-        this.collectNestedBehaviors(statement.body, parentSelector, rootSelector);
+        this.collectNestedBehaviors(statement.body, parentSelector, rootSelector, dynamicOwner);
         continue;
       }
       if (statement instanceof BlockNode) {
-        this.collectNestedBehaviors(statement, parentSelector, rootSelector);
+        this.collectNestedBehaviors(statement, parentSelector, rootSelector, dynamicOwner);
       }
     }
+  }
+  trackDynamicBehavior(owner, behaviorId) {
+    const ids = this.dynamicBehaviorIds.get(owner) ?? /* @__PURE__ */ new Set();
+    ids.add(behaviorId);
+    this.dynamicBehaviorIds.set(owner, ids);
+  }
+  disposeDynamicBehaviors(owner) {
+    const ids = this.dynamicBehaviorIds.get(owner);
+    if (!ids) {
+      return;
+    }
+    for (const behaviorId of ids) {
+      const behavior = this.behaviorEntriesById.get(behaviorId);
+      if (!behavior) {
+        continue;
+      }
+      behavior.dynamicOwners.delete(owner);
+      if (behavior.persistent || behavior.dynamicOwners.size > 0) {
+        continue;
+      }
+      for (const element of Array.from(this.behaviorBoundElements.get(behaviorId) ?? [])) {
+        const bound = this.behaviorBindings.get(element);
+        if (bound?.has(behaviorId)) {
+          this.unbindBehaviorForElement(behavior, element, this.getScope(element), bound);
+        }
+      }
+      this.behaviorRegistry = this.behaviorRegistry.filter((entry) => entry.id !== behaviorId);
+      this.behaviorRegistryHashes.delete(behavior.hash);
+      this.behaviorEntriesById.delete(behaviorId);
+      this.behaviorBoundElements.delete(behaviorId);
+    }
+    this.dynamicBehaviorIds.delete(owner);
   }
   computeSpecificity(selector) {
     const idMatches = selector.match(/#[\w-]+/g)?.length ?? 0;
@@ -6750,6 +6820,7 @@ var Engine = class _Engine {
     return void 0;
   }
   handleHtmlBehaviors(root) {
+    this.disposeDynamicBehaviors(root);
     const scripts = Array.from(root.querySelectorAll('script[type="text/vsn"]'));
     if (scripts.length === 0) {
       return;
@@ -6758,7 +6829,7 @@ var Engine = class _Engine {
     if (!source.trim()) {
       return;
     }
-    this.registerBehaviors(source);
+    this.registerBehaviorSource(source, root);
     void this.applyBehaviors(root);
   }
   registerDefaultAttributeHandlers() {

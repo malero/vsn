@@ -58,6 +58,8 @@ interface RegisteredBehavior {
   functions: FunctionBinding[];
   flags: BehaviorFlags;
   flagArgs: BehaviorFlagArgs;
+  persistent: boolean;
+  dynamicOwners: Set<Element>;
 }
 
 type FunctionBinding = {
@@ -169,6 +171,9 @@ export class Engine {
   private lifecycleBindings = new WeakMap<Element, LifecycleConfig>();
   private behaviorRegistry: RegisteredBehavior[] = [];
   private behaviorRegistryHashes = new Set<string>();
+  private behaviorEntriesById = new Map<number, RegisteredBehavior>();
+  private dynamicBehaviorIds = new WeakMap<Element, Set<number>>();
+  private behaviorBoundElements = new Map<number, Set<Element>>();
   private behaviorBindings = new WeakMap<Element, Set<number>>();
   private behaviorListeners = new WeakMap<Element, Map<number, BehaviorListener[]>>();
   private inlineListeners = new WeakMap<Element, BehaviorListener[]>();
@@ -547,6 +552,10 @@ export class Engine {
   }
 
   registerBehaviors(source: string): void {
+    this.registerBehaviorSource(source);
+  }
+
+  private registerBehaviorSource(source: string, dynamicOwner?: Element): void {
     const program = new Parser(source, {
       customFlags: new Set(this.flagHandlers.keys()),
       behaviorFlags: new Set(this.behaviorModifiers.keys())
@@ -564,7 +573,7 @@ export class Engine {
       this.registerGlobal(use.alias, value);
     }
     for (const behavior of program.behaviors) {
-      this.collectBehavior(behavior);
+      this.collectBehavior(behavior, undefined, undefined, dynamicOwner);
     }
   }
 
@@ -813,6 +822,7 @@ export class Engine {
     this.cleanupBehaviorResources(element);
     this.cleanupBehaviorListeners(element);
     this.cleanupInlineListeners(element);
+    this.disposeDynamicBehaviors(element);
   }
 
   private handleAddedNode(node: Element): void {
@@ -904,6 +914,9 @@ export class Engine {
     bound: Set<number>
   ): Promise<void> {
     bound.add(behavior.id);
+    const boundElements = this.behaviorBoundElements.get(behavior.id) ?? new Set<Element>();
+    boundElements.add(element);
+    this.behaviorBoundElements.set(behavior.id, boundElements);
     const rootScope = this.getBehaviorRootScope(element, behavior);
     this.applyBehaviorFunctions(element, scope, behavior.functions, rootScope);
     await this.applyBehaviorDeclarations(element, scope, behavior.declarations, rootScope, behavior.id);
@@ -934,6 +947,11 @@ export class Engine {
     bound: Set<number>
   ): void {
     bound.delete(behavior.id);
+    const boundElements = this.behaviorBoundElements.get(behavior.id);
+    boundElements?.delete(element);
+    if (boundElements?.size === 0) {
+      this.behaviorBoundElements.delete(behavior.id);
+    }
     this.cleanupBehaviorResources(element, behavior.id);
     const rootScope = this.getBehaviorRootScope(element, behavior);
     if (behavior.destruct) {
@@ -1408,6 +1426,16 @@ export class Engine {
       }
       listenerMap.clear();
       this.behaviorListeners.delete(element);
+    }
+    const bound = this.behaviorBindings.get(element);
+    if (bound) {
+      for (const behaviorId of bound) {
+        const boundElements = this.behaviorBoundElements.get(behaviorId);
+        boundElements?.delete(element);
+        if (boundElements?.size === 0) {
+          this.behaviorBoundElements.delete(behaviorId);
+        }
+      }
     }
     this.behaviorBindings.delete(element);
   }
@@ -1884,7 +1912,12 @@ export class Engine {
     }
   }
 
-  private collectBehavior(behavior: BehaviorNode, parentSelector?: string, rootSelectorOverride?: string): void {
+  private collectBehavior(
+    behavior: BehaviorNode,
+    parentSelector?: string,
+    rootSelectorOverride?: string,
+    dynamicOwner?: Element
+  ): void {
     const selector = parentSelector
       ? `${parentSelector} ${behavior.selector.selectorText}`
       : behavior.selector.selectorText;
@@ -1892,6 +1925,13 @@ export class Engine {
     const behaviorHash = this.hashBehavior(behavior);
     const hash = `${selector}::${rootSelector}::${behaviorHash}`;
     if (this.behaviorRegistryHashes.has(hash)) {
+      const existing = this.behaviorRegistry.find((entry) => entry.hash === hash);
+      if (existing && dynamicOwner) {
+        existing.dynamicOwners.add(dynamicOwner);
+        this.trackDynamicBehavior(dynamicOwner, existing.id);
+      } else if (existing) {
+        existing.persistent = true;
+      }
       return;
     }
     const cached = this.getCachedBehavior(behavior);
@@ -1905,27 +1945,75 @@ export class Engine {
       flags: behavior.flags ?? {},
       flagArgs: behavior.flagArgs ?? {},
       ...cached,
-      ...(parentSelector ? { parentSelector } : {})
+      ...(parentSelector ? { parentSelector } : {}),
+      persistent: dynamicOwner === undefined,
+      dynamicOwners: dynamicOwner ? new Set([dynamicOwner]) : new Set<Element>()
     };
     this.behaviorRegistry.push(entry);
     this.behaviorRegistryHashes.add(hash);
-    this.collectNestedBehaviors(behavior.body, selector, rootSelector);
+    this.behaviorEntriesById.set(entry.id, entry);
+    if (dynamicOwner) {
+      this.trackDynamicBehavior(dynamicOwner, entry.id);
+    }
+    this.collectNestedBehaviors(behavior.body, selector, rootSelector, dynamicOwner);
   }
 
-  private collectNestedBehaviors(block: BlockNode, parentSelector: string, rootSelector: string): void {
+  private collectNestedBehaviors(
+    block: BlockNode,
+    parentSelector: string,
+    rootSelector: string,
+    dynamicOwner?: Element
+  ): void {
     for (const statement of block.statements) {
       if (statement instanceof BehaviorNode) {
-        this.collectBehavior(statement, parentSelector, rootSelector);
+        this.collectBehavior(statement, parentSelector, rootSelector, dynamicOwner);
         continue;
       }
       if (statement instanceof OnBlockNode) {
-        this.collectNestedBehaviors(statement.body, parentSelector, rootSelector);
+        this.collectNestedBehaviors(statement.body, parentSelector, rootSelector, dynamicOwner);
         continue;
       }
       if (statement instanceof BlockNode) {
-        this.collectNestedBehaviors(statement, parentSelector, rootSelector);
+        this.collectNestedBehaviors(statement, parentSelector, rootSelector, dynamicOwner);
       }
     }
+  }
+
+  private trackDynamicBehavior(owner: Element, behaviorId: number): void {
+    const ids = this.dynamicBehaviorIds.get(owner) ?? new Set<number>();
+    ids.add(behaviorId);
+    this.dynamicBehaviorIds.set(owner, ids);
+  }
+
+  private disposeDynamicBehaviors(owner: Element): void {
+    const ids = this.dynamicBehaviorIds.get(owner);
+    if (!ids) {
+      return;
+    }
+
+    for (const behaviorId of ids) {
+      const behavior = this.behaviorEntriesById.get(behaviorId);
+      if (!behavior) {
+        continue;
+      }
+      behavior.dynamicOwners.delete(owner);
+      if (behavior.persistent || behavior.dynamicOwners.size > 0) {
+        continue;
+      }
+
+      for (const element of Array.from(this.behaviorBoundElements.get(behaviorId) ?? [])) {
+        const bound = this.behaviorBindings.get(element);
+        if (bound?.has(behaviorId)) {
+          this.unbindBehaviorForElement(behavior, element, this.getScope(element), bound);
+        }
+      }
+      this.behaviorRegistry = this.behaviorRegistry.filter((entry) => entry.id !== behaviorId);
+      this.behaviorRegistryHashes.delete(behavior.hash);
+      this.behaviorEntriesById.delete(behaviorId);
+      this.behaviorBoundElements.delete(behaviorId);
+    }
+
+    this.dynamicBehaviorIds.delete(owner);
   }
 
   private computeSpecificity(selector: string): number {
@@ -2882,6 +2970,7 @@ export class Engine {
   }
 
   private handleHtmlBehaviors(root: Element): void {
+    this.disposeDynamicBehaviors(root);
     const scripts = Array.from(root.querySelectorAll('script[type="text/vsn"]'));
     if (scripts.length === 0) {
       return;
@@ -2890,7 +2979,7 @@ export class Engine {
     if (!source.trim()) {
       return;
     }
-    this.registerBehaviors(source);
+    this.registerBehaviorSource(source, root);
     void this.applyBehaviors(root);
   }
 

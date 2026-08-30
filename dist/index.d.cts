@@ -608,6 +608,8 @@ interface RegisteredBehavior {
     functions: FunctionBinding[];
     flags: BehaviorFlags;
     flagArgs: BehaviorFlagArgs;
+    persistent: boolean;
+    dynamicOwners: Set<Element>;
 }
 type FunctionBinding = {
     name: string;
@@ -679,6 +681,9 @@ declare class Engine {
     private lifecycleBindings;
     private behaviorRegistry;
     private behaviorRegistryHashes;
+    private behaviorEntriesById;
+    private dynamicBehaviorIds;
+    private behaviorBoundElements;
     private behaviorBindings;
     private behaviorListeners;
     private inlineListeners;
@@ -720,6 +725,7 @@ declare class Engine {
     mount(root: HTMLElement): Promise<void>;
     unmount(element: Element): void;
     registerBehaviors(source: string): void;
+    private registerBehaviorSource;
     registerGlobal(name: string, value: any): void;
     registerGlobals(values: Record<string, any>): void;
     registerFlag(name: string, handler?: FlagHandler): void;
@@ -805,6 +811,8 @@ declare class Engine {
     private safeExecuteBlock;
     private collectBehavior;
     private collectNestedBehaviors;
+    private trackDynamicBehavior;
+    private disposeDynamicBehaviors;
     private computeSpecificity;
     private getBehaviorRootScope;
     private getImportantKey;
