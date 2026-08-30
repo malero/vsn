@@ -704,6 +704,7 @@ declare class Engine {
     private groupProxyCache;
     private scopeElements;
     private classMapBindings;
+    private behaviorClassMapBindings;
     constructor(options?: EngineOptions);
     private matchesMinWidth;
     private matchesMaxWidth;
@@ -764,6 +765,9 @@ declare class Engine {
     private watchAllScopes;
     private trackScopeWatcher;
     private cleanupScopeWatchers;
+    private trackBehaviorClassMapBinding;
+    private cleanupBehaviorClassMapBindings;
+    private cleanupBehaviorResources;
     private cleanupBehaviorListeners;
     private parseOnAttribute;
     private parseInlineFlags;

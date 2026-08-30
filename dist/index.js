@@ -4363,6 +4363,7 @@ var Engine = class _Engine {
   groupProxyCache = /* @__PURE__ */ new WeakMap();
   scopeElements = /* @__PURE__ */ new WeakMap();
   classMapBindings = /* @__PURE__ */ new WeakMap();
+  behaviorClassMapBindings = /* @__PURE__ */ new WeakMap();
   constructor(options = {}) {
     this.diagnostics = options.diagnostics ?? false;
     this.logger = options.logger ?? console;
@@ -4960,7 +4961,7 @@ var Engine = class _Engine {
     bound.add(behavior.id);
     const rootScope = this.getBehaviorRootScope(element, behavior);
     this.applyBehaviorFunctions(element, scope, behavior.functions, rootScope);
-    await this.applyBehaviorDeclarations(element, scope, behavior.declarations, rootScope);
+    await this.applyBehaviorDeclarations(element, scope, behavior.declarations, rootScope, behavior.id);
     await this.applyBehaviorModifierHook("onBind", behavior, element, scope, rootScope);
     if (behavior.construct) {
       await this.safeExecuteBlock(behavior.construct, scope, element, rootScope);
@@ -4982,6 +4983,7 @@ var Engine = class _Engine {
   }
   unbindBehaviorForElement(behavior, element, scope, bound) {
     bound.delete(behavior.id);
+    this.cleanupBehaviorResources(element, behavior.id);
     const rootScope = this.getBehaviorRootScope(element, behavior);
     if (behavior.destruct) {
       void this.safeExecuteBlock(behavior.destruct, scope, element, rootScope);
@@ -5247,7 +5249,7 @@ var Engine = class _Engine {
     }
     return void 0;
   }
-  watch(scope, expr, handler, element) {
+  watch(scope, expr, handler, element, behaviorId) {
     const key = expr.trim();
     if (!key) {
       return;
@@ -5263,7 +5265,7 @@ var Engine = class _Engine {
     if (target) {
       target.on(key, handler);
       if (element) {
-        this.trackScopeWatcher(element, target, "path", handler, key);
+        this.trackScopeWatcher(element, target, "path", handler, key, behaviorId);
       }
       return;
     }
@@ -5271,37 +5273,42 @@ var Engine = class _Engine {
     while (cursor) {
       cursor.on(key, handler);
       if (element) {
-        this.trackScopeWatcher(element, cursor, "path", handler, key);
+        this.trackScopeWatcher(element, cursor, "path", handler, key, behaviorId);
       }
       cursor = cursor.parent;
     }
   }
-  watchWithDebounce(scope, expr, handler, debounceMs, element) {
+  watchWithDebounce(scope, expr, handler, debounceMs, element, behaviorId) {
     const effectiveHandler = debounceMs ? debounce(handler, debounceMs) : handler;
-    this.watch(scope, expr, effectiveHandler, element);
+    this.watch(scope, expr, effectiveHandler, element, behaviorId);
   }
-  watchAllScopes(scope, handler, debounceMs, element) {
+  watchAllScopes(scope, handler, debounceMs, element, behaviorId) {
     const effectiveHandler = debounceMs ? debounce(handler, debounceMs) : handler;
     let cursor = scope;
     while (cursor) {
       cursor.onAny(effectiveHandler);
       if (element) {
-        this.trackScopeWatcher(element, cursor, "any", effectiveHandler);
+        this.trackScopeWatcher(element, cursor, "any", effectiveHandler, void 0, behaviorId);
       }
       cursor = cursor.parent;
     }
   }
-  trackScopeWatcher(element, scope, kind, handler, key) {
+  trackScopeWatcher(element, scope, kind, handler, key, behaviorId) {
     const watchers = this.scopeWatchers.get(element) ?? [];
-    watchers.push({ scope, kind, handler, ...key ? { key } : {} });
+    watchers.push({ scope, kind, handler, ...key ? { key } : {}, ...behaviorId !== void 0 ? { behaviorId } : {} });
     this.scopeWatchers.set(element, watchers);
   }
-  cleanupScopeWatchers(element) {
+  cleanupScopeWatchers(element, behaviorId) {
     const watchers = this.scopeWatchers.get(element);
     if (!watchers) {
       return;
     }
+    const remaining = [];
     for (const watcher of watchers) {
+      if (behaviorId !== void 0 && watcher.behaviorId !== behaviorId) {
+        remaining.push(watcher);
+        continue;
+      }
       if (watcher.kind === "any") {
         watcher.scope.offAny(watcher.handler);
         continue;
@@ -5310,7 +5317,36 @@ var Engine = class _Engine {
         watcher.scope.off(watcher.key, watcher.handler);
       }
     }
-    this.scopeWatchers.delete(element);
+    if (remaining.length > 0) {
+      this.scopeWatchers.set(element, remaining);
+    } else {
+      this.scopeWatchers.delete(element);
+    }
+  }
+  trackBehaviorClassMapBinding(element, behaviorId, binding) {
+    const bindings = this.behaviorClassMapBindings.get(element) ?? /* @__PURE__ */ new Map();
+    const behaviorBindings = bindings.get(behaviorId) ?? /* @__PURE__ */ new Set();
+    behaviorBindings.add(binding);
+    bindings.set(behaviorId, behaviorBindings);
+    this.behaviorClassMapBindings.set(element, bindings);
+  }
+  cleanupBehaviorClassMapBindings(element, behaviorId) {
+    const bindings = this.behaviorClassMapBindings.get(element);
+    const behaviorBindings = bindings?.get(behaviorId);
+    if (!behaviorBindings) {
+      return;
+    }
+    for (const binding of behaviorBindings) {
+      this.clearClassMapBinding(element, binding);
+    }
+    bindings?.delete(behaviorId);
+    if (bindings?.size === 0) {
+      this.behaviorClassMapBindings.delete(element);
+    }
+  }
+  cleanupBehaviorResources(element, behaviorId) {
+    this.cleanupScopeWatchers(element, behaviorId);
+    this.cleanupBehaviorClassMapBindings(element, behaviorId);
   }
   cleanupBehaviorListeners(element) {
     const listenerMap = this.behaviorListeners.get(element);
@@ -6192,12 +6228,12 @@ var Engine = class _Engine {
       scope.setPath(name, previousValues.get(name));
     }
   }
-  async applyBehaviorDeclarations(element, scope, declarations, rootScope) {
+  async applyBehaviorDeclarations(element, scope, declarations, rootScope, behaviorId) {
     for (const declaration of declarations) {
-      await this.applyBehaviorDeclaration(element, scope, declaration, rootScope);
+      await this.applyBehaviorDeclaration(element, scope, declaration, rootScope, behaviorId);
     }
   }
-  async applyBehaviorDeclaration(element, scope, declaration, rootScope) {
+  async applyBehaviorDeclaration(element, scope, declaration, rootScope, behaviorId) {
     const selfRef = this.getGroupProxy(scope);
     const context = { scope, rootScope, element, self: selfRef };
     const operator = declaration.operator;
@@ -6224,6 +6260,9 @@ var Engine = class _Engine {
       return;
     }
     const target = declaration.target;
+    if (behaviorId !== void 0 && target.kind === "attr" && target.name === "class") {
+      this.trackBehaviorClassMapBinding(element, behaviorId, declaration);
+    }
     const exprIdentifier = declaration.value instanceof IdentifierExpression ? declaration.value.name : void 0;
     if (operator === ":>") {
       if (exprIdentifier) {
@@ -6250,7 +6289,8 @@ var Engine = class _Engine {
           scope,
           debounceMs,
           rootScope,
-          declaration
+          declaration,
+          behaviorId
         );
       }
       if (declaration.flags.important && importantKey) {
@@ -6267,7 +6307,8 @@ var Engine = class _Engine {
       debounceMs,
       shouldWatch,
       rootScope,
-      declaration
+      declaration,
+      behaviorId
     );
     if (declaration.flags.important && importantKey) {
       this.markImportant(element, importantKey);
@@ -6347,7 +6388,7 @@ var Engine = class _Engine {
     }
     return false;
   }
-  applyDirectiveFromScope(element, target, expr, scope, debounceMs, watch = true, rootScope, binding) {
+  applyDirectiveFromScope(element, target, expr, scope, debounceMs, watch = true, rootScope, binding, behaviorId) {
     if (target.kind === "attr" && target.name === "html" && element instanceof HTMLElement) {
       const handler2 = () => {
         const useRoot = expr.startsWith("root.") && rootScope;
@@ -6361,7 +6402,7 @@ var Engine = class _Engine {
         const useRoot = expr.startsWith("root.") && rootScope;
         const sourceScope = useRoot ? rootScope : scope;
         const watchExpr = useRoot ? expr.slice("root.".length) : expr;
-        this.watchWithDebounce(sourceScope, watchExpr, handler2, debounceMs, element);
+        this.watchWithDebounce(sourceScope, watchExpr, handler2, debounceMs, element, behaviorId);
       }
       return;
     }
@@ -6383,10 +6424,10 @@ var Engine = class _Engine {
       const useRoot = expr.startsWith("root.") && rootScope;
       const sourceScope = useRoot ? rootScope : scope;
       const watchExpr = useRoot ? expr.slice("root.".length) : expr;
-      this.watchWithDebounce(sourceScope, watchExpr, handler, debounceMs, element);
+      this.watchWithDebounce(sourceScope, watchExpr, handler, debounceMs, element, behaviorId);
     }
   }
-  applyDirectiveFromExpression(element, target, expr, scope, debounceMs, rootScope, binding) {
+  applyDirectiveFromExpression(element, target, expr, scope, debounceMs, rootScope, binding, behaviorId) {
     const handler = async () => {
       const selfRef = this.getGroupProxy(scope);
       const context = { scope, rootScope, element, self: selfRef };
@@ -6396,7 +6437,7 @@ var Engine = class _Engine {
     void handler();
     this.watchAllScopes(scope, () => {
       void handler();
-    }, debounceMs, element);
+    }, debounceMs, element, behaviorId);
   }
   applyDirectiveToScope(element, target, expr, scope, debounceMs, rootScope, transform) {
     const useRoot = expr.startsWith("root.") && rootScope;

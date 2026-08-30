@@ -94,6 +94,14 @@ type BehaviorListener = {
   options?: AddEventListenerOptions | undefined;
 };
 
+type ScopeWatcher = {
+  scope: Scope;
+  kind: "path" | "any";
+  key?: string;
+  handler: () => void;
+  behaviorId?: number;
+};
+
 type FlagApplyContext = {
   name: string;
   args: any;
@@ -182,11 +190,12 @@ export class Engine {
   private logger: Partial<Pick<Console, "info" | "warn">>;
   private pendingUses: Promise<void>[] = [];
   private pendingAutoBindToScope: Array<{ element: Element; expr: string; scope: Scope }> = [];
-  private scopeWatchers = new WeakMap<Element, { scope: Scope; kind: "path" | "any"; key?: string; handler: () => void }[]>();
+  private scopeWatchers = new WeakMap<Element, ScopeWatcher[]>();
   private executionStack: Element[] = [];
   private groupProxyCache = new WeakMap<Scope, Record<string, any>>();
   private scopeElements = new WeakMap<Scope, Element>();
   private classMapBindings = new WeakMap<Element, Map<object, Set<string>>>();
+  private behaviorClassMapBindings = new WeakMap<Element, Map<number, Set<object>>>();
 
   constructor(options: EngineOptions = {}) {
     this.diagnostics = options.diagnostics ?? false;
@@ -829,7 +838,7 @@ export class Engine {
     bound.add(behavior.id);
     const rootScope = this.getBehaviorRootScope(element, behavior);
     this.applyBehaviorFunctions(element, scope, behavior.functions, rootScope);
-    await this.applyBehaviorDeclarations(element, scope, behavior.declarations, rootScope);
+    await this.applyBehaviorDeclarations(element, scope, behavior.declarations, rootScope, behavior.id);
     await this.applyBehaviorModifierHook("onBind", behavior, element, scope, rootScope);
     if (behavior.construct) {
       await this.safeExecuteBlock(behavior.construct, scope, element, rootScope);
@@ -857,6 +866,7 @@ export class Engine {
     bound: Set<number>
   ): void {
     bound.delete(behavior.id);
+    this.cleanupBehaviorResources(element, behavior.id);
     const rootScope = this.getBehaviorRootScope(element, behavior);
     if (behavior.destruct) {
       void this.safeExecuteBlock(behavior.destruct, scope, element, rootScope);
@@ -1157,7 +1167,7 @@ export class Engine {
     return undefined;
   }
 
-  private watch(scope: Scope, expr: string, handler: () => void, element?: Element): void {
+  private watch(scope: Scope, expr: string, handler: () => void, element?: Element, behaviorId?: number): void {
     const key = expr.trim();
     if (!key) {
       return;
@@ -1173,7 +1183,7 @@ export class Engine {
     if (target) {
       target.on(key, handler);
       if (element) {
-        this.trackScopeWatcher(element, target, "path", handler, key);
+        this.trackScopeWatcher(element, target, "path", handler, key, behaviorId);
       }
       return;
     }
@@ -1181,7 +1191,7 @@ export class Engine {
     while (cursor) {
       cursor.on(key, handler);
       if (element) {
-        this.trackScopeWatcher(element, cursor, "path", handler, key);
+        this.trackScopeWatcher(element, cursor, "path", handler, key, behaviorId);
       }
       cursor = cursor.parent;
     }
@@ -1192,19 +1202,26 @@ export class Engine {
     expr: string,
     handler: () => void,
     debounceMs?: number,
-    element?: Element
+    element?: Element,
+    behaviorId?: number
   ): void {
     const effectiveHandler = debounceMs ? debounce(handler, debounceMs) : handler;
-    this.watch(scope, expr, effectiveHandler, element);
+    this.watch(scope, expr, effectiveHandler, element, behaviorId);
   }
 
-  private watchAllScopes(scope: Scope, handler: () => void, debounceMs?: number, element?: Element): void {
+  private watchAllScopes(
+    scope: Scope,
+    handler: () => void,
+    debounceMs?: number,
+    element?: Element,
+    behaviorId?: number
+  ): void {
     const effectiveHandler = debounceMs ? debounce(handler, debounceMs) : handler;
     let cursor: Scope | undefined = scope;
     while (cursor) {
       cursor.onAny(effectiveHandler);
       if (element) {
-        this.trackScopeWatcher(element, cursor, "any", effectiveHandler);
+        this.trackScopeWatcher(element, cursor, "any", effectiveHandler, undefined, behaviorId);
       }
       cursor = cursor.parent;
     }
@@ -1215,19 +1232,25 @@ export class Engine {
     scope: Scope,
     kind: "path" | "any",
     handler: () => void,
-    key?: string
+    key?: string,
+    behaviorId?: number
   ): void {
     const watchers = this.scopeWatchers.get(element) ?? [];
-    watchers.push({ scope, kind, handler, ...(key ? { key } : {}) });
+    watchers.push({ scope, kind, handler, ...(key ? { key } : {}), ...(behaviorId !== undefined ? { behaviorId } : {}) });
     this.scopeWatchers.set(element, watchers);
   }
 
-  private cleanupScopeWatchers(element: Element): void {
+  private cleanupScopeWatchers(element: Element, behaviorId?: number): void {
     const watchers = this.scopeWatchers.get(element);
     if (!watchers) {
       return;
     }
+    const remaining: ScopeWatcher[] = [];
     for (const watcher of watchers) {
+      if (behaviorId !== undefined && watcher.behaviorId !== behaviorId) {
+        remaining.push(watcher);
+        continue;
+      }
       if (watcher.kind === "any") {
         watcher.scope.offAny(watcher.handler);
         continue;
@@ -1236,7 +1259,39 @@ export class Engine {
         watcher.scope.off(watcher.key, watcher.handler);
       }
     }
-    this.scopeWatchers.delete(element);
+    if (remaining.length > 0) {
+      this.scopeWatchers.set(element, remaining);
+    } else {
+      this.scopeWatchers.delete(element);
+    }
+  }
+
+  private trackBehaviorClassMapBinding(element: Element, behaviorId: number, binding: object): void {
+    const bindings = this.behaviorClassMapBindings.get(element) ?? new Map<number, Set<object>>();
+    const behaviorBindings = bindings.get(behaviorId) ?? new Set<object>();
+    behaviorBindings.add(binding);
+    bindings.set(behaviorId, behaviorBindings);
+    this.behaviorClassMapBindings.set(element, bindings);
+  }
+
+  private cleanupBehaviorClassMapBindings(element: Element, behaviorId: number): void {
+    const bindings = this.behaviorClassMapBindings.get(element);
+    const behaviorBindings = bindings?.get(behaviorId);
+    if (!behaviorBindings) {
+      return;
+    }
+    for (const binding of behaviorBindings) {
+      this.clearClassMapBinding(element, binding);
+    }
+    bindings?.delete(behaviorId);
+    if (bindings?.size === 0) {
+      this.behaviorClassMapBindings.delete(element);
+    }
+  }
+
+  private cleanupBehaviorResources(element: Element, behaviorId: number): void {
+    this.cleanupScopeWatchers(element, behaviorId);
+    this.cleanupBehaviorClassMapBindings(element, behaviorId);
   }
 
   private cleanupBehaviorListeners(element: Element): void {
@@ -2239,10 +2294,11 @@ export class Engine {
     element: Element,
     scope: Scope,
     declarations: DeclarationNode[],
-    rootScope?: Scope
+    rootScope?: Scope,
+    behaviorId?: number
   ): Promise<void> {
     for (const declaration of declarations) {
-      await this.applyBehaviorDeclaration(element, scope, declaration, rootScope);
+      await this.applyBehaviorDeclaration(element, scope, declaration, rootScope, behaviorId);
     }
   }
 
@@ -2250,7 +2306,8 @@ export class Engine {
     element: Element,
     scope: Scope,
     declaration: DeclarationNode,
-    rootScope?: Scope
+    rootScope?: Scope,
+    behaviorId?: number
   ): Promise<void> {
     const selfRef = this.getGroupProxy(scope);
     const context: ExecutionContext = { scope, rootScope, element, self: selfRef };
@@ -2283,6 +2340,9 @@ export class Engine {
     }
 
     const target = declaration.target;
+    if (behaviorId !== undefined && target.kind === "attr" && target.name === "class") {
+      this.trackBehaviorClassMapBinding(element, behaviorId, declaration);
+    }
     const exprIdentifier =
       declaration.value instanceof IdentifierExpression ? declaration.value.name : undefined;
 
@@ -2313,7 +2373,8 @@ export class Engine {
           scope,
           debounceMs,
           rootScope,
-          declaration
+          declaration,
+          behaviorId
         );
       }
       if (declaration.flags.important && importantKey) {
@@ -2331,7 +2392,8 @@ export class Engine {
       debounceMs,
       shouldWatch,
       rootScope,
-      declaration
+      declaration,
+      behaviorId
     );
     if (declaration.flags.important && importantKey) {
       this.markImportant(element, importantKey);
@@ -2435,7 +2497,8 @@ export class Engine {
     debounceMs?: number,
     watch = true,
     rootScope?: Scope,
-    binding?: object
+    binding?: object,
+    behaviorId?: number
   ): void {
     if (target.kind === "attr" && target.name === "html" && element instanceof HTMLElement) {
       const handler = () => {
@@ -2450,7 +2513,7 @@ export class Engine {
         const useRoot = expr.startsWith("root.") && rootScope;
         const sourceScope = useRoot ? rootScope : scope;
         const watchExpr = useRoot ? expr.slice("root.".length) : expr;
-        this.watchWithDebounce(sourceScope, watchExpr, handler, debounceMs, element);
+        this.watchWithDebounce(sourceScope, watchExpr, handler, debounceMs, element, behaviorId);
       }
       return;
     }
@@ -2472,7 +2535,7 @@ export class Engine {
       const useRoot = expr.startsWith("root.") && rootScope;
       const sourceScope = useRoot ? rootScope : scope;
       const watchExpr = useRoot ? expr.slice("root.".length) : expr;
-      this.watchWithDebounce(sourceScope, watchExpr, handler, debounceMs, element);
+      this.watchWithDebounce(sourceScope, watchExpr, handler, debounceMs, element, behaviorId);
     }
   }
 
@@ -2483,7 +2546,8 @@ export class Engine {
     scope: Scope,
     debounceMs?: number,
     rootScope?: Scope,
-    binding?: object
+    binding?: object,
+    behaviorId?: number
   ): void {
     const handler = async () => {
       const selfRef = this.getGroupProxy(scope);
@@ -2494,7 +2558,7 @@ export class Engine {
     void handler();
     this.watchAllScopes(scope, () => {
       void handler();
-    }, debounceMs, element);
+    }, debounceMs, element, behaviorId);
   }
 
   private applyDirectiveToScope(
