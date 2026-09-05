@@ -1844,7 +1844,8 @@ export class Parser {
       || token.type === TokenType.Less
       || token.type === TokenType.Plus
       || token.type === TokenType.Minus
-      || token.type === TokenType.Tilde;
+      || token.type === TokenType.Tilde
+      || token.type === TokenType.Ampersand;
   }
 
   private isFunctionDeclarationStart(): boolean {

@@ -63,6 +63,7 @@ export enum TokenType {
   NullishCoalesce = "NullishCoalesce",
   OptionalChain = "OptionalChain",
   Bang = "Bang",
+  Ampersand = "Ampersand",
 
   At = "At",
   Dollar = "Dollar",

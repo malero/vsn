@@ -165,6 +165,92 @@ function splitSelectorList(selector: string): string[] {
   return groups;
 }
 
+function replaceNestingSelector(
+  selector: string,
+  parentSelector: string
+): { selector: string; replaced: boolean } {
+  let result = "";
+  let quote = "";
+  let bracketDepth = 0;
+  let replaced = false;
+
+  for (let i = 0; i < selector.length; i += 1) {
+    const char = selector[i] ?? "";
+
+    if (quote) {
+      result += char;
+      if (char === "\\") {
+        const escaped = selector[i + 1];
+        if (escaped !== undefined) {
+          result += escaped;
+          i += 1;
+        }
+      } else if (char === quote) {
+        quote = "";
+      }
+      continue;
+    }
+
+    if (char === "\"" || char === "'") {
+      quote = char;
+      result += char;
+      continue;
+    }
+
+    if (char === "\\") {
+      result += char;
+      const escaped = selector[i + 1];
+      if (escaped !== undefined) {
+        result += escaped;
+        i += 1;
+      }
+      continue;
+    }
+
+    if (char === "[") {
+      bracketDepth += 1;
+      result += char;
+      continue;
+    }
+    if (char === "]") {
+      bracketDepth = Math.max(0, bracketDepth - 1);
+      result += char;
+      continue;
+    }
+
+    if (char === "&" && bracketDepth === 0) {
+      result += parentSelector;
+      replaced = true;
+      continue;
+    }
+
+    result += char;
+  }
+
+  return { selector: result, replaced };
+}
+
+function hasNestingSelector(selector: string): boolean {
+  return splitSelectorList(selector).some((group) => replaceNestingSelector(group, "").replaced);
+}
+
+function composeNestedSelector(parentSelector: string, nestedSelector: string): string {
+  const parentGroups = splitSelectorList(parentSelector);
+  const nestedGroups = splitSelectorList(nestedSelector);
+  const composedGroups: string[] = [];
+
+  for (const parentGroup of parentGroups) {
+    for (const nestedGroup of nestedGroups) {
+      const replacement = replaceNestingSelector(nestedGroup, parentGroup);
+      composedGroups.push(replacement.replaced
+        ? replacement.selector
+        : `${parentGroup} ${nestedGroup}`);
+    }
+  }
+
+  return composedGroups.join(", ");
+}
+
 function isSelectorNameChar(char: string | undefined): boolean {
   return Boolean(char && /[A-Za-z0-9_-]/.test(char));
 }
@@ -2469,9 +2555,13 @@ export class Engine {
     rootSelectorOverride?: string,
     dynamicOwner?: Element
   ): void {
+    const nestedSelector = behavior.selector.selectorText;
+    if (!parentSelector && hasNestingSelector(nestedSelector)) {
+      throw new Error("Nesting selector '&' requires a parent behavior");
+    }
     const selector = parentSelector
-      ? `${parentSelector} ${behavior.selector.selectorText}`
-      : behavior.selector.selectorText;
+      ? composeNestedSelector(parentSelector, nestedSelector)
+      : nestedSelector;
     const rootSelector = rootSelectorOverride ?? (parentSelector ?? behavior.selector.selectorText);
     const behaviorHash = this.hashBehavior(behavior);
     const hash = `${selector}::${rootSelector}::${behaviorHash}`;

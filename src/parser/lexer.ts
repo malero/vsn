@@ -342,7 +342,8 @@ export class Lexer {
       "!": TokenType.Bang,
       "@": TokenType.At,
       "$": TokenType.Dollar,
-      "?": TokenType.Question
+      "?": TokenType.Question,
+      "&": TokenType.Ampersand
     };
 
     const type = punctMap[ch];

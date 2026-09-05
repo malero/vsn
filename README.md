@@ -50,6 +50,8 @@ The `behavior` keyword is optional, so CSS-like declarations are valid. Selector
 }
 ```
 
+Nested behavior selectors without `&` target descendants as usual. A nested selector containing `&` replaces it with the parent selector, so `&.active` targets the parent element when it also has the `active` class.
+
 Class maps reactively add and remove only the mapped classes; existing static classes are preserved. Hyphenated identifiers are supported. Write whitespace around subtraction (`count - 1`) to distinguish it from a hyphenated identifier.
 
 Declarations are evaluated before `construct`, `destruct`, and `on` blocks. Common directive directions are:

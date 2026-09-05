@@ -58,6 +58,7 @@ declare enum TokenType {
     NullishCoalesce = "NullishCoalesce",
     OptionalChain = "OptionalChain",
     Bang = "Bang",
+    Ampersand = "Ampersand",
     At = "At",
     Dollar = "Dollar",
     Question = "Question"

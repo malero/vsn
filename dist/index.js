@@ -59,6 +59,7 @@ var TokenType = /* @__PURE__ */ ((TokenType2) => {
   TokenType2["NullishCoalesce"] = "NullishCoalesce";
   TokenType2["OptionalChain"] = "OptionalChain";
   TokenType2["Bang"] = "Bang";
+  TokenType2["Ampersand"] = "Ampersand";
   TokenType2["At"] = "At";
   TokenType2["Dollar"] = "Dollar";
   TokenType2["Question"] = "Question";
@@ -383,7 +384,8 @@ var Lexer = class {
       "!": "Bang" /* Bang */,
       "@": "At" /* At */,
       "$": "Dollar" /* Dollar */,
-      "?": "Question" /* Question */
+      "?": "Question" /* Question */,
+      "&": "Ampersand" /* Ampersand */
     };
     const type = punctMap[ch];
     if (!type) {
@@ -3643,7 +3645,7 @@ ${caret}`;
     }
   }
   isSelectorStartToken(token) {
-    return token.type === "Identifier" /* Identifier */ || token.type === "Dot" /* Dot */ || token.type === "Hash" /* Hash */ || token.type === "LBracket" /* LBracket */ || token.type === "Colon" /* Colon */ || token.type === "Star" /* Star */ || token.type === "Greater" /* Greater */ || token.type === "Less" /* Less */ || token.type === "Plus" /* Plus */ || token.type === "Minus" /* Minus */ || token.type === "Tilde" /* Tilde */;
+    return token.type === "Identifier" /* Identifier */ || token.type === "Dot" /* Dot */ || token.type === "Hash" /* Hash */ || token.type === "LBracket" /* LBracket */ || token.type === "Colon" /* Colon */ || token.type === "Star" /* Star */ || token.type === "Greater" /* Greater */ || token.type === "Less" /* Less */ || token.type === "Plus" /* Plus */ || token.type === "Minus" /* Minus */ || token.type === "Tilde" /* Tilde */ || token.type === "Ampersand" /* Ampersand */;
   }
   isFunctionDeclarationStart() {
     const first = this.stream.peekNonWhitespace(0);
@@ -4504,6 +4506,74 @@ function splitSelectorList(selector) {
     groups.push(finalGroup);
   }
   return groups;
+}
+function replaceNestingSelector(selector, parentSelector) {
+  let result = "";
+  let quote = "";
+  let bracketDepth = 0;
+  let replaced = false;
+  for (let i = 0; i < selector.length; i += 1) {
+    const char = selector[i] ?? "";
+    if (quote) {
+      result += char;
+      if (char === "\\") {
+        const escaped = selector[i + 1];
+        if (escaped !== void 0) {
+          result += escaped;
+          i += 1;
+        }
+      } else if (char === quote) {
+        quote = "";
+      }
+      continue;
+    }
+    if (char === '"' || char === "'") {
+      quote = char;
+      result += char;
+      continue;
+    }
+    if (char === "\\") {
+      result += char;
+      const escaped = selector[i + 1];
+      if (escaped !== void 0) {
+        result += escaped;
+        i += 1;
+      }
+      continue;
+    }
+    if (char === "[") {
+      bracketDepth += 1;
+      result += char;
+      continue;
+    }
+    if (char === "]") {
+      bracketDepth = Math.max(0, bracketDepth - 1);
+      result += char;
+      continue;
+    }
+    if (char === "&" && bracketDepth === 0) {
+      result += parentSelector;
+      replaced = true;
+      continue;
+    }
+    result += char;
+  }
+  return { selector: result, replaced };
+}
+function hasNestingSelector(selector) {
+  return splitSelectorList(selector).some((group) => replaceNestingSelector(group, "").replaced);
+}
+function composeNestedSelector(parentSelector, nestedSelector) {
+  const parentGroups = splitSelectorList(parentSelector);
+  const nestedGroups = splitSelectorList(nestedSelector);
+  const composedGroups = [];
+  for (const parentGroup of parentGroups) {
+    for (const nestedGroup of nestedGroups) {
+      const replacement = replaceNestingSelector(nestedGroup, parentGroup);
+      composedGroups.push(replacement.replaced ? replacement.selector : `${parentGroup} ${nestedGroup}`);
+    }
+  }
+  return composedGroups.join(", ");
 }
 function isSelectorNameChar(char) {
   return Boolean(char && /[A-Za-z0-9_-]/.test(char));
@@ -6464,7 +6534,11 @@ var Engine = class _Engine {
     }
   }
   collectBehavior(behavior, parentSelector, rootSelectorOverride, dynamicOwner) {
-    const selector = parentSelector ? `${parentSelector} ${behavior.selector.selectorText}` : behavior.selector.selectorText;
+    const nestedSelector = behavior.selector.selectorText;
+    if (!parentSelector && hasNestingSelector(nestedSelector)) {
+      throw new Error("Nesting selector '&' requires a parent behavior");
+    }
+    const selector = parentSelector ? composeNestedSelector(parentSelector, nestedSelector) : nestedSelector;
     const rootSelector = rootSelectorOverride ?? (parentSelector ?? behavior.selector.selectorText);
     const behaviorHash = this.hashBehavior(behavior);
     const hash = `${selector}::${rootSelector}::${behaviorHash}`;
@@ -7540,7 +7614,7 @@ var Engine = class _Engine {
 };
 
 // src/index.ts
-var VERSION = true ? "1.0.11" : "0.1.0";
+var VERSION = true ? "1.0.12" : "0.1.0";
 function parseCFS(source) {
   const parser = new Parser(source);
   return parser.parseProgram();

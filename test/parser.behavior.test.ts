@@ -30,6 +30,17 @@ button.primary { }
     expect(nestedBehavior.selector.selectorText).toBe("#dropdown");
   });
 
+  it("parses the nesting selector", () => {
+    const source = `.card {
+  &.active { }
+}`;
+
+    const program = new Parser(source).parseProgram();
+    const nestedBehavior = program.behaviors[0]!.body.statements[0] as BehaviorNode;
+
+    expect(nestedBehavior.selector.selectorText).toBe("&.active");
+  });
+
   it("parses nested behavior blocks", () => {
     const source = `behavior .card {
   active: false;
