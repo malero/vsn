@@ -59,4 +59,37 @@ describe("sanitize-html plugin", () => {
       globalThis.fetch = originalFetch;
     }
   });
+
+  it("sends htmx-compatible partial request headers", async () => {
+    const originalFetch = globalThis.fetch;
+    const fetchMock = vi.fn(async () => ({
+      text: async () => "<span>Loaded</span>",
+      ok: true
+    })) as any;
+    globalThis.fetch = fetchMock;
+    try {
+      document.body.innerHTML = `
+        <button id="load" name="load-fragment" vsn-get="/fragment" vsn-target="#panel"></button>
+        <div id="panel"></div>
+      `;
+
+      const engine = new Engine();
+      registerSanitizeHtml(engine, { sanitizer: (html) => html });
+      await engine.mount(document.body);
+
+      const button = document.getElementById("load") as HTMLButtonElement;
+      button.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      const request = fetchMock.mock.calls[0];
+      const headers = new Headers(request[1].headers);
+      expect(headers.get("HX-Request")).toBe("true");
+      expect(headers.get("HX-Current-URL")).toBe(window.location.href);
+      expect(headers.get("HX-Target")).toBe("panel");
+      expect(headers.get("HX-Trigger")).toBe("load");
+      expect(headers.get("HX-Trigger-Name")).toBe("load-fragment");
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
 });

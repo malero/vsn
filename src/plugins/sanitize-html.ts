@@ -1,4 +1,5 @@
 import type { Engine } from "../runtime/engine";
+import { getPartialHeaders } from "../runtime/http";
 
 type SanitizerOptions = {
   dompurifyConfig?: Record<string, any>;
@@ -110,7 +111,10 @@ async function applyGetWithSanitize(
     throw new Error("fetch is not available");
   }
 
-  const response = await globalThis.fetch(config.url);
+  const requestTarget = resolveTarget(element, config.targetSelector);
+  const response = await globalThis.fetch(config.url, {
+    headers: getPartialHeaders(element, requestTarget)
+  });
   if (!response || !response.ok) {
     return;
   }

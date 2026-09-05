@@ -63,7 +63,7 @@ $color :< theme.color;
 
 `construct` runs when a behavior binds and `destruct` runs when it unbinds. `self`, `parent`, and `root` address the current, parent, and behavior-root scopes. Named functions are synchronous unless declared `async`; async functions return promises and may use `await`.
 
-Inline attributes include `vsn-bind`, `vsn-if`, `vsn-show`, `vsn-html`, `vsn-each`, `vsn-get`, and `vsn-on:<event>`. `vsn-if` and `vsn-show` are currently visibility-only aliases: both toggle `display` without removing the element from the DOM.
+Inline attributes include `vsn-bind`, `vsn-if`, `vsn-show`, `vsn-html`, `vsn-each`, `vsn-get`, and `vsn-on:<event>`. `vsn-if` and `vsn-show` are currently visibility-only aliases: both toggle `display` without removing the element from the DOM. `vsn-get` sends htmx-compatible partial-request headers: `HX-Request`, `HX-Current-URL`, and, when available, `HX-Target`, `HX-Trigger`, and `HX-Trigger-Name`.
 
 ## Plugins
 

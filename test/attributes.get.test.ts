@@ -40,6 +40,29 @@ describe("vsn-get", () => {
     expect(panel.innerHTML).toBe("<span>Loaded</span>");
   });
 
+  it("sends htmx-compatible partial request headers", async () => {
+    document.body.innerHTML = `
+      <button id="load" name="load-fragment" vsn-get="/fragment" vsn-target="#panel"></button>
+      <div id="panel"></div>
+    `;
+
+    const engine = new Engine();
+    await engine.mount(document.body);
+
+    const button = document.getElementById("load") as HTMLButtonElement;
+    button.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    const request = (globalThis.fetch as any).mock.calls[0];
+    const headers = new Headers(request[1].headers);
+    expect(headers.get("HX-Request")).toBe("true");
+    expect(headers.get("HX-Current-URL")).toBe(window.location.href);
+    expect(headers.get("HX-Target")).toBe("panel");
+    expect(headers.get("HX-Trigger")).toBe("load");
+    expect(headers.get("HX-Trigger-Name")).toBe("load-fragment");
+  });
+
   it("fetches HTML and swaps into target on mount when !load is set", async () => {
     document.body.innerHTML = `
       <div id="panel" vsn-get!load="/fragment"></div>

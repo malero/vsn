@@ -17,7 +17,10 @@ export async function applyGet(
     throw new Error("fetch is not available");
   }
 
-  const response = await globalThis.fetch(config.url);
+  const requestTarget = resolveTarget(element, config.targetSelector);
+  const response = await globalThis.fetch(config.url, {
+    headers: getPartialHeaders(element, requestTarget)
+  });
   if (!response || !response.ok) {
     return;
   }
@@ -47,6 +50,33 @@ export async function applyGet(
 
   applyHtml(target as HTMLElement, "__html", { get: () => html } as unknown as Scope);
   onHtmlApplied?.(target);
+}
+
+export function getPartialHeaders(element: Element, target: Element | null): Headers {
+  const headers = new Headers();
+  headers.set("HX-Request", "true");
+
+  const currentUrl = element.ownerDocument.defaultView?.location.href;
+  if (currentUrl) {
+    headers.set("HX-Current-URL", currentUrl);
+  }
+
+  const targetId = target?.getAttribute("id");
+  if (targetId) {
+    headers.set("HX-Target", targetId);
+  }
+
+  const triggerId = element.getAttribute("id");
+  if (triggerId) {
+    headers.set("HX-Trigger", triggerId);
+  }
+
+  const triggerName = element.getAttribute("name");
+  if (triggerName) {
+    headers.set("HX-Trigger-Name", triggerName);
+  }
+
+  return headers;
 }
 
 function resolveTarget(element: Element, selector?: string): Element | null {
