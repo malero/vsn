@@ -34,6 +34,27 @@ if (typeof window !== "undefined") {
   (window as any)["parseCFS"] = parseCFS;
 }
 
+async function loadBehaviorSources(root: HTMLElement | Document): Promise<string> {
+  const documentRoot = root instanceof Document ? root : root.ownerDocument;
+  const scripts = Array.from(root.querySelectorAll('script[type="text/vsn"]'));
+  const sources = await Promise.all(
+    scripts.map(async (script) => {
+      const src = script.getAttribute("src")?.trim();
+      if (!src) {
+        return script.textContent ?? "";
+      }
+
+      const url = new URL(src, documentRoot.baseURI);
+      const response = await fetch(url.href);
+      if (!response.ok) {
+        throw new Error(`Failed to load VSN source '${url.href}' (HTTP ${response.status})`);
+      }
+      return response.text();
+    })
+  );
+  return sources.join("\n");
+}
+
 export function autoMount(root: HTMLElement | Document = document): Engine | null {
   if (typeof document === "undefined") {
     return null;
@@ -41,42 +62,41 @@ export function autoMount(root: HTMLElement | Document = document): Engine | nul
   const engine = new Engine();
   (globalThis as any).VSNEngine = engine;
   const startTime = typeof performance !== "undefined" && performance.now ? performance.now() : Date.now();
-  const mount = () => {
+  const mount = async () => {
     const target = root instanceof Document ? root.body : root;
     if (target) {
-      const plugins = (globalThis as any).VSNPlugins;
-      if (plugins && typeof plugins === "object") {
-        for (const plugin of Object.values(plugins)) {
-          if (typeof plugin === "function") {
-            plugin(engine);
+      try {
+        const plugins = (globalThis as any).VSNPlugins;
+        if (plugins && typeof plugins === "object") {
+          for (const plugin of Object.values(plugins)) {
+            if (typeof plugin === "function") {
+              plugin(engine);
+            }
           }
         }
+
+        const sources = await loadBehaviorSources(root);
+        if (sources.trim()) {
+          engine.registerBehaviors(sources);
+        }
+        await engine.mount(target);
+
+        const endTime = typeof performance !== "undefined" && performance.now ? performance.now() : Date.now();
+        const elapsedMs = Math.round(endTime - startTime);
+        console.log(`Took ${elapsedMs}ms to start up VSN.js. https://www.vsnjs.com/ v${VERSION}`);
+      } catch (error) {
+        console.warn("vsn:mountError", error);
+        target.dispatchEvent(new CustomEvent("vsn:error", {
+          detail: { error, selector: "mount" },
+          bubbles: true
+        }));
       }
-      const sources = Array.from(root.querySelectorAll('script[type="text/vsn"]'))
-        .map((script) => script.textContent ?? "")
-        .join("\n");
-      if (sources.trim()) {
-        engine.registerBehaviors(sources);
-      }
-      void engine.mount(target)
-        .then(() => {
-          const endTime = typeof performance !== "undefined" && performance.now ? performance.now() : Date.now();
-          const elapsedMs = Math.round(endTime - startTime);
-          console.log(`Took ${elapsedMs}ms to start up VSN.js. https://www.vsnjs.com/ v${VERSION}`);
-        })
-        .catch((error) => {
-          console.warn("vsn:mountError", error);
-          target.dispatchEvent(new CustomEvent("vsn:error", {
-            detail: { error, selector: "mount" },
-            bubbles: true
-          }));
-        });
     }
   };
   if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", () => setTimeout(mount, 0), { once: true });
+    document.addEventListener("DOMContentLoaded", () => setTimeout(() => void mount(), 0), { once: true });
   } else {
-    setTimeout(mount, 0);
+    setTimeout(() => void mount(), 0);
   }
   return engine;
 }

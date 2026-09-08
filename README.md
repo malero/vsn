@@ -85,7 +85,13 @@ registerMicrodata(engine);
 
 HTML extensions should use `engine.registerHtmlTransformer(transform, { priority })`; lower priorities run first and the returned disposer removes a transformer. The templates transformer runs before sanitization. The sanitizer uses DOMPurify when available; its fallback is intentionally minimal and is not a substitute for a full sanitizer for hostile HTML.
 
-For browser auto-mount, load the root package and any plugin entry points as modules. VSN creates an engine when an element with `auto-mount` is present, applies registered plugins, loads `script[type="text/vsn"]` blocks, and mounts the document body. For library usage, prefer the explicit `Engine` API above.
+For browser auto-mount, load the root package and any plugin entry points as modules. VSN creates an engine when an element with `auto-mount` is present, applies registered plugins, loads `script[type="text/vsn"]` blocks, and mounts the document body. Behavior scripts may also use `src`; VSN fetches the file and ignores any inline text when `src` is present:
+
+```html
+<script type="text/vsn" src="/behaviors/common.cfs"></script>
+```
+
+External `.vsn` and `.cfs` files use the same syntax. For library usage, prefer the explicit `Engine` API above.
 
 ## CFS syntax
 
