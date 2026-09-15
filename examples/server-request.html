@@ -1,0 +1,89 @@
+<section id="server-request-example" class="example-card cookbook-example">
+  <header class="cookbook-heading">
+    <div>
+      <p class="cookbook-eyebrow">Behavior cookbook</p>
+      <h1>Server-rendered requests</h1>
+      <p class="cookbook-lede">
+        Compare the built-in <code>vsn-get</code> attribute with an async CFS function that owns request state.
+      </p>
+    </div>
+    <span class="cookbook-badge">fragments + async</span>
+  </header>
+
+  <div class="cookbook-request-grid">
+    <article class="cookbook-request-panel">
+      <h2>Direct <code>vsn-get</code></h2>
+      <p>
+        The response is swapped into a target and any VSN behavior in the fragment is processed.
+      </p>
+      <button
+        id="partial-loader"
+        class="btn"
+        type="button"
+        vsn-get="counter-toggle.html"
+        vsn-target="#partial-target"
+        vsn-swap="inner"
+      >
+        Load a fragment
+      </button>
+      <div id="partial-target" class="cookbook-fragment-target">
+        <span>Nothing loaded yet.</span>
+      </div>
+    </article>
+
+    <article class="cookbook-request-panel">
+      <h2>Async CFS request</h2>
+      <p>
+        This path makes loading, success, and failure explicit in local state.
+      </p>
+      <div class="cookbook-toolbar">
+        <button class="btn" type="button" vsn-on:click="load('counter-toggle.html');">Success</button>
+        <button class="btn secondary" type="button" vsn-on:click="load('missing-fragment.html');">404</button>
+      </div>
+      <p class="cookbook-state cookbook-state-loading" vsn-show="loading">Loading fragment…</p>
+      <p class="cookbook-state cookbook-state-error" vsn-show="failed">
+        Request failed: <strong vsn-bind:from="error"></strong>
+      </p>
+      <p class="cookbook-state cookbook-state-success" vsn-if="loaded">The fragment loaded successfully.</p>
+      <div id="manual-result" class="cookbook-fragment-target" vsn-html="result">
+        <span>Choose a request above.</span>
+      </div>
+    </article>
+  </div>
+
+  <p class="cookbook-note">
+    The direct request also sends partial-request headers such as <code>HX-Request</code> and <code>HX-Target</code>.
+  </p>
+</section>
+
+<script type="text/vsn">
+  use fetch as request;
+
+  #server-request-example {
+    loading: false;
+    loaded: false;
+    failed: false;
+    result: "";
+    error: "";
+
+    async load(url) {
+      loading = true;
+      loaded = false;
+      failed = false;
+      error = "";
+      result = "";
+
+      response = await request(url);
+      if (!response.ok) {
+        loading = false;
+        failed = true;
+        error = "HTTP " + response.status;
+        return;
+      }
+
+      result = await response.text();
+      loading = false;
+      loaded = true;
+    }
+  }
+</script>

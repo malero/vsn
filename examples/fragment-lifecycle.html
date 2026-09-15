@@ -1,0 +1,65 @@
+<section id="fragment-lifecycle-example" class="example-card cookbook-example">
+  <header class="cookbook-heading">
+    <div>
+      <p class="cookbook-eyebrow">cookbook</p>
+      <h1>Fragment lifecycle</h1>
+      <p class="cookbook-lede">
+        Replacing <code>vsn-html</code> content binds new and tears down the old behavior.
+      </p>
+    </div>
+    <span class="cookbook-badge">construct + destruct</span>
+  </header>
+
+  <div class="cookbook-stage">
+    <div class="cookbook-toolbar">
+      <button class="btn" type="button" vsn-on:click="mountCard();">Mount card</button>
+      <button class="btn secondary" type="button" vsn-on:click="unmountCard();">Unmount card</button>
+      <span class="cookbook-status" vsn-show="hasCard">Card is mounted</span>
+    </div>
+
+    <p class="cookbook-note">
+      Last lifecycle event: <strong vsn-bind:from="message">No card mounted.</strong>
+    </p>
+
+    <div id="lifecycle-target" class="cookbook-lifecycle-target" vsn-html="content"></div>
+  </div>
+</section>
+
+<script type="text/vsn">
+  #fragment-lifecycle-example {
+    content: "";
+    hasCard: false;
+    message: "No card mounted.";
+    version: 0;
+
+    construct {
+      mountCard();
+    }
+
+    mountCard() {
+      version = version + 1;
+      hasCard = true;
+      content = html`
+        <article class="cookbook-lifecycle-card">
+          <strong>Dynamic card ${version}</strong>
+          <p>This card was rendered through the templates plugin.</p>
+        </article>
+      `;
+    }
+
+    unmountCard() {
+      content = "";
+      hasCard = false;
+    }
+
+    .cookbook-lifecycle-card {
+      construct {
+        root.message = "construct ran for dynamic card " + root.version;
+      }
+
+      destruct {
+        root.message = "destruct ran for dynamic card";
+      }
+    }
+  }
+</script>

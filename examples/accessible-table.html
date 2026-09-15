@@ -1,0 +1,106 @@
+<section id="accessible-table-example" class="example-card cookbook-example">
+  <header class="cookbook-heading">
+    <div>
+      <p class="cookbook-eyebrow">Behavior cookbook</p>
+      <h1>Accessible table selection</h1>
+      <p class="cookbook-lede">
+        Row scopes drive checkbox state, selected styling, and a mixed selection summary.
+      </p>
+    </div>
+    <span class="cookbook-badge">rows + ARIA</span>
+  </header>
+
+  <div class="cookbook-toolbar">
+    <button class="btn secondary" type="button" aria-pressed="false" vsn-on:click="toggleAll();">
+      Select all
+    </button>
+    <span class="cookbook-status">
+      <strong vsn-bind:from="selectedCount">0</strong> selected
+    </span>
+    <span class="cookbook-note-inline">The button exposes true, false, or mixed selection through <code>aria-pressed</code>.</span>
+  </div>
+
+  <div class="cookbook-table-wrap">
+    <table class="cookbook-table">
+      <caption>Example users</caption>
+      <thead>
+        <tr>
+          <th scope="col">Select</th>
+          <th scope="col">Name</th>
+          <th scope="col">Role</th>
+          <th scope="col">Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        <template vsn-each="rows as row, index">
+          <tr class="cookbook-table-row">
+            <td>
+              <input class="cookbook-table-check" type="checkbox" data-row-id="" />
+            </td>
+            <th scope="row" vsn-bind:from="row.1">Ada Lovelace</th>
+            <td vsn-bind:from="row.2">Editor</td>
+            <td><span class="cookbook-table-status" vsn-bind:from="row.3">Active</span></td>
+          </tr>
+        </template>
+      </tbody>
+    </table>
+  </div>
+
+  <p class="cookbook-note">
+    The row behavior reads <code>row</code> and <code>index</code> from the <code>vsn-each</code> child scope while selection lives at the root.
+  </p>
+</section>
+
+<script type="text/vsn">
+  #accessible-table-example {
+    rows: [
+      ["u1", "Ada Lovelace", "Editor", "Active"],
+      ["u2", "Grace Hopper", "Maintainer", "Active"],
+      ["u3", "Linus Torvalds", "Reviewer", "Invited"]
+    ];
+    selected: [];
+    selectedCount: 0;
+    allSelected: false;
+
+    sync() {
+      selectedCount = selected.length;
+      allSelected = selectedCount == rows.length;
+    }
+
+    isSelected(id) {
+      return selected.includes(id);
+    }
+
+    toggle(id) {
+      if (isSelected(id)) {
+        selected = selected.filter((value) => value != id);
+      } else {
+        selected = selected.concat([id]);
+      }
+      sync();
+    }
+
+    toggleAll() {
+      selected = allSelected ? [] : ["u1", "u2", "u3"];
+      sync();
+    }
+
+    .cookbook-table-row {
+      @class :< { "is-selected": selected && selected.includes(row[0]) };
+    }
+
+    .cookbook-table-check {
+      @data-row-id :< row[0];
+      @checked :< (selected && selected.includes(row[0]));
+      @aria-label :< "Select " + row[1];
+
+      on change() {
+        toggle(row[0]);
+      }
+    }
+
+    .cookbook-toolbar .btn {
+      @aria-pressed :< allSelected;
+    }
+  }
+</script>

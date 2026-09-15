@@ -5,6 +5,30 @@ import { Engine } from "../src/index";
 import { registerSanitizeHtml } from "../src/plugins/sanitize-html";
 
 describe("sanitize-html plugin", () => {
+  it("preserves VSN behavior scripts while stripping executable scripts", async () => {
+    document.body.innerHTML = `<div id="target"></div>`;
+
+    const engine = new Engine();
+    registerSanitizeHtml(engine);
+    await engine.mount(document.body);
+
+    const target = document.getElementById("target") as HTMLElement;
+    engine.setHtml(target, `
+      <div class="card"></div>
+      <script type="text/vsn">
+        behavior .card {
+          construct { ready = true; }
+        }
+      </script>
+      <script>window.bad = true;</script>
+    `);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(target.querySelector("script[type='text/vsn']")).toBeTruthy();
+    expect(target.querySelector("script:not([type='text/vsn'])")).toBeNull();
+    expect(engine.getScope(target.querySelector(".card") as HTMLElement).get("ready")).toBe(true);
+  });
+
   it("strips unsafe attributes when rendering html", async () => {
     document.body.innerHTML = `
       <div id="target" vsn-html="content"></div>

@@ -1,0 +1,61 @@
+<section id="toast-notifications-example" class="example-card cookbook-example">
+  <header class="cookbook-heading">
+    <div>
+      <p class="cookbook-eyebrow">Behavior cookbook</p>
+      <h1>Toast notifications</h1>
+      <p class="cookbook-lede">
+        A short-lived message uses ordinary state, a timer callback, and a reactive class map.
+      </p>
+    </div>
+    <span class="cookbook-badge">timer + class map</span>
+  </header>
+
+  <div class="cookbook-toolbar">
+    <button class="btn" type="button" vsn-on:click="notify('Draft saved.', 'success');">Success toast</button>
+    <button class="btn secondary" type="button" vsn-on:click="notify('Could not save the draft.', 'error');">Error toast</button>
+    <button class="ghost" type="button" vsn-on:click="hide();">Dismiss</button>
+  </div>
+
+  <div class="cookbook-toast-region" aria-live="polite" aria-atomic="true">
+    <aside class="cookbook-toast" role="status" vsn-show="visible">
+      <span class="cookbook-toast-mark" aria-hidden="true">●</span>
+      <span vsn-bind:from="message">A message will appear here.</span>
+      <button class="icon-button" type="button" aria-label="Dismiss notification" vsn-on:click="hide();">×</button>
+    </aside>
+  </div>
+
+  <p class="cookbook-note">
+    Calling <code>notify</code> replaces the current message and restarts its auto-dismiss timer.
+  </p>
+</section>
+
+<script type="text/vsn">
+  use setTimeout as later;
+  use clearTimeout as cancel;
+
+  #toast-notifications-example {
+    visible: false;
+    message: "";
+    kind: "success";
+    timer: 0;
+
+    notify(text, tone) {
+      timer && cancel(timer);
+      message = text;
+      kind = tone;
+      visible = true;
+      timer = later(hide, 2400);
+    }
+
+    hide() {
+      visible = false;
+    }
+
+    .cookbook-toast {
+      @class :< {
+        "is-success": kind == "success",
+        "is-error": kind == "error"
+      };
+    }
+  }
+</script>

@@ -708,6 +708,7 @@ declare class Engine {
     private dynamicBehaviorIds;
     private behaviorBoundElements;
     private behaviorBindings;
+    private behaviorRootScopes;
     private behaviorListeners;
     private inlineListeners;
     private behaviorId;

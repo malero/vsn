@@ -1,0 +1,87 @@
+<section id="bindings-example" class="example-card cookbook-example">
+  <header class="cookbook-heading">
+    <div>
+      <p class="cookbook-eyebrow">Core syntax cookbook</p>
+      <h1>Binding directions</h1>
+      <p class="cookbook-lede">
+        Compare element-to-scope, scope-to-element, and two-way bindings on common form controls.
+      </p>
+    </div>
+    <span class="cookbook-badge">:< + :> + :=</span>
+  </header>
+
+  <div class="cookbook-binding-grid">
+    <label class="cookbook-field">
+      <span><code>vsn-bind</code> — two-way</span>
+      <input type="text" vsn-bind="name" />
+    </label>
+
+    <div class="cookbook-binding-card">
+      <span class="cookbook-binding-label"><code>vsn-bind:from</code> — scope to element</span>
+      <strong vsn-bind:from="name">Name</strong>
+    </div>
+
+    <div class="cookbook-binding-card">
+      <span class="cookbook-binding-label"><code>vsn-bind:to</code> — element to scope</span>
+      <span id="binding-seed" vsn-bind:to="seed">Seeded from this text</span>
+      <small>Captured value: <strong vsn-bind:from="seed">—</strong></small>
+    </div>
+
+    <label class="cookbook-field">
+      <span>Checkbox with two-way binding</span>
+      <span class="cookbook-check-line">
+        <input type="checkbox" vsn-bind="subscribed" />
+        <span vsn-bind:from="subscriptionLabel">Not subscribed</span>
+      </span>
+    </label>
+
+    <label class="cookbook-field">
+      <span>Select with two-way binding</span>
+      <select vsn-bind="role" vsn-on:change="sync();">
+        <option value="viewer">Viewer</option>
+        <option value="editor">Editor</option>
+        <option value="owner">Owner</option>
+      </select>
+    </label>
+  </div>
+
+  <p class="cookbook-status">
+    Current summary: <strong vsn-bind:from="summary">Ada / viewer</strong>
+  </p>
+
+  <p class="cookbook-note">
+    Explicit directions are useful when markup should be one-way. The unqualified form chooses a two-way form binding here.
+  </p>
+</section>
+
+<script type="text/vsn">
+  #bindings-example {
+    name: "Ada";
+    seed: "";
+    subscribed: false;
+    role: "viewer";
+    subscriptionLabel: "Not subscribed";
+    summary: "Ada / viewer";
+
+    construct {
+      sync();
+    }
+
+    sync() {
+      subscriptionLabel = subscribed ? "Subscribed" : "Not subscribed";
+      summary = name + " / " + role;
+    }
+
+    input[type="text"] {
+      on input() {
+        sync();
+      }
+    }
+
+    input[type="checkbox"] {
+      on change() {
+        sync();
+      }
+    }
+  }
+</script>

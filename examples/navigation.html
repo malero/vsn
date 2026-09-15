@@ -1,9 +1,9 @@
 <nav class="nav-list">
   <script type="text/vsn">
-    behavior #nav {
+    #nav {
       active: "counter-toggle";
 
-      behavior a {
+      a {
         @data-id :> id;
         @aria-current :< (root.active == id);
         on click() {
@@ -52,7 +52,7 @@
   >
     Kanban Board
   </a>
-    <a
+  <a
     class="nav-link"
     href="#product-filters"
     data-id="product-filters"
@@ -61,5 +61,126 @@
     vsn-swap="inner"
   >
     Product Filters
+  </a>
+  <p class="nav-group-title">VSN cookbook</p>
+  <a
+    class="nav-link"
+    href="#modal"
+    data-id="modal"
+    vsn-get="modal.html"
+    vsn-target="#example"
+    vsn-swap="inner"
+  >
+    Dialog / Modal
+  </a>
+  <a
+    class="nav-link"
+    href="#tooltip"
+    data-id="tooltip"
+    vsn-get="tooltip.html"
+    vsn-target="#example"
+    vsn-swap="inner"
+  >
+    Tooltip
+  </a>
+  <a
+    class="nav-link"
+    href="#dropdown"
+    data-id="dropdown"
+    vsn-get="dropdown.html"
+    vsn-target="#example"
+    vsn-swap="inner"
+  >
+    Dropdown
+  </a>
+  <a
+    class="nav-link"
+    href="#form-validation"
+    data-id="form-validation"
+    vsn-get="form-validation.html"
+    vsn-target="#example"
+    vsn-swap="inner"
+  >
+    Form Validation
+  </a>
+  <a
+    class="nav-link"
+    href="#server-request"
+    data-id="server-request"
+    vsn-get="server-request.html"
+    vsn-target="#example"
+    vsn-swap="inner"
+  >
+    Server Requests
+  </a>
+  <a
+    class="nav-link"
+    href="#fragment-lifecycle"
+    data-id="fragment-lifecycle"
+    vsn-get="fragment-lifecycle.html"
+    vsn-target="#example"
+    vsn-swap="inner"
+  >
+    Fragment Lifecycle
+  </a>
+  <a
+    class="nav-link"
+    href="#nested-list"
+    data-id="nested-list"
+    vsn-get="nested-list.html"
+    vsn-target="#example"
+    vsn-swap="inner"
+  >
+    Nested List
+  </a>
+  <a
+    class="nav-link"
+    href="#async-search"
+    data-id="async-search"
+    vsn-get="async-search.html"
+    vsn-target="#example"
+    vsn-swap="inner"
+  >
+    Async Search
+  </a>
+  <a
+    class="nav-link"
+    href="#toast-notifications"
+    data-id="toast-notifications"
+    vsn-get="toast-notifications.html"
+    vsn-target="#example"
+    vsn-swap="inner"
+  >
+    Toast Notifications
+  </a>
+  <a
+    class="nav-link"
+    href="#accessible-table"
+    data-id="accessible-table"
+    vsn-get="accessible-table.html"
+    vsn-target="#example"
+    vsn-swap="inner"
+  >
+    Accessible Table
+  </a>
+  <a
+    class="nav-link"
+    href="#templates"
+    data-id="templates"
+    vsn-get="templates.html"
+    vsn-target="#example"
+    vsn-swap="inner"
+  >
+    Templates + Sanitizing
+  </a>
+  <a
+    class="nav-link"
+    href="#bindings"
+    data-id="bindings"
+    vsn-get="bindings.html"
+    vsn-target="#example"
+    vsn-swap="inner"
+  >
+    Binding Directions
   </a>
 </nav>

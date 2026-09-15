@@ -4865,6 +4865,7 @@ var Engine = class _Engine {
   dynamicBehaviorIds = /* @__PURE__ */ new WeakMap();
   behaviorBoundElements = /* @__PURE__ */ new Map();
   behaviorBindings = /* @__PURE__ */ new WeakMap();
+  behaviorRootScopes = /* @__PURE__ */ new WeakMap();
   behaviorListeners = /* @__PURE__ */ new WeakMap();
   inlineListeners = /* @__PURE__ */ new WeakMap();
   behaviorId = 0;
@@ -5206,6 +5207,12 @@ var Engine = class _Engine {
       this.inactiveSubtrees.delete(element);
     }
     for (const element of elements) {
+      if (element === root && root === root.ownerDocument.body && !this.hasVsnAttributes(element)) {
+        continue;
+      }
+      this.getScope(element, this.findParentScope(element));
+    }
+    for (const element of elements) {
       if (!this.hasVsnAttributes(element)) {
         continue;
       }
@@ -5514,11 +5521,14 @@ var Engine = class _Engine {
     this.cleanupInlineListeners(element);
     this.disposeDynamicBehaviors(element);
   }
-  handleAddedNode(node) {
+  handleAddedNode(node, applyBehaviors = true) {
     if (this.isInactive(node)) {
       return;
     }
     const elements = [node, ...Array.from(node.querySelectorAll("*"))];
+    for (const element of elements) {
+      this.getScope(element, this.findParentScope(element));
+    }
     for (const element of elements) {
       if (!this.hasVsnAttributes(element)) {
         continue;
@@ -5528,7 +5538,9 @@ var Engine = class _Engine {
       this.attachAttributes(element);
       this.runConstruct(element);
     }
-    void this.applyBehaviors(node);
+    if (applyBehaviors) {
+      void this.applyBehaviors(node);
+    }
   }
   handleUpdatedNode(node) {
     if (this.isInactive(node)) {
@@ -5567,7 +5579,8 @@ var Engine = class _Engine {
       return;
     }
     const bound = this.behaviorBindings.get(element) ?? /* @__PURE__ */ new Set();
-    const scope = this.getScope(element);
+    this.behaviorBindings.set(element, bound);
+    const scope = this.getScope(element, this.findParentScope(element));
     const matched = this.behaviorRegistry.filter((behavior) => element.matches(behavior.selector)).map((behavior) => ({
       behavior,
       specificity: this.computeSpecificityForElement(behavior.selector, element)
@@ -5596,6 +5609,9 @@ var Engine = class _Engine {
     boundElements.add(element);
     this.behaviorBoundElements.set(behavior.id, boundElements);
     const rootScope = this.getBehaviorRootScope(element, behavior);
+    const rootScopes = this.behaviorRootScopes.get(element) ?? /* @__PURE__ */ new Map();
+    rootScopes.set(behavior.id, rootScope);
+    this.behaviorRootScopes.set(element, rootScopes);
     this.applyBehaviorFunctions(element, scope, behavior.functions, rootScope);
     await this.applyBehaviorDeclarations(element, scope, behavior.declarations, rootScope, behavior.id);
     await this.applyBehaviorModifierHook("onBind", behavior, element, scope, rootScope);
@@ -5629,6 +5645,7 @@ var Engine = class _Engine {
     if (behavior.destruct) {
       void this.safeExecuteBlock(behavior.destruct, scope, element, rootScope);
     }
+    this.behaviorRootScopes.get(element)?.delete(behavior.id);
     void this.applyBehaviorModifierHook("onDestruct", behavior, element, scope, rootScope);
     const listenerMap = this.behaviorListeners.get(element);
     const listeners = listenerMap?.get(behavior.id);
@@ -6195,6 +6212,7 @@ var Engine = class _Engine {
       }
     }
     this.behaviorBindings.delete(element);
+    this.behaviorRootScopes.delete(element);
   }
   cleanupInlineListeners(element) {
     const listeners = this.inlineListeners.get(element);
@@ -6706,6 +6724,10 @@ var Engine = class _Engine {
     return specificityScore(maxSelectorSpecificity(matchingGroups.length > 0 ? matchingGroups : groups));
   }
   getBehaviorRootScope(element, behavior) {
+    const stored = this.behaviorRootScopes.get(element)?.get(behavior.id);
+    if (stored) {
+      return stored;
+    }
     const rootElement = element.closest(behavior.rootSelector) ?? element;
     return this.getScope(rootElement);
   }
@@ -7558,14 +7580,20 @@ var Engine = class _Engine {
   handleHtmlBehaviors(root) {
     this.disposeDynamicBehaviors(root);
     const scripts = Array.from(root.querySelectorAll('script[type="text/vsn"]'));
-    if (scripts.length === 0) {
+    if (scripts.length === 0 && root.children.length === 0) {
       return;
     }
-    const source = scripts.map((script) => script.textContent ?? "").join("\n");
-    if (!source.trim()) {
-      return;
+    if (scripts.length > 0) {
+      const source = scripts.map((script) => script.textContent ?? "").join("\n");
+      if (source.trim()) {
+        this.registerBehaviorSource(source, root);
+      }
     }
-    this.registerBehaviorSource(source, root);
+    const addedRoots = this.scopes.has(root) ? Array.from(root.children) : [root];
+    for (const addedRoot of addedRoots) {
+      this.ignoredAdded.set(addedRoot, true);
+      this.handleAddedNode(addedRoot, false);
+    }
     void this.applyBehaviors(root);
   }
   registerDefaultAttributeHandlers() {
@@ -7689,7 +7717,7 @@ var Engine = class _Engine {
 };
 
 // src/index.ts
-var VERSION = true ? "1.0.13" : "0.1.0";
+var VERSION = true ? "1.0.14" : "0.1.0";
 function parseCFS(source) {
   const parser = new Parser(source);
   return parser.parseProgram();

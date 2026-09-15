@@ -1,0 +1,78 @@
+<section id="dropdown-example" class="example-card cookbook-example">
+  <header class="cookbook-heading">
+    <div>
+      <p class="cookbook-eyebrow">cookbook</p>
+      <h1>Dropdown menu</h1>
+      <p class="cookbook-lede">
+        A nested uses <code>!outside</code> and keyboard flags to manage a menu.
+      </p>
+    </div>
+    <span class="cookbook-badge">outside + keys</span>
+  </header>
+
+  <div class="cookbook-stage">
+    <div class="cookbook-dropdown">
+      <button
+        class="cookbook-dropdown-toggle"
+        type="button"
+        aria-haspopup="listbox"
+        aria-expanded="false"
+      >
+        <span vsn-bind:from="selected">Open</span>
+        <span aria-hidden="true">⌄</span>
+      </button>
+
+      <div class="cookbook-dropdown-menu" role="listbox" vsn-show="open">
+        <button class="cookbook-dropdown-option" type="button" data-value="Open">Open</button>
+        <button class="cookbook-dropdown-option" type="button" data-value="In progress">In progress</button>
+        <button class="cookbook-dropdown-option" type="button" data-value="Blocked">Blocked</button>
+        <button class="cookbook-dropdown-option" type="button" data-value="Done">Done</button>
+      </div>
+    </div>
+
+    <button class="btn secondary" type="button">Click outside the menu</button>
+  </div>
+
+  <p class="cookbook-note">
+    Select an option, press Escape, or click outside the dropdown. The selected value is shared through the root scope.
+  </p>
+</section>
+
+<script type="text/vsn">
+  #dropdown-example {
+    open: false;
+    selected: "Open";
+
+    .cookbook-dropdown {
+      on click!outside() {
+        root.open = false;
+      }
+    }
+
+    .cookbook-dropdown-toggle {
+      @aria-expanded :< root.open;
+
+      on click() {
+        root.open = !root.open;
+      }
+
+      on keyup!escape() {
+        root.open = false;
+      }
+    }
+
+    .cookbook-dropdown-menu {
+      @aria-hidden :< !root.open;
+    }
+
+    .cookbook-dropdown-option {
+      @data-value :> value;
+      @aria-selected :< (root.selected == value);
+
+      on click() {
+        root.selected = value;
+        root.open = false;
+      }
+    }
+  }
+</script>

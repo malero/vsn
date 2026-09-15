@@ -17,7 +17,7 @@ export function registerSanitizeHtml(engine: Engine, options: SanitizerOptions =
   engine.registerHtmlTransformer((value, context) => {
     const { html, trusted } = unwrapTrustedHtml(value, context.element, trustedElements);
     context.trusted = context.trusted || trusted;
-    return context.trusted ? html : sanitizer(html);
+    return context.trusted ? html : sanitizePreservingVsnScripts(html, sanitizer);
   }, { priority: 200 });
 
   engine.registerFlag("trusted", {
@@ -126,7 +126,7 @@ async function applyGetWithSanitize(
     return;
   }
 
-  const output = config.trusted ? html : sanitizer(html);
+  const output = config.trusted ? html : sanitizePreservingVsnScripts(html, sanitizer);
   if (config.swap === "outer") {
     const wrapper = target.ownerDocument.createElement("div");
     wrapper.innerHTML = output;
@@ -169,6 +169,43 @@ function resolveSanitizer(options: SanitizerOptions): (html: string) => string {
     return (html) => purifier.sanitize(html, options.dompurifyConfig ?? {});
   }
   return fallbackSanitize;
+}
+
+function sanitizePreservingVsnScripts(
+  html: string,
+  sanitizer: (html: string) => string
+): string {
+  const extracted = extractVsnScripts(html);
+  const sanitized = sanitizer(extracted.html);
+  return extracted.scripts.length > 0
+    ? `${sanitized}${extracted.scripts.join("")}`
+    : sanitized;
+}
+
+function extractVsnScripts(html: string): { html: string; scripts: string[] } {
+  if (typeof document === "undefined") {
+    const scripts: string[] = [];
+    const withoutScripts = html.replace(
+      /<script\b[^>]*\btype\s*=\s*["']?text\/vsn["']?[^>]*>[\s\S]*?<\/script\s*>/gi,
+      (script) => {
+        scripts.push(script);
+        return "";
+      }
+    );
+    return { html: withoutScripts, scripts };
+  }
+
+  const template = document.createElement("template");
+  template.innerHTML = html;
+  const scripts: string[] = [];
+  for (const script of Array.from(template.content.querySelectorAll("script"))) {
+    if ((script.getAttribute("type") ?? "").trim().toLowerCase() !== "text/vsn") {
+      continue;
+    }
+    scripts.push(script.outerHTML);
+    script.remove();
+  }
+  return { html: template.innerHTML, scripts };
 }
 
 function fallbackSanitize(html: string): string {

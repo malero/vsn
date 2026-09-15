@@ -1,0 +1,57 @@
+<section id="templates-example" class="example-card cookbook-example">
+  <header class="cookbook-heading">
+    <div>
+      <p class="cookbook-eyebrow">Plugin cookbook</p>
+      <h1>Templates and sanitizing</h1>
+      <p class="cookbook-lede">
+        The templates plugin makes HTML fragments convenient; the sanitizer removes unsafe markup before insertion.
+      </p>
+    </div>
+    <span class="cookbook-badge">html + plugin</span>
+  </header>
+
+  <div class="cookbook-toolbar">
+    <button class="btn" type="button" vsn-on:click="render();">Render template</button>
+    <button class="btn secondary" type="button" vsn-on:click="toggleUnsafe();">Toggle sample HTML</button>
+  </div>
+
+  <div id="template-output" class="cookbook-template-output" vsn-html="view">
+    <span>Click Render template.</span>
+  </div>
+
+  <p class="cookbook-note">
+    The sample contains a script tag. Because the gallery registers the sanitize plugin, the script is removed before the template is inserted.
+  </p>
+</section>
+
+<script type="text/vsn">
+  #templates-example {
+    title: "A server-rendered card";
+    unsafe: "";
+    variant: false;
+    view: "";
+
+    construct {
+      render();
+    }
+
+    toggleUnsafe() {
+      variant = !variant;
+      render();
+    }
+
+    render() {
+      scriptClose = "</" + "script>";
+      unsafe = variant
+        ? "<em>another value</em><script>window.badAgain = true;" + scriptClose
+        : "<strong>safe emphasis</strong><script>window.bad = true;" + scriptClose;
+      view = html`
+        <article class="cookbook-template-card">
+          <p class="cookbook-eyebrow">Template output</p>
+          <h2>${title}</h2>
+          <div class="template-copy">${unsafe}</div>
+        </article>
+      `;
+    }
+  }
+</script>

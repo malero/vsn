@@ -1,0 +1,114 @@
+<section id="validation-example" class="example-card cookbook-example">
+  <header class="cookbook-heading">
+    <div>
+      <p class="cookbook-eyebrow">cookbook</p>
+      <h1>Form validation</h1>
+      <p class="cookbook-lede">
+        Inputs use two-way binding while validation state drives error text and ARIA attributes.
+      </p>
+    </div>
+    <span class="cookbook-badge">bind + validate</span>
+  </header>
+
+  <form class="cookbook-form cookbook-form-narrow" novalidate vsn-on:submit!prevent="submit();">
+    <label class="cookbook-field">
+      <span>Name</span>
+      <input
+        id="validation-name"
+        name="name"
+        type="text"
+        autocomplete="name"
+        aria-describedby="name-error"
+        vsn-bind="name"
+        vsn-on:input="clearName();"
+      />
+      <small id="name-error" class="field-error" vsn-show="nameError" vsn-bind:from="nameError"></small>
+    </label>
+
+    <label class="cookbook-field">
+      <span>Email</span>
+      <input
+        id="validation-email"
+        name="email"
+        type="email"
+        autocomplete="email"
+        aria-describedby="email-error"
+        vsn-bind="email"
+        vsn-on:input="clearEmail();"
+      />
+      <small id="email-error" class="field-error" vsn-show="emailError" vsn-bind:from="emailError"></small>
+    </label>
+
+    <label class="cookbook-field">
+      <span>Note <em>(optional)</em></span>
+      <textarea name="note" rows="3" vsn-bind="note"></textarea>
+    </label>
+
+    <div class="cookbook-actions">
+      <button class="btn" type="submit">Validate form</button>
+      <span class="cookbook-inline-status" vsn-show="submitted" vsn-bind:from="formMessage"></span>
+    </div>
+  </form>
+
+  <p class="cookbook-note">
+    This example does not submit to a server; it shows how a server response can map back to field state.
+  </p>
+</section>
+
+<script type="text/vsn">
+  #validation-example {
+    name: "";
+    email: "";
+    note: "";
+    nameError: "";
+    emailError: "";
+    formMessage: "";
+    submitted: false;
+    valid: false;
+
+    clearName() {
+      nameError = "";
+      submitted = false;
+    }
+
+    clearEmail() {
+      emailError = "";
+      submitted = false;
+    }
+
+    validate() {
+      valid = true;
+      nameError = "";
+      emailError = "";
+
+      if (name.trim() == "") {
+        nameError = "Name is required.";
+        valid = false;
+      }
+
+      if (email.trim() == "" || !email.includes("@")) {
+        emailError = "Enter a valid email address.";
+        valid = false;
+      }
+    }
+
+    submit() {
+      submitted = false;
+      validate();
+      if (valid) {
+        formMessage = "Looks good. The form is ready to submit.";
+        submitted = true;
+      }
+    }
+
+    #validation-name {
+      @aria-invalid :< (nameError != "" ? "true" : "false");
+      @class :< { "is-invalid": nameError != "" };
+    }
+
+    #validation-email {
+      @aria-invalid :< (emailError != "" ? "true" : "false");
+      @class :< { "is-invalid": emailError != "" };
+    }
+  }
+</script>

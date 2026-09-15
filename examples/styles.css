@@ -490,3 +490,677 @@ body {
     grid-template-columns: 1fr;
   }
 }
+
+.nav-group-title {
+  margin: 18px 10px 2px;
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.cookbook-example {
+  gap: 22px;
+}
+
+.cookbook-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.cookbook-heading h1,
+.cookbook-heading h2 {
+  margin: 4px 0 0;
+}
+
+.cookbook-eyebrow {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.cookbook-lede {
+  max-width: 680px;
+  margin: 8px 0 0;
+  color: var(--muted);
+}
+
+.cookbook-badge {
+  flex: 0 0 auto;
+  padding: 6px 10px;
+  border: 1px solid rgba(17, 92, 58, 0.2);
+  border-radius: 999px;
+  background: rgba(17, 92, 58, 0.1);
+  color: #115c3a;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.cookbook-stage {
+  display: grid;
+  gap: 16px;
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: #fffaf4;
+}
+
+.cookbook-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.cookbook-status,
+.cookbook-inline-status {
+  margin: 0;
+  color: var(--muted);
+}
+
+.cookbook-status strong,
+.cookbook-inline-status {
+  color: #115c3a;
+}
+
+.cookbook-note {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.88rem;
+  line-height: 1.55;
+}
+
+.cookbook-note code,
+.cookbook-lede code,
+.cookbook-request-panel code {
+  padding: 2px 5px;
+  border-radius: 5px;
+  background: rgba(224, 122, 47, 0.11);
+  color: var(--accent-ink);
+  font-size: 0.9em;
+}
+
+.icon-button {
+  display: inline-grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: #fff;
+  color: var(--ink);
+  cursor: pointer;
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.cookbook-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.cookbook-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(31, 28, 24, 0.48);
+}
+
+.cookbook-dialog {
+  width: min(100%, 520px);
+  padding: 22px;
+  border: 1px solid rgba(31, 28, 24, 0.14);
+  border-radius: 20px;
+  background: var(--paper);
+  box-shadow: 0 28px 70px rgba(31, 28, 24, 0.3);
+}
+
+.cookbook-dialog-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.cookbook-dialog-heading h2 {
+  margin: 4px 0 0;
+}
+
+.cookbook-form {
+  display: grid;
+  gap: 16px;
+}
+
+.cookbook-form-narrow {
+  width: min(100%, 560px);
+}
+
+.cookbook-field {
+  display: grid;
+  gap: 7px;
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.cookbook-field > span:first-child {
+  font-size: 0.9rem;
+}
+
+.cookbook-field em {
+  color: var(--muted);
+  font-size: 0.84em;
+  font-weight: 400;
+}
+
+.cookbook-field input,
+.cookbook-field textarea,
+.cookbook-field select,
+.cookbook-input,
+.cookbook-search input {
+  width: 100%;
+  padding: 11px 13px;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: #fff;
+  color: var(--ink);
+  font: inherit;
+  font-weight: 400;
+}
+
+.cookbook-field textarea {
+  resize: vertical;
+}
+
+.cookbook-field input:focus,
+.cookbook-field textarea:focus,
+.cookbook-field select:focus,
+.cookbook-input:focus,
+.cookbook-search input:focus,
+.cookbook-tooltip-trigger:focus,
+.cookbook-dropdown-toggle:focus,
+.cookbook-dropdown-option:focus,
+.icon-button:focus {
+  outline: 3px solid rgba(224, 122, 47, 0.28);
+  outline-offset: 2px;
+  border-color: var(--accent);
+}
+
+.field-error {
+  min-height: 1.25em;
+  color: #a42735;
+  font-weight: 500;
+}
+
+.cookbook-field input.is-invalid {
+  border-color: #a42735;
+  box-shadow: 0 0 0 3px rgba(164, 39, 53, 0.1);
+}
+
+.cookbook-inline-form {
+  align-items: end;
+}
+
+.cookbook-inline-form .cookbook-input {
+  flex: 1 1 260px;
+  width: auto;
+}
+
+.cookbook-tooltip-grid {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  padding: 28px 0 58px;
+}
+
+.cookbook-tooltip {
+  position: relative;
+}
+
+.cookbook-tooltip-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--ink);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 600;
+}
+
+.tooltip-symbol {
+  display: inline-grid;
+  width: 24px;
+  height: 24px;
+  place-items: center;
+  border-radius: 50%;
+  background: rgba(224, 122, 47, 0.18);
+  color: var(--accent-ink);
+  font-size: 0.8rem;
+}
+
+.cookbook-tooltip-content {
+  position: absolute;
+  top: calc(100% + 10px);
+  left: 0;
+  z-index: 5;
+  width: max-content;
+  max-width: 260px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--ink);
+  color: #fff;
+  box-shadow: var(--shadow);
+  font-size: 0.82rem;
+  font-weight: 400;
+  line-height: 1.4;
+}
+
+.cookbook-tooltip-content::before {
+  position: absolute;
+  top: -5px;
+  left: 18px;
+  width: 10px;
+  height: 10px;
+  background: var(--ink);
+  content: "";
+  transform: rotate(45deg);
+}
+
+.cookbook-tooltip-content kbd {
+  padding: 1px 4px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 4px;
+  font-size: 0.85em;
+}
+
+.cookbook-dropdown {
+  position: relative;
+  width: min(100%, 300px);
+}
+
+.cookbook-dropdown-toggle {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+  color: var(--ink);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 600;
+}
+
+.cookbook-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  left: 0;
+  z-index: 5;
+  display: grid;
+  gap: 4px;
+  padding: 7px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: var(--shadow);
+}
+
+.cookbook-dropdown-option {
+  padding: 9px 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+}
+
+.cookbook-dropdown-option:hover,
+.cookbook-dropdown-option[aria-selected="true"] {
+  background: rgba(224, 122, 47, 0.12);
+}
+
+.cookbook-request-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.cookbook-request-panel {
+  display: grid;
+  align-content: start;
+  gap: 14px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: #fffaf4;
+}
+
+.cookbook-request-panel h2 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.cookbook-request-panel p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.cookbook-fragment-target {
+  min-height: 76px;
+  padding: 14px;
+  border: 1px dashed var(--line);
+  border-radius: 12px;
+  background: #fff;
+}
+
+.cookbook-state-loading {
+  color: var(--accent) !important;
+}
+
+.cookbook-state-error {
+  color: #a42735 !important;
+}
+
+.cookbook-state-success {
+  color: #115c3a !important;
+}
+
+.cookbook-lifecycle-target {
+  min-height: 88px;
+  padding: 14px;
+  border: 1px dashed var(--line);
+  border-radius: 14px;
+  background: #fff;
+}
+
+.cookbook-lifecycle-card,
+.cookbook-template-card {
+  display: grid;
+  gap: 7px;
+  padding: 16px;
+  border-radius: 12px;
+  background: rgba(17, 92, 58, 0.09);
+  color: #115c3a;
+}
+
+.cookbook-lifecycle-card p,
+.cookbook-template-card p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.cookbook-list,
+.cookbook-results {
+  display: grid;
+  gap: 9px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cookbook-list-row {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) auto auto auto;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+}
+
+.cookbook-list-row.is-done {
+  background: rgba(17, 92, 58, 0.07);
+}
+
+.cookbook-list-row.is-done .cookbook-list-label {
+  color: var(--muted);
+  text-decoration: line-through;
+}
+
+.cookbook-list-index {
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.cookbook-list-label {
+  min-width: 0;
+  font-weight: 600;
+}
+
+.cookbook-list-state {
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.cookbook-search {
+  display: grid;
+  gap: 8px;
+  width: min(100%, 580px);
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.cookbook-results li {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+}
+
+.cookbook-results li span {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.cookbook-toast-region {
+  min-height: 76px;
+}
+
+.cookbook-toast {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: min(100%, 480px);
+  padding: 12px 14px;
+  border: 1px solid rgba(17, 92, 58, 0.22);
+  border-radius: 13px;
+  background: #f0faf3;
+  color: #115c3a;
+  box-shadow: var(--shadow);
+}
+
+.cookbook-toast.is-error {
+  border-color: rgba(164, 39, 53, 0.25);
+  background: #fff1f2;
+  color: #a42735;
+}
+
+.cookbook-toast .icon-button {
+  margin-left: auto;
+  width: 28px;
+  height: 28px;
+  border-color: transparent;
+  background: transparent;
+  color: currentColor;
+}
+
+.cookbook-toast-mark {
+  font-size: 0.7rem;
+}
+
+.cookbook-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #fff;
+}
+
+.cookbook-table {
+  width: 100%;
+  min-width: 560px;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.cookbook-table caption {
+  padding: 14px 16px;
+  color: var(--muted);
+  font-size: 0.8rem;
+  text-align: left;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.cookbook-table th,
+.cookbook-table td {
+  padding: 12px 14px;
+  border-top: 1px solid var(--line);
+}
+
+.cookbook-table thead th {
+  color: var(--muted);
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.cookbook-table-row.is-selected {
+  background: rgba(224, 122, 47, 0.09);
+}
+
+.cookbook-table-status {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: rgba(17, 92, 58, 0.1);
+  color: #115c3a;
+  font-size: 0.78rem;
+}
+
+.cookbook-table-check {
+  width: 17px;
+  height: 17px;
+}
+
+.cookbook-note-inline {
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.cookbook-template-output {
+  min-height: 130px;
+  padding: 16px;
+  border: 1px dashed var(--line);
+  border-radius: 14px;
+  background: #fffaf4;
+}
+
+.cookbook-template-card h2 {
+  margin: 0;
+  color: #115c3a;
+}
+
+.template-copy {
+  color: var(--ink);
+}
+
+.cookbook-binding-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.cookbook-binding-card {
+  display: grid;
+  align-content: center;
+  gap: 8px;
+  min-height: 88px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  background: #fffaf4;
+}
+
+.cookbook-binding-card strong {
+  font-size: 1.2rem;
+}
+
+.cookbook-binding-card small {
+  color: var(--muted);
+}
+
+.cookbook-binding-label {
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.cookbook-check-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 400;
+}
+
+@media (max-width: 720px) {
+  .cookbook-heading {
+    display: grid;
+  }
+
+  .cookbook-request-grid,
+  .cookbook-binding-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .cookbook-list-row {
+    grid-template-columns: 28px minmax(0, 1fr) auto;
+  }
+
+  .cookbook-list-state {
+    grid-column: 2;
+  }
+
+  .cookbook-list-row .btn,
+  .cookbook-list-row .ghost {
+    grid-row: 2;
+  }
+
+  .cookbook-list-row .btn {
+    grid-column: 2;
+  }
+
+  .cookbook-list-row .ghost {
+    grid-column: 3;
+  }
+}

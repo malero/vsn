@@ -93,6 +93,10 @@ For browser auto-mount, load the root package and any plugin entry points as mod
 
 External `.vsn` and `.cfs` files use the same syntax. For library usage, prefer the explicit `Engine` API above.
 
+The [`examples/`](./examples/) directory contains focused cookbook entries for
+behaviors, bindings, lifecycle, requests, templates, and accessibility. See
+[`examples/README.md`](./examples/README.md) for the feature map.
+
 ## CFS syntax
 
 Identifiers may contain hyphens so CSS-style names such as `data-value` remain intact. To subtract numbers, include whitespace around the operator: use `count - 1`, not `count-1`.

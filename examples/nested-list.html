@@ -1,0 +1,83 @@
+<section id="nested-list-example" class="example-card cookbook-example">
+  <header class="cookbook-heading">
+    <div>
+      <p class="cookbook-eyebrow">cookbook</p>
+      <h1>Nested list scopes</h1>
+      <p class="cookbook-lede">
+        Each row receives an item and index scope while its actions call functions from the parent behavior.
+      </p>
+    </div>
+    <span class="cookbook-badge">each + scopes</span>
+  </header>
+
+  <form class="cookbook-toolbar cookbook-inline-form" vsn-on:submit!prevent="add();">
+    <input class="cookbook-input" type="text" placeholder="Add a task" autocomplete="off" vsn-bind="newLabel" />
+    <button class="btn" type="submit">Add task</button>
+    <span class="cookbook-status"><strong vsn-bind:from="total">0</strong> rows</span>
+  </form>
+
+  <ul class="cookbook-list">
+    <template vsn-each="items as item, index">
+      <li class="cookbook-list-row">
+        <span class="cookbook-list-index" vsn-bind:from="index">0</span>
+        <span class="cookbook-list-label" vsn-bind:from="item[0]">Task</span>
+        <span class="cookbook-list-state"></span>
+        <button class="btn secondary" type="button" vsn-on:click="toggle(index);">Toggle</button>
+        <button class="ghost" type="button" vsn-on:click="remove(index);">Remove</button>
+      </li>
+    </template>
+  </ul>
+
+  <p class="cookbook-note">
+    Replacing the array causes the current runtime to recreate each rendered row, so row identity should not be assumed.
+  </p>
+</section>
+
+<script type="text/vsn">
+  #nested-list-example {
+    newLabel: "";
+    items: [
+      ["Review the schema", false],
+      ["Render the fragment", true],
+      ["Run the browser check", false]
+    ];
+    total: 0;
+
+    construct {
+      sync();
+    }
+
+    sync() {
+      total = items.length;
+    }
+
+    add() {
+      label = newLabel.trim();
+      if (label != "") {
+        items = items.concat([[label, false]]);
+        newLabel = "";
+        sync();
+      }
+    }
+
+    toggle(index) {
+      item = items[index];
+      updated = [item[0], !item[1]];
+      items = items.slice(0, index).concat([updated]).concat(items.slice(index + 1));
+      sync();
+    }
+
+    remove(index) {
+      items = items.slice(0, index).concat(items.slice(index + 1));
+      sync();
+    }
+
+    .cookbook-list-row {
+      @class :< { "is-done": item[1] };
+    }
+
+    .cookbook-list-state {
+      @html :< (item[1] ? "Done" : "Open");
+    }
+  }
+</script>

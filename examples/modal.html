@@ -1,0 +1,105 @@
+<section id="modal-example" class="example-card cookbook-example">
+  <header class="cookbook-heading">
+    <div>
+      <p class="cookbook-eyebrow">Behavior cookbook</p>
+      <h1>Dialog / modal</h1>
+      <p class="cookbook-lede">
+        State controls visibility while event flags handle Escape and backdrop clicks.
+      </p>
+    </div>
+    <span class="cookbook-badge">state + events</span>
+  </header>
+
+  <div class="cookbook-stage">
+    <div class="cookbook-toolbar">
+      <button
+        id="modal-launch"
+        class="btn"
+        type="button"
+        vsn-on:click="openDialog(self);"
+      >
+        Open dialog
+      </button>
+      <p class="cookbook-status">
+        State: <strong vsn-bind:from="status">Closed</strong>
+      </p>
+    </div>
+    <p class="cookbook-note">
+      <code>vsn-show</code> hides the backdrop without removing it from the DOM.
+      The close function restores focus to the launch button.
+    </p>
+  </div>
+
+  <div
+    id="modal-backdrop"
+    class="cookbook-modal"
+    role="presentation"
+    vsn-show="open"
+    vsn-on:click!self="closeDialog();"
+  >
+    <div
+      id="modal-dialog"
+      class="cookbook-dialog"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="modal-title"
+      tabindex="-1"
+    >
+      <header class="cookbook-dialog-heading">
+        <div>
+          <p class="cookbook-eyebrow">A stateful overlay</p>
+          <h2 id="modal-title">Edit the message</h2>
+        </div>
+        <button class="icon-button" type="button" aria-label="Close dialog" vsn-on:click="closeDialog();">
+          ×
+        </button>
+      </header>
+
+      <form class="cookbook-form" vsn-on:submit!prevent="saveDialog();">
+        <label class="cookbook-field">
+          <span>Message</span>
+          <input type="text" autofocus vsn-bind="message" />
+        </label>
+        <div class="cookbook-actions">
+          <button class="btn secondary" type="button" vsn-on:click="closeDialog();">Cancel</button>
+          <button class="btn" type="submit">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</section>
+
+<script type="text/vsn">
+  #modal-example {
+    open: false;
+    status: "Closed";
+    message: "Keep the dialog behavior close to the markup.";
+    lastFocus: null;
+
+    openDialog(ele) {
+      open = true;
+      status = "Open";
+      lastFocus = ele;
+    }
+
+    closeDialog() {
+      open = false;
+      status = "Closed";
+      lastFocus && lastFocus.focus();
+    }
+
+    saveDialog() {
+      open = false;
+      status = "Saved";
+      lastFocus && lastFocus.focus();
+    }
+
+    on keyup!escape() {
+      open ? closeDialog() : null;
+    }
+
+    #modal-backdrop {
+      @aria-hidden :< !root.open;
+    }
+  }
+</script>

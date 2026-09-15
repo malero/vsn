@@ -505,7 +505,7 @@
 </section>
 
 <script type="text/vsn">
-behavior #product-filters-app {
+#product-filters-app {
   activeFiltersTags: "";
   hasResults: true;
   noResults: false;
@@ -547,11 +547,11 @@ behavior #product-filters-app {
     updateVisible();
   }
 
-  behavior .filter-group !group('filterGroups') {
+  .filter-group !group('filterGroups') {
     group: @data-group;
     filter: null;
 
-    behavior .filter !group('filters') {
+    .filter !group('filters') {
       tag: @data-filter;
       @aria-current:< filter == tag;
 
@@ -562,13 +562,13 @@ behavior #product-filters-app {
     }
   }
 
-  behavior .clear-filters {
+  .clear-filters {
     on click(event) {
       clearFilters();
     }
   }
 
-  behavior .product-card !microdata !group("products") {
+  .product-card !microdata !group("products") {
     tags: [];
     active: true;
     $display:< active ? "block" : "none";

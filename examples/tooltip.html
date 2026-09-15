@@ -1,0 +1,80 @@
+<section id="tooltip-example" class="example-card cookbook-example">
+  <header class="cookbook-heading">
+    <div>
+      <p class="cookbook-eyebrow">Behavior cookbook</p>
+      <h1>Tooltip</h1>
+      <p class="cookbook-lede">
+        The same local state responds to pointer, focus, and click events.
+      </p>
+    </div>
+    <span class="cookbook-badge">hover + focus</span>
+  </header>
+
+  <div class="cookbook-tooltip-grid">
+    <article class="cookbook-tooltip">
+      <button
+        class="cookbook-tooltip-trigger"
+        type="button"
+        aria-describedby="tip-save"
+      >
+        <span class="tooltip-symbol">?</span>
+        Save changes
+      </button>
+      <span id="tip-save" class="cookbook-tooltip-content" role="tooltip" vsn-show="open">
+        Saves the current draft and keeps you on this page.
+      </span>
+    </article>
+
+    <article class="cookbook-tooltip">
+      <button
+        class="cookbook-tooltip-trigger"
+        type="button"
+        aria-describedby="tip-shortcut"
+      >
+        <span class="tooltip-symbol">⌘</span>
+        Keyboard shortcut
+      </button>
+      <span id="tip-shortcut" class="cookbook-tooltip-content" role="tooltip" vsn-show="open">
+        Press <kbd>⌘</kbd> <kbd>S</kbd> to save from a real application.
+      </span>
+    </article>
+  </div>
+
+  <p class="cookbook-note">
+    Tooltips should describe a control. Interactive content belongs in a popover or dialog.
+  </p>
+</section>
+
+<script type="text/vsn">
+  #tooltip-example {
+    .cookbook-tooltip {
+      open: false;
+
+      .cookbook-tooltip-trigger {
+        on mouseenter() {
+          open = true;
+        }
+
+        on mouseleave() {
+          open = false;
+        }
+
+        on focusin() {
+          open = true;
+        }
+
+        on focusout() {
+          open = false;
+        }
+
+        on click() {
+          open = !open;
+        }
+      }
+
+      .cookbook-tooltip-content {
+        @aria-hidden :< !open;
+      }
+    }
+  }
+</script>

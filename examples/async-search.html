@@ -1,0 +1,79 @@
+<section id="async-search-example" class="example-card cookbook-example">
+  <header class="cookbook-heading">
+    <div>
+      <p class="cookbook-eyebrow">Behavior cookbook</p>
+      <h1>Async search</h1>
+      <p class="cookbook-lede">
+        Debounced input starts an async list operation and renders loading, empty, and result states.
+      </p>
+    </div>
+    <span class="cookbook-badge">debounce + await</span>
+  </header>
+
+  <label class="cookbook-search">
+    <span>Search the catalog</span>
+    <input
+      type="search"
+      placeholder="Try “schema” or “browser”"
+      autocomplete="off"
+      vsn-bind="query"
+      vsn-on:input!debounce(300)="search();"
+    />
+  </label>
+
+  <div class="cookbook-toolbar">
+    <span class="cookbook-state cookbook-state-loading" vsn-show="loading">Searching…</span>
+    <span class="cookbook-state cookbook-state-success" vsn-show="hasResults">
+      <strong vsn-bind:from="resultCount">0</strong> matches
+    </span>
+    <span class="cookbook-state" vsn-show="empty">No matches.</span>
+  </div>
+
+  <ul id="async-results" class="cookbook-results">
+    <template vsn-each="results as result, index">
+      <li>
+        <strong vsn-bind:from="result.name">Result</strong>
+        <span vsn-bind:from="result.category">Category</span>
+      </li>
+    </template>
+  </ul>
+
+  <p class="cookbook-note">
+    The debounce flag belongs on the event declaration; the async function owns the request lifecycle.
+  </p>
+</section>
+
+<script type="text/vsn">
+  #async-search-example {
+    query: "";
+    catalog: [
+      { name: "Schema explorer", category: "Ent" },
+      { name: "Server fragment", category: "HTTP" },
+      { name: "Browser behavior", category: "VSN" },
+      { name: "Lifecycle hooks", category: "Runtime" },
+      { name: "Form bindings", category: "DOM" }
+    ];
+    results: [];
+    loading: false;
+    hasResults: false;
+    empty: false;
+    resultCount: 0;
+
+    construct {
+      search();
+    }
+
+    async search() {
+      loading = true;
+      hasResults = false;
+      empty = false;
+      results = await list.filter(catalog, (item) => {
+        return query == "" || item.name.toLowerCase().includes(query.toLowerCase());
+      });
+      resultCount = results.length;
+      loading = false;
+      hasResults = resultCount > 0;
+      empty = resultCount == 0;
+    }
+  }
+</script>
