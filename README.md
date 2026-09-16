@@ -85,6 +85,20 @@ registerMicrodata(engine);
 
 HTML extensions should use `engine.registerHtmlTransformer(transform, { priority })`; lower priorities run first and the returned disposer removes a transformer. The templates transformer runs before sanitization. The sanitizer uses DOMPurify when available; its fallback is intentionally minimal and is not a substitute for a full sanitizer for hostile HTML.
 
+Mounted elements and behavior bindings each have a `Lifetime`. Extensions can register teardown work with `onCleanup`, and cleanup runs once when the owning element or behavior unbinds:
+
+```ts
+engine.registerBehaviorModifier("resize", {
+  onBind: ({ element, onCleanup }) => {
+    const update = () => { /* ... */ };
+    window.addEventListener("resize", update);
+    onCleanup(() => window.removeEventListener("resize", update));
+  }
+});
+```
+
+The same `onCleanup` callback is available to custom attribute handlers and flag handlers. CFS lifecycle code can call `onCleanup(() => { /* ... */ })`; `engine.getLifetime(element)` exposes the inline lifetime directly, and `engine.dispose()` tears down all mounted roots.
+
 For browser auto-mount, load the root package and any plugin entry points as modules. VSN creates an engine when an element with `auto-mount` is present, applies registered plugins, loads `script[type="text/vsn"]` blocks, and mounts the document body. Behavior scripts may also use `src`; VSN fetches the file and ignores any inline text when `src` is present:
 
 ```html

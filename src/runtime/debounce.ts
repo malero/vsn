@@ -1,8 +1,8 @@
-type Debounced = (...args: any[]) => void;
+export type Debounced = ((...args: any[]) => void) & { cancel: () => void };
 
 export function debounce<T extends (...args: any[]) => void>(fn: T, waitMs: number): Debounced {
   let timer: ReturnType<typeof setTimeout> | undefined;
-  return (...args: any[]) => {
+  const debounced = ((...args: any[]) => {
     if (timer) {
       clearTimeout(timer);
     }
@@ -10,5 +10,13 @@ export function debounce<T extends (...args: any[]) => void>(fn: T, waitMs: numb
       timer = undefined;
       fn(...args);
     }, waitMs);
+  }) as Debounced;
+  debounced.cancel = () => {
+    if (!timer) {
+      return;
+    }
+    clearTimeout(timer);
+    timer = undefined;
   };
+  return debounced;
 }

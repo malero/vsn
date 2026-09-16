@@ -33,7 +33,7 @@ export function registerSanitizeHtml(engine: Engine, options: SanitizerOptions =
   engine.registerAttributeHandler({
     id: "vsn-get",
     match: (name) => name.startsWith("vsn-get"),
-    handle: (element, name) => {
+    handle: (element, name, _value, _scope, context) => {
       const trusted = name.includes("!trusted");
       const autoLoad = name.includes("!load");
       const url = element.getAttribute(name) ?? "";
@@ -61,12 +61,14 @@ export function registerSanitizeHtml(engine: Engine, options: SanitizerOptions =
         }
       };
 
-      element.addEventListener("click", (event) => {
+      const clickHandler = (event: Event) => {
         if (event.target !== element) {
           return;
         }
         void run();
-      });
+      };
+      element.addEventListener("click", clickHandler);
+      context?.onCleanup(() => element.removeEventListener("click", clickHandler));
       if (autoLoad) {
         Promise.resolve().then(run);
       }

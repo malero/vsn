@@ -43,7 +43,7 @@ function registerSanitizeHtml(engine, options = {}) {
   engine.registerAttributeHandler({
     id: "vsn-get",
     match: (name) => name.startsWith("vsn-get"),
-    handle: (element, name) => {
+    handle: (element, name, _value, _scope, context) => {
       const trusted = name.includes("!trusted");
       const autoLoad = name.includes("!load");
       const url = element.getAttribute(name) ?? "";
@@ -69,12 +69,14 @@ function registerSanitizeHtml(engine, options = {}) {
           element.dispatchEvent(new CustomEvent("vsn:getError", { detail: { error }, bubbles: true }));
         }
       };
-      element.addEventListener("click", (event) => {
+      const clickHandler = (event) => {
         if (event.target !== element) {
           return;
         }
         void run();
-      });
+      };
+      element.addEventListener("click", clickHandler);
+      context?.onCleanup(() => element.removeEventListener("click", clickHandler));
       if (autoLoad) {
         Promise.resolve().then(run);
       }

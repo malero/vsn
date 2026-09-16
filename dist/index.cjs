@@ -47,6 +47,7 @@ __export(index_exports, {
   IfNode: () => IfNode,
   IndexExpression: () => IndexExpression,
   Lexer: () => Lexer,
+  Lifetime: () => Lifetime,
   LiteralExpression: () => LiteralExpression,
   MemberExpression: () => MemberExpression,
   ObjectExpression: () => ObjectExpression,
@@ -1290,8 +1291,39 @@ var FunctionExpression = class extends BaseNode {
     const scope = context.scope;
     const globals = context.globals;
     const element = context.element;
+    const lifetime = context.lifetime;
     if (this.isAsync) {
       return (...args) => {
+        const invoke = () => {
+          const activeScope = scope?.createChild ? scope.createChild() : scope;
+          const inner = {
+            scope: activeScope,
+            rootScope: context.rootScope,
+            ...globals ? { globals } : {},
+            ...context.engine ? { engine: context.engine } : {},
+            ...element ? { element } : {},
+            ...context.self ? { self: context.self } : {},
+            ...lifetime ? { lifetime } : {},
+            returnValue: void 0,
+            returning: false,
+            breaking: false,
+            continuing: false
+          };
+          const previousValues = /* @__PURE__ */ new Map();
+          const applyResult = activeScope ? this.applyParams(activeScope, previousValues, inner, args) : void 0;
+          const bodyResult = resolveMaybe(applyResult, () => this.body.evaluate(inner));
+          const finalResult = resolveMaybe(bodyResult, () => inner.returnValue);
+          return Promise.resolve(finalResult).finally(() => {
+            if (activeScope && activeScope === scope) {
+              this.restoreParams(activeScope, previousValues);
+            }
+          });
+        };
+        return context.engine?.withExecutionContext ? context.engine.withExecutionContext(element, lifetime, invoke) : invoke();
+      };
+    }
+    return (...args) => {
+      const invoke = () => {
         const activeScope = scope?.createChild ? scope.createChild() : scope;
         const inner = {
           scope: activeScope,
@@ -1300,6 +1332,7 @@ var FunctionExpression = class extends BaseNode {
           ...context.engine ? { engine: context.engine } : {},
           ...element ? { element } : {},
           ...context.self ? { self: context.self } : {},
+          ...lifetime ? { lifetime } : {},
           returnValue: void 0,
           returning: false,
           breaking: false,
@@ -1309,42 +1342,19 @@ var FunctionExpression = class extends BaseNode {
         const applyResult = activeScope ? this.applyParams(activeScope, previousValues, inner, args) : void 0;
         const bodyResult = resolveMaybe(applyResult, () => this.body.evaluate(inner));
         const finalResult = resolveMaybe(bodyResult, () => inner.returnValue);
-        return Promise.resolve(finalResult).finally(() => {
-          if (activeScope && activeScope === scope) {
-            this.restoreParams(activeScope, previousValues);
-          }
-        });
+        if (isPromiseLike(finalResult)) {
+          return finalResult.finally(() => {
+            if (activeScope && activeScope === scope) {
+              this.restoreParams(activeScope, previousValues);
+            }
+          });
+        }
+        if (activeScope && activeScope === scope) {
+          this.restoreParams(activeScope, previousValues);
+        }
+        return finalResult;
       };
-    }
-    return (...args) => {
-      const activeScope = scope?.createChild ? scope.createChild() : scope;
-      const inner = {
-        scope: activeScope,
-        rootScope: context.rootScope,
-        ...globals ? { globals } : {},
-        ...context.engine ? { engine: context.engine } : {},
-        ...element ? { element } : {},
-        ...context.self ? { self: context.self } : {},
-        returnValue: void 0,
-        returning: false,
-        breaking: false,
-        continuing: false
-      };
-      const previousValues = /* @__PURE__ */ new Map();
-      const applyResult = activeScope ? this.applyParams(activeScope, previousValues, inner, args) : void 0;
-      const bodyResult = resolveMaybe(applyResult, () => this.body.evaluate(inner));
-      const finalResult = resolveMaybe(bodyResult, () => inner.returnValue);
-      if (isPromiseLike(finalResult)) {
-        return finalResult.finally(() => {
-          if (activeScope && activeScope === scope) {
-            this.restoreParams(activeScope, previousValues);
-          }
-        });
-      }
-      if (activeScope && activeScope === scope) {
-        this.restoreParams(activeScope, previousValues);
-      }
-      return finalResult;
+      return context.engine?.withExecutionContext ? context.engine.withExecutionContext(element, lifetime, invoke) : invoke();
     };
   }
   applyParams(scope, previousValues, context, args) {
@@ -4491,7 +4501,7 @@ function resolveTarget(element, selector) {
 // src/runtime/debounce.ts
 function debounce(fn, waitMs) {
   let timer;
-  return (...args) => {
+  const debounced = ((...args) => {
     if (timer) {
       clearTimeout(timer);
     }
@@ -4499,8 +4509,78 @@ function debounce(fn, waitMs) {
       timer = void 0;
       fn(...args);
     }, waitMs);
+  });
+  debounced.cancel = () => {
+    if (!timer) {
+      return;
+    }
+    clearTimeout(timer);
+    timer = void 0;
   };
+  return debounced;
 }
+
+// src/runtime/lifetime.ts
+var Lifetime = class _Lifetime {
+  entries = /* @__PURE__ */ new Set();
+  disposed = false;
+  get isDisposed() {
+    return this.disposed;
+  }
+  add(disposer) {
+    if (typeof disposer !== "function") {
+      throw new TypeError("Lifetime disposers must be functions");
+    }
+    if (this.disposed) {
+      disposer();
+      return () => void 0;
+    }
+    const entry = { disposer, active: true };
+    this.entries.add(entry);
+    return () => {
+      if (!entry.active) {
+        return;
+      }
+      entry.active = false;
+      this.entries.delete(entry);
+    };
+  }
+  onCleanup(disposer) {
+    return this.add(disposer);
+  }
+  child() {
+    const child = new _Lifetime();
+    const removeChild = this.add(() => child.dispose());
+    child.add(removeChild);
+    return child;
+  }
+  dispose() {
+    if (this.disposed) {
+      return;
+    }
+    this.disposed = true;
+    const errors = [];
+    const entries = Array.from(this.entries).reverse();
+    this.entries.clear();
+    for (const entry of entries) {
+      if (!entry.active) {
+        continue;
+      }
+      entry.active = false;
+      try {
+        entry.disposer();
+      } catch (error) {
+        errors.push(error);
+      }
+    }
+    if (errors.length === 1) {
+      throw errors[0];
+    }
+    if (errors.length > 1) {
+      throw new AggregateError(errors, "One or more lifetime disposers failed");
+    }
+  }
+};
 
 // src/runtime/engine.ts
 function isPromiseLike2(value) {
@@ -4866,12 +4946,13 @@ var Engine = class _Engine {
   behaviorBoundElements = /* @__PURE__ */ new Map();
   behaviorBindings = /* @__PURE__ */ new WeakMap();
   behaviorRootScopes = /* @__PURE__ */ new WeakMap();
-  behaviorListeners = /* @__PURE__ */ new WeakMap();
-  inlineListeners = /* @__PURE__ */ new WeakMap();
+  behaviorLifetimes = /* @__PURE__ */ new WeakMap();
+  inlineLifetimes = /* @__PURE__ */ new WeakMap();
   behaviorId = 0;
   codeCache = /* @__PURE__ */ new Map();
   behaviorCache = /* @__PURE__ */ new Map();
   observer;
+  observerLifetime;
   attributeHandlers = [];
   htmlTransformers = [];
   htmlTransformerOrder = 0;
@@ -4887,21 +4968,25 @@ var Engine = class _Engine {
   ignoredAdded = /* @__PURE__ */ new WeakMap();
   diagnostics;
   logger;
+  engineLifetime = new Lifetime();
   pendingUses = [];
   pendingAutoBindToScope = [];
-  scopeWatchers = /* @__PURE__ */ new WeakMap();
   executionStack = [];
   groupProxyCache = /* @__PURE__ */ new WeakMap();
   scopeElements = /* @__PURE__ */ new WeakMap();
   classMapBindings = /* @__PURE__ */ new WeakMap();
-  behaviorClassMapBindings = /* @__PURE__ */ new WeakMap();
-  behaviorInvalidators = /* @__PURE__ */ new WeakMap();
+  dynamicOwnerCleanupLifetimes = /* @__PURE__ */ new WeakMap();
   mountedRoots = /* @__PURE__ */ new Set();
+  mountedDocuments = /* @__PURE__ */ new Set();
   inactiveSubtrees = /* @__PURE__ */ new WeakSet();
   constructor(options = {}) {
     this.diagnostics = options.diagnostics ?? false;
     this.logger = options.logger ?? console;
     this.registerGlobal("console", console);
+    this.registerGlobal("onCleanup", (disposer) => {
+      const lifetime = this.getCurrentLifetime();
+      return lifetime ? lifetime.onCleanup(disposer) : () => void 0;
+    });
     this.registerFlag("important");
     this.registerFlag("debounce", {
       onEventBind: ({ args }) => ({
@@ -5196,12 +5281,16 @@ var Engine = class _Engine {
     return proxy;
   }
   async mount(root) {
+    if (this.engineLifetime.isDisposed) {
+      this.engineLifetime = new Lifetime();
+    }
     const documentRoot = root.ownerDocument;
     const active = _Engine.activeEngines.get(documentRoot);
     if (active && active !== this) {
       active.disposeMountedRoots();
     }
     _Engine.activeEngines.set(documentRoot, this);
+    this.mountedDocuments.add(documentRoot);
     const elements = [root, ...Array.from(root.querySelectorAll("*"))];
     for (const element of elements) {
       this.inactiveSubtrees.delete(element);
@@ -5254,6 +5343,13 @@ var Engine = class _Engine {
         continue;
       }
       this.registerGlobal(use.alias, value);
+    }
+    if (dynamicOwner) {
+      const lifetime = this.getInlineLifetime(dynamicOwner);
+      if (this.dynamicOwnerCleanupLifetimes.get(dynamicOwner) !== lifetime) {
+        lifetime.onCleanup(() => this.disposeDynamicBehaviors(dynamicOwner));
+        this.dynamicOwnerCleanupLifetimes.set(dynamicOwner, lifetime);
+      }
     }
     for (const behavior of program.behaviors) {
       this.collectBehavior(behavior, void 0, void 0, dynamicOwner);
@@ -5344,20 +5440,42 @@ var Engine = class _Engine {
     return new Promise((resolve) => {
       let elapsedMs = 0;
       let delayMs = initialDelayMs;
+      let timer;
+      let settled = false;
+      const removeCleanup = this.engineLifetime.onCleanup(() => {
+        if (timer) {
+          clearTimeout(timer);
+          timer = void 0;
+        }
+        settled = true;
+        resolve();
+      });
+      const finish = () => {
+        if (settled) {
+          return;
+        }
+        settled = true;
+        removeCleanup();
+        resolve();
+      };
       const check = () => {
+        if (settled) {
+          return;
+        }
         const value = this.resolveGlobalPath(use.name);
         if (value !== void 0) {
           this.registerGlobal(use.alias, value);
-          resolve();
+          finish();
           return;
         }
         if (elapsedMs >= timeoutMs) {
           this.emitUseError(use.name, new Error(`vsn: global '${use.name}' not found`));
-          resolve();
+          finish();
           return;
         }
         const scheduledDelay = Math.min(delayMs, timeoutMs - elapsedMs);
-        setTimeout(() => {
+        timer = setTimeout(() => {
+          timer = void 0;
           elapsedMs += scheduledDelay;
           delayMs = Math.min(delayMs * 2, maxDelayMs);
           check();
@@ -5381,6 +5499,97 @@ var Engine = class _Engine {
     this.scopes.set(element, scope);
     this.scopeElements.set(scope, element);
     return scope;
+  }
+  /**
+   * Returns the lifetime owned by an element's inline bindings.
+   * Extensions can use this for resources that should live until the element
+   * is unmounted.
+   */
+  getLifetime(element) {
+    return this.inlineLifetimes.get(element) ?? this.getInlineLifetime(element);
+  }
+  dispose() {
+    const documents = Array.from(this.mountedDocuments);
+    this.disposeMountedRoots();
+    try {
+      this.engineLifetime.dispose();
+    } catch (error) {
+      this.logger.warn?.("vsn:error", { error, selector: "engine" });
+    }
+    for (const documentRoot of documents) {
+      if (_Engine.activeEngines.get(documentRoot) === this) {
+        _Engine.activeEngines.delete(documentRoot);
+      }
+    }
+    this.mountedDocuments.clear();
+  }
+  getInlineLifetime(element) {
+    const existing = this.inlineLifetimes.get(element);
+    if (existing && !existing.isDisposed) {
+      return existing;
+    }
+    const lifetime = new Lifetime();
+    this.inlineLifetimes.set(element, lifetime);
+    return lifetime;
+  }
+  resetInlineLifetime(element) {
+    const existing = this.inlineLifetimes.get(element);
+    if (existing && !existing.isDisposed) {
+      if (this.lifecycleBindings.has(element)) {
+        this.runDestruct(element, existing);
+      }
+      this.disposeLifetime(element, existing);
+    }
+    const lifetime = new Lifetime();
+    this.inlineLifetimes.set(element, lifetime);
+    return lifetime;
+  }
+  getBehaviorLifetime(element, behaviorId) {
+    const lifetimes = this.behaviorLifetimes.get(element) ?? /* @__PURE__ */ new Map();
+    const existing = lifetimes.get(behaviorId);
+    if (existing && !existing.isDisposed) {
+      return existing;
+    }
+    const lifetime = new Lifetime();
+    lifetimes.set(behaviorId, lifetime);
+    this.behaviorLifetimes.set(element, lifetimes);
+    return lifetime;
+  }
+  disposeLifetime(element, lifetime) {
+    try {
+      lifetime.dispose();
+    } catch (error) {
+      this.emitError(element, error);
+    }
+  }
+  disposeBehaviorLifetimes(element) {
+    const lifetimes = this.behaviorLifetimes.get(element);
+    if (!lifetimes) {
+      return;
+    }
+    for (const lifetime of lifetimes.values()) {
+      this.disposeLifetime(element, lifetime);
+    }
+    this.behaviorLifetimes.delete(element);
+  }
+  addEventListener(lifetime, target, event, handler, options) {
+    target.addEventListener(event, handler, options);
+    lifetime.onCleanup(() => target.removeEventListener(event, handler, options));
+  }
+  cleanupBehaviorBindings(element) {
+    const bound = this.behaviorBindings.get(element);
+    if (bound) {
+      for (const behaviorId of bound) {
+        const boundElements = this.behaviorBoundElements.get(behaviorId);
+        boundElements?.delete(element);
+        if (boundElements?.size === 0) {
+          this.behaviorBoundElements.delete(behaviorId);
+        }
+      }
+    }
+    this.behaviorBindings.delete(element);
+    this.behaviorRootScopes.delete(element);
+    bound?.clear();
   }
   setHtml(element, value, options = {}) {
     if (!(element instanceof HTMLElement)) {
@@ -5421,7 +5630,11 @@ var Engine = class _Engine {
   }
   attachObserver(root) {
     if (!this.observer) {
+      const lifetime = this.engineLifetime.child();
+      this.observerLifetime = lifetime;
       this.observerFlush = debounce(() => this.flushObserverQueue(), 10);
+      lifetime.onCleanup(() => this.observerFlush?.cancel());
+      lifetime.onCleanup(() => this.observer?.disconnect());
       this.observer = new MutationObserver((mutations) => {
         for (const mutation of mutations) {
           if (mutation.type === "attributes" && mutation.target instanceof Element) {
@@ -5480,8 +5693,20 @@ var Engine = class _Engine {
     }
   }
   disconnectObserver() {
-    this.observer?.disconnect();
+    const lifetime = this.observerLifetime;
+    this.observerLifetime = void 0;
+    if (lifetime) {
+      try {
+        lifetime.dispose();
+      } catch (error) {
+        this.logger.warn?.("vsn:error", { error, selector: "observer" });
+      }
+    } else {
+      this.observer?.disconnect();
+      this.observerFlush?.cancel();
+    }
     this.observer = void 0;
+    this.observerFlush = void 0;
     this.pendingAdded.clear();
     this.pendingRemoved.clear();
     this.pendingUpdated.clear();
@@ -5510,15 +5735,18 @@ var Engine = class _Engine {
     }
   }
   teardownElement(element) {
-    if (this.lifecycleBindings.has(element)) {
-      this.runDestruct(element);
+    const inlineLifetime = this.inlineLifetimes.get(element);
+    if (inlineLifetime && !inlineLifetime.isDisposed) {
+      if (this.lifecycleBindings.has(element)) {
+        this.runDestruct(element, inlineLifetime);
+      }
+      this.disposeLifetime(element, inlineLifetime);
     }
     if (this.behaviorBindings.has(element)) {
       this.runBehaviorDestruct(element);
+      this.disposeBehaviorLifetimes(element);
+      this.cleanupBehaviorBindings(element);
     }
-    this.cleanupBehaviorResources(element);
-    this.cleanupBehaviorListeners(element);
-    this.cleanupInlineListeners(element);
     this.disposeDynamicBehaviors(element);
   }
   handleAddedNode(node, applyBehaviors = true) {
@@ -5556,6 +5784,9 @@ var Engine = class _Engine {
       return;
     }
     await this.waitForUses();
+    if (this.isInactive(root)) {
+      return;
+    }
     if (this.behaviorRegistry.length > 0) {
       const elements = [root, ...Array.from(root.querySelectorAll("*"))];
       for (const element of elements) {
@@ -5575,7 +5806,7 @@ var Engine = class _Engine {
     return false;
   }
   async reapplyBehaviorsForElement(element) {
-    if (this.behaviorRegistry.length === 0) {
+    if (this.behaviorRegistry.length === 0 || this.isInactive(element)) {
       return;
     }
     const bound = this.behaviorBindings.get(element) ?? /* @__PURE__ */ new Set();
@@ -5593,6 +5824,9 @@ var Engine = class _Engine {
     for (const { behavior } of matched) {
       if (!bound.has(behavior.id)) {
         await this.applyBehaviorForElement(behavior, element, scope, bound);
+        if (this.isInactive(element)) {
+          return;
+        }
       }
     }
     const matchedIds = new Set(matched.map(({ behavior }) => behavior.id));
@@ -5601,7 +5835,9 @@ var Engine = class _Engine {
         this.unbindBehaviorForElement(behavior, element, scope, bound);
       }
     }
-    this.behaviorBindings.set(element, bound);
+    if (!this.isInactive(element)) {
+      this.behaviorBindings.set(element, bound);
+    }
   }
   async applyBehaviorForElement(behavior, element, scope, bound) {
     bound.add(behavior.id);
@@ -5612,26 +5848,54 @@ var Engine = class _Engine {
     const rootScopes = this.behaviorRootScopes.get(element) ?? /* @__PURE__ */ new Map();
     rootScopes.set(behavior.id, rootScope);
     this.behaviorRootScopes.set(element, rootScopes);
-    this.applyBehaviorFunctions(element, scope, behavior.functions, rootScope);
-    await this.applyBehaviorDeclarations(element, scope, behavior.declarations, rootScope, behavior.id);
-    await this.applyBehaviorModifierHook("onBind", behavior, element, scope, rootScope);
-    if (behavior.construct) {
-      await this.safeExecuteBlock(behavior.construct, scope, element, rootScope);
+    const lifetime = this.getBehaviorLifetime(element, behavior.id);
+    try {
+      this.applyBehaviorFunctions(element, scope, behavior.functions, rootScope, lifetime);
+      await this.applyBehaviorDeclarations(element, scope, behavior.declarations, rootScope, behavior.id, lifetime);
+      if (lifetime.isDisposed) {
+        return;
+      }
+      await this.applyBehaviorModifierHook("onBind", behavior, element, scope, rootScope, lifetime);
+      if (lifetime.isDisposed) {
+        return;
+      }
+      if (behavior.construct) {
+        await this.safeExecuteBlock(behavior.construct, scope, element, rootScope, lifetime);
+      }
+      if (lifetime.isDisposed) {
+        return;
+      }
+      await this.applyBehaviorModifierHook("onConstruct", behavior, element, scope, rootScope, lifetime);
+      if (lifetime.isDisposed) {
+        return;
+      }
+      for (const onBlock of behavior.onBlocks) {
+        this.attachBehaviorOnHandler(
+          element,
+          onBlock.event,
+          onBlock.body,
+          onBlock.flags,
+          onBlock.flagArgs,
+          onBlock.args,
+          rootScope,
+          lifetime
+        );
+      }
+      this.logDiagnostic("bind", element, behavior);
+    } catch (error) {
+      this.disposeLifetime(element, lifetime);
+      this.behaviorLifetimes.get(element)?.delete(behavior.id);
+      if (this.behaviorLifetimes.get(element)?.size === 0) {
+        this.behaviorLifetimes.delete(element);
+      }
+      bound.delete(behavior.id);
+      boundElements.delete(element);
+      if (boundElements.size === 0) {
+        this.behaviorBoundElements.delete(behavior.id);
+      }
+      this.behaviorRootScopes.get(element)?.delete(behavior.id);
+      throw error;
     }
-    await this.applyBehaviorModifierHook("onConstruct", behavior, element, scope, rootScope);
-    for (const onBlock of behavior.onBlocks) {
-      this.attachBehaviorOnHandler(
-        element,
-        onBlock.event,
-        onBlock.body,
-        onBlock.flags,
-        onBlock.flagArgs,
-        onBlock.args,
-        behavior.id,
-        rootScope
-      );
-    }
-    this.logDiagnostic("bind", element, behavior);
   }
   unbindBehaviorForElement(behavior, element, scope, bound) {
     bound.delete(behavior.id);
@@ -5640,22 +5904,19 @@ var Engine = class _Engine {
     if (boundElements?.size === 0) {
       this.behaviorBoundElements.delete(behavior.id);
     }
-    this.cleanupBehaviorResources(element, behavior.id);
+    const lifetime = this.behaviorLifetimes.get(element)?.get(behavior.id) ?? new Lifetime();
+    this.disposeLifetime(element, lifetime);
+    this.behaviorLifetimes.get(element)?.delete(behavior.id);
+    if (this.behaviorLifetimes.get(element)?.size === 0) {
+      this.behaviorLifetimes.delete(element);
+    }
     const rootScope = this.getBehaviorRootScope(element, behavior);
     if (behavior.destruct) {
-      void this.safeExecuteBlock(behavior.destruct, scope, element, rootScope);
+      void this.safeExecuteBlock(behavior.destruct, scope, element, rootScope, lifetime);
     }
     this.behaviorRootScopes.get(element)?.delete(behavior.id);
-    void this.applyBehaviorModifierHook("onDestruct", behavior, element, scope, rootScope);
-    const listenerMap = this.behaviorListeners.get(element);
-    const listeners = listenerMap?.get(behavior.id);
-    if (listeners) {
-      for (const listener of listeners) {
-        listener.target.removeEventListener(listener.event, listener.handler, listener.options);
-      }
-      listenerMap?.delete(behavior.id);
-    }
-    void this.applyBehaviorModifierHook("onUnbind", behavior, element, scope, rootScope);
+    void this.applyBehaviorModifierHook("onDestruct", behavior, element, scope, rootScope, lifetime);
+    void this.applyBehaviorModifierHook("onUnbind", behavior, element, scope, rootScope, lifetime);
     this.logDiagnostic("unbind", element, behavior);
   }
   runBehaviorDestruct(element) {
@@ -5669,15 +5930,21 @@ var Engine = class _Engine {
         continue;
       }
       const rootScope = this.getBehaviorRootScope(element, behavior);
+      const lifetime = this.behaviorLifetimes.get(element)?.get(behavior.id) ?? new Lifetime();
       if (behavior.destruct) {
-        void this.safeExecuteBlock(behavior.destruct, scope, element, rootScope);
+        void this.safeExecuteBlock(behavior.destruct, scope, element, rootScope, lifetime);
       }
-      void this.applyBehaviorModifierHook("onDestruct", behavior, element, scope, rootScope);
-      void this.applyBehaviorModifierHook("onUnbind", behavior, element, scope, rootScope);
+      void this.applyBehaviorModifierHook("onDestruct", behavior, element, scope, rootScope, lifetime);
+      void this.applyBehaviorModifierHook("onUnbind", behavior, element, scope, rootScope, lifetime);
     }
   }
   attachAttributes(element) {
     const scope = this.getScope(element);
+    const lifetime = this.resetInlineLifetime(element);
+    const context = {
+      lifetime,
+      onCleanup: (disposer) => lifetime.onCleanup(disposer)
+    };
     for (const name of element.getAttributeNames()) {
       if (!name.startsWith("vsn-")) {
         continue;
@@ -5687,7 +5954,7 @@ var Engine = class _Engine {
         if (!handler.match(name)) {
           continue;
         }
-        const handled = handler.handle(element, name, value, scope);
+        const handled = handler.handle(element, name, value, scope, context);
         if (handled !== false) {
           break;
         }
@@ -5704,15 +5971,15 @@ var Engine = class _Engine {
       return;
     }
     const scope = this.getScope(element);
-    void this.safeExecute(config.construct, scope, element);
+    void this.safeExecute(config.construct, scope, element, void 0, this.getInlineLifetime(element));
   }
-  runDestruct(element) {
+  runDestruct(element, lifetime = this.getInlineLifetime(element)) {
     const config = this.lifecycleBindings.get(element);
     if (!config?.destruct) {
       return;
     }
     const scope = this.getScope(element);
-    void this.safeExecute(config.destruct, scope, element);
+    void this.safeExecute(config.destruct, scope, element, void 0, lifetime);
   }
   parseEachExpression(value) {
     const [listPart, rest] = value.split(/\s+as\s+/);
@@ -5778,7 +6045,7 @@ var Engine = class _Engine {
     });
     binding.rendered = rendered;
   }
-  attachBindInputHandler(element, expr) {
+  attachBindInputHandler(element, expr, lifetime = this.getInlineLifetime(element)) {
     if (!(element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement || element instanceof HTMLSelectElement)) {
       return;
     }
@@ -5786,8 +6053,8 @@ var Engine = class _Engine {
       const scope = this.getScope(element);
       applyBindToScope(element, expr, scope);
     };
-    element.addEventListener("input", handler);
-    element.addEventListener("change", handler);
+    this.addEventListener(lifetime, element, "input", handler);
+    this.addEventListener(lifetime, element, "change", handler);
   }
   parseBindDirection(name) {
     if (name.includes(":from")) {
@@ -5907,7 +6174,7 @@ var Engine = class _Engine {
     }
     return void 0;
   }
-  watch(scope, expr, handler, element, behaviorId) {
+  watch(scope, expr, handler, element, behaviorId, lifetime) {
     const key = expr.trim();
     if (!key) {
       return;
@@ -5916,36 +6183,41 @@ var Engine = class _Engine {
     if (!root) {
       return;
     }
+    const owner = lifetime ?? (element ? this.getInlineLifetime(element) : void 0);
     let target = scope;
     while (target && !target.hasKey(root)) {
       target = target.parent;
     }
     if (target) {
       target.on(key, handler);
-      if (element) {
-        this.trackScopeWatcher(element, target, "path", handler, key, behaviorId);
-      }
+      this.trackScopeWatcher(target, "path", handler, key, owner);
       return;
     }
     let cursor = scope;
     while (cursor) {
       cursor.on(key, handler);
-      if (element) {
-        this.trackScopeWatcher(element, cursor, "path", handler, key, behaviorId);
-      }
+      this.trackScopeWatcher(cursor, "path", handler, key, owner);
       cursor = cursor.parent;
     }
   }
-  watchWithDebounce(scope, expr, handler, debounceMs, element, behaviorId) {
+  watchWithDebounce(scope, expr, handler, debounceMs, element, behaviorId, lifetime) {
     const effectiveHandler = debounceMs ? debounce(handler, debounceMs) : handler;
-    this.watch(scope, expr, effectiveHandler, element, behaviorId);
+    const owner = lifetime ?? (element ? this.getInlineLifetime(element) : void 0);
+    if (debounceMs && owner) {
+      owner.onCleanup(effectiveHandler.cancel);
+    }
+    this.watch(scope, expr, effectiveHandler, element, behaviorId, owner);
   }
-  watchExpression(scope, rootScope, expression, handler, debounceMs, element, behaviorId) {
+  watchExpression(scope, rootScope, expression, handler, debounceMs, element, behaviorId, lifetime) {
     const dependencies = this.getExpressionDependencies(expression);
     if (dependencies.length === 0) {
       return;
     }
     const effectiveHandler = debounceMs ? debounce(handler, debounceMs) : handler;
+    const owner = lifetime ?? (element ? this.getInlineLifetime(element) : void 0);
+    if (debounceMs && owner) {
+      owner.onCleanup(effectiveHandler.cancel);
+    }
     for (const dependency of dependencies) {
       this.watchExpressionDependency(
         scope,
@@ -5953,7 +6225,8 @@ var Engine = class _Engine {
         dependency,
         effectiveHandler,
         element,
-        behaviorId
+        behaviorId,
+        owner
       );
     }
   }
@@ -6043,14 +6316,14 @@ var Engine = class _Engine {
     visit(expression);
     return Array.from(dependencies);
   }
-  watchExpressionDependency(scope, rootScope, dependency, handler, element, behaviorId) {
+  watchExpressionDependency(scope, rootScope, dependency, handler, element, behaviorId, lifetime) {
     const path = dependency.trim();
     if (!path) {
       return;
     }
     if (path.startsWith("root.")) {
       const target = rootScope ?? this.getRootScope(scope);
-      this.watchDirectScope(target, path.slice("root.".length), handler, element, behaviorId);
+      this.watchDirectScope(target, path.slice("root.".length), handler, element, behaviorId, lifetime);
       return;
     }
     if (path.startsWith("parent.")) {
@@ -6061,28 +6334,27 @@ var Engine = class _Engine {
         targetPath = targetPath.slice("parent.".length);
       }
       if (target) {
-        this.watchDirectScope(target, targetPath, handler, element, behaviorId);
+        this.watchDirectScope(target, targetPath, handler, element, behaviorId, lifetime);
       }
       return;
     }
     if (path.startsWith("self.")) {
-      this.watchDirectScope(scope, path.slice("self.".length), handler, element, behaviorId);
+      this.watchDirectScope(scope, path.slice("self.".length), handler, element, behaviorId, lifetime);
       return;
     }
     const root = path.split(".")[0];
     if (!root || !this.hasScopeKey(scope, root) && root in this.globals) {
       return;
     }
-    this.watch(scope, path, handler, element, behaviorId);
+    this.watch(scope, path, handler, element, behaviorId, lifetime);
   }
-  watchDirectScope(scope, path, handler, element, behaviorId) {
+  watchDirectScope(scope, path, handler, element, behaviorId, lifetime) {
     if (!scope || !path) {
       return;
     }
     scope.on(path, handler);
-    if (element) {
-      this.trackScopeWatcher(element, scope, "path", handler, path, behaviorId);
-    }
+    const owner = lifetime ?? (element ? this.getInlineLifetime(element) : void 0);
+    this.trackScopeWatcher(scope, "path", handler, path, owner);
   }
   hasScopeKey(scope, key) {
     let cursor = scope;
@@ -6101,128 +6373,23 @@ var Engine = class _Engine {
     }
     return root;
   }
-  trackScopeWatcher(element, scope, kind, handler, key, behaviorId) {
-    const watchers = this.scopeWatchers.get(element) ?? [];
-    watchers.push({ scope, kind, handler, ...key ? { key } : {}, ...behaviorId !== void 0 ? { behaviorId } : {} });
-    this.scopeWatchers.set(element, watchers);
-  }
-  cleanupScopeWatchers(element, behaviorId) {
-    const watchers = this.scopeWatchers.get(element);
-    if (!watchers) {
+  trackScopeWatcher(scope, kind, handler, key, lifetime) {
+    if (!lifetime) {
       return;
     }
-    const remaining = [];
-    for (const watcher of watchers) {
-      if (behaviorId !== void 0 && watcher.behaviorId !== behaviorId) {
-        remaining.push(watcher);
-        continue;
+    lifetime.onCleanup(() => {
+      if (kind === "any") {
+        scope.offAny(handler);
+      } else if (key) {
+        scope.off(key, handler);
       }
-      if (watcher.kind === "any") {
-        watcher.scope.offAny(watcher.handler);
-        continue;
-      }
-      if (watcher.key) {
-        watcher.scope.off(watcher.key, watcher.handler);
-      }
-    }
-    if (remaining.length > 0) {
-      this.scopeWatchers.set(element, remaining);
-    } else {
-      this.scopeWatchers.delete(element);
-    }
+    });
   }
-  trackBehaviorClassMapBinding(element, behaviorId, binding) {
-    const bindings = this.behaviorClassMapBindings.get(element) ?? /* @__PURE__ */ new Map();
-    const behaviorBindings = bindings.get(behaviorId) ?? /* @__PURE__ */ new Set();
-    behaviorBindings.add(binding);
-    bindings.set(behaviorId, behaviorBindings);
-    this.behaviorClassMapBindings.set(element, bindings);
+  trackBehaviorClassMapBinding(element, binding, lifetime) {
+    lifetime.onCleanup(() => this.clearClassMapBinding(element, binding));
   }
-  cleanupBehaviorClassMapBindings(element, behaviorId) {
-    const bindings = this.behaviorClassMapBindings.get(element);
-    const behaviorBindings = bindings?.get(behaviorId);
-    if (!behaviorBindings) {
-      return;
-    }
-    for (const binding of behaviorBindings) {
-      this.clearClassMapBinding(element, binding);
-    }
-    bindings?.delete(behaviorId);
-    if (bindings?.size === 0) {
-      this.behaviorClassMapBindings.delete(element);
-    }
-  }
-  trackBehaviorInvalidator(element, behaviorId, invalidator) {
-    const invalidators = this.behaviorInvalidators.get(element) ?? /* @__PURE__ */ new Map();
-    const behaviorInvalidators = invalidators.get(behaviorId) ?? /* @__PURE__ */ new Set();
-    behaviorInvalidators.add(invalidator);
-    invalidators.set(behaviorId, behaviorInvalidators);
-    this.behaviorInvalidators.set(element, invalidators);
-  }
-  cleanupBehaviorInvalidators(element, behaviorId) {
-    const invalidators = this.behaviorInvalidators.get(element);
-    if (!invalidators) {
-      return;
-    }
-    const ids = behaviorId === void 0 ? Array.from(invalidators.keys()) : [behaviorId];
-    for (const id of ids) {
-      for (const invalidate of invalidators.get(id) ?? []) {
-        invalidate();
-      }
-      invalidators.delete(id);
-    }
-    if (invalidators.size === 0) {
-      this.behaviorInvalidators.delete(element);
-    }
-  }
-  cleanupBehaviorResources(element, behaviorId) {
-    this.cleanupScopeWatchers(element, behaviorId);
-    this.cleanupBehaviorInvalidators(element, behaviorId);
-    if (behaviorId !== void 0) {
-      this.cleanupBehaviorClassMapBindings(element, behaviorId);
-      return;
-    }
-    const bindings = this.behaviorClassMapBindings.get(element);
-    if (!bindings) {
-      return;
-    }
-    for (const id of Array.from(bindings.keys())) {
-      this.cleanupBehaviorClassMapBindings(element, id);
-    }
-  }
-  cleanupBehaviorListeners(element) {
-    const listenerMap = this.behaviorListeners.get(element);
-    if (listenerMap) {
-      for (const listeners of listenerMap.values()) {
-        for (const listener of listeners) {
-          listener.target.removeEventListener(listener.event, listener.handler, listener.options);
-        }
-      }
-      listenerMap.clear();
-      this.behaviorListeners.delete(element);
-    }
-    const bound = this.behaviorBindings.get(element);
-    if (bound) {
-      for (const behaviorId of bound) {
-        const boundElements = this.behaviorBoundElements.get(behaviorId);
-        boundElements?.delete(element);
-        if (boundElements?.size === 0) {
-          this.behaviorBoundElements.delete(behaviorId);
-        }
-      }
-    }
-    this.behaviorBindings.delete(element);
-    this.behaviorRootScopes.delete(element);
-  }
-  cleanupInlineListeners(element) {
-    const listeners = this.inlineListeners.get(element);
-    if (!listeners) {
-      return;
-    }
-    for (const listener of listeners) {
-      listener.target.removeEventListener(listener.event, listener.handler, listener.options);
-    }
-    this.inlineListeners.delete(element);
+  trackBehaviorInvalidator(invalidator, lifetime) {
+    lifetime.onCleanup(invalidator);
   }
   parseOnAttribute(name, value) {
     if (!name.startsWith("vsn-on:")) {
@@ -6323,45 +6490,57 @@ var Engine = class _Engine {
       );
     }
   }
-  attachOnHandler(element, config) {
+  attachOnHandler(element, config, lifetime = this.getInlineLifetime(element)) {
     const { listenerTarget, options, debounceMs } = this.getEventBindingConfig(
       element,
       config.flags,
-      config.flagArgs
+      config.flagArgs,
+      lifetime
     );
     let effectiveHandler;
     const handler = async (event) => {
-      if (!element.isConnected) {
+      if (!element.isConnected || lifetime.isDisposed) {
         listenerTarget.removeEventListener(config.event, effectiveHandler, options);
         return;
       }
       const scope = this.getScope(element);
-      if (!this.applyEventFlagBefore(element, scope, config.flags, config.flagArgs, event)) {
+      if (!this.applyEventFlagBefore(element, scope, config.flags, config.flagArgs, event, lifetime)) {
         return;
       }
       try {
-        await this.execute(config.code, scope, element);
-        this.evaluate(element);
+        await this.execute(config.code, scope, element, void 0, lifetime);
+        if (!lifetime.isDisposed) {
+          this.evaluate(element);
+        }
       } catch (error) {
         this.emitError(element, error);
       } finally {
-        this.applyEventFlagAfter(element, scope, config.flags, config.flagArgs, event);
+        this.applyEventFlagAfter(element, scope, config.flags, config.flagArgs, event, lifetime);
       }
     };
     effectiveHandler = debounceMs ? debounce(handler, debounceMs) : handler;
-    listenerTarget.addEventListener(config.event, effectiveHandler, options);
-    const listeners = this.inlineListeners.get(element) ?? [];
-    listeners.push({ target: listenerTarget, event: config.event, handler: effectiveHandler, options });
-    this.inlineListeners.set(element, listeners);
+    if (debounceMs && effectiveHandler.cancel) {
+      lifetime.onCleanup(effectiveHandler.cancel);
+    }
+    this.addEventListener(lifetime, listenerTarget, config.event, effectiveHandler, options);
   }
-  attachBehaviorOnHandler(element, event, body, flags, flagArgs, args, behaviorId, rootScope) {
+  attachBehaviorOnHandler(element, event, body, flags, flagArgs, args, rootScope, lifetime) {
     if (event.includes(".")) {
       throw new Error("vsn:on does not support dot modifiers; use !flags instead");
     }
-    const { listenerTarget, options, debounceMs } = this.getEventBindingConfig(element, flags, flagArgs);
+    const { listenerTarget, options, debounceMs } = this.getEventBindingConfig(
+      element,
+      flags,
+      flagArgs,
+      lifetime,
+      rootScope
+    );
     const handler = async (evt) => {
+      if (lifetime.isDisposed) {
+        return;
+      }
       const scope = this.getScope(element);
-      if (!this.applyEventFlagBefore(element, scope, flags, flagArgs, evt)) {
+      if (!this.applyEventFlagBefore(element, scope, flags, flagArgs, evt, lifetime, rootScope)) {
         return;
       }
       const previousValues = /* @__PURE__ */ new Map();
@@ -6369,13 +6548,21 @@ var Engine = class _Engine {
         const argName = args[0];
         if (argName) {
           previousValues.set(argName, scope.getPath(argName));
-          const [nextArg] = this.applyEventFlagArgTransforms(element, scope, flags, flagArgs, evt);
+          const [nextArg] = this.applyEventFlagArgTransforms(
+            element,
+            scope,
+            flags,
+            flagArgs,
+            evt,
+            lifetime,
+            rootScope
+          );
           scope.setPath(argName, nextArg);
         }
       }
       let failed = false;
       try {
-        await this.executeBlock(body, scope, element, rootScope);
+        await this.executeBlock(body, scope, element, rootScope, lifetime);
       } catch (error) {
         failed = true;
         this.emitError(element, error);
@@ -6383,22 +6570,23 @@ var Engine = class _Engine {
         for (const [name, value] of previousValues.entries()) {
           scope.setPath(name, value);
         }
-        this.applyEventFlagAfter(element, scope, flags, flagArgs, evt);
+        this.applyEventFlagAfter(element, scope, flags, flagArgs, evt, lifetime, rootScope);
       }
-      if (!failed) {
+      if (!failed && !lifetime.isDisposed) {
         this.evaluate(element);
       }
     };
     const effectiveHandler = debounceMs ? debounce(handler, debounceMs) : handler;
-    listenerTarget.addEventListener(event, effectiveHandler, options);
-    const listenerMap = this.behaviorListeners.get(element) ?? /* @__PURE__ */ new Map();
-    const listeners = listenerMap.get(behaviorId) ?? [];
-    listeners.push({ target: listenerTarget, event, handler: effectiveHandler, options });
-    listenerMap.set(behaviorId, listeners);
-    this.behaviorListeners.set(element, listenerMap);
+    if (debounceMs) {
+      lifetime.onCleanup(effectiveHandler.cancel);
+    }
+    this.addEventListener(lifetime, listenerTarget, event, effectiveHandler, options);
   }
-  attachGetHandler(element, autoLoad = false) {
+  attachGetHandler(element, autoLoad = false, lifetime = this.getInlineLifetime(element)) {
     const handler = async () => {
+      if (lifetime.isDisposed) {
+        return;
+      }
       const config = this.getBindings.get(element);
       if (!config) {
         return;
@@ -6407,22 +6595,26 @@ var Engine = class _Engine {
         await applyGet(element, config, this.getScope(element), (target) => {
           this.handleHtmlBehaviors(target);
         });
+        if (lifetime.isDisposed) {
+          return;
+        }
       } catch (error) {
         console.warn("vsn:getError", error);
         element.dispatchEvent(new CustomEvent("vsn:getError", { detail: { error }, bubbles: true }));
       }
     };
-    element.addEventListener("click", (event) => {
+    const clickHandler = (event) => {
       if (event.target !== element) {
         return;
       }
       void handler();
-    });
+    };
+    this.addEventListener(lifetime, element, "click", clickHandler);
     if (autoLoad) {
       Promise.resolve().then(handler);
     }
   }
-  getEventBindingConfig(element, flags, flagArgs) {
+  getEventBindingConfig(element, flags, flagArgs, lifetime, rootScope) {
     let listenerTarget = element;
     let options = {};
     let debounceMs;
@@ -6436,9 +6628,11 @@ var Engine = class _Engine {
         args: flagArgs[name],
         element,
         scope: this.getScope(element),
-        rootScope: void 0,
+        rootScope,
         event: void 0,
-        engine: this
+        engine: this,
+        lifetime,
+        onCleanup: (disposer) => lifetime.onCleanup(disposer)
       });
       if (!patch) {
         continue;
@@ -6459,7 +6653,7 @@ var Engine = class _Engine {
       ...debounceMs !== void 0 ? { debounceMs } : {}
     };
   }
-  applyEventFlagBefore(element, scope, flags, flagArgs, event) {
+  applyEventFlagBefore(element, scope, flags, flagArgs, event, lifetime, rootScope) {
     for (const name of Object.keys(flags)) {
       const handler = this.flagHandlers.get(name);
       if (!handler?.onEventBefore) {
@@ -6470,9 +6664,11 @@ var Engine = class _Engine {
         args: flagArgs[name],
         element,
         scope,
-        rootScope: void 0,
+        rootScope,
         event,
-        engine: this
+        engine: this,
+        lifetime,
+        onCleanup: (disposer) => lifetime.onCleanup(disposer)
       });
       if (result === false) {
         return false;
@@ -6480,7 +6676,7 @@ var Engine = class _Engine {
     }
     return true;
   }
-  applyEventFlagAfter(element, scope, flags, flagArgs, event) {
+  applyEventFlagAfter(element, scope, flags, flagArgs, event, lifetime, rootScope) {
     for (const name of Object.keys(flags)) {
       const handler = this.flagHandlers.get(name);
       if (!handler?.onEventAfter) {
@@ -6491,13 +6687,15 @@ var Engine = class _Engine {
         args: flagArgs[name],
         element,
         scope,
-        rootScope: void 0,
+        rootScope,
         event,
-        engine: this
+        engine: this,
+        lifetime,
+        onCleanup: (disposer) => lifetime.onCleanup(disposer)
       });
     }
   }
-  applyEventFlagArgTransforms(element, scope, flags, flagArgs, event) {
+  applyEventFlagArgTransforms(element, scope, flags, flagArgs, event, lifetime, rootScope) {
     let args = [event];
     for (const name of Object.keys(flags)) {
       const handler = this.flagHandlers.get(name);
@@ -6510,9 +6708,11 @@ var Engine = class _Engine {
           args: flagArgs[name],
           element,
           scope,
-          rootScope: void 0,
+          rootScope,
           event,
-          engine: this
+          engine: this,
+          lifetime,
+          onCleanup: (disposer) => lifetime.onCleanup(disposer)
         },
         args
       );
@@ -6560,28 +6760,46 @@ var Engine = class _Engine {
     const expectedKey = keyAliases[flag] ?? flag;
     return key === expectedKey;
   }
-  async withExecutionElement(element, fn) {
+  withExecutionFrame(element, lifetime, fn) {
     if (!element) {
-      await fn();
-      return;
+      return fn();
     }
-    this.executionStack.push(element);
-    try {
-      await fn();
-    } finally {
+    this.executionStack.push({ element, ...lifetime ? { lifetime } : {} });
+    const pop = () => {
       this.executionStack.pop();
+    };
+    let result;
+    try {
+      result = fn();
+    } catch (error) {
+      pop();
+      throw error;
     }
+    if (isPromiseLike2(result)) {
+      return Promise.resolve(result).finally(pop);
+    }
+    pop();
+    return result;
+  }
+  withExecutionContext(element, lifetime, fn) {
+    return this.withExecutionFrame(element, lifetime, fn);
+  }
+  async withExecutionElement(element, lifetime, fn) {
+    await this.withExecutionFrame(element, lifetime, fn);
   }
   getCurrentElement() {
-    return this.executionStack[this.executionStack.length - 1];
+    return this.executionStack[this.executionStack.length - 1]?.element;
   }
-  async execute(code, scope, element, rootScope) {
+  getCurrentLifetime() {
+    return this.executionStack[this.executionStack.length - 1]?.lifetime;
+  }
+  async execute(code, scope, element, rootScope, lifetime) {
     let block = this.codeCache.get(code);
     if (!block) {
       block = Parser.parseInline(code);
       this.codeCache.set(code, block);
     }
-    await this.withExecutionElement(element, async () => {
+    await this.withExecutionElement(element, lifetime, async () => {
       const selfRef = this.getGroupProxy(scope);
       const context = {
         scope,
@@ -6589,13 +6807,14 @@ var Engine = class _Engine {
         globals: this.globals,
         engine: this,
         ...element ? { element } : {},
-        self: selfRef
+        self: selfRef,
+        ...lifetime ? { lifetime } : {}
       };
       await block.evaluate(context);
     });
   }
-  async executeBlock(block, scope, element, rootScope) {
-    await this.withExecutionElement(element, async () => {
+  async executeBlock(block, scope, element, rootScope, lifetime) {
+    await this.withExecutionElement(element, lifetime, async () => {
       const selfRef = this.getGroupProxy(scope);
       const context = {
         scope,
@@ -6603,23 +6822,24 @@ var Engine = class _Engine {
         globals: this.globals,
         engine: this,
         ...element ? { element } : {},
-        self: selfRef
+        self: selfRef,
+        ...lifetime ? { lifetime } : {}
       };
       await block.evaluate(context);
     });
   }
-  async safeExecute(code, scope, element, rootScope) {
+  async safeExecute(code, scope, element, rootScope, lifetime) {
     try {
-      await this.execute(code, scope, element, rootScope);
+      await this.execute(code, scope, element, rootScope, lifetime);
     } catch (error) {
       if (element) {
         this.emitError(element, error);
       }
     }
   }
-  async safeExecuteBlock(block, scope, element, rootScope) {
+  async safeExecuteBlock(block, scope, element, rootScope, lifetime) {
     try {
-      await this.executeBlock(block, scope, element, rootScope);
+      await this.executeBlock(block, scope, element, rootScope, lifetime);
     } catch (error) {
       if (element) {
         this.emitError(element, error);
@@ -7090,57 +7310,63 @@ var Engine = class _Engine {
     }
     return (hash >>> 0).toString(16);
   }
-  applyBehaviorFunctions(element, scope, functions, rootScope) {
+  applyBehaviorFunctions(element, scope, functions, rootScope, lifetime) {
     for (const declaration of functions) {
-      this.applyBehaviorFunction(element, scope, declaration, rootScope);
+      this.applyBehaviorFunction(element, scope, declaration, rootScope, lifetime);
     }
   }
-  applyBehaviorFunction(element, scope, declaration, rootScope) {
+  applyBehaviorFunction(element, scope, declaration, rootScope, lifetime) {
     const existing = scope.getPath(declaration.name);
     if (existing !== void 0 && typeof existing !== "function") {
       throw new Error(`Cannot override non-function '${declaration.name}' with a function`);
     }
     const selfRef = this.getGroupProxy(scope);
     const fn = (...args) => {
-      const callScope = scope.createChild ? scope.createChild() : scope;
-      const context = {
-        scope: callScope,
-        rootScope: rootScope ?? callScope,
-        globals: this.globals,
-        engine: this,
-        element,
-        self: selfRef,
-        returnValue: void 0,
-        returning: false,
-        breaking: false,
-        continuing: false
-      };
-      const previousValues = /* @__PURE__ */ new Map();
-      const restore = () => {
-        if (callScope === scope) {
-          this.restoreFunctionParams(callScope, declaration.params, previousValues);
+      if (lifetime.isDisposed) {
+        return void 0;
+      }
+      return this.withExecutionContext(element, lifetime, () => {
+        const callScope = scope.createChild ? scope.createChild() : scope;
+        const context = {
+          scope: callScope,
+          rootScope: rootScope ?? callScope,
+          globals: this.globals,
+          engine: this,
+          element,
+          self: selfRef,
+          returnValue: void 0,
+          returning: false,
+          breaking: false,
+          continuing: false,
+          lifetime
+        };
+        const previousValues = /* @__PURE__ */ new Map();
+        const restore = () => {
+          if (callScope === scope) {
+            this.restoreFunctionParams(callScope, declaration.params, previousValues);
+          }
+        };
+        let result;
+        try {
+          const paramsResult = this.applyFunctionParams(callScope, declaration.params, previousValues, context, args);
+          if (isPromiseLike2(paramsResult)) {
+            result = Promise.resolve(paramsResult).then(() => declaration.body.evaluate(context));
+          } else {
+            result = declaration.body.evaluate(context);
+          }
+        } catch (error) {
+          restore();
+          throw error;
         }
-      };
-      let result;
-      try {
-        const paramsResult = this.applyFunctionParams(callScope, declaration.params, previousValues, context, args);
-        if (isPromiseLike2(paramsResult)) {
-          result = Promise.resolve(paramsResult).then(() => declaration.body.evaluate(context));
-        } else {
-          result = declaration.body.evaluate(context);
+        if (declaration.isAsync) {
+          return Promise.resolve(result).then(() => context.returnValue).finally(restore);
         }
-      } catch (error) {
+        if (isPromiseLike2(result)) {
+          return Promise.resolve(result).then(() => context.returnValue).finally(restore);
+        }
         restore();
-        throw error;
-      }
-      if (declaration.isAsync) {
-        return Promise.resolve(result).then(() => context.returnValue).finally(restore);
-      }
-      if (isPromiseLike2(result)) {
-        return Promise.resolve(result).then(() => context.returnValue).finally(restore);
-      }
-      restore();
-      return context.returnValue;
+        return context.returnValue;
+      });
     };
     scope.setPath(declaration.name, fn);
   }
@@ -7186,17 +7412,28 @@ var Engine = class _Engine {
       scope.setPath(name, previousValues.get(name));
     }
   }
-  async applyBehaviorDeclarations(element, scope, declarations, rootScope, behaviorId) {
+  async applyBehaviorDeclarations(element, scope, declarations, rootScope, behaviorId, lifetime) {
     for (const declaration of declarations) {
-      await this.applyBehaviorDeclaration(element, scope, declaration, rootScope, behaviorId);
+      if (lifetime?.isDisposed) {
+        return;
+      }
+      await this.applyBehaviorDeclaration(element, scope, declaration, rootScope, behaviorId, lifetime);
     }
   }
-  async applyBehaviorDeclaration(element, scope, declaration, rootScope, behaviorId) {
+  async applyBehaviorDeclaration(element, scope, declaration, rootScope, behaviorId, lifetime) {
     const selfRef = this.getGroupProxy(scope);
-    const context = { scope, rootScope, globals: this.globals, engine: this, element, self: selfRef };
+    const context = {
+      scope,
+      rootScope,
+      globals: this.globals,
+      engine: this,
+      element,
+      self: selfRef,
+      ...lifetime ? { lifetime } : {}
+    };
     const operator = declaration.operator;
     const debounceMs = declaration.flags.debounce ? declaration.flagArgs.debounce ?? 200 : void 0;
-    const transform = (value) => this.applyCustomFlagTransforms(value, element, scope, declaration);
+    const transform = (value) => this.applyCustomFlagTransforms(value, element, scope, declaration, lifetime);
     const importantKey = this.getImportantKey(declaration);
     if (!declaration.flags.important && importantKey && this.isImportant(element, importantKey)) {
       return;
@@ -7204,10 +7441,13 @@ var Engine = class _Engine {
     if (importantKey && this.isInlineDeclaration(element, importantKey)) {
       return;
     }
-    this.applyCustomFlags(element, scope, declaration);
+    if (!lifetime) {
+      return;
+    }
+    this.applyCustomFlags(element, scope, declaration, lifetime);
     if (declaration.target instanceof IdentifierExpression) {
       const value = await declaration.value.evaluate(context);
-      const transformed = this.applyCustomFlagTransforms(value, element, scope, declaration);
+      const transformed = this.applyCustomFlagTransforms(value, element, scope, declaration, lifetime);
       scope.setPath(declaration.target.name, transformed);
       if (declaration.flags.important && importantKey) {
         this.markImportant(element, importantKey);
@@ -7219,12 +7459,12 @@ var Engine = class _Engine {
     }
     const target = declaration.target;
     if (behaviorId !== void 0 && target.kind === "attr" && target.name === "class") {
-      this.trackBehaviorClassMapBinding(element, behaviorId, declaration);
+      this.trackBehaviorClassMapBinding(element, declaration, lifetime);
     }
     const exprIdentifier = declaration.value instanceof IdentifierExpression ? declaration.value.name : void 0;
     if (operator === ":>") {
       if (exprIdentifier) {
-        this.applyDirectiveToScope(element, target, exprIdentifier, scope, debounceMs, rootScope, transform);
+        this.applyDirectiveToScope(element, target, exprIdentifier, scope, debounceMs, rootScope, transform, lifetime);
       }
       if (declaration.flags.important && importantKey) {
         this.markImportant(element, importantKey);
@@ -7232,11 +7472,11 @@ var Engine = class _Engine {
       return;
     }
     if (operator === ":=" && exprIdentifier) {
-      this.applyDirectiveToScope(element, target, exprIdentifier, scope, debounceMs, rootScope, transform);
+      this.applyDirectiveToScope(element, target, exprIdentifier, scope, debounceMs, rootScope, transform, lifetime);
     }
     if (!exprIdentifier) {
       const value = await declaration.value.evaluate(context);
-      const transformed = this.applyCustomFlagTransforms(value, element, scope, declaration);
+      const transformed = this.applyCustomFlagTransforms(value, element, scope, declaration, lifetime);
       this.setDirectiveValue(element, target, transformed, declaration);
       const shouldWatch2 = operator === ":<" || operator === ":=";
       if (shouldWatch2) {
@@ -7248,7 +7488,8 @@ var Engine = class _Engine {
           debounceMs,
           rootScope,
           declaration,
-          behaviorId
+          behaviorId,
+          lifetime
         );
       }
       if (declaration.flags.important && importantKey) {
@@ -7266,13 +7507,14 @@ var Engine = class _Engine {
       shouldWatch,
       rootScope,
       declaration,
-      behaviorId
+      behaviorId,
+      lifetime
     );
     if (declaration.flags.important && importantKey) {
       this.markImportant(element, importantKey);
     }
   }
-  applyCustomFlags(element, scope, declaration) {
+  applyCustomFlags(element, scope, declaration, lifetime) {
     if (this.flagHandlers.size === 0) {
       return;
     }
@@ -7285,14 +7527,17 @@ var Engine = class _Engine {
         args: declaration.flagArgs[name],
         element,
         scope,
-        declaration
+        declaration,
+        lifetime,
+        onCleanup: (disposer) => lifetime.onCleanup(disposer)
       });
     }
   }
-  applyCustomFlagTransforms(value, element, scope, declaration) {
+  applyCustomFlagTransforms(value, element, scope, declaration, lifetime) {
     if (this.flagHandlers.size === 0) {
       return value;
     }
+    const owner = lifetime ?? this.getInlineLifetime(element);
     let nextValue = value;
     for (const [name, handler] of this.flagHandlers) {
       if (!declaration.flags[name] || !handler.transformValue) {
@@ -7304,14 +7549,16 @@ var Engine = class _Engine {
           args: declaration.flagArgs[name],
           element,
           scope,
-          declaration
+          declaration,
+          lifetime: owner,
+          onCleanup: (disposer) => owner.onCleanup(disposer)
         },
         nextValue
       );
     }
     return nextValue;
   }
-  async applyBehaviorModifierHook(hook, behavior, element, scope, rootScope) {
+  async applyBehaviorModifierHook(hook, behavior, element, scope, rootScope, lifetime) {
     if (this.behaviorModifiers.size === 0) {
       return;
     }
@@ -7330,7 +7577,9 @@ var Engine = class _Engine {
         scope,
         rootScope,
         behavior,
-        engine: this
+        engine: this,
+        lifetime,
+        onCleanup: (disposer) => lifetime.onCleanup(disposer)
       });
     }
   }
@@ -7346,9 +7595,12 @@ var Engine = class _Engine {
     }
     return false;
   }
-  applyDirectiveFromScope(element, target, expr, scope, debounceMs, watch = true, rootScope, binding, behaviorId) {
+  applyDirectiveFromScope(element, target, expr, scope, debounceMs, watch = true, rootScope, binding, behaviorId, lifetime) {
     if (target.kind === "attr" && target.name === "html" && element instanceof HTMLElement) {
       const handler2 = () => {
+        if (lifetime?.isDisposed) {
+          return;
+        }
         const useRoot = expr.startsWith("root.") && rootScope;
         const sourceScope = useRoot ? rootScope : scope;
         const localExpr = useRoot ? `self.${expr.slice("root.".length)}` : expr;
@@ -7361,11 +7613,14 @@ var Engine = class _Engine {
         const useRoot = expr.startsWith("root.") && rootScope;
         const sourceScope = useRoot ? rootScope : scope;
         const watchExpr = useRoot ? expr.slice("root.".length) : expr;
-        this.watchWithDebounce(sourceScope, watchExpr, handler2, debounceMs, element, behaviorId);
+        this.watchWithDebounce(sourceScope, watchExpr, handler2, debounceMs, element, behaviorId, lifetime);
       }
       return;
     }
     const handler = () => {
+      if (lifetime?.isDisposed) {
+        return;
+      }
       const useRoot = expr.startsWith("root.") && rootScope;
       const sourceScope = useRoot ? rootScope : scope;
       const localExpr = useRoot ? `self.${expr.slice("root.".length)}` : expr;
@@ -7383,22 +7638,33 @@ var Engine = class _Engine {
       const useRoot = expr.startsWith("root.") && rootScope;
       const sourceScope = useRoot ? rootScope : scope;
       const watchExpr = useRoot ? expr.slice("root.".length) : expr;
-      this.watchWithDebounce(sourceScope, watchExpr, handler, debounceMs, element, behaviorId);
+      this.watchWithDebounce(sourceScope, watchExpr, handler, debounceMs, element, behaviorId, lifetime);
     }
   }
-  applyDirectiveFromExpression(element, target, expr, scope, debounceMs, rootScope, binding, behaviorId) {
+  applyDirectiveFromExpression(element, target, expr, scope, debounceMs, rootScope, binding, behaviorId, lifetime) {
     let version = 0;
-    if (behaviorId !== void 0) {
-      this.trackBehaviorInvalidator(element, behaviorId, () => {
+    if (lifetime) {
+      this.trackBehaviorInvalidator(() => {
         version += 1;
-      });
+      }, lifetime);
     }
     const handler = async () => {
+      if (lifetime?.isDisposed) {
+        return;
+      }
       const currentVersion = ++version;
       const selfRef = this.getGroupProxy(scope);
-      const context = { scope, rootScope, globals: this.globals, engine: this, element, self: selfRef };
+      const context = {
+        scope,
+        rootScope,
+        globals: this.globals,
+        engine: this,
+        element,
+        self: selfRef,
+        ...lifetime ? { lifetime } : {}
+      };
       const value = await expr.evaluate(context);
-      if (currentVersion !== version) {
+      if (currentVersion !== version || lifetime?.isDisposed) {
         return;
       }
       this.setDirectiveValue(element, target, value, binding);
@@ -7413,19 +7679,20 @@ var Engine = class _Engine {
       },
       debounceMs,
       element,
-      behaviorId
+      behaviorId,
+      lifetime
     );
   }
-  applyDirectiveToScope(element, target, expr, scope, debounceMs, rootScope, transform) {
+  applyDirectiveToScope(element, target, expr, scope, debounceMs, rootScope, transform, lifetime) {
     const useRoot = expr.startsWith("root.") && rootScope;
     const targetScope = useRoot ? rootScope : scope;
     const targetExpr = useRoot ? `self.${expr.slice("root.".length)}` : expr;
     if (target.kind === "attr" && target.name === "value") {
-      this.applyValueBindingToScope(element, targetExpr, debounceMs, targetScope, transform);
+      this.applyValueBindingToScope(element, targetExpr, debounceMs, targetScope, transform, lifetime);
       return;
     }
     if (target.kind === "attr" && target.name === "checked") {
-      this.applyCheckedBindingToScope(element, targetExpr, debounceMs, targetScope, transform);
+      this.applyCheckedBindingToScope(element, targetExpr, debounceMs, targetScope, transform, lifetime);
       return;
     }
     const value = this.getDirectiveValue(element, target);
@@ -7434,7 +7701,7 @@ var Engine = class _Engine {
       targetScope.set(targetExpr, nextValue);
     }
   }
-  applyCheckedBindingToScope(element, expr, debounceMs, scope, transform) {
+  applyCheckedBindingToScope(element, expr, debounceMs, scope, transform, lifetime) {
     if (!(element instanceof HTMLInputElement)) {
       return;
     }
@@ -7444,11 +7711,15 @@ var Engine = class _Engine {
       targetScope.set(expr, value);
     };
     const effectiveHandler = debounceMs ? debounce(handler, debounceMs) : handler;
+    const owner = lifetime ?? this.getInlineLifetime(element);
+    if (debounceMs) {
+      owner.onCleanup(effectiveHandler.cancel);
+    }
     effectiveHandler();
-    element.addEventListener("change", effectiveHandler);
-    element.addEventListener("input", effectiveHandler);
+    this.addEventListener(owner, element, "change", effectiveHandler);
+    this.addEventListener(owner, element, "input", effectiveHandler);
   }
-  applyValueBindingToScope(element, expr, debounceMs, scope, transform) {
+  applyValueBindingToScope(element, expr, debounceMs, scope, transform, lifetime) {
     if (!(element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement || element instanceof HTMLSelectElement)) {
       return;
     }
@@ -7459,9 +7730,13 @@ var Engine = class _Engine {
       targetScope.set(expr, nextValue);
     };
     const effectiveHandler = debounceMs ? debounce(handler, debounceMs) : handler;
+    const owner = lifetime ?? this.getInlineLifetime(element);
+    if (debounceMs) {
+      owner.onCleanup(effectiveHandler.cancel);
+    }
     effectiveHandler();
-    element.addEventListener("input", effectiveHandler);
-    element.addEventListener("change", effectiveHandler);
+    this.addEventListener(owner, element, "input", effectiveHandler);
+    this.addEventListener(owner, element, "change", effectiveHandler);
   }
   setDirectiveValue(element, target, value, binding) {
     if (target.kind === "attr" && target.name === "html" && element instanceof HTMLElement) {
@@ -7822,6 +8097,7 @@ if (typeof document !== "undefined") {
   IfNode,
   IndexExpression,
   Lexer,
+  Lifetime,
   LiteralExpression,
   MemberExpression,
   ObjectExpression,

@@ -18,7 +18,7 @@ HTML-first, selector-driven character. The priority labels are directional:
   summaries.
 - [ ] Replace static-only dependency discovery with a more precise dependency
   model, including dynamic indexes and conditional reads.
-- [ ] Add a unified lifetime/disposer API for watchers, event listeners,
+- [x] Add a unified lifetime/disposer API for watchers, event listeners,
   timers, observers, dynamic behavior registrations, and plugin resources.
 - [ ] Add `AbortSignal`/cancellation support for async functions, bindings,
   and network requests; prevent stale work from mutating unmounted elements.

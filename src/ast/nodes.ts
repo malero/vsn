@@ -1,3 +1,5 @@
+import type { Lifetime } from "../runtime/lifetime";
+
 export interface ExecutionContext {
   scope: {
     getPath(key: string): any;
@@ -10,9 +12,15 @@ export interface ExecutionContext {
   engine?: {
     getScope?(element: Element): ExecutionContext["scope"];
     setHtml?(element: Element, value: unknown, options?: { trusted?: boolean }): void;
+    withExecutionContext?<T>(
+      element: Element | undefined,
+      lifetime: Lifetime | undefined,
+      fn: () => T
+    ): T;
   };
   element?: Element;
   self?: any;
+  lifetime?: Lifetime;
   returnValue?: any;
   returning?: boolean;
   breaking?: boolean;
@@ -866,9 +874,45 @@ export class FunctionExpression extends BaseNode {
     const scope = context.scope;
     const globals = context.globals;
     const element = context.element;
+    const lifetime = context.lifetime;
 
     if (this.isAsync) {
       return (...args: any[]) => {
+        const invoke = () => {
+          const activeScope = scope?.createChild ? scope.createChild() : scope;
+          const inner: ExecutionContext = {
+            scope: activeScope,
+            rootScope: context.rootScope,
+            ...(globals ? { globals } : {}),
+            ...(context.engine ? { engine: context.engine } : {}),
+            ...(element ? { element } : {}),
+            ...(context.self ? { self: context.self } : {}),
+            ...(lifetime ? { lifetime } : {}),
+            returnValue: undefined,
+            returning: false,
+            breaking: false,
+            continuing: false
+          };
+          const previousValues = new Map<string, any>();
+          const applyResult = activeScope
+            ? this.applyParams(activeScope, previousValues, inner, args)
+            : undefined;
+          const bodyResult = resolveMaybe(applyResult, () => this.body.evaluate(inner));
+          const finalResult = resolveMaybe(bodyResult, () => inner.returnValue);
+          return Promise.resolve(finalResult).finally(() => {
+            if (activeScope && activeScope === scope) {
+              this.restoreParams(activeScope, previousValues);
+            }
+          });
+        };
+        return context.engine?.withExecutionContext
+          ? context.engine.withExecutionContext(element, lifetime, invoke)
+          : invoke();
+      };
+    }
+
+    return (...args: any[]) => {
+      const invoke = () => {
         const activeScope = scope?.createChild ? scope.createChild() : scope;
         const inner: ExecutionContext = {
           scope: activeScope,
@@ -877,6 +921,7 @@ export class FunctionExpression extends BaseNode {
           ...(context.engine ? { engine: context.engine } : {}),
           ...(element ? { element } : {}),
           ...(context.self ? { self: context.self } : {}),
+          ...(lifetime ? { lifetime } : {}),
           returnValue: undefined,
           returning: false,
           breaking: false,
@@ -888,45 +933,21 @@ export class FunctionExpression extends BaseNode {
           : undefined;
         const bodyResult = resolveMaybe(applyResult, () => this.body.evaluate(inner));
         const finalResult = resolveMaybe(bodyResult, () => inner.returnValue);
-        return Promise.resolve(finalResult).finally(() => {
-          if (activeScope && activeScope === scope) {
-            this.restoreParams(activeScope, previousValues);
-          }
-        });
+        if (isPromiseLike(finalResult)) {
+          return finalResult.finally(() => {
+            if (activeScope && activeScope === scope) {
+              this.restoreParams(activeScope, previousValues);
+            }
+          });
+        }
+        if (activeScope && activeScope === scope) {
+          this.restoreParams(activeScope, previousValues);
+        }
+        return finalResult;
       };
-    }
-
-    return (...args: any[]) => {
-      const activeScope = scope?.createChild ? scope.createChild() : scope;
-      const inner: ExecutionContext = {
-        scope: activeScope,
-        rootScope: context.rootScope,
-        ...(globals ? { globals } : {}),
-        ...(context.engine ? { engine: context.engine } : {}),
-        ...(element ? { element } : {}),
-        ...(context.self ? { self: context.self } : {}),
-        returnValue: undefined,
-        returning: false,
-        breaking: false,
-        continuing: false
-      };
-      const previousValues = new Map<string, any>();
-      const applyResult = activeScope
-        ? this.applyParams(activeScope, previousValues, inner, args)
-        : undefined;
-      const bodyResult = resolveMaybe(applyResult, () => this.body.evaluate(inner));
-      const finalResult = resolveMaybe(bodyResult, () => inner.returnValue);
-      if (isPromiseLike(finalResult)) {
-        return finalResult.finally(() => {
-          if (activeScope && activeScope === scope) {
-            this.restoreParams(activeScope, previousValues);
-          }
-        });
-      }
-      if (activeScope && activeScope === scope) {
-        this.restoreParams(activeScope, previousValues);
-      }
-      return finalResult;
+      return context.engine?.withExecutionContext
+        ? context.engine.withExecutionContext(element, lifetime, invoke)
+        : invoke();
     };
   }
 
