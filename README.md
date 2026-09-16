@@ -65,7 +65,7 @@ $color :< theme.color;
 
 `construct` runs when a behavior binds and `destruct` runs when it unbinds. `self`, `parent`, and `root` address the current, parent, and behavior-root scopes. Named functions are synchronous unless declared `async`; async functions return promises and may use `await`.
 
-Inline attributes include `vsn-bind`, `vsn-if`, `vsn-show`, `vsn-html`, `vsn-each`, `vsn-get`, and `vsn-on:<event>`. `vsn-if` and `vsn-show` are currently visibility-only aliases: both toggle `display` without removing the element from the DOM. `vsn-get` sends htmx-compatible partial-request headers: `HX-Request`, `HX-Current-URL`, and, when available, `HX-Target`, `HX-Trigger`, and `HX-Trigger-Name`.
+Inline attributes include `vsn-bind`, `vsn-if`, `vsn-show`, `vsn-text`, `vsn-html`, `vsn-each`, `vsn-get`, and `vsn-on:<event>`. `vsn-text` writes literal text with `textContent`; `vsn-html` sanitizes HTML by default, while `vsn-html!trusted` explicitly bypasses sanitization. Untrusted HTML never activates VSN behavior scripts or `vsn-*` attributes. `vsn-if` and `vsn-show` are currently visibility-only aliases: both toggle `display` without removing the element from the DOM. `vsn-get` sends htmx-compatible partial-request headers: `HX-Request`, `HX-Current-URL`, and, when available, `HX-Target`, `HX-Trigger`, and `HX-Trigger-Name`.
 
 ## Plugins
 
@@ -83,7 +83,9 @@ registerSanitizeHtml(engine);
 registerMicrodata(engine);
 ```
 
-HTML extensions should use `engine.registerHtmlTransformer(transform, { priority })`; lower priorities run first and the returned disposer removes a transformer. The templates transformer runs before sanitization. The sanitizer uses DOMPurify when available; its fallback is intentionally minimal and is not a substitute for a full sanitizer for hostile HTML.
+HTML insertion is sanitized by the engine by default. `registerSanitizeHtml(engine)` is optional and can replace the built-in sanitizer with DOMPurify or a custom sanitizer; `dompurifyConfig` can be used to allow application-specific custom elements. HTML extensions should use `engine.registerHtmlTransformer(transform, { priority })`; lower priorities run first and the returned disposer removes a transformer. Transformers run before the sanitizer.
+
+When Trusted Types is available, HTML output is passed through the engine's Trusted Types policy before it reaches `innerHTML`. Applications using a CSP-managed policy can provide `trustedTypesPolicy` or `trustedTypesPolicyName` through `Engine` options.
 
 Mounted elements and behavior bindings each have a `Lifetime`. Extensions can register teardown work with `onCleanup`, and cleanup runs once when the owning element or behavior unbinds:
 

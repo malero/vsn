@@ -1,4 +1,5 @@
 import { Scope } from "./scope";
+import { resolveHtmlSanitizer, sanitizeVsnMarkup } from "./html-safety";
 
 export function applyHtml(
   element: HTMLElement,
@@ -11,5 +12,5 @@ export function applyHtml(
   }
   const value = scope.get(key);
   const html = value == null ? "" : String(value);
-  element.innerHTML = html;
+  element.innerHTML = sanitizeVsnMarkup(html, resolveHtmlSanitizer());
 }

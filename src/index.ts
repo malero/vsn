@@ -35,8 +35,10 @@ export type {
   HtmlTransformContext,
   HtmlTransformer,
   HtmlTransformOptions,
-  RegisteredBehavior
+  RegisteredBehavior,
+  TrustedTypesPolicy
 } from "./runtime/engine";
+export type { HtmlSanitizer, HtmlSanitizerOptions } from "./runtime/html-safety";
 
 export function parseCFS(source: string) {
   const parser = new Parser(source);

@@ -22,7 +22,7 @@ HTML-first, selector-driven character. The priority labels are directional:
   timers, observers, dynamic behavior registrations, and plugin resources.
 - [x] Add `AbortSignal`/cancellation support for async functions, bindings,
   and network requests; prevent stale work from mutating unmounted elements.
-- [ ] Make HTML insertion safe by default. Keep explicit trusted HTML as an
+- [x] Make HTML insertion safe by default. Keep explicit trusted HTML as an
   opt-in and integrate Trusted Types where available.
 
 ## P1 — DOM and application semantics

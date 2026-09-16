@@ -1,5 +1,20 @@
-// src/plugins/templates.ts
+// src/runtime/html-safety.ts
 var TRUSTED_HTML_KEY = "__vsnTrustedHtml";
+function unwrapTrustedHtml(value) {
+  if (!value || typeof value !== "object") {
+    return void 0;
+  }
+  const candidate = value;
+  if (candidate[TRUSTED_HTML_KEY] !== true) {
+    return void 0;
+  }
+  return { value: candidate.value, trusted: true };
+}
+function isTrustedHtmlValue(value) {
+  return Boolean(unwrapTrustedHtml(value));
+}
+
+// src/plugins/templates.ts
 function registerTemplates(engine) {
   engine.registerGlobal("html", html);
   return engine.registerHtmlTransformer((value) => {
@@ -40,9 +55,6 @@ function html(stringsOrValue, ...values) {
 }
 function isTemplate(value) {
   return Boolean(value && typeof value === "object" && value.__vsnTemplate);
-}
-function isTrustedHtmlValue(value) {
-  return Boolean(value && typeof value === "object" && value[TRUSTED_HTML_KEY]);
 }
 function isElement(value) {
   return typeof Element !== "undefined" && value instanceof Element;

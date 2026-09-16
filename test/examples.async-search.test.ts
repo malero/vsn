@@ -10,7 +10,7 @@ describe("async-search cookbook example", () => {
     const html = await readFile("examples/async-search.html", "utf8");
     const originalFetch = globalThis.fetch;
     document.body.innerHTML = `
-      <button id="load" vsn-get="/async-search.html" vsn-target="#example"></button>
+      <button id="load" vsn-get!trusted="/async-search.html" vsn-target="#example"></button>
       <main id="example"></main>
     `;
 

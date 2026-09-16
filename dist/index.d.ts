@@ -664,6 +664,12 @@ declare class Scope {
 declare function computed<T>(scope: Scope, getter: ComputedGetter<T>, options?: ReactiveOptions): ComputedRef<T>;
 declare function effect(scope: Scope, callback: EffectCallback, options?: EffectOptions): Disposer;
 
+type HtmlSanitizer = (html: string) => string;
+type HtmlSanitizerOptions = {
+    dompurifyConfig?: Record<string, any>;
+    sanitizer?: HtmlSanitizer;
+};
+
 interface RegisteredBehavior {
     id: number;
     hash: string;
@@ -714,6 +720,7 @@ type HtmlTransformOptions = {
 };
 type HtmlSetOptions = {
     trusted?: boolean;
+    process?: boolean;
 };
 type FlagApplyContext = {
     name: string;
@@ -771,6 +778,12 @@ type EventFlagContext = {
 type EngineOptions = {
     diagnostics?: boolean;
     logger?: Partial<Pick<Console, "info" | "warn">>;
+    htmlSanitizer?: HtmlSanitizer;
+    trustedTypesPolicy?: TrustedTypesPolicy;
+    trustedTypesPolicyName?: string;
+};
+type TrustedTypesPolicy = {
+    createHTML: (value: string) => unknown;
 };
 declare class Engine {
     private static activeEngines;
@@ -799,6 +812,10 @@ declare class Engine {
     private attributeHandlers;
     private htmlTransformers;
     private htmlTransformerOrder;
+    private htmlSanitizer;
+    private trustedTypesPolicy;
+    private trustedTypesPolicyName;
+    private trustedTypesPolicyResolved;
     private globals;
     private importantFlags;
     private inlineDeclarations;
@@ -838,6 +855,7 @@ declare class Engine {
     registerFlag(name: string, handler?: FlagHandler): void;
     registerBehaviorModifier(name: string, handler?: BehaviorModifierHandler): void;
     registerHtmlTransformer(transform: HtmlTransformer, options?: HtmlTransformOptions): () => void;
+    registerHtmlSanitizer(sanitizer: HtmlSanitizer): () => void;
     getRegistryStats(): {
         behaviorCount: number;
         behaviorCacheSize: number;
@@ -866,7 +884,12 @@ declare class Engine {
     private addEventListener;
     private cleanupBehaviorBindings;
     setHtml(element: Element, value: unknown, options?: HtmlSetOptions): void;
-    processHtml(root: Element): void;
+    private toTrustedHtml;
+    private isNativeTrustedHtml;
+    private getTrustedTypesPolicy;
+    processHtml(root: Element, options?: {
+        trusted?: boolean;
+    }): void;
     evaluate(element: Element): void;
     private attachObserver;
     private observeRoot;
@@ -982,4 +1005,4 @@ declare const VERSION: string;
 declare function parseCFS(source: string): ProgramNode;
 declare function autoMount(root?: HTMLElement | Document): Engine | null;
 
-export { type ArrayElement, ArrayExpression, ArrayPattern, type ArrayPatternElement, AssertError, AssertNode, AssignmentNode, type AssignmentTarget, type AttributeHandler, type AttributeHandlerContext, AwaitExpression, BaseNode, type BehaviorFlagArgs, type BehaviorFlags, type BehaviorModifierContext, type BehaviorModifierHandler, BehaviorNode, BinaryExpression, BlockNode, BreakNode, type CFSNode, CallExpression, type ComputedGetter, type ComputedRef, ContinueNode, type DeclarationFlagArgs, type DeclarationFlags, DeclarationNode, type DeclarationTarget, DirectiveExpression, type Disposer, type EffectCallback, type EffectOptions, ElementDirectiveExpression, ElementPropertyExpression, ElementRefExpression, Engine, type EngineOptions, type EventBindPatch, type EventFlagContext, type ExecutionContext, type ExpressionNode, type FlagApplyContext, type FlagHandler, ForEachNode, ForNode, FunctionDeclarationNode, FunctionExpression, type FunctionParam, type HtmlSetOptions, type HtmlTransformContext, type HtmlTransformOptions, type HtmlTransformer, IdentifierExpression, IfNode, IndexExpression, Lexer, Lifetime, LiteralExpression, MemberExpression, type ObjectEntry, ObjectExpression, ObjectPattern, type ObjectPatternEntry, OnBlockNode, Parser, type PatternNode, ProgramNode, QueryExpression, type ReactiveOptions, type ReactiveScheduler, type RegisteredBehavior, RestElement, ReturnNode, Scope, SelectorNode, SpreadElement, TaggedTemplateExpression, TemplateExpression, TernaryExpression, TokenType, TryNode, UnaryExpression, type UseFlagArgs, type UseFlags, UseNode, VERSION, WhileNode, autoMount, batch, computed, effect, isAbortError, parseCFS, throwIfAborted };
+export { type ArrayElement, ArrayExpression, ArrayPattern, type ArrayPatternElement, AssertError, AssertNode, AssignmentNode, type AssignmentTarget, type AttributeHandler, type AttributeHandlerContext, AwaitExpression, BaseNode, type BehaviorFlagArgs, type BehaviorFlags, type BehaviorModifierContext, type BehaviorModifierHandler, BehaviorNode, BinaryExpression, BlockNode, BreakNode, type CFSNode, CallExpression, type ComputedGetter, type ComputedRef, ContinueNode, type DeclarationFlagArgs, type DeclarationFlags, DeclarationNode, type DeclarationTarget, DirectiveExpression, type Disposer, type EffectCallback, type EffectOptions, ElementDirectiveExpression, ElementPropertyExpression, ElementRefExpression, Engine, type EngineOptions, type EventBindPatch, type EventFlagContext, type ExecutionContext, type ExpressionNode, type FlagApplyContext, type FlagHandler, ForEachNode, ForNode, FunctionDeclarationNode, FunctionExpression, type FunctionParam, type HtmlSanitizer, type HtmlSanitizerOptions, type HtmlSetOptions, type HtmlTransformContext, type HtmlTransformOptions, type HtmlTransformer, IdentifierExpression, IfNode, IndexExpression, Lexer, Lifetime, LiteralExpression, MemberExpression, type ObjectEntry, ObjectExpression, ObjectPattern, type ObjectPatternEntry, OnBlockNode, Parser, type PatternNode, ProgramNode, QueryExpression, type ReactiveOptions, type ReactiveScheduler, type RegisteredBehavior, RestElement, ReturnNode, Scope, SelectorNode, SpreadElement, TaggedTemplateExpression, TemplateExpression, TernaryExpression, TokenType, type TrustedTypesPolicy, TryNode, UnaryExpression, type UseFlagArgs, type UseFlags, UseNode, VERSION, WhileNode, autoMount, batch, computed, effect, isAbortError, parseCFS, throwIfAborted };

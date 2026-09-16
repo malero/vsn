@@ -10,7 +10,7 @@ describe("modal cookbook example", () => {
     const html = await readFile("examples/modal.html", "utf8");
     const originalFetch = globalThis.fetch;
     document.body.innerHTML = `
-      <button id="load" vsn-get="/modal.html" vsn-target="#example"></button>
+      <button id="load" vsn-get!trusted="/modal.html" vsn-target="#example"></button>
       <main id="example"></main>
     `;
 

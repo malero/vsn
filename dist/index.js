@@ -543,6 +543,133 @@ var Lifetime = class _Lifetime {
   }
 };
 
+// src/runtime/html-safety.ts
+var TRUSTED_HTML_KEY = "__vsnTrustedHtml";
+var DEFAULT_DOMPURIFY_CONFIG = {
+  CUSTOM_ELEMENT_HANDLING: {
+    tagNameCheck: /^vsn-[a-z][a-z0-9-]*$/i,
+    attributeNameCheck: null,
+    allowCustomizedBuiltInElements: false
+  }
+};
+var BLOCKED_ELEMENTS = /* @__PURE__ */ new Set([
+  "base",
+  "embed",
+  "iframe",
+  "link",
+  "meta",
+  "object",
+  "script",
+  "style",
+  "svg",
+  "template"
+]);
+var BLOCKED_ATTRIBUTES = /* @__PURE__ */ new Set([
+  "action",
+  "formaction",
+  "is",
+  "srcdoc",
+  "xlink:href"
+]);
+var URL_ATTRIBUTES = /* @__PURE__ */ new Set([
+  "cite",
+  "href",
+  "poster",
+  "src"
+]);
+function markTrustedHtml(value) {
+  return {
+    [TRUSTED_HTML_KEY]: true,
+    value
+  };
+}
+function unwrapTrustedHtml(value) {
+  if (!value || typeof value !== "object") {
+    return void 0;
+  }
+  const candidate = value;
+  if (candidate[TRUSTED_HTML_KEY] !== true) {
+    return void 0;
+  }
+  return { value: candidate.value, trusted: true };
+}
+function resolveHtmlSanitizer(options = {}) {
+  if (options.sanitizer) {
+    return options.sanitizer;
+  }
+  return (html) => {
+    const purifier = globalThis.DOMPurify;
+    if (purifier && typeof purifier.sanitize === "function") {
+      const config = {
+        ...DEFAULT_DOMPURIFY_CONFIG,
+        ...options.dompurifyConfig ?? {}
+      };
+      if (options.dompurifyConfig?.CUSTOM_ELEMENT_HANDLING === void 0) {
+        config.CUSTOM_ELEMENT_HANDLING = { ...DEFAULT_DOMPURIFY_CONFIG.CUSTOM_ELEMENT_HANDLING };
+      }
+      return String(purifier.sanitize(html, config));
+    }
+    return fallbackSanitize(html);
+  };
+}
+function sanitizeVsnMarkup(html, sanitizer) {
+  return stripUnsafeVsnMarkup(sanitizer(html));
+}
+function stripUnsafeVsnMarkup(html) {
+  if (typeof document === "undefined") {
+    return html.replace(/<script\b[^>]*>[\s\S]*?<\/script\s*>/gi, "").replace(/\s+vsn-[\w:-]+(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+))?/gi, "");
+  }
+  const template = document.createElement("template");
+  template.innerHTML = html;
+  for (const script of Array.from(template.content.querySelectorAll("script"))) {
+    script.remove();
+  }
+  for (const element of Array.from(template.content.querySelectorAll("*"))) {
+    for (const attribute of Array.from(element.attributes)) {
+      if (attribute.name.toLowerCase().startsWith("vsn-")) {
+        element.removeAttribute(attribute.name);
+      }
+    }
+  }
+  return template.innerHTML;
+}
+function fallbackSanitize(html) {
+  if (typeof document === "undefined") {
+    return html.replace(/<\s*(?:base|embed|iframe|link|meta|object|script|style|svg|template)\b[^>]*>[\s\S]*?<\/\s*(?:base|embed|iframe|link|meta|object|script|style|svg|template)\s*>/gi, "").replace(/<\s*(?:base|embed|iframe|link|meta|object|script|style|svg|template)\b[^>]*\/?\s*>/gi, "").replace(/\s+(?:on[\w:-]+|vsn-[\w:-]+|action|formaction|is|srcdoc|xlink:href)\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, "").replace(/\s+(?:cite|href|poster|src)\s*=\s*(?:"\s*(?:javascript|vbscript|data):[^" ]*"|'\s*(?:javascript|vbscript|data):[^' ]*'|\s*(?:javascript|vbscript|data):[^\s>]+)/gi, "");
+  }
+  const template = document.createElement("template");
+  template.innerHTML = html;
+  const elements = Array.from(template.content.querySelectorAll("*"));
+  for (const element of elements) {
+    if (BLOCKED_ELEMENTS.has(element.tagName.toLowerCase())) {
+      element.remove();
+      continue;
+    }
+    for (const attribute of Array.from(element.attributes)) {
+      const name = attribute.name.toLowerCase();
+      if (name.startsWith("on") || name.startsWith("vsn-") || name === "style" || BLOCKED_ATTRIBUTES.has(name) || URL_ATTRIBUTES.has(name) && !isSafeUrl(attribute.value, name) || name === "srcset" && !isSafeUrl(attribute.value, name)) {
+        element.removeAttribute(attribute.name);
+      }
+    }
+  }
+  return template.innerHTML;
+}
+function isSafeUrl(value, attributeName) {
+  const normalized = value.replace(/[\u0000-\u0020\u007f]/g, "").toLowerCase();
+  if (attributeName === "srcset") {
+    return !/(?:^|[\s,])(?:javascript|vbscript|data):/i.test(normalized);
+  }
+  if (!normalized || normalized.startsWith("#") || normalized.startsWith("/") || normalized.startsWith("./") || normalized.startsWith("../") || normalized.startsWith("?")) {
+    return true;
+  }
+  try {
+    const protocol = new URL(value, document.baseURI).protocol.toLowerCase();
+    return protocol === "http:" || protocol === "https:" || attributeName === "href" && (protocol === "mailto:" || protocol === "tel:");
+  } catch {
+    return false;
+  }
+}
+
 // src/ast/nodes.ts
 var BaseNode = class {
   constructor(type) {
@@ -1019,7 +1146,8 @@ var AssignmentNode = class extends BaseNode {
           context.engine.setHtml(element, value);
           return;
         }
-        element.innerHTML = value == null ? "" : String(value);
+        const html = value == null ? "" : String(value);
+        element.innerHTML = sanitizeVsnMarkup(html, resolveHtmlSanitizer());
         return;
       }
       element.setAttribute(target.name, value == null ? "" : String(value));
@@ -5206,11 +5334,11 @@ function applyHtml(element, expression, scope) {
   }
   const value = scope.get(key);
   const html = value == null ? "" : String(value);
-  element.innerHTML = html;
+  element.innerHTML = sanitizeVsnMarkup(html, resolveHtmlSanitizer());
 }
 
 // src/runtime/http.ts
-async function applyGet(element, config, scope, onHtmlApplied) {
+async function applyGet(element, config, scope, onHtmlApplied, htmlApplier) {
   if (!globalThis.fetch) {
     throw new Error("fetch is not available");
   }
@@ -5231,9 +5359,12 @@ async function applyGet(element, config, scope, onHtmlApplied) {
     element.dispatchEvent(new CustomEvent("vsn:targetError", { detail: { selector: config.targetSelector } }));
     return;
   }
+  const apply = htmlApplier ?? ((targetElement, value) => {
+    applyHtml(targetElement, "__html", { get: () => value });
+  });
   if (config.swap === "outer") {
     const wrapper = target.ownerDocument.createElement("div");
-    applyHtml(wrapper, "__html", { get: () => html });
+    apply(wrapper, html);
     const replacements = Array.from(wrapper.childNodes);
     const elements = Array.from(wrapper.children);
     if (replacements.length > 0 && target.parentNode) {
@@ -5246,7 +5377,7 @@ async function applyGet(element, config, scope, onHtmlApplied) {
     }
     return;
   }
-  applyHtml(target, "__html", { get: () => html });
+  apply(target, html);
   onHtmlApplied?.(target);
 }
 function getPartialHeaders(element, target) {
@@ -5673,6 +5804,10 @@ var Engine = class _Engine {
   attributeHandlers = [];
   htmlTransformers = [];
   htmlTransformerOrder = 0;
+  htmlSanitizer;
+  trustedTypesPolicy;
+  trustedTypesPolicyName;
+  trustedTypesPolicyResolved = false;
   globals = {};
   importantFlags = /* @__PURE__ */ new WeakMap();
   inlineDeclarations = /* @__PURE__ */ new WeakMap();
@@ -5699,6 +5834,9 @@ var Engine = class _Engine {
   constructor(options = {}) {
     this.diagnostics = options.diagnostics ?? false;
     this.logger = options.logger ?? console;
+    this.htmlSanitizer = options.htmlSanitizer ?? resolveHtmlSanitizer();
+    this.trustedTypesPolicy = options.trustedTypesPolicy;
+    this.trustedTypesPolicyName = options.trustedTypesPolicyName ?? "vsn";
     this.registerGlobal("console", console);
     this.registerGlobal("batch", batch);
     this.registerGlobal("computed", (nameOrGetter, getter) => {
@@ -5736,6 +5874,15 @@ var Engine = class _Engine {
       return lifetime ? lifetime.onCleanup(disposer) : () => void 0;
     });
     this.registerFlag("important");
+    this.registerFlag("trusted", {
+      transformValue: ({ declaration }, value) => {
+        const target = declaration.target;
+        if (target instanceof DirectiveExpression && target.kind === "attr" && target.name === "html") {
+          return markTrustedHtml(value);
+        }
+        return value;
+      }
+    });
     this.registerFlag("debounce", {
       onEventBind: ({ args }) => ({
         debounceMs: typeof args === "number" ? args : 200
@@ -6134,6 +6281,15 @@ var Engine = class _Engine {
       }
     };
   }
+  registerHtmlSanitizer(sanitizer) {
+    const previous = this.htmlSanitizer;
+    this.htmlSanitizer = sanitizer;
+    return () => {
+      if (this.htmlSanitizer === sanitizer) {
+        this.htmlSanitizer = previous;
+      }
+    };
+  }
   getRegistryStats() {
     return {
       behaviorCount: this.behaviorRegistry.length,
@@ -6363,11 +6519,59 @@ var Engine = class _Engine {
     for (const entry of this.htmlTransformers) {
       transformed = entry.transform(transformed, context);
     }
-    element.innerHTML = transformed == null ? "" : String(transformed);
-    this.processHtml(element);
+    const trustedValue = unwrapTrustedHtml(transformed);
+    if (trustedValue) {
+      context.trusted = true;
+      transformed = trustedValue.value;
+    }
+    if (this.isNativeTrustedHtml(transformed)) {
+      context.trusted = true;
+    }
+    const html = transformed == null ? "" : String(transformed);
+    const output = context.trusted ? html : sanitizeVsnMarkup(html, this.htmlSanitizer);
+    element.innerHTML = this.toTrustedHtml(output);
+    if (options.process !== false) {
+      this.processHtml(element, { trusted: context.trusted });
+    }
   }
-  processHtml(root) {
-    this.handleHtmlBehaviors(root);
+  toTrustedHtml(value) {
+    if (this.isNativeTrustedHtml(value)) {
+      return value;
+    }
+    const html = value == null ? "" : String(value);
+    const policy = this.getTrustedTypesPolicy();
+    return policy ? policy.createHTML(html) : html;
+  }
+  isNativeTrustedHtml(value) {
+    const trustedHtml = globalThis.TrustedHTML;
+    return typeof trustedHtml === "function" && value instanceof trustedHtml;
+  }
+  getTrustedTypesPolicy() {
+    if (this.trustedTypesPolicy) {
+      return this.trustedTypesPolicy;
+    }
+    if (this.trustedTypesPolicyResolved) {
+      return void 0;
+    }
+    this.trustedTypesPolicyResolved = true;
+    const trustedTypes = globalThis.trustedTypes;
+    if (!trustedTypes || typeof trustedTypes.createPolicy !== "function") {
+      return void 0;
+    }
+    try {
+      this.trustedTypesPolicy = trustedTypes.createPolicy(this.trustedTypesPolicyName, {
+        createHTML: (html) => html
+      });
+    } catch (error) {
+      this.logger.warn?.(
+        `vsn: unable to create Trusted Types policy '${this.trustedTypesPolicyName}'. Pass a policy through Engine options when Trusted Types enforcement is enabled.`,
+        error
+      );
+    }
+    return this.trustedTypesPolicy;
+  }
+  processHtml(root, options = {}) {
+    this.handleHtmlBehaviors(root, options.trusted ?? false);
   }
   evaluate(element) {
     const scope = this.getScope(element);
@@ -7218,8 +7422,14 @@ var Engine = class _Engine {
           this.getScope(element),
           (target) => {
             if (!operationLifetime.signal.aborted) {
-              this.handleHtmlBehaviors(target);
+              this.handleHtmlBehaviors(target, Boolean(config.trusted));
             }
+          },
+          (target, html) => {
+            this.setHtml(target, html, {
+              trusted: Boolean(config.trusted),
+              process: false
+            });
           }
         );
         if (operationLifetime.signal.aborted || lifetime.isDisposed) {
@@ -8532,13 +8742,18 @@ var Engine = class _Engine {
     }
     return void 0;
   }
-  handleHtmlBehaviors(root) {
+  handleHtmlBehaviors(root, trusted = false) {
     this.disposeDynamicBehaviors(root);
     const scripts = Array.from(root.querySelectorAll('script[type="text/vsn"]'));
+    if (!trusted) {
+      for (const script of scripts) {
+        script.remove();
+      }
+    }
     if (scripts.length === 0 && root.children.length === 0) {
       return;
     }
-    if (scripts.length > 0) {
+    if (trusted && scripts.length > 0) {
       const source = scripts.map((script) => script.textContent ?? "").join("\n");
       if (source.trim()) {
         this.registerBehaviorSource(source, root);
@@ -8603,13 +8818,29 @@ var Engine = class _Engine {
       }
     });
     this.registerAttributeHandler({
-      id: "vsn-html",
-      match: (name) => name.startsWith("vsn-html"),
+      id: "vsn-text",
+      match: (name) => name === "vsn-text",
       handle: (element, _name, value, scope) => {
-        this.htmlBindings.set(element, { expr: value, trusted: _name.includes("!trusted") });
+        if (!(element instanceof HTMLElement)) {
+          return;
+        }
+        const update = () => {
+          const nextValue = scope.get(value.trim());
+          element.textContent = nextValue == null ? "" : String(nextValue);
+        };
+        update();
+        this.watch(scope, value, update, element);
+      }
+    });
+    this.registerAttributeHandler({
+      id: "vsn-html",
+      match: (name) => name === "vsn-html" || name.startsWith("vsn-html!"),
+      handle: (element, _name, value, scope) => {
+        const trusted = _name.split("!").includes("trusted");
+        this.htmlBindings.set(element, { expr: value, trusted });
         this.markInlineDeclaration(element, "attr:html");
         if (element instanceof HTMLElement) {
-          this.setHtml(element, scope.get(value.trim()), { trusted: _name.includes("!trusted") });
+          this.setHtml(element, scope.get(value.trim()), { trusted });
         }
         this.watch(scope, value, () => this.evaluate(element), element);
       }
@@ -8629,15 +8860,17 @@ var Engine = class _Engine {
     });
     this.registerAttributeHandler({
       id: "vsn-get",
-      match: (name) => name.startsWith("vsn-get"),
+      match: (name) => name === "vsn-get" || name.startsWith("vsn-get!"),
       handle: (element, name, _value, _scope, context) => {
         const autoLoad = name.includes("!load");
+        const trusted = name.split("!").includes("trusted");
         const url = element.getAttribute(name) ?? "";
         const target = element.getAttribute("vsn-target") ?? void 0;
         const swap = element.getAttribute("vsn-swap") ?? "inner";
         const config = {
           url,
           swap,
+          trusted,
           ...target ? { targetSelector: target } : {}
         };
         this.getBindings.set(element, config);

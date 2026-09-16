@@ -20,7 +20,7 @@ describe("vsn-html", () => {
     expect(element.innerHTML).toBe("<span>Hi</span>");
   });
 
-  it("does not sanitize html by default", async () => {
+  it("sanitizes html by default", async () => {
     document.body.innerHTML = `
       <div id="host" vsn-html="content"></div>
     `;
@@ -35,12 +35,84 @@ describe("vsn-html", () => {
 
     engine.evaluate(host);
 
-    expect(host.innerHTML).toBe("<script>bad()</script><span>Ok</span>");
+    expect(host.innerHTML).toBe("<span>Ok</span>");
   });
 
-  it("parses behaviors in html", async () => {
+  it("removes executable VSN attributes while preserving custom elements", async () => {
     document.body.innerHTML = `
       <div id="host" vsn-html="content"></div>
+    `;
+
+    const engine = new Engine();
+    await engine.mount(document.body);
+
+    const host = document.getElementById("host") as HTMLDivElement;
+    const scope = engine.getScope(host);
+    scope.set("content", `
+      <vsn-tabs vsn-on:click="bad()"><vsn-tab>One</vsn-tab></vsn-tabs>
+    `);
+    engine.evaluate(host);
+
+    const tabs = host.querySelector("vsn-tabs");
+    expect(tabs).toBeTruthy();
+    expect(tabs?.hasAttribute("vsn-on:click")).toBe(false);
+    expect(tabs?.querySelector("vsn-tab")?.textContent).toBe("One");
+  });
+
+  it("sanitizes CFS html assignments by default", async () => {
+    document.body.innerHTML = `<div id="host"></div>`;
+
+    const engine = new Engine();
+    engine.registerBehaviors(`
+      behavior #host {
+        construct {
+          @html = "<script>bad()</script><span>Ok</span>";
+        }
+      }
+    `);
+    await engine.mount(document.body);
+
+    const host = document.getElementById("host") as HTMLDivElement;
+    expect(host.innerHTML).toBe("<span>Ok</span>");
+  });
+
+  it("supports the trusted flag on CFS html bindings", async () => {
+    document.body.innerHTML = `<div id="host"></div>`;
+
+    const engine = new Engine();
+    engine.registerBehaviors(`
+      behavior #host {
+        content: "<script>trusted()</script><span>Ok</span>";
+        @html :< content !trusted;
+      }
+    `);
+    await engine.mount(document.body);
+
+    const host = document.getElementById("host") as HTMLDivElement;
+    expect(host.querySelector("script")?.textContent).toBe("trusted()");
+    expect(host.querySelector("span")?.textContent).toBe("Ok");
+  });
+
+  it("supports literal text with vsn-text", async () => {
+    document.body.innerHTML = `
+      <div id="host" vsn-text="content"></div>
+    `;
+
+    const engine = new Engine();
+    await engine.mount(document.body);
+
+    const host = document.getElementById("host") as HTMLDivElement;
+    const scope = engine.getScope(host);
+    scope.set("content", "<span>Not markup</span>");
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(host.textContent).toBe("<span>Not markup</span>");
+    expect(host.querySelector("span")).toBeNull();
+  });
+
+  it("parses behaviors in explicitly trusted html", async () => {
+    document.body.innerHTML = `
+      <div id="host" vsn-html!trusted="content"></div>
     `;
 
     const engine = new Engine();

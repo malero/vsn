@@ -5,7 +5,7 @@ import { Engine } from "../src/index";
 
 describe("dynamic behavior registration", () => {
   it("replaces behaviors declared by successive HTML swaps", async () => {
-    document.body.innerHTML = `<div id="host" vsn-html="content"></div>`;
+    document.body.innerHTML = `<div id="host" vsn-html!trusted="content"></div>`;
 
     const engine = new Engine();
     await engine.mount(document.body);

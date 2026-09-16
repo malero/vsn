@@ -5,7 +5,7 @@ import { Engine } from "../src/index";
 import { registerSanitizeHtml } from "../src/plugins/sanitize-html";
 
 describe("sanitize-html plugin", () => {
-  it("preserves VSN behavior scripts while stripping executable scripts", async () => {
+  it("removes VSN behavior scripts from untrusted HTML", async () => {
     document.body.innerHTML = `<div id="target"></div>`;
 
     const engine = new Engine();
@@ -24,8 +24,30 @@ describe("sanitize-html plugin", () => {
     `);
     await new Promise((resolve) => setTimeout(resolve, 0));
 
-    expect(target.querySelector("script[type='text/vsn']")).toBeTruthy();
+    expect(target.querySelector("script[type='text/vsn']")).toBeNull();
     expect(target.querySelector("script:not([type='text/vsn'])")).toBeNull();
+    expect(engine.getScope(target.querySelector(".card") as HTMLElement).get("ready")).toBeUndefined();
+  });
+
+  it("executes VSN behavior scripts for explicitly trusted HTML", async () => {
+    document.body.innerHTML = `<div id="target"></div>`;
+
+    const engine = new Engine();
+    registerSanitizeHtml(engine);
+    await engine.mount(document.body);
+
+    const target = document.getElementById("target") as HTMLElement;
+    engine.setHtml(target, `
+      <div class="card"></div>
+      <script type="text/vsn">
+        behavior .card {
+          construct { ready = true; }
+        }
+      </script>
+    `, { trusted: true });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(target.querySelector("script[type='text/vsn']")).toBeTruthy();
     expect(engine.getScope(target.querySelector(".card") as HTMLElement).get("ready")).toBe(true);
   });
 

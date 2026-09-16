@@ -1,5 +1,6 @@
 import { throwIfAborted } from "../runtime/lifetime";
 import type { Lifetime } from "../runtime/lifetime";
+import { resolveHtmlSanitizer, sanitizeVsnMarkup } from "../runtime/html-safety";
 
 export interface ExecutionContext {
   scope: {
@@ -560,7 +561,8 @@ export class AssignmentNode extends BaseNode {
           context.engine.setHtml(element, value);
           return;
         }
-        element.innerHTML = value == null ? "" : String(value);
+        const html = value == null ? "" : String(value);
+        element.innerHTML = sanitizeVsnMarkup(html, resolveHtmlSanitizer());
         return;
       }
       element.setAttribute(target.name, value == null ? "" : String(value));

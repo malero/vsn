@@ -97,9 +97,39 @@ describe("vsn-get", () => {
     expect(panel.innerHTML).toContain("<button");
   });
 
-  it("parses behaviors from vsn-get html", async () => {
+  it("does not execute VSN behavior scripts from untrusted responses", async () => {
     document.body.innerHTML = `
       <div id="panel" vsn-get="/test"></div>
+    `;
+
+    const engine = new Engine();
+    await engine.mount(document.body);
+
+    (globalThis.fetch as any) = vi.fn(async () => ({
+      ok: true,
+      text: async () => `
+        <div class="card"></div>
+        <script type="text/vsn">
+          behavior .card {
+            construct { ready = true; }
+          }
+        </script>
+      `
+    }));
+
+    const panel = document.getElementById("panel") as HTMLDivElement;
+    panel.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    const card = panel.querySelector(".card") as HTMLDivElement;
+    expect(panel.querySelector("script[type='text/vsn']")).toBeNull();
+    expect(engine.getScope(card).get("ready")).toBeUndefined();
+  });
+
+  it("parses behaviors from vsn-get html", async () => {
+    document.body.innerHTML = `
+      <div id="panel" vsn-get!trusted="/test"></div>
     `;
 
     const engine = new Engine();
@@ -129,7 +159,7 @@ describe("vsn-get", () => {
 
   it("emits vsn:getError when HTML contains invalid CFS", async () => {
     document.body.innerHTML = `
-      <div id="panel" vsn-get="/bad"></div>
+      <div id="panel" vsn-get!trusted="/bad"></div>
     `;
 
     const engine = new Engine();

@@ -75,6 +75,8 @@ declare class Scope {
     private appendPath;
 }
 
+type HtmlSanitizer = (html: string) => string;
+
 interface ExecutionContext {
     scope: {
         getPath(key: string): any;
@@ -390,6 +392,7 @@ type HtmlTransformOptions = {
 };
 type HtmlSetOptions = {
     trusted?: boolean;
+    process?: boolean;
 };
 type FlagApplyContext = {
     name: string;
@@ -447,6 +450,12 @@ type EventFlagContext = {
 type EngineOptions = {
     diagnostics?: boolean;
     logger?: Partial<Pick<Console, "info" | "warn">>;
+    htmlSanitizer?: HtmlSanitizer;
+    trustedTypesPolicy?: TrustedTypesPolicy;
+    trustedTypesPolicyName?: string;
+};
+type TrustedTypesPolicy = {
+    createHTML: (value: string) => unknown;
 };
 declare class Engine {
     private static activeEngines;
@@ -475,6 +484,10 @@ declare class Engine {
     private attributeHandlers;
     private htmlTransformers;
     private htmlTransformerOrder;
+    private htmlSanitizer;
+    private trustedTypesPolicy;
+    private trustedTypesPolicyName;
+    private trustedTypesPolicyResolved;
     private globals;
     private importantFlags;
     private inlineDeclarations;
@@ -514,6 +527,7 @@ declare class Engine {
     registerFlag(name: string, handler?: FlagHandler): void;
     registerBehaviorModifier(name: string, handler?: BehaviorModifierHandler): void;
     registerHtmlTransformer(transform: HtmlTransformer, options?: HtmlTransformOptions): () => void;
+    registerHtmlSanitizer(sanitizer: HtmlSanitizer): () => void;
     getRegistryStats(): {
         behaviorCount: number;
         behaviorCacheSize: number;
@@ -542,7 +556,12 @@ declare class Engine {
     private addEventListener;
     private cleanupBehaviorBindings;
     setHtml(element: Element, value: unknown, options?: HtmlSetOptions): void;
-    processHtml(root: Element): void;
+    private toTrustedHtml;
+    private isNativeTrustedHtml;
+    private getTrustedTypesPolicy;
+    processHtml(root: Element, options?: {
+        trusted?: boolean;
+    }): void;
     evaluate(element: Element): void;
     private attachObserver;
     private observeRoot;

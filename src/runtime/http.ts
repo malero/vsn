@@ -6,14 +6,18 @@ export interface GetConfig {
   url: string;
   targetSelector?: string;
   swap?: "inner" | "outer";
+  trusted?: boolean;
   signal?: AbortSignal;
 }
+
+export type HtmlApplier = (element: HTMLElement, html: string) => void;
 
 export async function applyGet(
   element: Element,
   config: GetConfig,
   scope: Scope,
-  onHtmlApplied?: (target: Element) => void
+  onHtmlApplied?: (target: Element) => void,
+  htmlApplier?: HtmlApplier
 ): Promise<void> {
   if (!globalThis.fetch) {
     throw new Error("fetch is not available");
@@ -38,9 +42,13 @@ export async function applyGet(
     return;
   }
 
+  const apply = htmlApplier ?? ((targetElement: HTMLElement, value: string) => {
+    applyHtml(targetElement, "__html", { get: () => value } as unknown as Scope);
+  });
+
   if (config.swap === "outer") {
     const wrapper = target.ownerDocument.createElement("div");
-    applyHtml(wrapper, "__html", { get: () => html } as unknown as Scope);
+    apply(wrapper, html);
     const replacements = Array.from(wrapper.childNodes);
     const elements = Array.from(wrapper.children);
     if (replacements.length > 0 && target.parentNode) {
@@ -54,7 +62,7 @@ export async function applyGet(
     return;
   }
 
-  applyHtml(target as HTMLElement, "__html", { get: () => html } as unknown as Scope);
+  apply(target as HTMLElement, html);
   onHtmlApplied?.(target);
 }
 

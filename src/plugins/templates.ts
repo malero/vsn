@@ -1,17 +1,11 @@
 import type { Engine } from "../runtime/engine";
+import { isTrustedHtmlValue } from "../runtime/html-safety";
 
 type TemplateResult = {
   __vsnTemplate: true;
   strings: string[];
   values: any[];
 };
-
-type TrustedHtmlValue = {
-  __vsnTrustedHtml: true;
-  value: unknown;
-};
-
-const TRUSTED_HTML_KEY = "__vsnTrustedHtml";
 
 export function registerTemplates(engine: Engine): () => void {
   engine.registerGlobal("html", html);
@@ -58,10 +52,6 @@ function html(stringsOrValue: TemplateStringsArray | string, ...values: any[]): 
 
 function isTemplate(value: any): value is TemplateResult {
   return Boolean(value && typeof value === "object" && value.__vsnTemplate);
-}
-
-function isTrustedHtmlValue(value: any): value is TrustedHtmlValue {
-  return Boolean(value && typeof value === "object" && value[TRUSTED_HTML_KEY]);
 }
 
 function isElement(value: any): value is Element {

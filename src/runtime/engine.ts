@@ -4,6 +4,13 @@ import { applyBindToElement, applyBindToScope, BindDirection } from "./bindings"
 import { applyIf, applyShow } from "./conditionals";
 import { applyGet, GetConfig } from "./http";
 import { debounce, Debounced } from "./debounce";
+import {
+  markTrustedHtml,
+  resolveHtmlSanitizer,
+  sanitizeVsnMarkup,
+  unwrapTrustedHtml
+} from "./html-safety";
+import type { HtmlSanitizer } from "./html-safety";
 import { isAbortError, Lifetime, throwIfAborted } from "./lifetime";
 import type { Disposer } from "./lifetime";
 import { Parser } from "../parser/parser";
@@ -498,6 +505,7 @@ export type HtmlTransformOptions = {
 
 export type HtmlSetOptions = {
   trusted?: boolean;
+  process?: boolean;
 };
 
 type RegisteredHtmlTransformer = {
@@ -583,6 +591,13 @@ export type EventFlagContext = {
 export type EngineOptions = {
   diagnostics?: boolean;
   logger?: Partial<Pick<Console, "info" | "warn">>;
+  htmlSanitizer?: HtmlSanitizer;
+  trustedTypesPolicy?: TrustedTypesPolicy;
+  trustedTypesPolicyName?: string;
+};
+
+export type TrustedTypesPolicy = {
+  createHTML: (value: string) => unknown;
 };
 
 export class Engine {
@@ -612,6 +627,10 @@ export class Engine {
   private attributeHandlers: AttributeHandler[] = [];
   private htmlTransformers: RegisteredHtmlTransformer[] = [];
   private htmlTransformerOrder = 0;
+  private htmlSanitizer: HtmlSanitizer;
+  private trustedTypesPolicy: TrustedTypesPolicy | undefined;
+  private trustedTypesPolicyName: string;
+  private trustedTypesPolicyResolved = false;
   private globals: Record<string, any> = {};
   private importantFlags = new WeakMap<Element, Set<string>>();
   private inlineDeclarations = new WeakMap<Element, Set<string>>();
@@ -639,6 +658,9 @@ export class Engine {
   constructor(options: EngineOptions = {}) {
     this.diagnostics = options.diagnostics ?? false;
     this.logger = options.logger ?? console;
+    this.htmlSanitizer = options.htmlSanitizer ?? resolveHtmlSanitizer();
+    this.trustedTypesPolicy = options.trustedTypesPolicy;
+    this.trustedTypesPolicyName = options.trustedTypesPolicyName ?? "vsn";
     this.registerGlobal("console", console);
     this.registerGlobal("batch", batch);
     this.registerGlobal("computed", (nameOrGetter: any, getter?: any) => {
@@ -676,6 +698,15 @@ export class Engine {
       return lifetime ? lifetime.onCleanup(disposer) : () => undefined;
     });
     this.registerFlag("important");
+    this.registerFlag("trusted", {
+      transformValue: ({ declaration }, value) => {
+        const target = declaration.target;
+        if (target instanceof DirectiveExpression && target.kind === "attr" && target.name === "html") {
+          return markTrustedHtml(value);
+        }
+        return value;
+      }
+    });
     this.registerFlag("debounce", {
       onEventBind: ({ args }) => ({
         debounceMs: typeof args === "number" ? args : 200
@@ -1098,6 +1129,16 @@ export class Engine {
     };
   }
 
+  registerHtmlSanitizer(sanitizer: HtmlSanitizer): () => void {
+    const previous = this.htmlSanitizer;
+    this.htmlSanitizer = sanitizer;
+    return () => {
+      if (this.htmlSanitizer === sanitizer) {
+        this.htmlSanitizer = previous;
+      }
+    };
+  }
+
   getRegistryStats(): { behaviorCount: number; behaviorCacheSize: number } {
     return {
       behaviorCount: this.behaviorRegistry.length,
@@ -1355,12 +1396,66 @@ export class Engine {
     for (const entry of this.htmlTransformers) {
       transformed = entry.transform(transformed, context);
     }
-    element.innerHTML = transformed == null ? "" : String(transformed);
-    this.processHtml(element);
+
+    const trustedValue = unwrapTrustedHtml(transformed);
+    if (trustedValue) {
+      context.trusted = true;
+      transformed = trustedValue.value;
+    }
+
+    if (this.isNativeTrustedHtml(transformed)) {
+      context.trusted = true;
+    }
+    const html = transformed == null ? "" : String(transformed);
+    const output = context.trusted ? html : sanitizeVsnMarkup(html, this.htmlSanitizer);
+    element.innerHTML = this.toTrustedHtml(output) as string;
+    if (options.process !== false) {
+      this.processHtml(element, { trusted: context.trusted });
+    }
   }
 
-  processHtml(root: Element): void {
-    this.handleHtmlBehaviors(root);
+  private toTrustedHtml(value: unknown): unknown {
+    if (this.isNativeTrustedHtml(value)) {
+      return value;
+    }
+    const html = value == null ? "" : String(value);
+    const policy = this.getTrustedTypesPolicy();
+    return policy ? policy.createHTML(html) : html;
+  }
+
+  private isNativeTrustedHtml(value: unknown): boolean {
+    const trustedHtml = (globalThis as Record<string, any>).TrustedHTML;
+    return typeof trustedHtml === "function" && value instanceof trustedHtml;
+  }
+
+  private getTrustedTypesPolicy(): TrustedTypesPolicy | undefined {
+    if (this.trustedTypesPolicy) {
+      return this.trustedTypesPolicy;
+    }
+    if (this.trustedTypesPolicyResolved) {
+      return undefined;
+    }
+    this.trustedTypesPolicyResolved = true;
+    const trustedTypes = (globalThis as Record<string, any>).trustedTypes;
+    if (!trustedTypes || typeof trustedTypes.createPolicy !== "function") {
+      return undefined;
+    }
+    try {
+      this.trustedTypesPolicy = trustedTypes.createPolicy(this.trustedTypesPolicyName, {
+        createHTML: (html: string) => html
+      });
+    } catch (error) {
+      this.logger.warn?.(
+        `vsn: unable to create Trusted Types policy '${this.trustedTypesPolicyName}'. `
+        + "Pass a policy through Engine options when Trusted Types enforcement is enabled.",
+        error
+      );
+    }
+    return this.trustedTypesPolicy;
+  }
+
+  processHtml(root: Element, options: { trusted?: boolean } = {}): void {
+    this.handleHtmlBehaviors(root, options.trusted ?? false);
   }
 
   evaluate(element: Element): void {
@@ -2340,8 +2435,14 @@ export class Engine {
           this.getScope(element),
           (target) => {
             if (!operationLifetime.signal.aborted) {
-              this.handleHtmlBehaviors(target);
+              this.handleHtmlBehaviors(target, Boolean(config.trusted));
             }
+          },
+          (target, html) => {
+            this.setHtml(target, html, {
+              trusted: Boolean(config.trusted),
+              process: false
+            });
           }
         );
         if (operationLifetime.signal.aborted || lifetime.isDisposed) {
@@ -3925,13 +4026,18 @@ export class Engine {
     return undefined;
   }
 
-  private handleHtmlBehaviors(root: Element): void {
+  private handleHtmlBehaviors(root: Element, trusted = false): void {
     this.disposeDynamicBehaviors(root);
     const scripts = Array.from(root.querySelectorAll('script[type="text/vsn"]'));
+    if (!trusted) {
+      for (const script of scripts) {
+        script.remove();
+      }
+    }
     if (scripts.length === 0 && root.children.length === 0) {
       return;
     }
-    if (scripts.length > 0) {
+    if (trusted && scripts.length > 0) {
       const source = scripts.map((script) => script.textContent ?? "").join("\n");
       if (source.trim()) {
         this.registerBehaviorSource(source, root);
@@ -4001,13 +4107,30 @@ export class Engine {
     });
 
     this.registerAttributeHandler({
-      id: "vsn-html",
-      match: (name) => name.startsWith("vsn-html"),
+      id: "vsn-text",
+      match: (name) => name === "vsn-text",
       handle: (element, _name, value, scope) => {
-        this.htmlBindings.set(element, { expr: value, trusted: _name.includes("!trusted") });
+        if (!(element instanceof HTMLElement)) {
+          return;
+        }
+        const update = () => {
+          const nextValue = scope.get(value.trim());
+          element.textContent = nextValue == null ? "" : String(nextValue);
+        };
+        update();
+        this.watch(scope, value, update, element);
+      }
+    });
+
+    this.registerAttributeHandler({
+      id: "vsn-html",
+      match: (name) => name === "vsn-html" || name.startsWith("vsn-html!"),
+      handle: (element, _name, value, scope) => {
+        const trusted = _name.split("!").includes("trusted");
+        this.htmlBindings.set(element, { expr: value, trusted });
         this.markInlineDeclaration(element, "attr:html");
         if (element instanceof HTMLElement) {
-          this.setHtml(element, scope.get(value.trim()), { trusted: _name.includes("!trusted") });
+          this.setHtml(element, scope.get(value.trim()), { trusted });
         }
         this.watch(scope, value, () => this.evaluate(element), element);
       }
@@ -4029,15 +4152,17 @@ export class Engine {
 
     this.registerAttributeHandler({
       id: "vsn-get",
-      match: (name) => name.startsWith("vsn-get"),
+      match: (name) => name === "vsn-get" || name.startsWith("vsn-get!"),
       handle: (element, name, _value, _scope, context) => {
         const autoLoad = name.includes("!load");
+        const trusted = name.split("!").includes("trusted");
         const url = element.getAttribute(name) ?? "";
         const target = element.getAttribute("vsn-target") ?? undefined;
         const swap = (element.getAttribute("vsn-swap") as "inner" | "outer" | null) ?? "inner";
         const config: GetConfig = {
           url,
           swap,
+          trusted,
           ...(target ? { targetSelector: target } : {})
         };
         this.getBindings.set(element, config);
