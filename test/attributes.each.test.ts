@@ -65,4 +65,62 @@ describe("vsn-each", () => {
     expect(row.querySelector(".label")?.textContent).toBe("child");
     expect(row.querySelector(".idx")?.textContent).toBe("0");
   });
+
+  it("reuses keyed rows across reordering while preserving state and behavior", async () => {
+    document.body.innerHTML = `
+      <div id="host" vsn-construct="items = [{ id: 'a', label: 'A' }, { id: 'b', label: 'B' }, { id: 'c', label: 'C' }];">
+        <ul>
+          <template vsn-each="items as item, index" vsn-key="item.id">
+            <li class="row">
+              <input class="editor" vsn-bind="item.label" />
+              <span class="label" vsn-bind:from="item.label"></span>
+              <span class="idx" vsn-bind:from="index"></span>
+            </li>
+          </template>
+        </ul>
+      </div>
+    `;
+
+    const engine = new Engine();
+    engine.registerBehaviors(`
+      .row {
+        construct { mounts = (mounts ?? 0) + 1; }
+        destruct { destroyed = true; }
+      }
+    `);
+    await engine.mount(document.body);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    const initialRows = Array.from(document.querySelectorAll(".row"));
+    const rowA = initialRows[0] as HTMLLIElement;
+    const rowB = initialRows[1] as HTMLLIElement;
+    const rowC = initialRows[2] as HTMLLIElement;
+    const editorB = rowB.querySelector(".editor") as HTMLInputElement;
+    editorB.focus();
+    editorB.value = "Edited";
+    editorB.dispatchEvent(new Event("input", { bubbles: true }));
+
+    const host = document.getElementById("host") as HTMLDivElement;
+    const scope = engine.getScope(host);
+    const items = scope.get("items") as Array<{ id: string; label: string }>;
+    scope.set("items", [items[2], items[1], items[0]]);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    const reorderedRows = Array.from(document.querySelectorAll(".row"));
+    expect(reorderedRows).toEqual([rowC, rowB, rowA]);
+    expect(rowB.querySelector(".editor")).toBe(editorB);
+    expect(editorB.value).toBe("Edited");
+    expect(document.activeElement).toBe(editorB);
+    expect(reorderedRows.map((row) => row.querySelector(".idx")?.textContent)).toEqual(["0", "1", "2"]);
+    expect(reorderedRows.map((row) => row.querySelector(".label")?.textContent)).toEqual(["C", "Edited", "A"]);
+    expect(engine.getScope(rowA).get("mounts")).toBe(1);
+    expect(engine.getScope(rowB).get("mounts")).toBe(1);
+    expect(engine.getScope(rowC).get("mounts")).toBe(1);
+
+    scope.set("items", [items[2], items[0]]);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(Array.from(document.querySelectorAll(".row"))).toEqual([rowC, rowA]);
+    expect(engine.getScope(rowB).get("destroyed")).toBe(true);
+  });
 });

@@ -492,6 +492,11 @@ function unwrapProxy(value: any): any {
   return current;
 }
 
+/** @internal Normalize reactive proxies for identity comparisons. */
+export function unwrapReactiveValue<T>(value: T): T {
+  return unwrapProxy(value);
+}
+
 export class Scope {
   private data = new Map<string, any>();
   private computedValues = new Map<string, ComputedState<any>>();

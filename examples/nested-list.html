@@ -17,7 +17,7 @@
   </form>
 
   <ul class="cookbook-list">
-    <template vsn-each="items as item, index">
+    <template vsn-each="items as item, index" vsn-key="item.0">
       <li class="cookbook-list-row">
         <span class="cookbook-list-index" vsn-bind:from="index">0</span>
         <span class="cookbook-list-label" vsn-bind:from="item[0]">Task</span>
@@ -29,7 +29,7 @@
   </ul>
 
   <p class="cookbook-note">
-    Replacing the array causes the current runtime to recreate each rendered row, so row identity should not be assumed.
+    The stable task label keys each row, so replacing or reordering the array preserves row identity.
   </p>
 </section>
 

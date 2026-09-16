@@ -37,7 +37,7 @@
   </div>
 
   <ul class="todo-list">
-    <template vsn-each="todos as todo, index">
+    <template vsn-each="todos as todo, index" vsn-key="todo.0">
       <li class="todo-item">
         <button class="todo-check" vsn-on:click="toggleTodo(index);"></button>
         <span class="todo-title"></span>

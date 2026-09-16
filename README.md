@@ -67,6 +67,18 @@ $color :< theme.color;
 
 Inline attributes include `vsn-bind`, `vsn-if`, `vsn-show`, `vsn-text`, `vsn-html`, `vsn-each`, `vsn-get`, and `vsn-on:<event>`. `vsn-text` writes literal text with `textContent`; `vsn-html` sanitizes HTML by default, while `vsn-html!trusted` explicitly bypasses sanitization. Untrusted HTML never activates VSN behavior scripts or `vsn-*` attributes. `vsn-if` and `vsn-show` are currently visibility-only aliases: both toggle `display` without removing the element from the DOM. `vsn-get` sends htmx-compatible partial-request headers: `HX-Request`, `HX-Current-URL`, and, when available, `HX-Target`, `HX-Trigger`, and `HX-Trigger-Name`.
 
+`vsn-each` renders the content of a `<template>` once per array item. Add `vsn-key` to reuse rows across list updates and preserve their DOM identity, focus, form state, animations, and child behaviors:
+
+```html
+<template vsn-each="users as user, index" vsn-key="user.id">
+  <li><input vsn-bind="user.name" /></li>
+</template>
+```
+
+The key expression is evaluated in each item scope. Keys must be unique and
+must not be `null` or `undefined`; omit `vsn-key` when index-based rendering is
+acceptable.
+
 ## Plugins
 
 Plugins can be imported from the package subpaths and registered on an engine:

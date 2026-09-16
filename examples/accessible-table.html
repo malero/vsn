@@ -32,7 +32,7 @@
         </tr>
       </thead>
       <tbody>
-        <template vsn-each="rows as row, index">
+        <template vsn-each="rows as row, index" vsn-key="row.0">
           <tr class="cookbook-table-row">
             <td>
               <input class="cookbook-table-check" type="checkbox" data-row-id="" />

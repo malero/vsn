@@ -27,7 +27,7 @@ HTML-first, selector-driven character. The priority labels are directional:
 
 ## P1 — DOM and application semantics
 
-- [ ] Add keyed `vsn-each` rendering so updates preserve element identity,
+- [x] Add keyed `vsn-each` rendering so updates preserve element identity,
   focus, input state, animations, and child behavior.
 - [ ] Give `vsn-if` true conditional mount/unmount semantics and keep
   `vsn-show` as visibility-only; document lifecycle behavior for both.

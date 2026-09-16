@@ -30,7 +30,7 @@
   </div>
 
   <ul id="async-results" class="cookbook-results">
-    <template vsn-each="results as result, index">
+    <template vsn-each="results as result, index" vsn-key="result.name">
       <li>
         <strong vsn-bind:from="result.name">Result</strong>
         <span vsn-bind:from="result.category">Category</span>

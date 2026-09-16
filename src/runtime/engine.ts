@@ -1,4 +1,4 @@
-import { batch, computed, effect, Scope } from "./scope";
+import { batch, computed, effect, Scope, unwrapReactiveValue } from "./scope";
 import type { ComputedGetter, ComputedRef, EffectCallback, EffectOptions, ReactiveOptions } from "./scope";
 import { applyBindToElement, applyBindToScope, BindDirection } from "./bindings";
 import { applyIf, applyShow } from "./conditionals";
@@ -518,7 +518,16 @@ type EachBinding = {
   listExpr: string;
   itemName: string;
   indexName?: string;
-  rendered: Element[];
+  keyExpr?: string;
+  rendered: EachRenderedItem[];
+};
+
+type EachRenderedItem = {
+  key: unknown;
+  scope: Scope;
+  roots: Element[];
+  nodes: Node[];
+  mounted: boolean;
 };
 
 type CachedBehavior = {
@@ -641,6 +650,7 @@ export class Engine {
   private pendingUpdated = new Set<Element>();
   private observerFlush: Debounced | undefined;
   private ignoredAdded = new WeakMap<Element, boolean>();
+  private ignoredRemoved = new WeakMap<Element, boolean>();
   private diagnostics: boolean;
   private logger: Partial<Pick<Console, "info" | "warn">>;
   private engineLifetime = new Lifetime();
@@ -1570,6 +1580,10 @@ export class Engine {
     const removed = Array.from(this.pendingRemoved);
     this.pendingRemoved.clear();
     for (const node of removed) {
+      if (this.ignoredRemoved.has(node)) {
+        this.ignoredRemoved.delete(node);
+        continue;
+      }
       this.handleRemovedNode(node);
     }
     const updated = Array.from(this.pendingUpdated);
@@ -1885,12 +1899,238 @@ export class Engine {
     return { listExpr, itemName, ...(indexName ? { indexName } : {}) };
   }
 
+  private createEachScope(
+    parentScope: Scope,
+    binding: EachBinding,
+    item: unknown,
+    index: number
+  ): Scope {
+    const itemScope = new Scope(parentScope);
+    itemScope.isEachItem = true;
+    this.updateEachScope(itemScope, binding, item, index);
+    return itemScope;
+  }
+
+  private updateEachScope(
+    itemScope: Scope,
+    binding: EachBinding,
+    item: unknown,
+    index: number
+  ): void {
+    // Always notify the item scope. The parent array may have changed an item
+    // in place, which emits on the parent scope rather than this child scope.
+    // Re-emitting here refreshes item bindings without recreating their DOM.
+    itemScope.setPath(`self.${binding.itemName}`, item);
+    if (binding.indexName) {
+      const currentIndex = itemScope.get(`self.${binding.indexName}`);
+      if (!Object.is(currentIndex, index)) {
+        itemScope.setPath(`self.${binding.indexName}`, index);
+      }
+    }
+  }
+
+  private createEachItem(
+    itemScope: Scope,
+    key: unknown
+  ): EachRenderedItem {
+    return {
+      key,
+      scope: itemScope,
+      roots: [],
+      nodes: [],
+      mounted: false
+    };
+  }
+
+  private removeEachItem(item: EachRenderedItem): void {
+    for (const root of item.roots) {
+      this.handleRemovedNode(root);
+    }
+    for (const node of item.nodes) {
+      if (node.parentNode) {
+        node.parentNode.removeChild(node);
+      }
+    }
+    item.roots = [];
+    item.nodes = [];
+    item.mounted = false;
+  }
+
+  private mountEachItem(
+    template: HTMLTemplateElement,
+    parent: HTMLElement,
+    item: EachRenderedItem,
+    anchor: Node
+  ): void {
+    const fragment = template.content.cloneNode(true) as DocumentFragment;
+    const nodes = Array.from(fragment.childNodes);
+    const roots = nodes.filter((node) => node.nodeType === 1) as Element[];
+    item.nodes = nodes;
+    item.roots = roots;
+    item.mounted = true;
+
+    for (const root of roots) {
+      this.getScope(root, item.scope);
+      if (this.observer) {
+        this.ignoredAdded.set(root, true);
+      }
+    }
+    parent.insertBefore(fragment, anchor);
+    for (const root of roots) {
+      this.handleAddedNode(root);
+      this.evaluate(root);
+      for (const child of Array.from(root.querySelectorAll("*"))) {
+        this.evaluate(child);
+      }
+    }
+  }
+
+  private placeEachItem(
+    template: HTMLTemplateElement,
+    parent: HTMLElement,
+    item: EachRenderedItem,
+    anchor: Node
+  ): Node {
+    if (!item.mounted) {
+      this.mountEachItem(template, parent, item, anchor);
+      return item.nodes[0] ?? anchor;
+    }
+
+    for (let index = item.nodes.length - 1; index >= 0; index -= 1) {
+      const node = item.nodes[index];
+      if (!node) {
+        continue;
+      }
+      if (node.nextSibling !== anchor) {
+        if (node.nodeType === 1) {
+          const element = node as Element;
+          if (this.observer && node.parentNode) {
+            this.ignoredRemoved.set(element, true);
+          }
+          if (this.observer) {
+            this.ignoredAdded.set(element, true);
+          }
+        }
+        parent.insertBefore(node, anchor);
+      }
+      anchor = node;
+    }
+    return anchor;
+  }
+
+  private reportEachKeyError(element: Element, message: string): void {
+    this.emitError(element, new Error(message));
+  }
+
+  private renderUnkeyedEach(
+    template: HTMLTemplateElement,
+    parent: HTMLElement,
+    binding: EachBinding,
+    scope: Scope,
+    list: any[]
+  ): void {
+    for (const item of binding.rendered) {
+      this.removeEachItem(item);
+    }
+
+    const rendered = list.map((item, index) => {
+      const itemScope = this.createEachScope(scope, binding, item, index);
+      return this.createEachItem(itemScope, index);
+    });
+    let anchor: Node = template;
+    for (let index = rendered.length - 1; index >= 0; index -= 1) {
+      const item = rendered[index];
+      if (item) {
+        anchor = this.placeEachItem(template, parent, item, anchor);
+      }
+    }
+    binding.rendered = rendered;
+  }
+
+  private renderKeyedEach(
+    template: HTMLTemplateElement,
+    parent: HTMLElement,
+    binding: EachBinding,
+    scope: Scope,
+    list: any[]
+  ): void {
+    const keyExpr = binding.keyExpr ?? "";
+    const candidates: Array<{ key: unknown; item: unknown; index: number; scope: Scope }> = [];
+    const seenKeys = new Set<unknown>();
+    for (let index = 0; index < list.length; index += 1) {
+      const item = list[index];
+      const itemScope = this.createEachScope(scope, binding, item, index);
+      const key = unwrapReactiveValue(itemScope.get(keyExpr));
+      if (key === null || key === undefined) {
+        this.reportEachKeyError(
+          template,
+          `vsn-each key '${keyExpr}' returned ${key === null ? "null" : "undefined"} at index ${index}`
+        );
+        return;
+      }
+      if (seenKeys.has(key)) {
+        this.reportEachKeyError(
+          template,
+          `vsn-each key '${keyExpr}' returned a duplicate value at index ${index}`
+        );
+        return;
+      }
+      seenKeys.add(key);
+      candidates.push({ key, item, index, scope: itemScope });
+    }
+
+    const previousByKey = new Map<unknown, EachRenderedItem>();
+    for (const item of binding.rendered) {
+      previousByKey.set(item.key, item);
+    }
+
+    const rendered = candidates.map((candidate) => {
+      const existing = previousByKey.get(candidate.key);
+      if (existing) {
+        this.updateEachScope(existing.scope, binding, candidate.item, candidate.index);
+        return existing;
+      }
+      return this.createEachItem(candidate.scope, candidate.key);
+    });
+    const retained = new Set(rendered);
+    for (const item of binding.rendered) {
+      if (!retained.has(item)) {
+        this.removeEachItem(item);
+      }
+    }
+
+    const activeElement = parent.ownerDocument.activeElement;
+    const selection = activeElement instanceof HTMLInputElement || activeElement instanceof HTMLTextAreaElement
+      ? {
+          start: activeElement.selectionStart,
+          end: activeElement.selectionEnd,
+          direction: activeElement.selectionDirection
+        }
+      : undefined;
+    let anchor: Node = template;
+    for (let index = rendered.length - 1; index >= 0; index -= 1) {
+      const item = rendered[index];
+      if (item) {
+        anchor = this.placeEachItem(template, parent, item, anchor);
+      }
+    }
+    if (activeElement instanceof HTMLElement && activeElement.isConnected && parent.contains(activeElement)) {
+      activeElement.focus();
+      if (
+        selection
+        && (activeElement instanceof HTMLInputElement || activeElement instanceof HTMLTextAreaElement)
+        && selection.start !== null
+        && selection.end !== null
+      ) {
+        activeElement.setSelectionRange(selection.start, selection.end, selection.direction ?? "none");
+      }
+    }
+    binding.rendered = rendered;
+  }
+
   private renderEach(element: Element): void {
     const binding = this.eachBindings.get(element);
-    if (!binding) {
-      return;
-    }
-    if (!(element instanceof HTMLTemplateElement)) {
+    if (!binding || !(element instanceof HTMLTemplateElement)) {
       return;
     }
     const parent = element.parentElement;
@@ -1898,45 +2138,20 @@ export class Engine {
       return;
     }
 
-    for (const node of binding.rendered) {
-      this.handleRemovedNode(node);
-      if (node.parentNode) {
-        node.parentNode.removeChild(node);
-      }
-    }
-    binding.rendered = [];
-
     const scope = this.getScope(element);
     const list = scope.get(binding.listExpr);
     if (!Array.isArray(list)) {
+      for (const item of binding.rendered) {
+        this.removeEachItem(item);
+      }
+      binding.rendered = [];
       return;
     }
-
-    const rendered: Element[] = [];
-    list.forEach((item, index) => {
-      const fragment = element.content.cloneNode(true) as DocumentFragment;
-      const roots = Array.from(fragment.children) as Element[];
-      const itemScope = new Scope(scope);
-      itemScope.isEachItem = true;
-      itemScope.setPath(`self.${binding.itemName}`, item);
-      if (binding.indexName) {
-        itemScope.setPath(`self.${binding.indexName}`, index);
-      }
-      for (const root of roots) {
-        this.getScope(root, itemScope);
-      }
-      parent.insertBefore(fragment, element);
-      for (const root of roots) {
-        this.ignoredAdded.set(root, true);
-        rendered.push(root);
-        this.handleAddedNode(root);
-        this.evaluate(root);
-        for (const child of Array.from(root.querySelectorAll("*"))) {
-          this.evaluate(child);
-        }
-      }
-    });
-    binding.rendered = rendered;
+    if (binding.keyExpr) {
+      this.renderKeyedEach(element, parent, binding, scope, list);
+      return;
+    }
+    this.renderUnkeyedEach(element, parent, binding, scope, list);
   }
 
   private attachBindInputHandler(element: Element, expr: string, lifetime = this.getInlineLifetime(element)): void {
@@ -4144,7 +4359,12 @@ export class Engine {
         if (!config) {
           return;
         }
-        this.eachBindings.set(element, { ...config, rendered: [] });
+        const keyExpr = element.getAttribute("vsn-key")?.trim() || undefined;
+        this.eachBindings.set(element, {
+          ...config,
+          ...(keyExpr ? { keyExpr } : {}),
+          rendered: []
+        });
         this.renderEach(element);
         this.watch(scope, config.listExpr, () => this.renderEach(element), element);
       }

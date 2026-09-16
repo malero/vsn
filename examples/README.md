@@ -34,9 +34,10 @@ not to provide a component framework or an application architecture.
 ## Reading these examples
 
 The examples use the current runtime semantics. In particular, `vsn-show` and
-`vsn-if` toggle visibility without removing elements, `vsn-each` currently
-recreates its rendered rows, and `vsn-get` swaps HTML fragments and processes
-new VSN behavior inside explicitly trusted fragments. Binding attributes resolve scope paths, so dotted
+`vsn-if` toggle visibility without removing elements, `vsn-each` reuses rows
+when a unique `vsn-key` is provided and recreates them otherwise, and `vsn-get`
+swaps HTML fragments and processes new VSN behavior inside explicitly trusted
+fragments. Binding attributes resolve scope paths, so dotted
 paths such as `result.name` (or `item.0` for an array element) should be used
 with `vsn-bind`; bracket indexing belongs in CFS expressions and behavior
 declarations. The examples intentionally make those details visible so they can

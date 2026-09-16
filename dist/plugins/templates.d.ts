@@ -498,6 +498,7 @@ declare class Engine {
     private pendingUpdated;
     private observerFlush;
     private ignoredAdded;
+    private ignoredRemoved;
     private diagnostics;
     private logger;
     private engineLifetime;
@@ -584,6 +585,15 @@ declare class Engine {
     private runConstruct;
     private runDestruct;
     private parseEachExpression;
+    private createEachScope;
+    private updateEachScope;
+    private createEachItem;
+    private removeEachItem;
+    private mountEachItem;
+    private placeEachItem;
+    private reportEachKeyError;
+    private renderUnkeyedEach;
+    private renderKeyedEach;
     private renderEach;
     private attachBindInputHandler;
     private parseBindDirection;
