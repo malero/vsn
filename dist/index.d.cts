@@ -108,6 +108,8 @@ declare class Lexer {
 }
 
 type Disposer = () => void;
+declare function isAbortError(error: unknown): boolean;
+declare function throwIfAborted(signal?: AbortSignal | null): void;
 /**
  * Owns resources for one mounted element or behavior binding.
  *
@@ -118,7 +120,12 @@ type Disposer = () => void;
 declare class Lifetime {
     private entries;
     private disposed;
+    private disposing;
+    private readonly controller;
     get isDisposed(): boolean;
+    get signal(): AbortSignal;
+    /** True while registered cleanup callbacks are being invoked. */
+    get isDisposing(): boolean;
     add(disposer: Disposer): Disposer;
     onCleanup(disposer: Disposer): Disposer;
     child(): Lifetime;
@@ -144,6 +151,7 @@ interface ExecutionContext {
     element?: Element;
     self?: any;
     lifetime?: Lifetime;
+    signal?: AbortSignal;
     returnValue?: any;
     returning?: boolean;
     breaking?: boolean;
@@ -655,6 +663,7 @@ type AttributeHandler = {
 };
 type AttributeHandlerContext = {
     lifetime: Lifetime;
+    signal: AbortSignal;
     onCleanup: (disposer: Disposer) => Disposer;
 };
 type HtmlTransformContext = {
@@ -675,6 +684,7 @@ type FlagApplyContext = {
     scope: Scope;
     declaration: DeclarationNode;
     lifetime: Lifetime;
+    signal: AbortSignal;
     onCleanup: (disposer: Disposer) => Disposer;
 };
 type FlagHandler = {
@@ -700,6 +710,7 @@ type BehaviorModifierContext = {
     behavior: RegisteredBehavior;
     engine: Engine;
     lifetime: Lifetime;
+    signal: AbortSignal;
     onCleanup: (disposer: Disposer) => Disposer;
 };
 type EventBindPatch = {
@@ -716,6 +727,7 @@ type EventFlagContext = {
     event: Event | undefined;
     engine: Engine;
     lifetime: Lifetime;
+    signal: AbortSignal;
     onCleanup: (disposer: Disposer) => Disposer;
 };
 type EngineOptions = {
@@ -803,6 +815,7 @@ declare class Engine {
      * is unmounted.
      */
     getLifetime(element: Element): Lifetime;
+    get signal(): AbortSignal;
     dispose(): void;
     private getInlineLifetime;
     private resetInlineLifetime;
@@ -932,4 +945,4 @@ declare const VERSION: string;
 declare function parseCFS(source: string): ProgramNode;
 declare function autoMount(root?: HTMLElement | Document): Engine | null;
 
-export { type ArrayElement, ArrayExpression, ArrayPattern, type ArrayPatternElement, AssertError, AssertNode, AssignmentNode, type AssignmentTarget, type AttributeHandler, type AttributeHandlerContext, AwaitExpression, BaseNode, type BehaviorFlagArgs, type BehaviorFlags, type BehaviorModifierContext, type BehaviorModifierHandler, BehaviorNode, BinaryExpression, BlockNode, BreakNode, type CFSNode, CallExpression, ContinueNode, type DeclarationFlagArgs, type DeclarationFlags, DeclarationNode, type DeclarationTarget, DirectiveExpression, type Disposer, ElementDirectiveExpression, ElementPropertyExpression, ElementRefExpression, Engine, type EngineOptions, type EventBindPatch, type EventFlagContext, type ExecutionContext, type ExpressionNode, type FlagApplyContext, type FlagHandler, ForEachNode, ForNode, FunctionDeclarationNode, FunctionExpression, type FunctionParam, type HtmlSetOptions, type HtmlTransformContext, type HtmlTransformOptions, type HtmlTransformer, IdentifierExpression, IfNode, IndexExpression, Lexer, Lifetime, LiteralExpression, MemberExpression, type ObjectEntry, ObjectExpression, ObjectPattern, type ObjectPatternEntry, OnBlockNode, Parser, type PatternNode, ProgramNode, QueryExpression, type RegisteredBehavior, RestElement, ReturnNode, SelectorNode, SpreadElement, TaggedTemplateExpression, TemplateExpression, TernaryExpression, TokenType, TryNode, UnaryExpression, type UseFlagArgs, type UseFlags, UseNode, VERSION, WhileNode, autoMount, parseCFS };
+export { type ArrayElement, ArrayExpression, ArrayPattern, type ArrayPatternElement, AssertError, AssertNode, AssignmentNode, type AssignmentTarget, type AttributeHandler, type AttributeHandlerContext, AwaitExpression, BaseNode, type BehaviorFlagArgs, type BehaviorFlags, type BehaviorModifierContext, type BehaviorModifierHandler, BehaviorNode, BinaryExpression, BlockNode, BreakNode, type CFSNode, CallExpression, ContinueNode, type DeclarationFlagArgs, type DeclarationFlags, DeclarationNode, type DeclarationTarget, DirectiveExpression, type Disposer, ElementDirectiveExpression, ElementPropertyExpression, ElementRefExpression, Engine, type EngineOptions, type EventBindPatch, type EventFlagContext, type ExecutionContext, type ExpressionNode, type FlagApplyContext, type FlagHandler, ForEachNode, ForNode, FunctionDeclarationNode, FunctionExpression, type FunctionParam, type HtmlSetOptions, type HtmlTransformContext, type HtmlTransformOptions, type HtmlTransformer, IdentifierExpression, IfNode, IndexExpression, Lexer, Lifetime, LiteralExpression, MemberExpression, type ObjectEntry, ObjectExpression, ObjectPattern, type ObjectPatternEntry, OnBlockNode, Parser, type PatternNode, ProgramNode, QueryExpression, type RegisteredBehavior, RestElement, ReturnNode, SelectorNode, SpreadElement, TaggedTemplateExpression, TemplateExpression, TernaryExpression, TokenType, TryNode, UnaryExpression, type UseFlagArgs, type UseFlags, UseNode, VERSION, WhileNode, autoMount, isAbortError, parseCFS, throwIfAborted };

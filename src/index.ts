@@ -5,11 +5,12 @@ export const VERSION = typeof __VSN_VERSION__ !== "undefined" ? __VSN_VERSION__ 
 export { Lexer } from "./parser/lexer";
 import { Parser } from "./parser/parser";
 import { Engine } from "./runtime/engine";
+import { isAbortError } from "./runtime/lifetime";
 export { Parser };
 export { TokenType } from "./parser/token";
 export * from "./ast/nodes";
 export { Engine } from "./runtime/engine";
-export { Lifetime } from "./runtime/lifetime";
+export { isAbortError, Lifetime, throwIfAborted } from "./runtime/lifetime";
 export type { Disposer } from "./runtime/lifetime";
 export type {
   AttributeHandler,
@@ -37,7 +38,7 @@ if (typeof window !== "undefined") {
   (window as any)["parseCFS"] = parseCFS;
 }
 
-async function loadBehaviorSources(root: HTMLElement | Document): Promise<string> {
+async function loadBehaviorSources(root: HTMLElement | Document, signal?: AbortSignal): Promise<string> {
   const documentRoot = root instanceof Document ? root : root.ownerDocument;
   const scripts = Array.from(root.querySelectorAll('script[type="text/vsn"]'));
   const sources = await Promise.all(
@@ -48,7 +49,12 @@ async function loadBehaviorSources(root: HTMLElement | Document): Promise<string
       }
 
       const url = new URL(src, documentRoot.baseURI);
-      const response = await fetch(url.href);
+      const response = signal
+        ? await fetch(url.href, { signal })
+        : await fetch(url.href);
+      if (signal?.aborted) {
+        return "";
+      }
       if (!response.ok) {
         throw new Error(`Failed to load VSN source '${url.href}' (HTTP ${response.status})`);
       }
@@ -69,6 +75,9 @@ export function autoMount(root: HTMLElement | Document = document): Engine | nul
     const target = root instanceof Document ? root.body : root;
     if (target) {
       try {
+        if (engine.signal.aborted) {
+          return;
+        }
         const plugins = (globalThis as any).VSNPlugins;
         if (plugins && typeof plugins === "object") {
           for (const plugin of Object.values(plugins)) {
@@ -78,7 +87,10 @@ export function autoMount(root: HTMLElement | Document = document): Engine | nul
           }
         }
 
-        const sources = await loadBehaviorSources(root);
+        const sources = await loadBehaviorSources(root, engine.signal);
+        if (engine.signal.aborted) {
+          return;
+        }
         if (sources.trim()) {
           engine.registerBehaviors(sources);
         }
@@ -88,6 +100,9 @@ export function autoMount(root: HTMLElement | Document = document): Engine | nul
         const elapsedMs = Math.round(endTime - startTime);
         console.log(`Took ${elapsedMs}ms to start up VSN.js. https://www.vsnjs.com/ v${VERSION}`);
       } catch (error) {
+        if (engine.signal.aborted || isAbortError(error)) {
+          return;
+        }
         console.warn("vsn:mountError", error);
         target.dispatchEvent(new CustomEvent("vsn:error", {
           detail: { error, selector: "mount" },

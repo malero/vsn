@@ -1,3 +1,21 @@
+// src/runtime/lifetime.ts
+function isAbortError(error) {
+  return Boolean(
+    error && typeof error === "object" && "name" in error && error.name === "AbortError"
+  );
+}
+function throwIfAborted(signal) {
+  if (!signal?.aborted) {
+    return;
+  }
+  if (signal.reason) {
+    throw signal.reason;
+  }
+  const error = new Error("The operation was aborted");
+  error.name = "AbortError";
+  throw error;
+}
+
 // src/runtime/http.ts
 function getPartialHeaders(element, target) {
   const headers = new Headers();
@@ -50,7 +68,15 @@ function registerSanitizeHtml(engine, options = {}) {
       const target = element.getAttribute("vsn-target") ?? void 0;
       const swap = element.getAttribute("vsn-swap") ?? "inner";
       const targetSelector = target ?? void 0;
+      const ownerLifetime = context?.lifetime ?? engine.getLifetime(element);
+      let requestLifetime;
       const run = async () => {
+        if (ownerLifetime.isDisposed || !element.isConnected) {
+          return;
+        }
+        requestLifetime?.dispose();
+        const operationLifetime = ownerLifetime.child();
+        requestLifetime = operationLifetime;
         try {
           await applyGetWithSanitize(
             engine,
@@ -59,14 +85,23 @@ function registerSanitizeHtml(engine, options = {}) {
               url,
               swap,
               trusted,
+              signal: operationLifetime.signal,
               ...targetSelector ? { targetSelector } : {}
             },
             sanitizer,
             trustedElements
           );
         } catch (error) {
+          if (operationLifetime.signal.aborted || ownerLifetime.signal.aborted || isAbortError(error)) {
+            return;
+          }
           console.warn("vsn:getError", error);
           element.dispatchEvent(new CustomEvent("vsn:getError", { detail: { error }, bubbles: true }));
+        } finally {
+          if (requestLifetime === operationLifetime) {
+            requestLifetime = void 0;
+          }
+          operationLifetime.dispose();
         }
       };
       const clickHandler = (event) => {
@@ -76,7 +111,10 @@ function registerSanitizeHtml(engine, options = {}) {
         void run();
       };
       element.addEventListener("click", clickHandler);
-      context?.onCleanup(() => element.removeEventListener("click", clickHandler));
+      context?.onCleanup(() => {
+        requestLifetime?.dispose();
+        element.removeEventListener("click", clickHandler);
+      });
       if (autoLoad) {
         Promise.resolve().then(run);
       }
@@ -105,14 +143,18 @@ async function applyGetWithSanitize(engine, element, config, sanitizer, trustedE
   if (!globalThis.fetch) {
     throw new Error("fetch is not available");
   }
+  throwIfAborted(config.signal);
   const requestTarget = resolveTarget(element, config.targetSelector);
   const response = await globalThis.fetch(config.url, {
-    headers: getPartialHeaders(element, requestTarget)
+    headers: getPartialHeaders(element, requestTarget),
+    ...config.signal ? { signal: config.signal } : {}
   });
+  throwIfAborted(config.signal);
   if (!response || !response.ok) {
     return;
   }
   const html = await response.text();
+  throwIfAborted(config.signal);
   const target = resolveTarget(element, config.targetSelector);
   if (!target) {
     element.dispatchEvent(new CustomEvent("vsn:targetError", { detail: { selector: config.targetSelector } }));

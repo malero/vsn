@@ -3,7 +3,7 @@ import { applyBindToElement, applyBindToScope, BindDirection } from "./bindings"
 import { applyIf, applyShow } from "./conditionals";
 import { applyGet, GetConfig } from "./http";
 import { debounce, Debounced } from "./debounce";
-import { Lifetime } from "./lifetime";
+import { isAbortError, Lifetime, throwIfAborted } from "./lifetime";
 import type { Disposer } from "./lifetime";
 import { Parser } from "../parser/parser";
 import {
@@ -480,6 +480,7 @@ export type AttributeHandler = {
 
 export type AttributeHandlerContext = {
   lifetime: Lifetime;
+  signal: AbortSignal;
   onCleanup: (disposer: Disposer) => Disposer;
 };
 
@@ -526,6 +527,7 @@ export type FlagApplyContext = {
   scope: Scope;
   declaration: DeclarationNode;
   lifetime: Lifetime;
+  signal: AbortSignal;
   onCleanup: (disposer: Disposer) => Disposer;
 };
 
@@ -554,6 +556,7 @@ export type BehaviorModifierContext = {
   behavior: RegisteredBehavior;
   engine: Engine;
   lifetime: Lifetime;
+  signal: AbortSignal;
   onCleanup: (disposer: Disposer) => Disposer;
 };
 
@@ -572,6 +575,7 @@ export type EventFlagContext = {
   event: Event | undefined;
   engine: Engine;
   lifetime: Lifetime;
+  signal: AbortSignal;
   onCleanup: (disposer: Disposer) => Disposer;
 };
 
@@ -1194,6 +1198,10 @@ export class Engine {
     return this.inlineLifetimes.get(element) ?? this.getInlineLifetime(element);
   }
 
+  get signal(): AbortSignal {
+    return this.engineLifetime.signal;
+  }
+
   dispose(): void {
     const documents = Array.from(this.mountedDocuments);
     this.disposeMountedRoots();
@@ -1609,6 +1617,7 @@ export class Engine {
       }
       this.logDiagnostic("bind", element, behavior);
     } catch (error) {
+      const cancelled = lifetime.signal.aborted || isAbortError(error);
       this.disposeLifetime(element, lifetime);
       this.behaviorLifetimes.get(element)?.delete(behavior.id);
       if (this.behaviorLifetimes.get(element)?.size === 0) {
@@ -1620,7 +1629,9 @@ export class Engine {
         this.behaviorBoundElements.delete(behavior.id);
       }
       this.behaviorRootScopes.get(element)?.delete(behavior.id);
-      throw error;
+      if (!cancelled) {
+        throw error;
+      }
     }
   }
 
@@ -1644,7 +1655,7 @@ export class Engine {
     }
     const rootScope = this.getBehaviorRootScope(element, behavior);
     if (behavior.destruct) {
-      void this.safeExecuteBlock(behavior.destruct, scope, element, rootScope, lifetime);
+      void this.safeExecuteBlock(behavior.destruct, scope, element, rootScope, lifetime, null);
     }
     this.behaviorRootScopes.get(element)?.delete(behavior.id);
     void this.applyBehaviorModifierHook("onDestruct", behavior, element, scope, rootScope, lifetime);
@@ -1665,7 +1676,7 @@ export class Engine {
       const rootScope = this.getBehaviorRootScope(element, behavior);
       const lifetime = this.behaviorLifetimes.get(element)?.get(behavior.id) ?? new Lifetime();
       if (behavior.destruct) {
-        void this.safeExecuteBlock(behavior.destruct, scope, element, rootScope, lifetime);
+        void this.safeExecuteBlock(behavior.destruct, scope, element, rootScope, lifetime, null);
       }
       void this.applyBehaviorModifierHook("onDestruct", behavior, element, scope, rootScope, lifetime);
       void this.applyBehaviorModifierHook("onUnbind", behavior, element, scope, rootScope, lifetime);
@@ -1677,6 +1688,7 @@ export class Engine {
     const lifetime = this.resetInlineLifetime(element);
     const context: AttributeHandlerContext = {
       lifetime,
+      signal: lifetime.signal,
       onCleanup: (disposer) => lifetime.onCleanup(disposer)
     };
     for (const name of element.getAttributeNames()) {
@@ -2031,7 +2043,7 @@ export class Engine {
         return;
       }
       if (node instanceof IdentifierExpression) {
-        if (node.name !== "self") {
+        if (node.name !== "self" && node.name !== "signal") {
           dependencies.add(node.name);
         }
         return;
@@ -2350,7 +2362,9 @@ export class Engine {
           this.evaluate(element);
         }
       } catch (error) {
-        this.emitError(element, error);
+        if (!lifetime.signal.aborted && !isAbortError(error)) {
+          this.emitError(element, error);
+        }
       } finally {
         this.applyEventFlagAfter(element, scope, config.flags, config.flagArgs, event, lifetime);
       }
@@ -2412,7 +2426,9 @@ export class Engine {
         await this.executeBlock(body, scope, element, rootScope, lifetime);
       } catch (error) {
         failed = true;
-        this.emitError(element, error);
+        if (!lifetime.signal.aborted && !isAbortError(error)) {
+          this.emitError(element, error);
+        }
       } finally {
         for (const [name, value] of previousValues.entries()) {
           scope.setPath(name, value);
@@ -2435,24 +2451,44 @@ export class Engine {
     autoLoad = false,
     lifetime = this.getInlineLifetime(element)
   ): void {
+    let requestLifetime: Lifetime | undefined;
     const handler = async () => {
-      if (lifetime.isDisposed) {
+      if (lifetime.isDisposed || !element.isConnected) {
         return;
       }
+      requestLifetime?.dispose();
+      const operationLifetime = lifetime.child();
+      requestLifetime = operationLifetime;
       const config = this.getBindings.get(element);
       if (!config) {
+        operationLifetime.dispose();
         return;
       }
       try {
-        await applyGet(element, config, this.getScope(element), (target) => {
-          this.handleHtmlBehaviors(target);
-        });
-        if (lifetime.isDisposed) {
+        await applyGet(
+          element,
+          { ...config, signal: operationLifetime.signal },
+          this.getScope(element),
+          (target) => {
+            if (!operationLifetime.signal.aborted) {
+              this.handleHtmlBehaviors(target);
+            }
+          }
+        );
+        if (operationLifetime.signal.aborted || lifetime.isDisposed) {
           return;
         }
       } catch (error) {
+        if (operationLifetime.signal.aborted || lifetime.signal.aborted || isAbortError(error)) {
+          return;
+        }
         console.warn("vsn:getError", error);
         element.dispatchEvent(new CustomEvent("vsn:getError", { detail: { error }, bubbles: true }));
+      } finally {
+        if (requestLifetime === operationLifetime) {
+          requestLifetime = undefined;
+        }
+        operationLifetime.dispose();
       }
     };
 
@@ -2492,6 +2528,7 @@ export class Engine {
         event: undefined,
         engine: this,
         lifetime,
+        signal: lifetime.signal,
         onCleanup: (disposer) => lifetime.onCleanup(disposer)
       });
       if (!patch) {
@@ -2537,6 +2574,7 @@ export class Engine {
         event,
         engine: this,
         lifetime,
+        signal: lifetime.signal,
         onCleanup: (disposer) => lifetime.onCleanup(disposer)
       });
       if (result === false) {
@@ -2555,6 +2593,9 @@ export class Engine {
     lifetime: Lifetime,
     rootScope?: Scope
   ): void {
+    if (lifetime.isDisposed) {
+      return;
+    }
     for (const name of Object.keys(flags)) {
       const handler = this.flagHandlers.get(name);
       if (!handler?.onEventAfter) {
@@ -2569,6 +2610,7 @@ export class Engine {
         event,
         engine: this,
         lifetime,
+        signal: lifetime.signal,
         onCleanup: (disposer) => lifetime.onCleanup(disposer)
       });
     }
@@ -2599,6 +2641,7 @@ export class Engine {
           event,
           engine: this,
           lifetime,
+          signal: lifetime.signal,
           onCleanup: (disposer) => lifetime.onCleanup(disposer)
         },
         args
@@ -2706,6 +2749,7 @@ export class Engine {
     rootScope?: Scope,
     lifetime?: Lifetime
   ): Promise<void> {
+    throwIfAborted(lifetime?.signal);
     let block = this.codeCache.get(code);
     if (!block) {
       block = Parser.parseInline(code);
@@ -2720,7 +2764,7 @@ export class Engine {
         engine: this,
         ...(element ? { element } : {}),
         self: selfRef,
-        ...(lifetime ? { lifetime } : {})
+        ...(lifetime ? { lifetime, signal: lifetime.signal } : {})
       };
       await block.evaluate(context);
     });
@@ -2731,8 +2775,10 @@ export class Engine {
     scope: Scope,
     element?: Element,
     rootScope?: Scope,
-    lifetime?: Lifetime
+    lifetime?: Lifetime,
+    signal: AbortSignal | null | undefined = lifetime?.signal
   ): Promise<void> {
+    throwIfAborted(signal);
     await this.withExecutionElement(element, lifetime, async () => {
       const selfRef = this.getGroupProxy(scope);
       const context: ExecutionContext = {
@@ -2742,7 +2788,7 @@ export class Engine {
         engine: this,
         ...(element ? { element } : {}),
         self: selfRef,
-        ...(lifetime ? { lifetime } : {})
+        ...(lifetime ? { lifetime, ...(signal ? { signal } : {}) } : {})
       };
       await block.evaluate(context);
     });
@@ -2758,7 +2804,7 @@ export class Engine {
     try {
       await this.execute(code, scope, element, rootScope, lifetime);
     } catch (error) {
-      if (element) {
+      if (element && !lifetime?.signal.aborted && !isAbortError(error)) {
         this.emitError(element, error);
       }
     }
@@ -2769,12 +2815,13 @@ export class Engine {
     scope: Scope,
     element?: Element,
     rootScope?: Scope,
-    lifetime?: Lifetime
+    lifetime?: Lifetime,
+    signal: AbortSignal | null | undefined = lifetime?.signal
   ): Promise<void> {
     try {
-      await this.executeBlock(block, scope, element, rootScope, lifetime);
+      await this.executeBlock(block, scope, element, rootScope, lifetime, signal);
     } catch (error) {
-      if (element) {
+      if (element && !signal?.aborted && !isAbortError(error)) {
         this.emitError(element, error);
       }
     }
@@ -3315,50 +3362,52 @@ export class Engine {
     }
     const selfRef = this.getGroupProxy(scope);
     const fn = (...args: any[]) => {
-      if (lifetime.isDisposed) {
+      if (lifetime.isDisposed && !lifetime.isDisposing) {
         return undefined;
       }
+      const signal = lifetime.isDisposing ? undefined : lifetime.signal;
       return this.withExecutionContext(element, lifetime, () => {
-      const callScope = scope.createChild ? scope.createChild() : scope;
-      const context: ExecutionContext = {
-        scope: callScope,
-        rootScope: rootScope ?? callScope,
-        globals: this.globals,
-        engine: this,
-        element,
-        self: selfRef,
-        returnValue: undefined,
-        returning: false,
-        breaking: false,
-        continuing: false,
-        lifetime
-      };
-      const previousValues = new Map<string, any>();
-      const restore = () => {
-        if (callScope === scope) {
-          this.restoreFunctionParams(callScope, declaration.params, previousValues);
+        const callScope = scope.createChild ? scope.createChild() : scope;
+        const context: ExecutionContext = {
+          scope: callScope,
+          rootScope: rootScope ?? callScope,
+          globals: this.globals,
+          engine: this,
+          element,
+          self: selfRef,
+          returnValue: undefined,
+          returning: false,
+          breaking: false,
+          continuing: false,
+          lifetime,
+          ...(signal ? { signal } : {})
+        };
+        const previousValues = new Map<string, any>();
+        const restore = () => {
+          if (callScope === scope) {
+            this.restoreFunctionParams(callScope, declaration.params, previousValues);
+          }
+        };
+        let result: any;
+        try {
+          const paramsResult = this.applyFunctionParams(callScope, declaration.params, previousValues, context, args);
+          if (isPromiseLike(paramsResult)) {
+            result = Promise.resolve(paramsResult).then(() => declaration.body.evaluate(context));
+          } else {
+            result = declaration.body.evaluate(context);
+          }
+        } catch (error) {
+          restore();
+          throw error;
         }
-      };
-      let result: any;
-      try {
-        const paramsResult = this.applyFunctionParams(callScope, declaration.params, previousValues, context, args);
-        if (isPromiseLike(paramsResult)) {
-          result = Promise.resolve(paramsResult).then(() => declaration.body.evaluate(context));
-        } else {
-          result = declaration.body.evaluate(context);
+        if (declaration.isAsync) {
+          return Promise.resolve(result).then(() => context.returnValue).finally(restore);
         }
-      } catch (error) {
+        if (isPromiseLike(result)) {
+          return Promise.resolve(result).then(() => context.returnValue).finally(restore);
+        }
         restore();
-        throw error;
-      }
-      if (declaration.isAsync) {
-        return Promise.resolve(result).then(() => context.returnValue).finally(restore);
-      }
-      if (isPromiseLike(result)) {
-        return Promise.resolve(result).then(() => context.returnValue).finally(restore);
-      }
-      restore();
-      return context.returnValue;
+        return context.returnValue;
       });
     };
     scope.setPath(declaration.name, fn);
@@ -3450,7 +3499,7 @@ export class Engine {
       engine: this,
       element,
       self: selfRef,
-      ...(lifetime ? { lifetime } : {})
+      ...(lifetime ? { lifetime, signal: lifetime.signal } : {})
     };
     const operator = declaration.operator;
     const debounceMs = declaration.flags.debounce
@@ -3471,6 +3520,9 @@ export class Engine {
 
     if (declaration.target instanceof IdentifierExpression) {
       const value = await declaration.value.evaluate(context);
+      if (lifetime.isDisposed) {
+        return;
+      }
       const transformed = this.applyCustomFlagTransforms(value, element, scope, declaration, lifetime);
       scope.setPath(declaration.target.name, transformed);
       if (declaration.flags.important && importantKey) {
@@ -3506,6 +3558,9 @@ export class Engine {
 
     if (!exprIdentifier) {
       const value = await declaration.value.evaluate(context);
+      if (lifetime.isDisposed) {
+        return;
+      }
       const transformed = this.applyCustomFlagTransforms(value, element, scope, declaration, lifetime);
       this.setDirectiveValue(element, target, transformed, declaration);
       const shouldWatch = operator === ":<" || operator === ":=";
@@ -3566,6 +3621,7 @@ export class Engine {
         scope,
         declaration,
         lifetime,
+        signal: lifetime.signal,
         onCleanup: (disposer) => lifetime.onCleanup(disposer)
       });
     }
@@ -3595,6 +3651,7 @@ export class Engine {
           scope,
           declaration,
           lifetime: owner,
+          signal: owner.signal,
           onCleanup: (disposer) => owner.onCleanup(disposer)
         },
         nextValue
@@ -3631,6 +3688,7 @@ export class Engine {
         behavior,
         engine: this,
         lifetime,
+        signal: lifetime.signal,
         onCleanup: (disposer) => lifetime.onCleanup(disposer)
       });
     }
@@ -3728,6 +3786,7 @@ export class Engine {
       if (lifetime?.isDisposed) {
         return;
       }
+      throwIfAborted(lifetime?.signal);
       const currentVersion = ++version;
       const selfRef = this.getGroupProxy(scope);
       const context: ExecutionContext = {
@@ -3737,7 +3796,7 @@ export class Engine {
         engine: this,
         element,
         self: selfRef,
-        ...(lifetime ? { lifetime } : {})
+        ...(lifetime ? { lifetime, signal: lifetime.signal } : {})
       };
       const value = await expr.evaluate(context);
       if (currentVersion !== version || lifetime?.isDisposed) {
@@ -3745,13 +3804,20 @@ export class Engine {
       }
       this.setDirectiveValue(element, target, value, binding);
     };
-    void handler();
+    const run = () => {
+      void handler().catch((error) => {
+        if (!lifetime?.signal.aborted && !isAbortError(error)) {
+          this.emitError(element, error);
+        }
+      });
+    };
+    run();
     this.watchExpression(
       scope,
       rootScope,
       expr,
       () => {
-        void handler();
+        run();
       },
       debounceMs,
       element,
@@ -4073,7 +4139,7 @@ export class Engine {
     this.registerAttributeHandler({
       id: "vsn-get",
       match: (name) => name.startsWith("vsn-get"),
-      handle: (element, name) => {
+      handle: (element, name, _value, _scope, context) => {
         const autoLoad = name.includes("!load");
         const url = element.getAttribute(name) ?? "";
         const target = element.getAttribute("vsn-target") ?? undefined;
@@ -4084,7 +4150,7 @@ export class Engine {
           ...(target ? { targetSelector: target } : {})
         };
         this.getBindings.set(element, config);
-        this.attachGetHandler(element, autoLoad);
+        this.attachGetHandler(element, autoLoad, context?.lifetime);
       }
     });
 

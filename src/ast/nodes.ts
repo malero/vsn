@@ -1,3 +1,4 @@
+import { throwIfAborted } from "../runtime/lifetime";
 import type { Lifetime } from "../runtime/lifetime";
 
 export interface ExecutionContext {
@@ -21,6 +22,7 @@ export interface ExecutionContext {
   element?: Element;
   self?: any;
   lifetime?: Lifetime;
+  signal?: AbortSignal;
   returnValue?: any;
   returning?: boolean;
   breaking?: boolean;
@@ -53,9 +55,17 @@ function isPromiseLike<T>(value: T | Promise<T>): value is Promise<T> {
   return Boolean(value) && typeof (value as Promise<T>).then === "function";
 }
 
-function resolveMaybe<T, R>(value: T | Promise<T>, next: (value: T) => R | Promise<R>): R | Promise<R> {
+function resolveMaybe<T, R>(
+  value: T | Promise<T>,
+  next: (value: T) => R | Promise<R>,
+  signal?: AbortSignal
+): R | Promise<R> {
+  throwIfAborted(signal);
   if (isPromiseLike(value)) {
-    return value.then(next);
+    return value.then((resolved) => {
+      throwIfAborted(signal);
+      return next(resolved);
+    });
   }
   return next(value);
 }
@@ -65,6 +75,7 @@ function evaluateWithChildScope(context: ExecutionContext, block: BlockNode): an
   if (!scope || !scope.createChild) {
     return block.evaluate(context);
   }
+  throwIfAborted(context.signal);
   const previousScope = context.scope;
   context.scope = scope.createChild();
   let result: any;
@@ -114,9 +125,12 @@ export class BlockNode extends BaseNode {
   }
 
   evaluate(context: ExecutionContext): any {
+    throwIfAborted(context.signal);
     let index = 0;
     const run = (): any => {
+      throwIfAborted(context.signal);
       while (index < this.statements.length) {
+        throwIfAborted(context.signal);
         if (context.returning || context.breaking || context.continuing) {
           break;
         }
@@ -125,7 +139,10 @@ export class BlockNode extends BaseNode {
         if (statement && typeof statement.evaluate === "function") {
           const result = statement.evaluate(context);
           if (isPromiseLike(result)) {
-            return result.then(() => run());
+            return result.then(() => {
+              throwIfAborted(context.signal);
+              return run();
+            });
           }
         }
       }
@@ -176,23 +193,27 @@ export class AssignmentNode extends BaseNode {
   }
 
   evaluate(context: ExecutionContext): any {
+    throwIfAborted(context.signal);
     const target = this.target;
     if (target instanceof DirectiveExpression) {
       const value = this.value.evaluate(context);
       return resolveMaybe(value, (resolvedValue) => {
+        throwIfAborted(context.signal);
         this.assignDirectiveTarget(context, target, resolvedValue, this.operator);
         return resolvedValue;
-      });
+      }, context.signal);
     }
     if (target instanceof ElementDirectiveExpression) {
       const elementValue = target.element.evaluate(context);
       return resolveMaybe(elementValue, (resolvedElement) => {
+        throwIfAborted(context.signal);
         const element = resolveElementFromReference(resolvedElement);
         if (!element) {
           return undefined;
         }
         const value = this.value.evaluate(context);
         return resolveMaybe(value, (resolvedValue) => {
+          throwIfAborted(context.signal);
           this.assignDirectiveTarget(
             { ...context, element },
             target.directive,
@@ -200,8 +221,8 @@ export class AssignmentNode extends BaseNode {
             this.operator
           );
           return resolvedValue;
-        });
-      });
+        }, context.signal);
+      }, context.signal);
     }
     if (!context.scope || !context.scope.setPath) {
       return undefined;
@@ -211,6 +232,7 @@ export class AssignmentNode extends BaseNode {
     }
     const value = this.value.evaluate(context);
     return resolveMaybe(value, (resolvedValue) => {
+      throwIfAborted(context.signal);
       if (this.operator !== "=") {
         return this.applyCompoundAssignment(context, resolvedValue);
       }
@@ -222,17 +244,18 @@ export class AssignmentNode extends BaseNode {
       if (this.target instanceof MemberExpression || this.target instanceof IndexExpression) {
         const resolved = this.resolveAssignmentTarget(context);
         return resolveMaybe(resolved, (resolvedTarget) => {
+          throwIfAborted(context.signal);
           if (resolvedTarget?.scope?.setPath) {
             resolvedTarget.scope.setPath(resolvedTarget.path, resolvedValue);
             return resolvedValue;
           }
           this.assignTarget(context, this.target, resolvedValue);
           return resolvedValue;
-        });
+        }, context.signal);
       }
       this.assignTarget(context, this.target, resolvedValue, this.operator);
       return resolvedValue;
-    });
+    }, context.signal);
   }
 
   private applyCompoundAssignment(context: ExecutionContext, value: any): any {
@@ -241,6 +264,7 @@ export class AssignmentNode extends BaseNode {
     }
     const resolved = this.resolveAssignmentTarget(context);
     return resolveMaybe(resolved, (resolvedTarget) => {
+      throwIfAborted(context.signal);
       if (!resolvedTarget) {
         throw new Error("Compound assignment requires a simple identifier or member path");
       }
@@ -258,7 +282,7 @@ export class AssignmentNode extends BaseNode {
       }
       scope?.setPath?.(path, result);
       return result;
-    });
+    }, context.signal);
   }
 
   private applyIncrement(context: ExecutionContext): any {
@@ -267,6 +291,7 @@ export class AssignmentNode extends BaseNode {
     }
     const resolved = this.resolveAssignmentTarget(context);
     return resolveMaybe(resolved, (resolvedTarget) => {
+      throwIfAborted(context.signal);
       if (!resolvedTarget) {
         throw new Error("Increment/decrement requires a simple identifier or member path");
       }
@@ -277,7 +302,7 @@ export class AssignmentNode extends BaseNode {
       const next = (Number.isNaN(numeric) ? 0 : numeric) + delta;
       scope?.setPath?.(path, next);
       return this.prefix ? next : numeric;
-    });
+    }, context.signal);
   }
 
   private resolveAssignmentTarget(
@@ -311,6 +336,7 @@ export class AssignmentNode extends BaseNode {
       const targetExpr = this.target;
       const basePath = this.resolveTargetPath(context, targetExpr.target);
       return resolveMaybe(basePath, (resolvedBase) => {
+        throwIfAborted(context.signal);
         if (!resolvedBase) {
           return null;
         }
@@ -324,11 +350,12 @@ export class AssignmentNode extends BaseNode {
           return { scope: context.scope, path: `root.${rawPath}` };
         }
         return { scope: context.scope, path: rawPath };
-      });
+      }, context.signal);
     }
     if (this.target instanceof IndexExpression) {
       const path = this.resolveIndexPath(context, this.target);
       return resolveMaybe(path, (resolvedPath) => {
+        throwIfAborted(context.signal);
         if (!resolvedPath) {
           return null;
         }
@@ -341,7 +368,7 @@ export class AssignmentNode extends BaseNode {
           return { scope: context.scope, path: `root.${rawPath}` };
         }
         return { scope: context.scope, path: rawPath };
-      });
+      }, context.signal);
     }
     return null;
   }
@@ -349,17 +376,19 @@ export class AssignmentNode extends BaseNode {
   private resolveIndexPath(context: ExecutionContext, expr: IndexExpression): string | null | Promise<string | null> {
     const base = this.resolveTargetPath(context, expr.target);
     return resolveMaybe(base, (resolvedBase) => {
+      throwIfAborted(context.signal);
       if (!resolvedBase) {
         return null;
       }
       const indexValue = expr.index.evaluate(context);
       return resolveMaybe(indexValue, (resolvedIndex) => {
+        throwIfAborted(context.signal);
         if (resolvedIndex == null) {
           return null;
         }
         return `${resolvedBase}.${resolvedIndex}`;
-      });
-    });
+      }, context.signal);
+    }, context.signal);
   }
 
   private resolveTargetPath(context: ExecutionContext, target: ExpressionNode): string | null | Promise<string | null> {
@@ -384,6 +413,7 @@ export class AssignmentNode extends BaseNode {
     if (!context.scope || !context.scope.setPath) {
       return;
     }
+    throwIfAborted(context.signal);
     if (target instanceof DirectiveExpression) {
       this.assignDirectiveTarget(context, target, value, operator);
       return;
@@ -391,6 +421,7 @@ export class AssignmentNode extends BaseNode {
     if (target instanceof ElementDirectiveExpression) {
       const elementValue = target.element.evaluate(context);
       const next = resolveMaybe(elementValue, (resolvedElement) => {
+        throwIfAborted(context.signal);
         const element = resolveElementFromReference(resolvedElement);
         if (!element) {
           return;
@@ -401,7 +432,7 @@ export class AssignmentNode extends BaseNode {
           value,
           operator
         );
-      });
+      }, context.signal);
       if (isPromiseLike(next)) {
         void next;
       }
@@ -410,6 +441,7 @@ export class AssignmentNode extends BaseNode {
     if (target instanceof ElementPropertyExpression) {
       const elementValue = target.element.evaluate(context);
       const next = resolveMaybe(elementValue, (resolvedElement) => {
+        throwIfAborted(context.signal);
         if (resolvedElement && typeof resolvedElement === "object" && resolvedElement.__scope) {
           resolvedElement.__scope.setPath?.(target.property, value);
           return;
@@ -419,13 +451,14 @@ export class AssignmentNode extends BaseNode {
           return;
         }
         (element as any)[target.property] = value;
-      });
+      }, context.signal);
       if (isPromiseLike(next)) {
         void next;
       }
       return;
     }
     if (target instanceof IdentifierExpression) {
+      throwIfAborted(context.signal);
       context.scope.setPath(target.name, value);
       return;
     }
@@ -473,6 +506,7 @@ export class AssignmentNode extends BaseNode {
     value: any,
     operator: AssignmentNode["operator"] = "="
   ): void {
+    throwIfAborted(context.signal);
     const element = context.element;
     if (!element) {
       return;
@@ -558,15 +592,17 @@ export class ReturnNode extends BaseNode {
   }
 
   evaluate(context: ExecutionContext): any {
+    throwIfAborted(context.signal);
     if (context.returning) {
       return context.returnValue;
     }
     const nextValue = this.value ? this.value.evaluate(context) : undefined;
     return resolveMaybe(nextValue, (resolved) => {
+      throwIfAborted(context.signal);
       context.returnValue = resolved;
       context.returning = true;
       return context.returnValue;
-    });
+    }, context.signal);
   }
 }
 
@@ -576,6 +612,7 @@ export class BreakNode extends BaseNode {
   }
 
   evaluate(context: ExecutionContext): any {
+    throwIfAborted(context.signal);
     context.breaking = true;
     return undefined;
   }
@@ -587,6 +624,7 @@ export class ContinueNode extends BaseNode {
   }
 
   evaluate(context: ExecutionContext): any {
+    throwIfAborted(context.signal);
     context.continuing = true;
     return undefined;
   }
@@ -605,13 +643,15 @@ export class AssertNode extends BaseNode {
   }
 
   evaluate(context: ExecutionContext): any {
+    throwIfAborted(context.signal);
     const value = this.test.evaluate(context);
     return resolveMaybe(value, (resolved) => {
+      throwIfAborted(context.signal);
       if (!resolved) {
         throw new AssertError();
       }
       return resolved;
-    });
+    }, context.signal);
   }
 }
 
@@ -625,8 +665,10 @@ export class IfNode extends BaseNode {
   }
 
   evaluate(context: ExecutionContext): any {
+    throwIfAborted(context.signal);
     const condition = this.test.evaluate(context);
     return resolveMaybe(condition, (resolved) => {
+      throwIfAborted(context.signal);
       if (resolved) {
         return evaluateWithChildScope(context, this.consequent);
       }
@@ -634,7 +676,7 @@ export class IfNode extends BaseNode {
         return evaluateWithChildScope(context, this.alternate);
       }
       return undefined;
-    });
+    }, context.signal);
   }
 }
 
@@ -644,18 +686,22 @@ export class WhileNode extends BaseNode {
   }
 
   evaluate(context: ExecutionContext): any {
+    throwIfAborted(context.signal);
     const previousScope = context.scope;
     if (context.scope?.createChild) {
       context.scope = context.scope.createChild();
     }
     const run = (): any => {
+      throwIfAborted(context.signal);
       const condition = this.test.evaluate(context);
       return resolveMaybe(condition, (resolved) => {
+        throwIfAborted(context.signal);
         if (!resolved || context.returning) {
           return undefined;
         }
         const bodyResult = this.body.evaluate(context);
         return resolveMaybe(bodyResult, () => {
+          throwIfAborted(context.signal);
           if (context.breaking) {
             context.breaking = false;
             return undefined;
@@ -664,8 +710,8 @@ export class WhileNode extends BaseNode {
             context.continuing = false;
           }
           return run();
-        });
-      });
+        }, context.signal);
+      }, context.signal);
     };
     const result = run();
     if (isPromiseLike(result)) {
@@ -689,8 +735,10 @@ export class ForEachNode extends BaseNode {
   }
 
   evaluate(context: ExecutionContext): any {
+    throwIfAborted(context.signal);
     const iterableValue = this.iterable.evaluate(context);
     return resolveMaybe(iterableValue, (resolved) => {
+      throwIfAborted(context.signal);
       const entries = this.getEntries(resolved);
       const previousScope = context.scope;
       let bodyScope = context.scope;
@@ -699,6 +747,7 @@ export class ForEachNode extends BaseNode {
       }
       let index = 0;
       const loop = (): any => {
+        throwIfAborted(context.signal);
         if (index >= entries.length || context.returning) {
           context.scope = previousScope;
           return undefined;
@@ -709,6 +758,7 @@ export class ForEachNode extends BaseNode {
         context.scope?.setPath?.(this.target.name, value);
         const bodyResult = this.body.evaluate(context);
         return resolveMaybe(bodyResult, () => {
+          throwIfAborted(context.signal);
           if (context.breaking) {
             context.breaking = false;
             context.scope = previousScope;
@@ -719,10 +769,10 @@ export class ForEachNode extends BaseNode {
           }
           context.scope = previousScope;
           return loop();
-        });
+        }, context.signal);
       };
       return loop();
-    });
+    }, context.signal);
   }
 
   private getEntries(value: any): any[] {
@@ -759,16 +809,20 @@ export class ForNode extends BaseNode {
   }
 
   evaluate(context: ExecutionContext): any {
+    throwIfAborted(context.signal);
     const initResult = this.init ? this.init.evaluate(context) : undefined;
     const run = (): any => {
+      throwIfAborted(context.signal);
       const previousScope = context.scope;
       let bodyScope = context.scope;
       if (context.scope?.createChild) {
         bodyScope = context.scope.createChild();
       }
       const loop = (): any => {
+        throwIfAborted(context.signal);
         const testResult = this.test ? this.test.evaluate(context) : true;
         return resolveMaybe(testResult, (passed) => {
+          throwIfAborted(context.signal);
           if (!passed || context.returning) {
             context.scope = previousScope;
             return undefined;
@@ -776,6 +830,7 @@ export class ForNode extends BaseNode {
           context.scope = bodyScope;
           const bodyResult = this.body.evaluate(context);
           return resolveMaybe(bodyResult, () => {
+            throwIfAborted(context.signal);
             if (context.returning) {
               context.scope = previousScope;
               return undefined;
@@ -790,13 +845,13 @@ export class ForNode extends BaseNode {
               context.continuing = false;
             }
             const updateResult = this.update ? this.update.evaluate(context) : undefined;
-            return resolveMaybe(updateResult, () => loop());
-          });
-        });
+            return resolveMaybe(updateResult, () => loop(), context.signal);
+          }, context.signal);
+        }, context.signal);
       };
       return loop();
     };
-    return resolveMaybe(initResult, () => run());
+    return resolveMaybe(initResult, () => run(), context.signal);
   }
 }
 
@@ -810,7 +865,9 @@ export class TryNode extends BaseNode {
   }
 
   evaluate(context: ExecutionContext): any {
+    throwIfAborted(context.signal);
     const handleError = (error: any): any => {
+      throwIfAborted(context.signal);
       if (context.returning) {
         return context.returnValue;
       }
@@ -830,12 +887,13 @@ export class TryNode extends BaseNode {
       }
       const handlerResult = this.handler.evaluate(context);
       return resolveMaybe(handlerResult, () => {
+        throwIfAborted(context.signal);
         if (scope && scope.setPath && handlerScope === previousScope) {
           scope.setPath(this.errorName, previous);
         }
         context.scope = previousScope;
         return undefined;
-      });
+      }, context.signal);
     };
 
     try {
@@ -871,6 +929,7 @@ export class FunctionExpression extends BaseNode {
   }
 
   evaluate(context: ExecutionContext): any {
+    throwIfAborted(context.signal);
     const scope = context.scope;
     const globals = context.globals;
     const element = context.element;
@@ -879,6 +938,7 @@ export class FunctionExpression extends BaseNode {
     if (this.isAsync) {
       return (...args: any[]) => {
         const invoke = () => {
+          const signal = lifetime?.isDisposing ? undefined : context.signal;
           const activeScope = scope?.createChild ? scope.createChild() : scope;
           const inner: ExecutionContext = {
             scope: activeScope,
@@ -888,6 +948,7 @@ export class FunctionExpression extends BaseNode {
             ...(element ? { element } : {}),
             ...(context.self ? { self: context.self } : {}),
             ...(lifetime ? { lifetime } : {}),
+            ...(signal ? { signal } : {}),
             returnValue: undefined,
             returning: false,
             breaking: false,
@@ -897,8 +958,8 @@ export class FunctionExpression extends BaseNode {
           const applyResult = activeScope
             ? this.applyParams(activeScope, previousValues, inner, args)
             : undefined;
-          const bodyResult = resolveMaybe(applyResult, () => this.body.evaluate(inner));
-          const finalResult = resolveMaybe(bodyResult, () => inner.returnValue);
+          const bodyResult = resolveMaybe(applyResult, () => this.body.evaluate(inner), inner.signal);
+          const finalResult = resolveMaybe(bodyResult, () => inner.returnValue, inner.signal);
           return Promise.resolve(finalResult).finally(() => {
             if (activeScope && activeScope === scope) {
               this.restoreParams(activeScope, previousValues);
@@ -913,6 +974,7 @@ export class FunctionExpression extends BaseNode {
 
     return (...args: any[]) => {
       const invoke = () => {
+        const signal = lifetime?.isDisposing ? undefined : context.signal;
         const activeScope = scope?.createChild ? scope.createChild() : scope;
         const inner: ExecutionContext = {
           scope: activeScope,
@@ -922,6 +984,7 @@ export class FunctionExpression extends BaseNode {
           ...(element ? { element } : {}),
           ...(context.self ? { self: context.self } : {}),
           ...(lifetime ? { lifetime } : {}),
+          ...(signal ? { signal } : {}),
           returnValue: undefined,
           returning: false,
           breaking: false,
@@ -931,8 +994,8 @@ export class FunctionExpression extends BaseNode {
         const applyResult = activeScope
           ? this.applyParams(activeScope, previousValues, inner, args)
           : undefined;
-        const bodyResult = resolveMaybe(applyResult, () => this.body.evaluate(inner));
-        const finalResult = resolveMaybe(bodyResult, () => inner.returnValue);
+        const bodyResult = resolveMaybe(applyResult, () => this.body.evaluate(inner), inner.signal);
+        const finalResult = resolveMaybe(bodyResult, () => inner.returnValue, inner.signal);
         if (isPromiseLike(finalResult)) {
           return finalResult.finally(() => {
             if (activeScope && activeScope === scope) {
@@ -957,6 +1020,7 @@ export class FunctionExpression extends BaseNode {
     context: ExecutionContext,
     args: any[]
   ): any {
+    throwIfAborted(context.signal);
     if (!scope) {
       return;
     }
@@ -981,10 +1045,12 @@ export class FunctionExpression extends BaseNode {
         if (value === undefined && param.defaultValue) {
           const defaultValue = param.defaultValue.evaluate(context);
           return resolveMaybe(defaultValue, (resolvedDefault) => {
+            throwIfAborted(context.signal);
             setPath(`self.${name}`, resolvedDefault);
             return applyAt(i + 1, argIndex + 1);
-          });
+          }, context.signal);
         }
+        throwIfAborted(context.signal);
         setPath(`self.${name}`, value);
         argIndex += 1;
       }
@@ -1106,6 +1172,9 @@ export class IdentifierExpression extends BaseNode {
         return value;
       }
     }
+    if (this.name === "signal" && context.signal) {
+      return context.signal;
+    }
     return context.globals ? context.globals[this.name] : undefined;
   }
 }
@@ -1176,6 +1245,7 @@ export class TemplateExpression extends BaseNode {
   }
 
   evaluate(context: ExecutionContext): any {
+    throwIfAborted(context.signal);
     let result = "";
     let index = 0;
     const run = (): any => {
@@ -1184,9 +1254,10 @@ export class TemplateExpression extends BaseNode {
         index += 1;
         const value = part.evaluate(context);
         return resolveMaybe(value, (resolved) => {
+          throwIfAborted(context.signal);
           result += resolved == null ? "" : String(resolved);
           return run();
-        });
+        }, context.signal);
       }
       return result;
     };
@@ -1213,14 +1284,16 @@ export class TaggedTemplateExpression extends BaseNode {
   }
 
   evaluate(context: ExecutionContext): any {
+    throwIfAborted(context.signal);
     const tagValue = this.tag.evaluate(context);
     return resolveMaybe(tagValue, (resolvedTag) => {
+      throwIfAborted(context.signal);
       if (typeof resolvedTag !== "function") {
         return undefined;
       }
       const { strings, values } = this.template.getTemplateParts(context);
       return resolvedTag(strings, ...values);
-    });
+    }, context.signal);
   }
 }
 
@@ -1230,8 +1303,10 @@ export class UnaryExpression extends BaseNode {
   }
 
   evaluate(context: ExecutionContext): any {
+    throwIfAborted(context.signal);
     const value = this.argument.evaluate(context);
     return resolveMaybe(value, (resolved) => {
+      throwIfAborted(context.signal);
       if (this.operator === "!") {
         return !resolved;
       }
@@ -1239,7 +1314,7 @@ export class UnaryExpression extends BaseNode {
         return -(resolved as any);
       }
       return resolved;
-    });
+    }, context.signal);
   }
 }
 
@@ -1253,8 +1328,10 @@ export class BinaryExpression extends BaseNode {
   }
 
   evaluate(context: ExecutionContext): any {
+    throwIfAborted(context.signal);
     const leftValue = this.left.evaluate(context);
     return resolveMaybe(leftValue, (resolvedLeft) => {
+      throwIfAborted(context.signal);
       if (this.operator === "&&") {
         if (!resolvedLeft) {
           return resolvedLeft;
@@ -1275,6 +1352,7 @@ export class BinaryExpression extends BaseNode {
       }
       const rightValue = this.right.evaluate(context);
       return resolveMaybe(rightValue, (resolvedRight) => {
+        throwIfAborted(context.signal);
         if (this.operator === "+") {
           return (resolvedLeft as any) + (resolvedRight as any);
         }
@@ -1315,8 +1393,8 @@ export class BinaryExpression extends BaseNode {
           return (resolvedLeft as any) >= (resolvedRight as any);
         }
         return undefined;
-      });
-    });
+      }, context.signal);
+    }, context.signal);
   }
 }
 
@@ -1330,13 +1408,15 @@ export class TernaryExpression extends BaseNode {
   }
 
   evaluate(context: ExecutionContext): any {
+    throwIfAborted(context.signal);
     const condition = this.test.evaluate(context);
     return resolveMaybe(condition, (resolved) => {
+      throwIfAborted(context.signal);
       if (resolved) {
         return this.consequent.evaluate(context);
       }
       return this.alternate.evaluate(context);
-    });
+    }, context.signal);
   }
 }
 
@@ -1350,8 +1430,9 @@ export class MemberExpression extends BaseNode {
   }
 
   evaluate(context: ExecutionContext): any {
+    throwIfAborted(context.signal);
     const resolved = this.resolve(context);
-    return resolveMaybe(resolved, (resolvedValue) => resolvedValue?.value);
+    return resolveMaybe(resolved, (resolvedValue) => resolvedValue?.value, context.signal);
   }
 
   resolve(
@@ -1371,11 +1452,12 @@ export class MemberExpression extends BaseNode {
 
     const target = this.target.evaluate(context);
     return resolveMaybe(target, (resolvedTarget) => {
+      throwIfAborted(context.signal);
       if (resolvedTarget == null) {
         return { value: undefined, target: resolvedTarget, optional: this.optional };
       }
       return { value: (resolvedTarget as any)[this.property], target: resolvedTarget, optional: this.optional };
-    });
+    }, context.signal);
   }
 
   getIdentifierPath(): { path: string; root: string } | undefined {
@@ -1467,10 +1549,13 @@ export class CallExpression extends BaseNode {
   }
 
   evaluate(context: ExecutionContext): any {
+    throwIfAborted(context.signal);
     const resolved = this.resolveCallee(context);
     return resolveMaybe(resolved, (resolvedCallee) => {
+      throwIfAborted(context.signal);
       const fnValue = resolvedCallee?.fn ?? this.callee.evaluate(context);
       return resolveMaybe(fnValue, (resolvedFn) => {
+        throwIfAborted(context.signal);
         if (typeof resolvedFn !== "function") {
           return undefined;
         }
@@ -1480,15 +1565,17 @@ export class CallExpression extends BaseNode {
             const arg = this.args[i]!;
             const argValue = arg.evaluate(context);
             return resolveMaybe(argValue, (resolvedArg) => {
+              throwIfAborted(context.signal);
               values.push(resolvedArg);
               return evalArgs(i + 1);
-            });
+            }, context.signal);
           }
+          throwIfAborted(context.signal);
           return resolvedFn.apply(resolvedCallee?.thisArg, values);
         };
         return evalArgs(0);
-      });
-    });
+      }, context.signal);
+    }, context.signal);
   }
 
   private resolveCallee(
@@ -1497,11 +1584,12 @@ export class CallExpression extends BaseNode {
     if (this.callee instanceof MemberExpression) {
       const resolved = this.callee.resolve(context);
       return resolveMaybe(resolved, (resolvedValue) => {
+        throwIfAborted(context.signal);
         if (!resolvedValue) {
           return undefined;
         }
         return { fn: resolvedValue.value, thisArg: resolvedValue.target };
-      });
+      }, context.signal);
     }
     if (!(this.callee instanceof IdentifierExpression)) {
       return undefined;
@@ -1547,6 +1635,7 @@ export class ArrayExpression extends BaseNode {
   }
 
   evaluate(context: ExecutionContext): any {
+    throwIfAborted(context.signal);
     const values: any[] = [];
     const pushElements = (value: any) => {
       if (value == null) {
@@ -1567,15 +1656,17 @@ export class ArrayExpression extends BaseNode {
         if (element instanceof SpreadElement) {
           const spreadValue = element.value.evaluate(context);
           return resolveMaybe(spreadValue, (resolvedSpread) => {
+            throwIfAborted(context.signal);
             pushElements(resolvedSpread);
             return evalAt(i + 1);
-          });
+          }, context.signal);
         }
         const value = element.evaluate(context);
         return resolveMaybe(value, (resolvedValue) => {
+          throwIfAborted(context.signal);
           values.push(resolvedValue);
           return evalAt(i + 1);
-        });
+        }, context.signal);
       }
       return values;
     };
@@ -1594,6 +1685,7 @@ export class ObjectExpression extends BaseNode {
   }
 
   evaluate(context: ExecutionContext): any {
+    throwIfAborted(context.signal);
     const result: Record<string, any> = {};
     const evalAt = (index: number): any => {
       for (let i = index; i < this.entries.length; i += 1) {
@@ -1601,27 +1693,31 @@ export class ObjectExpression extends BaseNode {
         if ("spread" in entry) {
           const spreadValue = entry.spread.evaluate(context);
           return resolveMaybe(spreadValue, (resolvedSpread) => {
+            throwIfAborted(context.signal);
             if (resolvedSpread != null) {
               Object.assign(result, resolvedSpread);
             }
             return evalAt(i + 1);
-          });
+          }, context.signal);
         }
         if ("computed" in entry && entry.computed) {
           const keyValue = entry.keyExpr.evaluate(context);
           return resolveMaybe(keyValue, (resolvedKey) => {
+            throwIfAborted(context.signal);
             const entryValue = entry.value.evaluate(context);
             return resolveMaybe(entryValue, (resolvedValue) => {
+              throwIfAborted(context.signal);
               result[String(resolvedKey)] = resolvedValue;
               return evalAt(i + 1);
-            });
-          });
+            }, context.signal);
+          }, context.signal);
         }
         const value = entry.value.evaluate(context);
         return resolveMaybe(value, (resolvedValue) => {
+          throwIfAborted(context.signal);
           result[entry.key] = resolvedValue;
           return evalAt(i + 1);
-        });
+        }, context.signal);
       }
       return result;
     };
@@ -1635,20 +1731,23 @@ export class IndexExpression extends BaseNode {
   }
 
   evaluate(context: ExecutionContext): any {
+    throwIfAborted(context.signal);
     const target = this.target.evaluate(context);
     return resolveMaybe(target, (resolvedTarget) => {
+      throwIfAborted(context.signal);
       if (resolvedTarget == null) {
         return undefined;
       }
       const index = this.index.evaluate(context);
       return resolveMaybe(index, (resolvedIndex) => {
+        throwIfAborted(context.signal);
         if (resolvedIndex == null) {
           return undefined;
         }
         const key = this.normalizeIndexKey(resolvedTarget, resolvedIndex);
         return (resolvedTarget as any)[key as any];
-      });
-    });
+      }, context.signal);
+    }, context.signal);
   }
 
   private normalizeIndexKey(target: unknown, index: unknown): unknown {
@@ -1708,15 +1807,17 @@ export class ElementDirectiveExpression extends BaseNode {
   }
 
   evaluate(context: ExecutionContext): any {
+    throwIfAborted(context.signal);
     const elementValue = this.element.evaluate(context);
     return resolveMaybe(elementValue, (resolvedElement) => {
+      throwIfAborted(context.signal);
       const element = resolveElementFromReference(resolvedElement);
       if (!element) {
         return undefined;
       }
       const nextContext: ExecutionContext = { ...context, element };
       return this.directive.evaluate(nextContext);
-    });
+    }, context.signal);
   }
 }
 
@@ -1726,8 +1827,10 @@ export class ElementPropertyExpression extends BaseNode {
   }
 
   evaluate(context: ExecutionContext): any {
+    throwIfAborted(context.signal);
     const elementValue = this.element.evaluate(context);
     return resolveMaybe(elementValue, (resolvedElement) => {
+      throwIfAborted(context.signal);
       if (resolvedElement && typeof resolvedElement === "object" && resolvedElement.__scope) {
         return resolvedElement.__scope.getPath?.(this.property);
       }
@@ -1736,7 +1839,7 @@ export class ElementPropertyExpression extends BaseNode {
         return undefined;
       }
       return (element as any)[this.property];
-    });
+    }, context.signal);
   }
 }
 
@@ -1759,8 +1862,12 @@ export class AwaitExpression extends BaseNode {
   }
 
   evaluate(context: ExecutionContext): any {
+    throwIfAborted(context.signal);
     const value = this.argument.evaluate(context);
-    return Promise.resolve(value);
+    return Promise.resolve(value).then((resolved) => {
+      throwIfAborted(context.signal);
+      return resolved;
+    });
   }
 }
 

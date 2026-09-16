@@ -20,7 +20,7 @@ HTML-first, selector-driven character. The priority labels are directional:
   model, including dynamic indexes and conditional reads.
 - [x] Add a unified lifetime/disposer API for watchers, event listeners,
   timers, observers, dynamic behavior registrations, and plugin resources.
-- [ ] Add `AbortSignal`/cancellation support for async functions, bindings,
+- [x] Add `AbortSignal`/cancellation support for async functions, bindings,
   and network requests; prevent stale work from mutating unmounted elements.
 - [ ] Make HTML insertion safe by default. Keep explicit trusted HTML as an
   opt-in and integrate Trusted Types where available.

@@ -99,6 +99,17 @@ engine.registerBehaviorModifier("resize", {
 
 The same `onCleanup` callback is available to custom attribute handlers and flag handlers. CFS lifecycle code can call `onCleanup(() => { /* ... */ })`; `engine.getLifetime(element)` exposes the inline lifetime directly, and `engine.dispose()` tears down all mounted roots.
 
+Each lifetime also exposes an `AbortSignal`. CFS code can reference the current signal as `signal` and pass it to async APIs so pending work is canceled when its element or behavior unmounts:
+
+```vsn
+async load(url) {
+  const response = await request(url, { signal });
+  result = await response.text();
+}
+```
+
+The same signal is available as `context.signal` in extension hooks. Async expression bindings ignore completions from disposed lifetimes, and `vsn-get` aborts an active request when its trigger unmounts or a newer request starts. Cancellation errors are treated as normal teardown rather than reported through `vsn:error`.
+
 For browser auto-mount, load the root package and any plugin entry points as modules. VSN creates an engine when an element with `auto-mount` is present, applies registered plugins, loads `script[type="text/vsn"]` blocks, and mounts the document body. Behavior scripts may also use `src`; VSN fetches the file and ignores any inline text when `src` is present:
 
 ```html

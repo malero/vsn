@@ -73,7 +73,10 @@ describe("autoMount errors", () => {
       await vi.runAllTimersAsync();
 
       const card = document.querySelector(".card") as HTMLDivElement;
-      expect(fetch).toHaveBeenCalledWith(new URL("/behaviors/common.cfs", document.baseURI).href);
+      expect(fetch).toHaveBeenCalledWith(
+        new URL("/behaviors/common.cfs", document.baseURI).href,
+        { signal: expect.any(AbortSignal) }
+      );
       expect(engine?.getScope(card).get("external")).toBe(true);
       expect(engine?.getScope(card).get("inline")).toBe(undefined);
     } finally {

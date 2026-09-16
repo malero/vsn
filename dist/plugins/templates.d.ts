@@ -34,7 +34,12 @@ type Disposer = () => void;
 declare class Lifetime {
     private entries;
     private disposed;
+    private disposing;
+    private readonly controller;
     get isDisposed(): boolean;
+    get signal(): AbortSignal;
+    /** True while registered cleanup callbacks are being invoked. */
+    get isDisposing(): boolean;
     add(disposer: Disposer): Disposer;
     onCleanup(disposer: Disposer): Disposer;
     child(): Lifetime;
@@ -60,6 +65,7 @@ interface ExecutionContext {
     element?: Element;
     self?: any;
     lifetime?: Lifetime;
+    signal?: AbortSignal;
     returnValue?: any;
     returning?: boolean;
     breaking?: boolean;
@@ -341,6 +347,7 @@ type AttributeHandler = {
 };
 type AttributeHandlerContext = {
     lifetime: Lifetime;
+    signal: AbortSignal;
     onCleanup: (disposer: Disposer) => Disposer;
 };
 type HtmlTransformContext = {
@@ -361,6 +368,7 @@ type FlagApplyContext = {
     scope: Scope;
     declaration: DeclarationNode;
     lifetime: Lifetime;
+    signal: AbortSignal;
     onCleanup: (disposer: Disposer) => Disposer;
 };
 type FlagHandler = {
@@ -386,6 +394,7 @@ type BehaviorModifierContext = {
     behavior: RegisteredBehavior;
     engine: Engine;
     lifetime: Lifetime;
+    signal: AbortSignal;
     onCleanup: (disposer: Disposer) => Disposer;
 };
 type EventBindPatch = {
@@ -402,6 +411,7 @@ type EventFlagContext = {
     event: Event | undefined;
     engine: Engine;
     lifetime: Lifetime;
+    signal: AbortSignal;
     onCleanup: (disposer: Disposer) => Disposer;
 };
 type EngineOptions = {
@@ -489,6 +499,7 @@ declare class Engine {
      * is unmounted.
      */
     getLifetime(element: Element): Lifetime;
+    get signal(): AbortSignal;
     dispose(): void;
     private getInlineLifetime;
     private resetInlineLifetime;

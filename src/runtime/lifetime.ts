@@ -1,5 +1,26 @@
 export type Disposer = () => void;
 
+export function isAbortError(error: unknown): boolean {
+  return Boolean(
+    error
+    && typeof error === "object"
+    && "name" in error
+    && (error as { name?: unknown }).name === "AbortError"
+  );
+}
+
+export function throwIfAborted(signal?: AbortSignal | null): void {
+  if (!signal?.aborted) {
+    return;
+  }
+  if (signal.reason) {
+    throw signal.reason;
+  }
+  const error = new Error("The operation was aborted");
+  error.name = "AbortError";
+  throw error;
+}
+
 type CleanupEntry = {
   disposer: Disposer;
   active: boolean;
@@ -15,9 +36,20 @@ type CleanupEntry = {
 export class Lifetime {
   private entries = new Set<CleanupEntry>();
   private disposed = false;
+  private disposing = false;
+  private readonly controller = new AbortController();
 
   get isDisposed(): boolean {
     return this.disposed;
+  }
+
+  get signal(): AbortSignal {
+    return this.controller.signal;
+  }
+
+  /** True while registered cleanup callbacks are being invoked. */
+  get isDisposing(): boolean {
+    return this.disposing;
   }
 
   add(disposer: Disposer): Disposer {
@@ -57,20 +89,26 @@ export class Lifetime {
       return;
     }
     this.disposed = true;
+    this.controller.abort();
+    this.disposing = true;
 
     const errors: unknown[] = [];
     const entries = Array.from(this.entries).reverse();
     this.entries.clear();
-    for (const entry of entries) {
-      if (!entry.active) {
-        continue;
+    try {
+      for (const entry of entries) {
+        if (!entry.active) {
+          continue;
+        }
+        entry.active = false;
+        try {
+          entry.disposer();
+        } catch (error) {
+          errors.push(error);
+        }
       }
-      entry.active = false;
-      try {
-        entry.disposer();
-      } catch (error) {
-        errors.push(error);
-      }
+    } finally {
+      this.disposing = false;
     }
 
     if (errors.length === 1) {

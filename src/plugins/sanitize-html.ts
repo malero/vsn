@@ -1,5 +1,7 @@
 import type { Engine } from "../runtime/engine";
 import { getPartialHeaders } from "../runtime/http";
+import { isAbortError, throwIfAborted } from "../runtime/lifetime";
+import type { Lifetime } from "../runtime/lifetime";
 
 type SanitizerOptions = {
   dompurifyConfig?: Record<string, any>;
@@ -40,8 +42,16 @@ export function registerSanitizeHtml(engine: Engine, options: SanitizerOptions =
       const target = element.getAttribute("vsn-target") ?? undefined;
       const swap = (element.getAttribute("vsn-swap") as "inner" | "outer" | null) ?? "inner";
       const targetSelector = target ?? undefined;
+      const ownerLifetime = context?.lifetime ?? engine.getLifetime(element);
+      let requestLifetime: Lifetime | undefined;
 
       const run = async () => {
+        if (ownerLifetime.isDisposed || !element.isConnected) {
+          return;
+        }
+        requestLifetime?.dispose();
+        const operationLifetime = ownerLifetime.child();
+        requestLifetime = operationLifetime;
         try {
           await applyGetWithSanitize(
             engine,
@@ -50,14 +60,23 @@ export function registerSanitizeHtml(engine: Engine, options: SanitizerOptions =
               url,
               swap,
               trusted,
+              signal: operationLifetime.signal,
               ...(targetSelector ? { targetSelector } : {})
             },
             sanitizer,
             trustedElements
           );
         } catch (error) {
+          if (operationLifetime.signal.aborted || ownerLifetime.signal.aborted || isAbortError(error)) {
+            return;
+          }
           console.warn("vsn:getError", error);
           element.dispatchEvent(new CustomEvent("vsn:getError", { detail: { error }, bubbles: true }));
+        } finally {
+          if (requestLifetime === operationLifetime) {
+            requestLifetime = undefined;
+          }
+          operationLifetime.dispose();
         }
       };
 
@@ -68,7 +87,10 @@ export function registerSanitizeHtml(engine: Engine, options: SanitizerOptions =
         void run();
       };
       element.addEventListener("click", clickHandler);
-      context?.onCleanup(() => element.removeEventListener("click", clickHandler));
+      context?.onCleanup(() => {
+        requestLifetime?.dispose();
+        element.removeEventListener("click", clickHandler);
+      });
       if (autoLoad) {
         Promise.resolve().then(run);
       }
@@ -105,23 +127,33 @@ function unwrapTrustedHtml(
 async function applyGetWithSanitize(
   engine: Engine,
   element: Element,
-  config: { url: string; targetSelector?: string; swap?: "inner" | "outer"; trusted: boolean },
+  config: {
+    url: string;
+    targetSelector?: string;
+    swap?: "inner" | "outer";
+    trusted: boolean;
+    signal?: AbortSignal;
+  },
   sanitizer: (html: string) => string,
   trustedElements: WeakSet<Element>
 ): Promise<void> {
   if (!globalThis.fetch) {
     throw new Error("fetch is not available");
   }
+  throwIfAborted(config.signal);
 
   const requestTarget = resolveTarget(element, config.targetSelector);
   const response = await globalThis.fetch(config.url, {
-    headers: getPartialHeaders(element, requestTarget)
+    headers: getPartialHeaders(element, requestTarget),
+    ...(config.signal ? { signal: config.signal } : {})
   });
+  throwIfAborted(config.signal);
   if (!response || !response.ok) {
     return;
   }
 
   const html = await response.text();
+  throwIfAborted(config.signal);
   const target = resolveTarget(element, config.targetSelector);
   if (!target) {
     element.dispatchEvent(new CustomEvent("vsn:targetError", { detail: { selector: config.targetSelector } }));

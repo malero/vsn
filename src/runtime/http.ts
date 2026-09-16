@@ -1,10 +1,12 @@
 import { applyHtml } from "./html";
+import { throwIfAborted } from "./lifetime";
 import { Scope } from "./scope";
 
 export interface GetConfig {
   url: string;
   targetSelector?: string;
   swap?: "inner" | "outer";
+  signal?: AbortSignal;
 }
 
 export async function applyGet(
@@ -16,16 +18,20 @@ export async function applyGet(
   if (!globalThis.fetch) {
     throw new Error("fetch is not available");
   }
+  throwIfAborted(config.signal);
 
   const requestTarget = resolveTarget(element, config.targetSelector);
   const response = await globalThis.fetch(config.url, {
-    headers: getPartialHeaders(element, requestTarget)
+    headers: getPartialHeaders(element, requestTarget),
+    ...(config.signal ? { signal: config.signal } : {})
   });
+  throwIfAborted(config.signal);
   if (!response || !response.ok) {
     return;
   }
 
   const html = await response.text();
+  throwIfAborted(config.signal);
   const target = resolveTarget(element, config.targetSelector);
   if (!target) {
     element.dispatchEvent(new CustomEvent("vsn:targetError", { detail: { selector: config.targetSelector } }));

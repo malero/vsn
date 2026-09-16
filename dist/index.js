@@ -450,6 +450,99 @@ var Lexer = class {
   }
 };
 
+// src/runtime/lifetime.ts
+function isAbortError(error) {
+  return Boolean(
+    error && typeof error === "object" && "name" in error && error.name === "AbortError"
+  );
+}
+function throwIfAborted(signal) {
+  if (!signal?.aborted) {
+    return;
+  }
+  if (signal.reason) {
+    throw signal.reason;
+  }
+  const error = new Error("The operation was aborted");
+  error.name = "AbortError";
+  throw error;
+}
+var Lifetime = class _Lifetime {
+  entries = /* @__PURE__ */ new Set();
+  disposed = false;
+  disposing = false;
+  controller = new AbortController();
+  get isDisposed() {
+    return this.disposed;
+  }
+  get signal() {
+    return this.controller.signal;
+  }
+  /** True while registered cleanup callbacks are being invoked. */
+  get isDisposing() {
+    return this.disposing;
+  }
+  add(disposer) {
+    if (typeof disposer !== "function") {
+      throw new TypeError("Lifetime disposers must be functions");
+    }
+    if (this.disposed) {
+      disposer();
+      return () => void 0;
+    }
+    const entry = { disposer, active: true };
+    this.entries.add(entry);
+    return () => {
+      if (!entry.active) {
+        return;
+      }
+      entry.active = false;
+      this.entries.delete(entry);
+    };
+  }
+  onCleanup(disposer) {
+    return this.add(disposer);
+  }
+  child() {
+    const child = new _Lifetime();
+    const removeChild = this.add(() => child.dispose());
+    child.add(removeChild);
+    return child;
+  }
+  dispose() {
+    if (this.disposed) {
+      return;
+    }
+    this.disposed = true;
+    this.controller.abort();
+    this.disposing = true;
+    const errors = [];
+    const entries = Array.from(this.entries).reverse();
+    this.entries.clear();
+    try {
+      for (const entry of entries) {
+        if (!entry.active) {
+          continue;
+        }
+        entry.active = false;
+        try {
+          entry.disposer();
+        } catch (error) {
+          errors.push(error);
+        }
+      }
+    } finally {
+      this.disposing = false;
+    }
+    if (errors.length === 1) {
+      throw errors[0];
+    }
+    if (errors.length > 1) {
+      throw new AggregateError(errors, "One or more lifetime disposers failed");
+    }
+  }
+};
+
 // src/ast/nodes.ts
 var BaseNode = class {
   constructor(type) {
@@ -465,9 +558,13 @@ var BaseNode = class {
 function isPromiseLike(value) {
   return Boolean(value) && typeof value.then === "function";
 }
-function resolveMaybe(value, next) {
+function resolveMaybe(value, next, signal) {
+  throwIfAborted(signal);
   if (isPromiseLike(value)) {
-    return value.then(next);
+    return value.then((resolved) => {
+      throwIfAborted(signal);
+      return next(resolved);
+    });
   }
   return next(value);
 }
@@ -476,6 +573,7 @@ function evaluateWithChildScope(context, block) {
   if (!scope || !scope.createChild) {
     return block.evaluate(context);
   }
+  throwIfAborted(context.signal);
   const previousScope = context.scope;
   context.scope = scope.createChild();
   let result;
@@ -515,9 +613,12 @@ var BlockNode = class extends BaseNode {
     this.statements = statements;
   }
   evaluate(context) {
+    throwIfAborted(context.signal);
     let index = 0;
     const run = () => {
+      throwIfAborted(context.signal);
       while (index < this.statements.length) {
+        throwIfAborted(context.signal);
         if (context.returning || context.breaking || context.continuing) {
           break;
         }
@@ -526,7 +627,10 @@ var BlockNode = class extends BaseNode {
         if (statement && typeof statement.evaluate === "function") {
           const result = statement.evaluate(context);
           if (isPromiseLike(result)) {
-            return result.then(() => run());
+            return result.then(() => {
+              throwIfAborted(context.signal);
+              return run();
+            });
           }
         }
       }
@@ -569,23 +673,27 @@ var AssignmentNode = class extends BaseNode {
     this.prefix = prefix;
   }
   evaluate(context) {
+    throwIfAborted(context.signal);
     const target = this.target;
     if (target instanceof DirectiveExpression) {
       const value2 = this.value.evaluate(context);
       return resolveMaybe(value2, (resolvedValue) => {
+        throwIfAborted(context.signal);
         this.assignDirectiveTarget(context, target, resolvedValue, this.operator);
         return resolvedValue;
-      });
+      }, context.signal);
     }
     if (target instanceof ElementDirectiveExpression) {
       const elementValue = target.element.evaluate(context);
       return resolveMaybe(elementValue, (resolvedElement) => {
+        throwIfAborted(context.signal);
         const element = resolveElementFromReference(resolvedElement);
         if (!element) {
           return void 0;
         }
         const value2 = this.value.evaluate(context);
         return resolveMaybe(value2, (resolvedValue) => {
+          throwIfAborted(context.signal);
           this.assignDirectiveTarget(
             { ...context, element },
             target.directive,
@@ -593,8 +701,8 @@ var AssignmentNode = class extends BaseNode {
             this.operator
           );
           return resolvedValue;
-        });
-      });
+        }, context.signal);
+      }, context.signal);
     }
     if (!context.scope || !context.scope.setPath) {
       return void 0;
@@ -604,6 +712,7 @@ var AssignmentNode = class extends BaseNode {
     }
     const value = this.value.evaluate(context);
     return resolveMaybe(value, (resolvedValue) => {
+      throwIfAborted(context.signal);
       if (this.operator !== "=") {
         return this.applyCompoundAssignment(context, resolvedValue);
       }
@@ -615,17 +724,18 @@ var AssignmentNode = class extends BaseNode {
       if (this.target instanceof MemberExpression || this.target instanceof IndexExpression) {
         const resolved = this.resolveAssignmentTarget(context);
         return resolveMaybe(resolved, (resolvedTarget) => {
+          throwIfAborted(context.signal);
           if (resolvedTarget?.scope?.setPath) {
             resolvedTarget.scope.setPath(resolvedTarget.path, resolvedValue);
             return resolvedValue;
           }
           this.assignTarget(context, this.target, resolvedValue);
           return resolvedValue;
-        });
+        }, context.signal);
       }
       this.assignTarget(context, this.target, resolvedValue, this.operator);
       return resolvedValue;
-    });
+    }, context.signal);
   }
   applyCompoundAssignment(context, value) {
     if (!context.scope || !context.scope.setPath) {
@@ -633,6 +743,7 @@ var AssignmentNode = class extends BaseNode {
     }
     const resolved = this.resolveAssignmentTarget(context);
     return resolveMaybe(resolved, (resolvedTarget) => {
+      throwIfAborted(context.signal);
       if (!resolvedTarget) {
         throw new Error("Compound assignment requires a simple identifier or member path");
       }
@@ -650,7 +761,7 @@ var AssignmentNode = class extends BaseNode {
       }
       scope?.setPath?.(path, result);
       return result;
-    });
+    }, context.signal);
   }
   applyIncrement(context) {
     if (!context.scope || !context.scope.setPath) {
@@ -658,6 +769,7 @@ var AssignmentNode = class extends BaseNode {
     }
     const resolved = this.resolveAssignmentTarget(context);
     return resolveMaybe(resolved, (resolvedTarget) => {
+      throwIfAborted(context.signal);
       if (!resolvedTarget) {
         throw new Error("Increment/decrement requires a simple identifier or member path");
       }
@@ -668,7 +780,7 @@ var AssignmentNode = class extends BaseNode {
       const next = (Number.isNaN(numeric) ? 0 : numeric) + delta;
       scope?.setPath?.(path, next);
       return this.prefix ? next : numeric;
-    });
+    }, context.signal);
   }
   resolveAssignmentTarget(context) {
     if (this.target instanceof IdentifierExpression) {
@@ -699,6 +811,7 @@ var AssignmentNode = class extends BaseNode {
       const targetExpr = this.target;
       const basePath = this.resolveTargetPath(context, targetExpr.target);
       return resolveMaybe(basePath, (resolvedBase) => {
+        throwIfAborted(context.signal);
         if (!resolvedBase) {
           return null;
         }
@@ -712,11 +825,12 @@ var AssignmentNode = class extends BaseNode {
           return { scope: context.scope, path: `root.${rawPath}` };
         }
         return { scope: context.scope, path: rawPath };
-      });
+      }, context.signal);
     }
     if (this.target instanceof IndexExpression) {
       const path = this.resolveIndexPath(context, this.target);
       return resolveMaybe(path, (resolvedPath) => {
+        throwIfAborted(context.signal);
         if (!resolvedPath) {
           return null;
         }
@@ -729,24 +843,26 @@ var AssignmentNode = class extends BaseNode {
           return { scope: context.scope, path: `root.${rawPath}` };
         }
         return { scope: context.scope, path: rawPath };
-      });
+      }, context.signal);
     }
     return null;
   }
   resolveIndexPath(context, expr) {
     const base = this.resolveTargetPath(context, expr.target);
     return resolveMaybe(base, (resolvedBase) => {
+      throwIfAborted(context.signal);
       if (!resolvedBase) {
         return null;
       }
       const indexValue = expr.index.evaluate(context);
       return resolveMaybe(indexValue, (resolvedIndex) => {
+        throwIfAborted(context.signal);
         if (resolvedIndex == null) {
           return null;
         }
         return `${resolvedBase}.${resolvedIndex}`;
-      });
-    });
+      }, context.signal);
+    }, context.signal);
   }
   resolveTargetPath(context, target) {
     if (target instanceof IdentifierExpression) {
@@ -764,6 +880,7 @@ var AssignmentNode = class extends BaseNode {
     if (!context.scope || !context.scope.setPath) {
       return;
     }
+    throwIfAborted(context.signal);
     if (target instanceof DirectiveExpression) {
       this.assignDirectiveTarget(context, target, value, operator);
       return;
@@ -771,6 +888,7 @@ var AssignmentNode = class extends BaseNode {
     if (target instanceof ElementDirectiveExpression) {
       const elementValue = target.element.evaluate(context);
       const next = resolveMaybe(elementValue, (resolvedElement) => {
+        throwIfAborted(context.signal);
         const element = resolveElementFromReference(resolvedElement);
         if (!element) {
           return;
@@ -781,7 +899,7 @@ var AssignmentNode = class extends BaseNode {
           value,
           operator
         );
-      });
+      }, context.signal);
       if (isPromiseLike(next)) {
         void next;
       }
@@ -790,6 +908,7 @@ var AssignmentNode = class extends BaseNode {
     if (target instanceof ElementPropertyExpression) {
       const elementValue = target.element.evaluate(context);
       const next = resolveMaybe(elementValue, (resolvedElement) => {
+        throwIfAborted(context.signal);
         if (resolvedElement && typeof resolvedElement === "object" && resolvedElement.__scope) {
           resolvedElement.__scope.setPath?.(target.property, value);
           return;
@@ -799,13 +918,14 @@ var AssignmentNode = class extends BaseNode {
           return;
         }
         element[target.property] = value;
-      });
+      }, context.signal);
       if (isPromiseLike(next)) {
         void next;
       }
       return;
     }
     if (target instanceof IdentifierExpression) {
+      throwIfAborted(context.signal);
       context.scope.setPath(target.name, value);
       return;
     }
@@ -847,6 +967,7 @@ var AssignmentNode = class extends BaseNode {
     }
   }
   assignDirectiveTarget(context, target, value, operator = "=") {
+    throwIfAborted(context.signal);
     const element = context.element;
     if (!element) {
       return;
@@ -924,15 +1045,17 @@ var ReturnNode = class extends BaseNode {
     this.value = value;
   }
   evaluate(context) {
+    throwIfAborted(context.signal);
     if (context.returning) {
       return context.returnValue;
     }
     const nextValue = this.value ? this.value.evaluate(context) : void 0;
     return resolveMaybe(nextValue, (resolved) => {
+      throwIfAborted(context.signal);
       context.returnValue = resolved;
       context.returning = true;
       return context.returnValue;
-    });
+    }, context.signal);
   }
 };
 var BreakNode = class extends BaseNode {
@@ -940,6 +1063,7 @@ var BreakNode = class extends BaseNode {
     super("Break");
   }
   evaluate(context) {
+    throwIfAborted(context.signal);
     context.breaking = true;
     return void 0;
   }
@@ -949,6 +1073,7 @@ var ContinueNode = class extends BaseNode {
     super("Continue");
   }
   evaluate(context) {
+    throwIfAborted(context.signal);
     context.continuing = true;
     return void 0;
   }
@@ -965,13 +1090,15 @@ var AssertNode = class extends BaseNode {
     this.test = test;
   }
   evaluate(context) {
+    throwIfAborted(context.signal);
     const value = this.test.evaluate(context);
     return resolveMaybe(value, (resolved) => {
+      throwIfAborted(context.signal);
       if (!resolved) {
         throw new AssertError();
       }
       return resolved;
-    });
+    }, context.signal);
   }
 };
 var IfNode = class extends BaseNode {
@@ -982,8 +1109,10 @@ var IfNode = class extends BaseNode {
     this.alternate = alternate;
   }
   evaluate(context) {
+    throwIfAborted(context.signal);
     const condition = this.test.evaluate(context);
     return resolveMaybe(condition, (resolved) => {
+      throwIfAborted(context.signal);
       if (resolved) {
         return evaluateWithChildScope(context, this.consequent);
       }
@@ -991,7 +1120,7 @@ var IfNode = class extends BaseNode {
         return evaluateWithChildScope(context, this.alternate);
       }
       return void 0;
-    });
+    }, context.signal);
   }
 };
 var WhileNode = class extends BaseNode {
@@ -1001,18 +1130,22 @@ var WhileNode = class extends BaseNode {
     this.body = body;
   }
   evaluate(context) {
+    throwIfAborted(context.signal);
     const previousScope = context.scope;
     if (context.scope?.createChild) {
       context.scope = context.scope.createChild();
     }
     const run = () => {
+      throwIfAborted(context.signal);
       const condition = this.test.evaluate(context);
       return resolveMaybe(condition, (resolved) => {
+        throwIfAborted(context.signal);
         if (!resolved || context.returning) {
           return void 0;
         }
         const bodyResult = this.body.evaluate(context);
         return resolveMaybe(bodyResult, () => {
+          throwIfAborted(context.signal);
           if (context.breaking) {
             context.breaking = false;
             return void 0;
@@ -1021,8 +1154,8 @@ var WhileNode = class extends BaseNode {
             context.continuing = false;
           }
           return run();
-        });
-      });
+        }, context.signal);
+      }, context.signal);
     };
     const result = run();
     if (isPromiseLike(result)) {
@@ -1043,8 +1176,10 @@ var ForEachNode = class extends BaseNode {
     this.body = body;
   }
   evaluate(context) {
+    throwIfAborted(context.signal);
     const iterableValue = this.iterable.evaluate(context);
     return resolveMaybe(iterableValue, (resolved) => {
+      throwIfAborted(context.signal);
       const entries = this.getEntries(resolved);
       const previousScope = context.scope;
       let bodyScope = context.scope;
@@ -1053,6 +1188,7 @@ var ForEachNode = class extends BaseNode {
       }
       let index = 0;
       const loop = () => {
+        throwIfAborted(context.signal);
         if (index >= entries.length || context.returning) {
           context.scope = previousScope;
           return void 0;
@@ -1063,6 +1199,7 @@ var ForEachNode = class extends BaseNode {
         context.scope?.setPath?.(this.target.name, value);
         const bodyResult = this.body.evaluate(context);
         return resolveMaybe(bodyResult, () => {
+          throwIfAborted(context.signal);
           if (context.breaking) {
             context.breaking = false;
             context.scope = previousScope;
@@ -1073,10 +1210,10 @@ var ForEachNode = class extends BaseNode {
           }
           context.scope = previousScope;
           return loop();
-        });
+        }, context.signal);
       };
       return loop();
-    });
+    }, context.signal);
   }
   getEntries(value) {
     if (value == null) {
@@ -1109,16 +1246,20 @@ var ForNode = class extends BaseNode {
     this.body = body;
   }
   evaluate(context) {
+    throwIfAborted(context.signal);
     const initResult = this.init ? this.init.evaluate(context) : void 0;
     const run = () => {
+      throwIfAborted(context.signal);
       const previousScope = context.scope;
       let bodyScope = context.scope;
       if (context.scope?.createChild) {
         bodyScope = context.scope.createChild();
       }
       const loop = () => {
+        throwIfAborted(context.signal);
         const testResult = this.test ? this.test.evaluate(context) : true;
         return resolveMaybe(testResult, (passed) => {
+          throwIfAborted(context.signal);
           if (!passed || context.returning) {
             context.scope = previousScope;
             return void 0;
@@ -1126,6 +1267,7 @@ var ForNode = class extends BaseNode {
           context.scope = bodyScope;
           const bodyResult = this.body.evaluate(context);
           return resolveMaybe(bodyResult, () => {
+            throwIfAborted(context.signal);
             if (context.returning) {
               context.scope = previousScope;
               return void 0;
@@ -1140,13 +1282,13 @@ var ForNode = class extends BaseNode {
               context.continuing = false;
             }
             const updateResult = this.update ? this.update.evaluate(context) : void 0;
-            return resolveMaybe(updateResult, () => loop());
-          });
-        });
+            return resolveMaybe(updateResult, () => loop(), context.signal);
+          }, context.signal);
+        }, context.signal);
       };
       return loop();
     };
-    return resolveMaybe(initResult, () => run());
+    return resolveMaybe(initResult, () => run(), context.signal);
   }
 };
 var TryNode = class extends BaseNode {
@@ -1157,7 +1299,9 @@ var TryNode = class extends BaseNode {
     this.handler = handler;
   }
   evaluate(context) {
+    throwIfAborted(context.signal);
     const handleError = (error) => {
+      throwIfAborted(context.signal);
       if (context.returning) {
         return context.returnValue;
       }
@@ -1177,12 +1321,13 @@ var TryNode = class extends BaseNode {
       }
       const handlerResult = this.handler.evaluate(context);
       return resolveMaybe(handlerResult, () => {
+        throwIfAborted(context.signal);
         if (scope && scope.setPath && handlerScope === previousScope) {
           scope.setPath(this.errorName, previous);
         }
         context.scope = previousScope;
         return void 0;
-      });
+      }, context.signal);
     };
     try {
       const bodyResult = evaluateWithChildScope(context, this.body);
@@ -1212,6 +1357,7 @@ var FunctionExpression = class extends BaseNode {
     this.isAsync = isAsync;
   }
   evaluate(context) {
+    throwIfAborted(context.signal);
     const scope = context.scope;
     const globals = context.globals;
     const element = context.element;
@@ -1219,6 +1365,7 @@ var FunctionExpression = class extends BaseNode {
     if (this.isAsync) {
       return (...args) => {
         const invoke = () => {
+          const signal = lifetime?.isDisposing ? void 0 : context.signal;
           const activeScope = scope?.createChild ? scope.createChild() : scope;
           const inner = {
             scope: activeScope,
@@ -1228,6 +1375,7 @@ var FunctionExpression = class extends BaseNode {
             ...element ? { element } : {},
             ...context.self ? { self: context.self } : {},
             ...lifetime ? { lifetime } : {},
+            ...signal ? { signal } : {},
             returnValue: void 0,
             returning: false,
             breaking: false,
@@ -1235,8 +1383,8 @@ var FunctionExpression = class extends BaseNode {
           };
           const previousValues = /* @__PURE__ */ new Map();
           const applyResult = activeScope ? this.applyParams(activeScope, previousValues, inner, args) : void 0;
-          const bodyResult = resolveMaybe(applyResult, () => this.body.evaluate(inner));
-          const finalResult = resolveMaybe(bodyResult, () => inner.returnValue);
+          const bodyResult = resolveMaybe(applyResult, () => this.body.evaluate(inner), inner.signal);
+          const finalResult = resolveMaybe(bodyResult, () => inner.returnValue, inner.signal);
           return Promise.resolve(finalResult).finally(() => {
             if (activeScope && activeScope === scope) {
               this.restoreParams(activeScope, previousValues);
@@ -1248,6 +1396,7 @@ var FunctionExpression = class extends BaseNode {
     }
     return (...args) => {
       const invoke = () => {
+        const signal = lifetime?.isDisposing ? void 0 : context.signal;
         const activeScope = scope?.createChild ? scope.createChild() : scope;
         const inner = {
           scope: activeScope,
@@ -1257,6 +1406,7 @@ var FunctionExpression = class extends BaseNode {
           ...element ? { element } : {},
           ...context.self ? { self: context.self } : {},
           ...lifetime ? { lifetime } : {},
+          ...signal ? { signal } : {},
           returnValue: void 0,
           returning: false,
           breaking: false,
@@ -1264,8 +1414,8 @@ var FunctionExpression = class extends BaseNode {
         };
         const previousValues = /* @__PURE__ */ new Map();
         const applyResult = activeScope ? this.applyParams(activeScope, previousValues, inner, args) : void 0;
-        const bodyResult = resolveMaybe(applyResult, () => this.body.evaluate(inner));
-        const finalResult = resolveMaybe(bodyResult, () => inner.returnValue);
+        const bodyResult = resolveMaybe(applyResult, () => this.body.evaluate(inner), inner.signal);
+        const finalResult = resolveMaybe(bodyResult, () => inner.returnValue, inner.signal);
         if (isPromiseLike(finalResult)) {
           return finalResult.finally(() => {
             if (activeScope && activeScope === scope) {
@@ -1282,6 +1432,7 @@ var FunctionExpression = class extends BaseNode {
     };
   }
   applyParams(scope, previousValues, context, args) {
+    throwIfAborted(context.signal);
     if (!scope) {
       return;
     }
@@ -1306,10 +1457,12 @@ var FunctionExpression = class extends BaseNode {
         if (value === void 0 && param.defaultValue) {
           const defaultValue = param.defaultValue.evaluate(context);
           return resolveMaybe(defaultValue, (resolvedDefault) => {
+            throwIfAborted(context.signal);
             setPath(`self.${name}`, resolvedDefault);
             return applyAt(i + 1, argIndex + 1);
-          });
+          }, context.signal);
         }
+        throwIfAborted(context.signal);
         setPath(`self.${name}`, value);
         argIndex += 1;
       }
@@ -1364,6 +1517,9 @@ var IdentifierExpression = class extends BaseNode {
       if (explicit || value !== void 0 || root && context.scope.hasKey?.(root)) {
         return value;
       }
+    }
+    if (this.name === "signal" && context.signal) {
+      return context.signal;
     }
     return context.globals ? context.globals[this.name] : void 0;
   }
@@ -1426,6 +1582,7 @@ var TemplateExpression = class extends BaseNode {
     this.parts = parts;
   }
   evaluate(context) {
+    throwIfAborted(context.signal);
     let result = "";
     let index = 0;
     const run = () => {
@@ -1434,9 +1591,10 @@ var TemplateExpression = class extends BaseNode {
         index += 1;
         const value = part.evaluate(context);
         return resolveMaybe(value, (resolved) => {
+          throwIfAborted(context.signal);
           result += resolved == null ? "" : String(resolved);
           return run();
-        });
+        }, context.signal);
       }
       return result;
     };
@@ -1462,14 +1620,16 @@ var TaggedTemplateExpression = class extends BaseNode {
     this.template = template;
   }
   evaluate(context) {
+    throwIfAborted(context.signal);
     const tagValue = this.tag.evaluate(context);
     return resolveMaybe(tagValue, (resolvedTag) => {
+      throwIfAborted(context.signal);
       if (typeof resolvedTag !== "function") {
         return void 0;
       }
       const { strings, values } = this.template.getTemplateParts(context);
       return resolvedTag(strings, ...values);
-    });
+    }, context.signal);
   }
 };
 var UnaryExpression = class extends BaseNode {
@@ -1479,8 +1639,10 @@ var UnaryExpression = class extends BaseNode {
     this.argument = argument;
   }
   evaluate(context) {
+    throwIfAborted(context.signal);
     const value = this.argument.evaluate(context);
     return resolveMaybe(value, (resolved) => {
+      throwIfAborted(context.signal);
       if (this.operator === "!") {
         return !resolved;
       }
@@ -1488,7 +1650,7 @@ var UnaryExpression = class extends BaseNode {
         return -resolved;
       }
       return resolved;
-    });
+    }, context.signal);
   }
 };
 var BinaryExpression = class extends BaseNode {
@@ -1499,8 +1661,10 @@ var BinaryExpression = class extends BaseNode {
     this.right = right;
   }
   evaluate(context) {
+    throwIfAborted(context.signal);
     const leftValue = this.left.evaluate(context);
     return resolveMaybe(leftValue, (resolvedLeft) => {
+      throwIfAborted(context.signal);
       if (this.operator === "&&") {
         if (!resolvedLeft) {
           return resolvedLeft;
@@ -1521,6 +1685,7 @@ var BinaryExpression = class extends BaseNode {
       }
       const rightValue = this.right.evaluate(context);
       return resolveMaybe(rightValue, (resolvedRight) => {
+        throwIfAborted(context.signal);
         if (this.operator === "+") {
           return resolvedLeft + resolvedRight;
         }
@@ -1561,8 +1726,8 @@ var BinaryExpression = class extends BaseNode {
           return resolvedLeft >= resolvedRight;
         }
         return void 0;
-      });
-    });
+      }, context.signal);
+    }, context.signal);
   }
 };
 var TernaryExpression = class extends BaseNode {
@@ -1573,13 +1738,15 @@ var TernaryExpression = class extends BaseNode {
     this.alternate = alternate;
   }
   evaluate(context) {
+    throwIfAborted(context.signal);
     const condition = this.test.evaluate(context);
     return resolveMaybe(condition, (resolved) => {
+      throwIfAborted(context.signal);
       if (resolved) {
         return this.consequent.evaluate(context);
       }
       return this.alternate.evaluate(context);
-    });
+    }, context.signal);
   }
 };
 var MemberExpression = class _MemberExpression extends BaseNode {
@@ -1590,8 +1757,9 @@ var MemberExpression = class _MemberExpression extends BaseNode {
     this.optional = optional;
   }
   evaluate(context) {
+    throwIfAborted(context.signal);
     const resolved = this.resolve(context);
-    return resolveMaybe(resolved, (resolvedValue) => resolvedValue?.value);
+    return resolveMaybe(resolved, (resolvedValue) => resolvedValue?.value, context.signal);
   }
   resolve(context) {
     const path = this.getIdentifierPath();
@@ -1607,11 +1775,12 @@ var MemberExpression = class _MemberExpression extends BaseNode {
     }
     const target = this.target.evaluate(context);
     return resolveMaybe(target, (resolvedTarget) => {
+      throwIfAborted(context.signal);
       if (resolvedTarget == null) {
         return { value: void 0, target: resolvedTarget, optional: this.optional };
       }
       return { value: resolvedTarget[this.property], target: resolvedTarget, optional: this.optional };
-    });
+    }, context.signal);
   }
   getIdentifierPath() {
     const targetPath = this.getTargetIdentifierPath();
@@ -1688,10 +1857,13 @@ var CallExpression = class extends BaseNode {
     this.args = args;
   }
   evaluate(context) {
+    throwIfAborted(context.signal);
     const resolved = this.resolveCallee(context);
     return resolveMaybe(resolved, (resolvedCallee) => {
+      throwIfAborted(context.signal);
       const fnValue = resolvedCallee?.fn ?? this.callee.evaluate(context);
       return resolveMaybe(fnValue, (resolvedFn) => {
+        throwIfAborted(context.signal);
         if (typeof resolvedFn !== "function") {
           return void 0;
         }
@@ -1701,25 +1873,28 @@ var CallExpression = class extends BaseNode {
             const arg = this.args[i];
             const argValue = arg.evaluate(context);
             return resolveMaybe(argValue, (resolvedArg) => {
+              throwIfAborted(context.signal);
               values.push(resolvedArg);
               return evalArgs(i + 1);
-            });
+            }, context.signal);
           }
+          throwIfAborted(context.signal);
           return resolvedFn.apply(resolvedCallee?.thisArg, values);
         };
         return evalArgs(0);
-      });
-    });
+      }, context.signal);
+    }, context.signal);
   }
   resolveCallee(context) {
     if (this.callee instanceof MemberExpression) {
       const resolved = this.callee.resolve(context);
       return resolveMaybe(resolved, (resolvedValue) => {
+        throwIfAborted(context.signal);
         if (!resolvedValue) {
           return void 0;
         }
         return { fn: resolvedValue.value, thisArg: resolvedValue.target };
-      });
+      }, context.signal);
     }
     if (!(this.callee instanceof IdentifierExpression)) {
       return void 0;
@@ -1762,6 +1937,7 @@ var ArrayExpression = class extends BaseNode {
     this.elements = elements;
   }
   evaluate(context) {
+    throwIfAborted(context.signal);
     const values = [];
     const pushElements = (value) => {
       if (value == null) {
@@ -1782,15 +1958,17 @@ var ArrayExpression = class extends BaseNode {
         if (element instanceof SpreadElement) {
           const spreadValue = element.value.evaluate(context);
           return resolveMaybe(spreadValue, (resolvedSpread) => {
+            throwIfAborted(context.signal);
             pushElements(resolvedSpread);
             return evalAt(i + 1);
-          });
+          }, context.signal);
         }
         const value = element.evaluate(context);
         return resolveMaybe(value, (resolvedValue) => {
+          throwIfAborted(context.signal);
           values.push(resolvedValue);
           return evalAt(i + 1);
-        });
+        }, context.signal);
       }
       return values;
     };
@@ -1803,6 +1981,7 @@ var ObjectExpression = class extends BaseNode {
     this.entries = entries;
   }
   evaluate(context) {
+    throwIfAborted(context.signal);
     const result = {};
     const evalAt = (index) => {
       for (let i = index; i < this.entries.length; i += 1) {
@@ -1810,27 +1989,31 @@ var ObjectExpression = class extends BaseNode {
         if ("spread" in entry) {
           const spreadValue = entry.spread.evaluate(context);
           return resolveMaybe(spreadValue, (resolvedSpread) => {
+            throwIfAborted(context.signal);
             if (resolvedSpread != null) {
               Object.assign(result, resolvedSpread);
             }
             return evalAt(i + 1);
-          });
+          }, context.signal);
         }
         if ("computed" in entry && entry.computed) {
           const keyValue = entry.keyExpr.evaluate(context);
           return resolveMaybe(keyValue, (resolvedKey) => {
+            throwIfAborted(context.signal);
             const entryValue = entry.value.evaluate(context);
             return resolveMaybe(entryValue, (resolvedValue) => {
+              throwIfAborted(context.signal);
               result[String(resolvedKey)] = resolvedValue;
               return evalAt(i + 1);
-            });
-          });
+            }, context.signal);
+          }, context.signal);
         }
         const value = entry.value.evaluate(context);
         return resolveMaybe(value, (resolvedValue) => {
+          throwIfAborted(context.signal);
           result[entry.key] = resolvedValue;
           return evalAt(i + 1);
-        });
+        }, context.signal);
       }
       return result;
     };
@@ -1844,20 +2027,23 @@ var IndexExpression = class extends BaseNode {
     this.index = index;
   }
   evaluate(context) {
+    throwIfAborted(context.signal);
     const target = this.target.evaluate(context);
     return resolveMaybe(target, (resolvedTarget) => {
+      throwIfAborted(context.signal);
       if (resolvedTarget == null) {
         return void 0;
       }
       const index = this.index.evaluate(context);
       return resolveMaybe(index, (resolvedIndex) => {
+        throwIfAborted(context.signal);
         if (resolvedIndex == null) {
           return void 0;
         }
         const key = this.normalizeIndexKey(resolvedTarget, resolvedIndex);
         return resolvedTarget[key];
-      });
-    });
+      }, context.signal);
+    }, context.signal);
   }
   normalizeIndexKey(target, index) {
     if (Array.isArray(target) && typeof index === "string" && index.trim() !== "") {
@@ -1916,15 +2102,17 @@ var ElementDirectiveExpression = class extends BaseNode {
     this.directive = directive;
   }
   evaluate(context) {
+    throwIfAborted(context.signal);
     const elementValue = this.element.evaluate(context);
     return resolveMaybe(elementValue, (resolvedElement) => {
+      throwIfAborted(context.signal);
       const element = resolveElementFromReference(resolvedElement);
       if (!element) {
         return void 0;
       }
       const nextContext = { ...context, element };
       return this.directive.evaluate(nextContext);
-    });
+    }, context.signal);
   }
 };
 var ElementPropertyExpression = class extends BaseNode {
@@ -1934,8 +2122,10 @@ var ElementPropertyExpression = class extends BaseNode {
     this.property = property;
   }
   evaluate(context) {
+    throwIfAborted(context.signal);
     const elementValue = this.element.evaluate(context);
     return resolveMaybe(elementValue, (resolvedElement) => {
+      throwIfAborted(context.signal);
       if (resolvedElement && typeof resolvedElement === "object" && resolvedElement.__scope) {
         return resolvedElement.__scope.getPath?.(this.property);
       }
@@ -1944,7 +2134,7 @@ var ElementPropertyExpression = class extends BaseNode {
         return void 0;
       }
       return element[this.property];
-    });
+    }, context.signal);
   }
 };
 function resolveElementFromReference(value) {
@@ -1965,8 +2155,12 @@ var AwaitExpression = class extends BaseNode {
     this.argument = argument;
   }
   evaluate(context) {
+    throwIfAborted(context.signal);
     const value = this.argument.evaluate(context);
-    return Promise.resolve(value);
+    return Promise.resolve(value).then((resolved) => {
+      throwIfAborted(context.signal);
+      return resolved;
+    });
   }
 };
 var QueryExpression = class extends BaseNode {
@@ -4363,14 +4557,18 @@ async function applyGet(element, config, scope, onHtmlApplied) {
   if (!globalThis.fetch) {
     throw new Error("fetch is not available");
   }
+  throwIfAborted(config.signal);
   const requestTarget = resolveTarget(element, config.targetSelector);
   const response = await globalThis.fetch(config.url, {
-    headers: getPartialHeaders(element, requestTarget)
+    headers: getPartialHeaders(element, requestTarget),
+    ...config.signal ? { signal: config.signal } : {}
   });
+  throwIfAborted(config.signal);
   if (!response || !response.ok) {
     return;
   }
   const html = await response.text();
+  throwIfAborted(config.signal);
   const target = resolveTarget(element, config.targetSelector);
   if (!target) {
     element.dispatchEvent(new CustomEvent("vsn:targetError", { detail: { selector: config.targetSelector } }));
@@ -4443,68 +4641,6 @@ function debounce(fn, waitMs) {
   };
   return debounced;
 }
-
-// src/runtime/lifetime.ts
-var Lifetime = class _Lifetime {
-  entries = /* @__PURE__ */ new Set();
-  disposed = false;
-  get isDisposed() {
-    return this.disposed;
-  }
-  add(disposer) {
-    if (typeof disposer !== "function") {
-      throw new TypeError("Lifetime disposers must be functions");
-    }
-    if (this.disposed) {
-      disposer();
-      return () => void 0;
-    }
-    const entry = { disposer, active: true };
-    this.entries.add(entry);
-    return () => {
-      if (!entry.active) {
-        return;
-      }
-      entry.active = false;
-      this.entries.delete(entry);
-    };
-  }
-  onCleanup(disposer) {
-    return this.add(disposer);
-  }
-  child() {
-    const child = new _Lifetime();
-    const removeChild = this.add(() => child.dispose());
-    child.add(removeChild);
-    return child;
-  }
-  dispose() {
-    if (this.disposed) {
-      return;
-    }
-    this.disposed = true;
-    const errors = [];
-    const entries = Array.from(this.entries).reverse();
-    this.entries.clear();
-    for (const entry of entries) {
-      if (!entry.active) {
-        continue;
-      }
-      entry.active = false;
-      try {
-        entry.disposer();
-      } catch (error) {
-        errors.push(error);
-      }
-    }
-    if (errors.length === 1) {
-      throw errors[0];
-    }
-    if (errors.length > 1) {
-      throw new AggregateError(errors, "One or more lifetime disposers failed");
-    }
-  }
-};
 
 // src/runtime/engine.ts
 function isPromiseLike2(value) {
@@ -5432,6 +5568,9 @@ var Engine = class _Engine {
   getLifetime(element) {
     return this.inlineLifetimes.get(element) ?? this.getInlineLifetime(element);
   }
+  get signal() {
+    return this.engineLifetime.signal;
+  }
   dispose() {
     const documents = Array.from(this.mountedDocuments);
     this.disposeMountedRoots();
@@ -5807,6 +5946,7 @@ var Engine = class _Engine {
       }
       this.logDiagnostic("bind", element, behavior);
     } catch (error) {
+      const cancelled = lifetime.signal.aborted || isAbortError(error);
       this.disposeLifetime(element, lifetime);
       this.behaviorLifetimes.get(element)?.delete(behavior.id);
       if (this.behaviorLifetimes.get(element)?.size === 0) {
@@ -5818,7 +5958,9 @@ var Engine = class _Engine {
         this.behaviorBoundElements.delete(behavior.id);
       }
       this.behaviorRootScopes.get(element)?.delete(behavior.id);
-      throw error;
+      if (!cancelled) {
+        throw error;
+      }
     }
   }
   unbindBehaviorForElement(behavior, element, scope, bound) {
@@ -5836,7 +5978,7 @@ var Engine = class _Engine {
     }
     const rootScope = this.getBehaviorRootScope(element, behavior);
     if (behavior.destruct) {
-      void this.safeExecuteBlock(behavior.destruct, scope, element, rootScope, lifetime);
+      void this.safeExecuteBlock(behavior.destruct, scope, element, rootScope, lifetime, null);
     }
     this.behaviorRootScopes.get(element)?.delete(behavior.id);
     void this.applyBehaviorModifierHook("onDestruct", behavior, element, scope, rootScope, lifetime);
@@ -5856,7 +5998,7 @@ var Engine = class _Engine {
       const rootScope = this.getBehaviorRootScope(element, behavior);
       const lifetime = this.behaviorLifetimes.get(element)?.get(behavior.id) ?? new Lifetime();
       if (behavior.destruct) {
-        void this.safeExecuteBlock(behavior.destruct, scope, element, rootScope, lifetime);
+        void this.safeExecuteBlock(behavior.destruct, scope, element, rootScope, lifetime, null);
       }
       void this.applyBehaviorModifierHook("onDestruct", behavior, element, scope, rootScope, lifetime);
       void this.applyBehaviorModifierHook("onUnbind", behavior, element, scope, rootScope, lifetime);
@@ -5867,6 +6009,7 @@ var Engine = class _Engine {
     const lifetime = this.resetInlineLifetime(element);
     const context = {
       lifetime,
+      signal: lifetime.signal,
       onCleanup: (disposer) => lifetime.onCleanup(disposer)
     };
     for (const name of element.getAttributeNames()) {
@@ -6161,7 +6304,7 @@ var Engine = class _Engine {
         return;
       }
       if (node instanceof IdentifierExpression) {
-        if (node.name !== "self") {
+        if (node.name !== "self" && node.name !== "signal") {
           dependencies.add(node.name);
         }
         return;
@@ -6437,7 +6580,9 @@ var Engine = class _Engine {
           this.evaluate(element);
         }
       } catch (error) {
-        this.emitError(element, error);
+        if (!lifetime.signal.aborted && !isAbortError(error)) {
+          this.emitError(element, error);
+        }
       } finally {
         this.applyEventFlagAfter(element, scope, config.flags, config.flagArgs, event, lifetime);
       }
@@ -6489,7 +6634,9 @@ var Engine = class _Engine {
         await this.executeBlock(body, scope, element, rootScope, lifetime);
       } catch (error) {
         failed = true;
-        this.emitError(element, error);
+        if (!lifetime.signal.aborted && !isAbortError(error)) {
+          this.emitError(element, error);
+        }
       } finally {
         for (const [name, value] of previousValues.entries()) {
           scope.setPath(name, value);
@@ -6507,24 +6654,44 @@ var Engine = class _Engine {
     this.addEventListener(lifetime, listenerTarget, event, effectiveHandler, options);
   }
   attachGetHandler(element, autoLoad = false, lifetime = this.getInlineLifetime(element)) {
+    let requestLifetime;
     const handler = async () => {
-      if (lifetime.isDisposed) {
+      if (lifetime.isDisposed || !element.isConnected) {
         return;
       }
+      requestLifetime?.dispose();
+      const operationLifetime = lifetime.child();
+      requestLifetime = operationLifetime;
       const config = this.getBindings.get(element);
       if (!config) {
+        operationLifetime.dispose();
         return;
       }
       try {
-        await applyGet(element, config, this.getScope(element), (target) => {
-          this.handleHtmlBehaviors(target);
-        });
-        if (lifetime.isDisposed) {
+        await applyGet(
+          element,
+          { ...config, signal: operationLifetime.signal },
+          this.getScope(element),
+          (target) => {
+            if (!operationLifetime.signal.aborted) {
+              this.handleHtmlBehaviors(target);
+            }
+          }
+        );
+        if (operationLifetime.signal.aborted || lifetime.isDisposed) {
           return;
         }
       } catch (error) {
+        if (operationLifetime.signal.aborted || lifetime.signal.aborted || isAbortError(error)) {
+          return;
+        }
         console.warn("vsn:getError", error);
         element.dispatchEvent(new CustomEvent("vsn:getError", { detail: { error }, bubbles: true }));
+      } finally {
+        if (requestLifetime === operationLifetime) {
+          requestLifetime = void 0;
+        }
+        operationLifetime.dispose();
       }
     };
     const clickHandler = (event) => {
@@ -6556,6 +6723,7 @@ var Engine = class _Engine {
         event: void 0,
         engine: this,
         lifetime,
+        signal: lifetime.signal,
         onCleanup: (disposer) => lifetime.onCleanup(disposer)
       });
       if (!patch) {
@@ -6592,6 +6760,7 @@ var Engine = class _Engine {
         event,
         engine: this,
         lifetime,
+        signal: lifetime.signal,
         onCleanup: (disposer) => lifetime.onCleanup(disposer)
       });
       if (result === false) {
@@ -6601,6 +6770,9 @@ var Engine = class _Engine {
     return true;
   }
   applyEventFlagAfter(element, scope, flags, flagArgs, event, lifetime, rootScope) {
+    if (lifetime.isDisposed) {
+      return;
+    }
     for (const name of Object.keys(flags)) {
       const handler = this.flagHandlers.get(name);
       if (!handler?.onEventAfter) {
@@ -6615,6 +6787,7 @@ var Engine = class _Engine {
         event,
         engine: this,
         lifetime,
+        signal: lifetime.signal,
         onCleanup: (disposer) => lifetime.onCleanup(disposer)
       });
     }
@@ -6636,6 +6809,7 @@ var Engine = class _Engine {
           event,
           engine: this,
           lifetime,
+          signal: lifetime.signal,
           onCleanup: (disposer) => lifetime.onCleanup(disposer)
         },
         args
@@ -6718,6 +6892,7 @@ var Engine = class _Engine {
     return this.executionStack[this.executionStack.length - 1]?.lifetime;
   }
   async execute(code, scope, element, rootScope, lifetime) {
+    throwIfAborted(lifetime?.signal);
     let block = this.codeCache.get(code);
     if (!block) {
       block = Parser.parseInline(code);
@@ -6732,12 +6907,13 @@ var Engine = class _Engine {
         engine: this,
         ...element ? { element } : {},
         self: selfRef,
-        ...lifetime ? { lifetime } : {}
+        ...lifetime ? { lifetime, signal: lifetime.signal } : {}
       };
       await block.evaluate(context);
     });
   }
-  async executeBlock(block, scope, element, rootScope, lifetime) {
+  async executeBlock(block, scope, element, rootScope, lifetime, signal = lifetime?.signal) {
+    throwIfAborted(signal);
     await this.withExecutionElement(element, lifetime, async () => {
       const selfRef = this.getGroupProxy(scope);
       const context = {
@@ -6747,7 +6923,7 @@ var Engine = class _Engine {
         engine: this,
         ...element ? { element } : {},
         self: selfRef,
-        ...lifetime ? { lifetime } : {}
+        ...lifetime ? { lifetime, ...signal ? { signal } : {} } : {}
       };
       await block.evaluate(context);
     });
@@ -6756,16 +6932,16 @@ var Engine = class _Engine {
     try {
       await this.execute(code, scope, element, rootScope, lifetime);
     } catch (error) {
-      if (element) {
+      if (element && !lifetime?.signal.aborted && !isAbortError(error)) {
         this.emitError(element, error);
       }
     }
   }
-  async safeExecuteBlock(block, scope, element, rootScope, lifetime) {
+  async safeExecuteBlock(block, scope, element, rootScope, lifetime, signal = lifetime?.signal) {
     try {
-      await this.executeBlock(block, scope, element, rootScope, lifetime);
+      await this.executeBlock(block, scope, element, rootScope, lifetime, signal);
     } catch (error) {
-      if (element) {
+      if (element && !signal?.aborted && !isAbortError(error)) {
         this.emitError(element, error);
       }
     }
@@ -7246,9 +7422,10 @@ var Engine = class _Engine {
     }
     const selfRef = this.getGroupProxy(scope);
     const fn = (...args) => {
-      if (lifetime.isDisposed) {
+      if (lifetime.isDisposed && !lifetime.isDisposing) {
         return void 0;
       }
+      const signal = lifetime.isDisposing ? void 0 : lifetime.signal;
       return this.withExecutionContext(element, lifetime, () => {
         const callScope = scope.createChild ? scope.createChild() : scope;
         const context = {
@@ -7262,7 +7439,8 @@ var Engine = class _Engine {
           returning: false,
           breaking: false,
           continuing: false,
-          lifetime
+          lifetime,
+          ...signal ? { signal } : {}
         };
         const previousValues = /* @__PURE__ */ new Map();
         const restore = () => {
@@ -7353,7 +7531,7 @@ var Engine = class _Engine {
       engine: this,
       element,
       self: selfRef,
-      ...lifetime ? { lifetime } : {}
+      ...lifetime ? { lifetime, signal: lifetime.signal } : {}
     };
     const operator = declaration.operator;
     const debounceMs = declaration.flags.debounce ? declaration.flagArgs.debounce ?? 200 : void 0;
@@ -7371,6 +7549,9 @@ var Engine = class _Engine {
     this.applyCustomFlags(element, scope, declaration, lifetime);
     if (declaration.target instanceof IdentifierExpression) {
       const value = await declaration.value.evaluate(context);
+      if (lifetime.isDisposed) {
+        return;
+      }
       const transformed = this.applyCustomFlagTransforms(value, element, scope, declaration, lifetime);
       scope.setPath(declaration.target.name, transformed);
       if (declaration.flags.important && importantKey) {
@@ -7400,6 +7581,9 @@ var Engine = class _Engine {
     }
     if (!exprIdentifier) {
       const value = await declaration.value.evaluate(context);
+      if (lifetime.isDisposed) {
+        return;
+      }
       const transformed = this.applyCustomFlagTransforms(value, element, scope, declaration, lifetime);
       this.setDirectiveValue(element, target, transformed, declaration);
       const shouldWatch2 = operator === ":<" || operator === ":=";
@@ -7453,6 +7637,7 @@ var Engine = class _Engine {
         scope,
         declaration,
         lifetime,
+        signal: lifetime.signal,
         onCleanup: (disposer) => lifetime.onCleanup(disposer)
       });
     }
@@ -7475,6 +7660,7 @@ var Engine = class _Engine {
           scope,
           declaration,
           lifetime: owner,
+          signal: owner.signal,
           onCleanup: (disposer) => owner.onCleanup(disposer)
         },
         nextValue
@@ -7503,6 +7689,7 @@ var Engine = class _Engine {
         behavior,
         engine: this,
         lifetime,
+        signal: lifetime.signal,
         onCleanup: (disposer) => lifetime.onCleanup(disposer)
       });
     }
@@ -7576,6 +7763,7 @@ var Engine = class _Engine {
       if (lifetime?.isDisposed) {
         return;
       }
+      throwIfAborted(lifetime?.signal);
       const currentVersion = ++version;
       const selfRef = this.getGroupProxy(scope);
       const context = {
@@ -7585,7 +7773,7 @@ var Engine = class _Engine {
         engine: this,
         element,
         self: selfRef,
-        ...lifetime ? { lifetime } : {}
+        ...lifetime ? { lifetime, signal: lifetime.signal } : {}
       };
       const value = await expr.evaluate(context);
       if (currentVersion !== version || lifetime?.isDisposed) {
@@ -7593,13 +7781,20 @@ var Engine = class _Engine {
       }
       this.setDirectiveValue(element, target, value, binding);
     };
-    void handler();
+    const run = () => {
+      void handler().catch((error) => {
+        if (!lifetime?.signal.aborted && !isAbortError(error)) {
+          this.emitError(element, error);
+        }
+      });
+    };
+    run();
     this.watchExpression(
       scope,
       rootScope,
       expr,
       () => {
-        void handler();
+        run();
       },
       debounceMs,
       element,
@@ -7874,7 +8069,7 @@ var Engine = class _Engine {
     this.registerAttributeHandler({
       id: "vsn-get",
       match: (name) => name.startsWith("vsn-get"),
-      handle: (element, name) => {
+      handle: (element, name, _value, _scope, context) => {
         const autoLoad = name.includes("!load");
         const url = element.getAttribute(name) ?? "";
         const target = element.getAttribute("vsn-target") ?? void 0;
@@ -7885,7 +8080,7 @@ var Engine = class _Engine {
           ...target ? { targetSelector: target } : {}
         };
         this.getBindings.set(element, config);
-        this.attachGetHandler(element, autoLoad);
+        this.attachGetHandler(element, autoLoad, context?.lifetime);
       }
     });
     this.registerAttributeHandler({
@@ -7924,7 +8119,7 @@ function parseCFS(source) {
 if (typeof window !== "undefined") {
   window["parseCFS"] = parseCFS;
 }
-async function loadBehaviorSources(root) {
+async function loadBehaviorSources(root, signal) {
   const documentRoot = root instanceof Document ? root : root.ownerDocument;
   const scripts = Array.from(root.querySelectorAll('script[type="text/vsn"]'));
   const sources = await Promise.all(
@@ -7934,7 +8129,10 @@ async function loadBehaviorSources(root) {
         return script.textContent ?? "";
       }
       const url = new URL(src, documentRoot.baseURI);
-      const response = await fetch(url.href);
+      const response = signal ? await fetch(url.href, { signal }) : await fetch(url.href);
+      if (signal?.aborted) {
+        return "";
+      }
       if (!response.ok) {
         throw new Error(`Failed to load VSN source '${url.href}' (HTTP ${response.status})`);
       }
@@ -7954,6 +8152,9 @@ function autoMount(root = document) {
     const target = root instanceof Document ? root.body : root;
     if (target) {
       try {
+        if (engine.signal.aborted) {
+          return;
+        }
         const plugins = globalThis.VSNPlugins;
         if (plugins && typeof plugins === "object") {
           for (const plugin of Object.values(plugins)) {
@@ -7962,7 +8163,10 @@ function autoMount(root = document) {
             }
           }
         }
-        const sources = await loadBehaviorSources(root);
+        const sources = await loadBehaviorSources(root, engine.signal);
+        if (engine.signal.aborted) {
+          return;
+        }
         if (sources.trim()) {
           engine.registerBehaviors(sources);
         }
@@ -7971,6 +8175,9 @@ function autoMount(root = document) {
         const elapsedMs = Math.round(endTime - startTime);
         console.log(`Took ${elapsedMs}ms to start up VSN.js. https://www.vsnjs.com/ v${VERSION}`);
       } catch (error) {
+        if (engine.signal.aborted || isAbortError(error)) {
+          return;
+        }
         console.warn("vsn:mountError", error);
         target.dispatchEvent(new CustomEvent("vsn:error", {
           detail: { error, selector: "mount" },
@@ -8043,6 +8250,8 @@ export {
   VERSION,
   WhileNode,
   autoMount,
-  parseCFS
+  isAbortError,
+  parseCFS,
+  throwIfAborted
 };
 //# sourceMappingURL=index.js.map
