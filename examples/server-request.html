@@ -23,9 +23,17 @@
         vsn-get!trusted="counter-toggle.html"
         vsn-target="#partial-target"
         vsn-swap="inner"
+        vsn-loading="root.directLoading"
+        vsn-error="root.directError"
       >
         Load a fragment
       </button>
+      <p class="cookbook-state cookbook-state-loading" vsn-show="root.directLoading">
+        Loading direct fragment…
+      </p>
+      <p class="cookbook-state cookbook-state-error" vsn-show="root.directError">
+        Direct request failed: <strong vsn-text="root.directError"></strong>
+      </p>
       <div id="partial-target" class="cookbook-fragment-target">
         <span>Nothing loaded yet.</span>
       </div>

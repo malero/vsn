@@ -96,7 +96,67 @@ $color :< theme.color;
 
 `construct` runs when a behavior binds and `destruct` runs when it unbinds. `self`, `parent`, and `root` address the current, parent, and behavior-root scopes. Named functions are synchronous unless declared `async`; async functions return promises and may use `await`.
 
-Inline attributes include `vsn-bind`, `vsn-if`, `vsn-show`, `vsn-text`, `vsn-html`, `vsn-each`, `vsn-get`, `vsn-transition`, `vsn-enter`, `vsn-leave`, and `vsn-on:<event>`. `vsn-text` writes literal text with `textContent`; `vsn-html` sanitizes HTML by default, while `vsn-html!trusted` explicitly bypasses sanitization. Untrusted HTML never activates VSN behavior scripts or `vsn-*` attributes. `vsn-if` conditionally mounts and unmounts an element, running its lifecycle cleanup and setup each time; `vsn-show` keeps the element mounted and toggles the native `hidden` state without overwriting inline display styles. `vsn-get` sends htmx-compatible partial-request headers: `HX-Request`, `HX-Current-URL`, and, when available, `HX-Target`, `HX-Trigger`, and `HX-Trigger-Name`.
+Inline attributes include `vsn-bind`, `vsn-if`, `vsn-show`, `vsn-text`, `vsn-html`, `vsn-each`, `vsn-get`, `vsn-transition`, `vsn-enter`, `vsn-leave`, and `vsn-on:<event>`. `vsn-text` writes literal text with `textContent`; `vsn-html` sanitizes HTML by default, while `vsn-html!trusted` explicitly bypasses sanitization. Untrusted HTML never activates VSN behavior scripts or `vsn-*` attributes. `vsn-if` conditionally mounts and unmounts an element, running its lifecycle cleanup and setup each time; `vsn-show` keeps the element mounted and toggles the native `hidden` state without overwriting inline display styles.
+
+### Requests
+
+`vsn-get` is a request trigger as well as a partial HTML swap. It sends
+htmx-compatible headers (`HX-Request`, `HX-Current-URL`, and, when available,
+`HX-Target`, `HX-Trigger`, and `HX-Trigger-Name`) and supports methods, request
+bodies, forms, request state, history, and focus restoration:
+
+```html
+<form
+  vsn-get="/api/search"
+  method="post"
+  vsn-target="#results"
+  vsn-loading="request.loading"
+  vsn-error="request.error"
+  vsn-data="request.data"
+>
+  <input name="query" value="vsn" />
+  <button type="submit">Search</button>
+</form>
+
+<button
+  vsn-get="/api/items"
+  vsn-method="POST"
+  vsn-body="payload"
+  vsn-headers="headers"
+  vsn-swap="none"
+>
+  Save
+</button>
+```
+
+On a form, `vsn-get` uses the form's `action` and `method` when explicit
+attributes are not supplied. GET and HEAD forms become query parameters;
+other methods use `FormData`, including the clicked submitter. A button can use
+`vsn-get!form` to submit its containing form or `vsn-form="#filters"` to select
+another form. `vsn-body` and `vsn-headers` resolve a scope path first, then a
+JSON literal, and finally a plain string. Object bodies default to JSON and
+`vsn-swap="none"` makes a request data-only.
+
+`vsn-loading` is set to `true` while the request is active and `false` when it
+finishes. `vsn-error` receives an error message (or `""` after a new request)
+and `vsn-data` receives the response text on success. Data is cleared while a
+new request is active and after a failure. These state attributes are opt-in;
+VSN does not create state paths when they are omitted.
+
+Use `vsn-history="push"` or `vsn-history="replace"` (or the `!push` and
+`!replace` modifiers) to update browser history after a successful request.
+`vsn-history-url` overrides the URL written to history. Use `vsn-focus` with a
+CSS selector, or the `!focus` modifier, to restore focus after a successful
+swap. `!load` starts the request when the element mounts and `!trusted` permits
+trusted HTML behavior processing, subject to the same explicit trust rules as
+`vsn-html!trusted`.
+
+Non-2xx responses reject as `RequestError`, do not swap HTML, and do not update
+history or focus. They update `vsn-error` when configured and dispatch
+`vsn:getError` with the error, response, status, and status text. Requests are
+aborted when their trigger unmounts or a newer request starts. The equivalent
+programmatic API is `engine.request(element, config)`, which returns the
+response, response text, target, and whether a swap occurred.
 
 `vsn-each` renders the content of a `<template>` once per array item. Add `vsn-key` to reuse rows across list updates and preserve their DOM identity, focus, form state, animations, and child behaviors:
 

@@ -6,6 +6,15 @@ export { Lexer } from "./parser/lexer";
 import { Parser } from "./parser/parser";
 import { Engine } from "./runtime/engine";
 import { isAbortError } from "./runtime/lifetime";
+export { RequestError } from "./runtime/http";
+export type {
+  GetConfig,
+  RequestConfig,
+  RequestHistory,
+  RequestResult,
+  RequestStatePaths,
+  RequestSwap
+} from "./runtime/http";
 export { Parser };
 export { TokenType } from "./parser/token";
 export * from "./ast/nodes";

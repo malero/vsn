@@ -666,6 +666,44 @@ declare class Scope {
 declare function computed<T>(scope: Scope, getter: ComputedGetter<T>, options?: ReactiveOptions): ComputedRef<T>;
 declare function effect(scope: Scope, callback: EffectCallback, options?: EffectOptions): Disposer;
 
+type RequestSwap = "inner" | "outer" | "none";
+type RequestHistory = "none" | "push" | "replace";
+type RequestStatePaths = {
+    loading?: string;
+    error?: string;
+    data?: string;
+};
+interface RequestConfig {
+    url?: string;
+    method?: string;
+    headers?: HeadersInit;
+    body?: unknown;
+    form?: HTMLFormElement;
+    submitter?: HTMLElement;
+    targetSelector?: string;
+    swap?: RequestSwap;
+    trusted?: boolean;
+    history?: RequestHistory;
+    historyUrl?: string;
+    restoreFocus?: boolean | string;
+    signal?: AbortSignal;
+}
+/** Backwards-compatible name for integrations that used the old GET helper. */
+type GetConfig = RequestConfig;
+interface RequestResult {
+    response: Response;
+    body: string;
+    target: Element | null;
+    swapped: boolean;
+}
+declare class RequestError extends Error {
+    readonly response: Response;
+    readonly status: number;
+    readonly statusText: string;
+    readonly url: string;
+    constructor(response: Response);
+}
+
 type HtmlSanitizer = (html: string) => string;
 type HtmlSanitizerOptions = {
     dompurifyConfig?: Record<string, any>;
@@ -899,6 +937,11 @@ declare class Engine {
     private addEventListener;
     private cleanupBehaviorBindings;
     setHtml(element: Element, value: unknown, options?: HtmlSetOptions): void;
+    /**
+     * Sends a request and optionally applies its HTML response through the
+    * engine's sanitizer and behavior processor.
+    */
+    request(element: Element, config: RequestConfig): Promise<RequestResult>;
     private toTrustedHtml;
     private isNativeTrustedHtml;
     private getTrustedTypesPolicy;
@@ -989,6 +1032,10 @@ declare class Engine {
     private attachOnHandler;
     private attachBehaviorOnHandler;
     private attachGetHandler;
+    private resolveRequestForm;
+    private resolveRequestSubmitter;
+    private resolveRequestValue;
+    private resolveRequestHeaders;
     private getEventBindingConfig;
     private applyEventFlagBefore;
     private applyEventFlagAfter;
@@ -1051,4 +1098,4 @@ declare const VERSION: string;
 declare function parseCFS(source: string): ProgramNode;
 declare function autoMount(root?: HTMLElement | Document): Engine | null;
 
-export { type ArrayElement, ArrayExpression, ArrayPattern, type ArrayPatternElement, AssertError, AssertNode, AssignmentNode, type AssignmentTarget, type AttributeHandler, type AttributeHandlerContext, AwaitExpression, BaseNode, type BehaviorFlagArgs, type BehaviorFlags, type BehaviorModifierContext, type BehaviorModifierHandler, BehaviorNode, BinaryExpression, BlockNode, BreakNode, type CFSNode, CallExpression, type ComputedGetter, type ComputedRef, ContinueNode, type DeclarationFlagArgs, type DeclarationFlags, DeclarationNode, type DeclarationTarget, DirectiveExpression, type Disposer, type EffectCallback, type EffectOptions, ElementDirectiveExpression, ElementPropertyExpression, ElementRefExpression, Engine, type EngineOptions, type EventBindPatch, type EventFlagContext, type ExecutionContext, type ExpressionNode, type FlagApplyContext, type FlagHandler, ForEachNode, ForNode, FunctionDeclarationNode, FunctionExpression, type FunctionParam, type HtmlSanitizer, type HtmlSanitizerOptions, type HtmlSetOptions, type HtmlTransformContext, type HtmlTransformOptions, type HtmlTransformer, type HydrationOptions, IdentifierExpression, IfNode, IndexExpression, Lexer, Lifetime, LiteralExpression, MemberExpression, type ObjectEntry, ObjectExpression, ObjectPattern, type ObjectPatternEntry, OnBlockNode, Parser, type PatternNode, ProgramNode, QueryExpression, type ReactiveOptions, type ReactiveScheduler, type RegisteredBehavior, RestElement, ReturnNode, Scope, SelectorNode, SpreadElement, TaggedTemplateExpression, TemplateExpression, TernaryExpression, TokenType, type TrustedTypesPolicy, TryNode, UnaryExpression, type UseFlagArgs, type UseFlags, UseNode, VERSION, WhileNode, autoMount, batch, computed, effect, isAbortError, parseCFS, throwIfAborted };
+export { type ArrayElement, ArrayExpression, ArrayPattern, type ArrayPatternElement, AssertError, AssertNode, AssignmentNode, type AssignmentTarget, type AttributeHandler, type AttributeHandlerContext, AwaitExpression, BaseNode, type BehaviorFlagArgs, type BehaviorFlags, type BehaviorModifierContext, type BehaviorModifierHandler, BehaviorNode, BinaryExpression, BlockNode, BreakNode, type CFSNode, CallExpression, type ComputedGetter, type ComputedRef, ContinueNode, type DeclarationFlagArgs, type DeclarationFlags, DeclarationNode, type DeclarationTarget, DirectiveExpression, type Disposer, type EffectCallback, type EffectOptions, ElementDirectiveExpression, ElementPropertyExpression, ElementRefExpression, Engine, type EngineOptions, type EventBindPatch, type EventFlagContext, type ExecutionContext, type ExpressionNode, type FlagApplyContext, type FlagHandler, ForEachNode, ForNode, FunctionDeclarationNode, FunctionExpression, type FunctionParam, type GetConfig, type HtmlSanitizer, type HtmlSanitizerOptions, type HtmlSetOptions, type HtmlTransformContext, type HtmlTransformOptions, type HtmlTransformer, type HydrationOptions, IdentifierExpression, IfNode, IndexExpression, Lexer, Lifetime, LiteralExpression, MemberExpression, type ObjectEntry, ObjectExpression, ObjectPattern, type ObjectPatternEntry, OnBlockNode, Parser, type PatternNode, ProgramNode, QueryExpression, type ReactiveOptions, type ReactiveScheduler, type RegisteredBehavior, type RequestConfig, RequestError, type RequestHistory, type RequestResult, type RequestStatePaths, type RequestSwap, RestElement, ReturnNode, Scope, SelectorNode, SpreadElement, TaggedTemplateExpression, TemplateExpression, TernaryExpression, TokenType, type TrustedTypesPolicy, TryNode, UnaryExpression, type UseFlagArgs, type UseFlags, UseNode, VERSION, WhileNode, autoMount, batch, computed, effect, isAbortError, parseCFS, throwIfAborted };

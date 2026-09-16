@@ -5362,47 +5362,82 @@ function applyHtml(element, expression, scope) {
 }
 
 // src/runtime/http.ts
-async function applyGet(element, config, scope, onHtmlApplied, htmlApplier) {
+var RequestError = class extends Error {
+  response;
+  status;
+  statusText;
+  url;
+  constructor(response) {
+    const status = response.status || 0;
+    const statusText = response.statusText?.trim() ?? "";
+    super(`Request failed with HTTP ${status}${statusText ? ` ${statusText}` : ""}`);
+    this.name = "VsnRequestError";
+    this.response = response;
+    this.status = status;
+    this.statusText = statusText;
+    this.url = response.url;
+  }
+};
+async function applyRequest(element, config, onHtmlApplied, htmlApplier) {
   if (!globalThis.fetch) {
     throw new Error("fetch is not available");
   }
   throwIfAborted(config.signal);
+  const request = buildRequest(element, config);
   const requestTarget = resolveTarget(element, config.targetSelector);
-  const response = await globalThis.fetch(config.url, {
-    headers: getPartialHeaders(element, requestTarget),
-    ...config.signal ? { signal: config.signal } : {}
-  });
+  const focus = config.restoreFocus ? captureFocus(element) : void 0;
+  const response = await globalThis.fetch(request.url, request.init);
   throwIfAborted(config.signal);
-  if (!response || !response.ok) {
-    return;
+  if (!response) {
+    throw new Error("Request returned no response");
   }
-  const html = await response.text();
+  if (!response.ok) {
+    throw new RequestError(response);
+  }
+  const body = await response.text();
   throwIfAborted(config.signal);
-  const target = resolveTarget(element, config.targetSelector);
-  if (!target) {
-    element.dispatchEvent(new CustomEvent("vsn:targetError", { detail: { selector: config.targetSelector } }));
-    return;
-  }
-  const apply = htmlApplier ?? ((targetElement, value) => {
-    applyHtml(targetElement, "__html", { get: () => value });
-  });
-  if (config.swap === "outer") {
-    const wrapper = target.ownerDocument.createElement("div");
-    apply(wrapper, html);
-    const replacements = Array.from(wrapper.childNodes);
-    const elements = Array.from(wrapper.children);
-    if (replacements.length > 0 && target.parentNode) {
-      const fragment = target.ownerDocument.createDocumentFragment();
-      fragment.append(...replacements);
-      target.parentNode.replaceChild(fragment, target);
-      for (const element2 of elements) {
-        onHtmlApplied?.(element2);
+  const swap = config.swap ?? "inner";
+  let target = requestTarget;
+  let swapped = false;
+  if (swap !== "none") {
+    if (!target) {
+      element.dispatchEvent(new CustomEvent("vsn:targetError", {
+        detail: { selector: config.targetSelector },
+        bubbles: true
+      }));
+    } else {
+      const apply = htmlApplier ?? ((targetElement, value) => {
+        applyHtml(targetElement, "__html", { get: () => value });
+      });
+      if (swap === "outer") {
+        const wrapper = target.ownerDocument.createElement("div");
+        apply(wrapper, body);
+        const replacements = Array.from(wrapper.childNodes);
+        const elements = Array.from(wrapper.children);
+        if (replacements.length > 0 && target.parentNode) {
+          const fragment = target.ownerDocument.createDocumentFragment();
+          fragment.append(...replacements);
+          target.parentNode.replaceChild(fragment, target);
+          swapped = true;
+          for (const replacement of elements) {
+            onHtmlApplied?.(replacement);
+          }
+        }
+      } else {
+        apply(target, body);
+        swapped = true;
+        onHtmlApplied?.(target);
       }
     }
-    return;
   }
-  apply(target, html);
-  onHtmlApplied?.(target);
+  updateHistory(element, config, request.url, response.url);
+  if (config.restoreFocus && swapped) {
+    restoreFocus(element, config.restoreFocus, focus);
+  }
+  if (swap === "outer" && target && !target.isConnected) {
+    target = config.targetSelector ? resolveTarget(element, config.targetSelector) : null;
+  }
+  return { response, body, target, swapped };
 }
 function getPartialHeaders(element, target) {
   const headers = new Headers();
@@ -5424,6 +5459,148 @@ function getPartialHeaders(element, target) {
     headers.set("HX-Trigger-Name", triggerName);
   }
   return headers;
+}
+function buildRequest(element, config) {
+  const form = config.form;
+  const rawUrl = config.url || form?.getAttribute("action") || element.ownerDocument.defaultView?.location.href || "";
+  const method = (config.method ?? form?.getAttribute("method") ?? "GET").trim().toUpperCase() || "GET";
+  const target = resolveTarget(element, config.targetSelector);
+  const headers = getPartialHeaders(element, target);
+  if (config.headers) {
+    const customHeaders = new Headers(config.headers);
+    customHeaders.forEach((value, key) => headers.set(key, value));
+  }
+  let url = rawUrl;
+  let body = config.body;
+  if (body === void 0 && form) {
+    const formData = createFormData(form, config.submitter);
+    if (method === "GET" || method === "HEAD") {
+      url = appendFormDataToUrl(element, rawUrl, formData);
+    } else {
+      body = formData;
+    }
+  }
+  if ((method === "GET" || method === "HEAD") && body !== void 0 && body !== null) {
+    throw new TypeError(`${method} requests cannot include a body`);
+  }
+  const normalizedBody = normalizeBody(body, headers);
+  const init = {
+    method,
+    headers
+  };
+  if (normalizedBody !== void 0 && method !== "GET" && method !== "HEAD") {
+    init.body = normalizedBody;
+  }
+  if (config.signal) {
+    init.signal = config.signal;
+  }
+  return { url, init };
+}
+function createFormData(form, submitter) {
+  const formData = new FormData(form);
+  if (!submitter || !form.contains(submitter)) {
+    return formData;
+  }
+  if (!(submitter instanceof HTMLButtonElement || submitter instanceof HTMLInputElement)) {
+    return formData;
+  }
+  if (submitter.disabled || !submitter.name) {
+    return formData;
+  }
+  const type = (submitter.getAttribute("type") ?? (submitter instanceof HTMLButtonElement ? "submit" : "text")).toLowerCase();
+  if (type !== "submit" && type !== "image") {
+    return formData;
+  }
+  formData.append(submitter.name, submitter.value);
+  return formData;
+}
+function appendFormDataToUrl(element, rawUrl, formData) {
+  const url = new URL(rawUrl, element.ownerDocument.baseURI);
+  formData.forEach((value, key) => {
+    url.searchParams.append(key, typeof value === "string" ? value : value.name);
+  });
+  return url.href;
+}
+function normalizeBody(value, headers) {
+  if (value === void 0 || value === null) {
+    return void 0;
+  }
+  if (typeof value === "string") {
+    return value;
+  }
+  if (typeof FormData !== "undefined" && value instanceof FormData) {
+    return value;
+  }
+  if (typeof URLSearchParams !== "undefined" && value instanceof URLSearchParams) {
+    if (!headers.has("Content-Type")) {
+      headers.set("Content-Type", "application/x-www-form-urlencoded;charset=UTF-8");
+    }
+    return value;
+  }
+  if (typeof Blob !== "undefined" && value instanceof Blob) {
+    return value;
+  }
+  if (typeof ArrayBuffer !== "undefined" && value instanceof ArrayBuffer) {
+    return value;
+  }
+  if (typeof ArrayBuffer !== "undefined" && ArrayBuffer.isView(value)) {
+    return value;
+  }
+  if (typeof ReadableStream !== "undefined" && value instanceof ReadableStream) {
+    return value;
+  }
+  if (typeof value === "object") {
+    if (!headers.has("Content-Type")) {
+      headers.set("Content-Type", "application/json");
+    }
+    return JSON.stringify(value);
+  }
+  return String(value);
+}
+function captureFocus(element) {
+  const active = element.ownerDocument.activeElement;
+  if (!(active instanceof HTMLElement)) {
+    return void 0;
+  }
+  return {
+    element: active,
+    ...active.id ? { id: active.id } : {}
+  };
+}
+function restoreFocus(element, option, snapshot) {
+  let candidate = null;
+  if (typeof option === "string" && option.trim()) {
+    try {
+      candidate = element.ownerDocument.querySelector(option);
+    } catch {
+      candidate = null;
+    }
+  } else if (snapshot?.id) {
+    candidate = element.ownerDocument.getElementById(snapshot.id);
+  } else if (snapshot?.element.isConnected) {
+    candidate = snapshot.element;
+  }
+  if (!candidate && element instanceof HTMLElement && element.isConnected) {
+    candidate = element;
+  }
+  candidate?.focus();
+}
+function updateHistory(element, config, requestUrl, responseUrl) {
+  const mode = config.history ?? "none";
+  if (mode === "none") {
+    return;
+  }
+  const view = element.ownerDocument.defaultView;
+  if (!view?.history) {
+    return;
+  }
+  const url = config.historyUrl || responseUrl || requestUrl;
+  const state = mode === "replace" ? view.history.state : {};
+  if (mode === "push") {
+    view.history.pushState(state, "", url);
+  } else {
+    view.history.replaceState(state, "", url);
+  }
 }
 function resolveTarget(element, selector) {
   if (!selector) {
@@ -6598,6 +6775,26 @@ var Engine = class _Engine {
     if (options.process !== false) {
       this.processHtml(element, { trusted: context.trusted });
     }
+  }
+  /**
+   * Sends a request and optionally applies its HTML response through the
+  * engine's sanitizer and behavior processor.
+  */
+  async request(element, config) {
+    const requestConfig = config.signal ? config : { ...config, signal: this.engineLifetime.signal };
+    return applyRequest(
+      element,
+      requestConfig,
+      (target) => {
+        this.handleHtmlBehaviors(target, Boolean(config.trusted));
+      },
+      (target, html) => {
+        this.setHtml(target, html, {
+          trusted: Boolean(config.trusted),
+          process: false
+        });
+      }
+    );
   }
   toTrustedHtml(value) {
     if (this.isNativeTrustedHtml(value)) {
@@ -8090,7 +8287,7 @@ var Engine = class _Engine {
   }
   attachGetHandler(element, autoLoad = false, lifetime = this.getInlineLifetime(element)) {
     let requestLifetime;
-    const handler = async () => {
+    const handler = async (event) => {
       if (lifetime.isDisposed || !element.isConnected) {
         return;
       }
@@ -8102,32 +8299,59 @@ var Engine = class _Engine {
         operationLifetime.dispose();
         return;
       }
+      const scope = this.getScope(element);
+      const isCurrent = () => requestLifetime === operationLifetime && !operationLifetime.signal.aborted && !lifetime.isDisposed;
+      const setState = (path, value) => {
+        if (isCurrent() && path?.trim()) {
+          scope.setPath(path, value);
+        }
+      };
       try {
-        await applyGet(
+        this.batch(() => {
+          setState(config.state?.loading, true);
+          setState(config.state?.error, "");
+          setState(config.state?.data, void 0);
+        });
+        const form = this.resolveRequestForm(element, config.formSelector, config.useForm);
+        const submitter = this.resolveRequestSubmitter(element, event);
+        const body = config.bodyExpression === void 0 ? config.body : this.resolveRequestValue(element, config.bodyExpression);
+        const headers = config.headersExpression === void 0 ? config.headers : this.resolveRequestHeaders(element, config.headersExpression);
+        const result = await this.request(
           element,
-          { ...config, signal: operationLifetime.signal },
-          this.getScope(element),
-          (target) => {
-            if (!operationLifetime.signal.aborted) {
-              this.handleHtmlBehaviors(target, Boolean(config.trusted));
-            }
-          },
-          (target, html) => {
-            this.setHtml(target, html, {
-              trusted: Boolean(config.trusted),
-              process: false
-            });
+          {
+            ...config,
+            ...body === void 0 ? {} : { body },
+            ...headers === void 0 ? {} : { headers },
+            ...form ? { form } : {},
+            ...submitter ? { submitter } : {},
+            signal: operationLifetime.signal
           }
         );
-        if (operationLifetime.signal.aborted || lifetime.isDisposed) {
+        if (!isCurrent()) {
           return;
         }
+        this.batch(() => {
+          setState(config.state?.data, result.body);
+          setState(config.state?.loading, false);
+        });
       } catch (error) {
-        if (operationLifetime.signal.aborted || lifetime.signal.aborted || isAbortError(error)) {
+        if (!isCurrent() || isAbortError(error)) {
           return;
         }
+        const message = error instanceof Error ? error.message : String(error);
+        this.batch(() => {
+          setState(config.state?.error, message);
+          setState(config.state?.data, void 0);
+          setState(config.state?.loading, false);
+        });
         console.warn("vsn:getError", error);
-        element.dispatchEvent(new CustomEvent("vsn:getError", { detail: { error }, bubbles: true }));
+        const detail = error instanceof RequestError ? {
+          error,
+          response: error.response,
+          status: error.status,
+          statusText: error.statusText
+        } : { error };
+        element.dispatchEvent(new CustomEvent("vsn:getError", { detail, bubbles: true }));
       } finally {
         if (requestLifetime === operationLifetime) {
           requestLifetime = void 0;
@@ -8135,16 +8359,82 @@ var Engine = class _Engine {
         operationLifetime.dispose();
       }
     };
-    const clickHandler = (event) => {
-      if (event.target !== element) {
-        return;
-      }
-      void handler();
-    };
-    this.addEventListener(lifetime, element, "click", clickHandler);
-    if (autoLoad) {
-      Promise.resolve().then(handler);
+    if (element instanceof HTMLFormElement) {
+      const submitHandler = (event) => {
+        event.preventDefault();
+        void handler(event);
+      };
+      this.addEventListener(lifetime, element, "submit", submitHandler);
+    } else {
+      const clickHandler = (event) => {
+        if (event.target !== element) {
+          return;
+        }
+        event.preventDefault();
+        void handler(event);
+      };
+      this.addEventListener(lifetime, element, "click", clickHandler);
     }
+    if (autoLoad) {
+      Promise.resolve().then(() => void handler());
+    }
+  }
+  resolveRequestForm(element, selector, useForm = false) {
+    if (selector?.trim()) {
+      let candidate = null;
+      try {
+        candidate = element.ownerDocument.querySelector(selector);
+      } catch {
+        throw new Error(`Invalid vsn-form selector '${selector}'`);
+      }
+      if (!(candidate instanceof HTMLFormElement)) {
+        throw new Error(`vsn-form selector '${selector}' did not match a form`);
+      }
+      return candidate;
+    }
+    if (element instanceof HTMLFormElement) {
+      return element;
+    }
+    if (!useForm) {
+      return void 0;
+    }
+    const form = element.closest("form");
+    if (!(form instanceof HTMLFormElement)) {
+      throw new Error("vsn-get!form requires a containing form");
+    }
+    return form;
+  }
+  resolveRequestSubmitter(element, event) {
+    const submitter = typeof SubmitEvent !== "undefined" && event instanceof SubmitEvent ? event.submitter : void 0;
+    if (submitter instanceof HTMLElement) {
+      return submitter;
+    }
+    return element instanceof HTMLElement && !(element instanceof HTMLFormElement) ? element : void 0;
+  }
+  resolveRequestValue(element, expression) {
+    const source = expression.trim();
+    if (!source) {
+      return void 0;
+    }
+    const scope = this.getScope(element);
+    if (scope.hasPath(source)) {
+      return scope.getPath(source);
+    }
+    try {
+      return JSON.parse(source);
+    } catch {
+      return source;
+    }
+  }
+  resolveRequestHeaders(element, expression) {
+    const value = this.resolveRequestValue(element, expression);
+    if (value == null || value === "") {
+      return void 0;
+    }
+    if (typeof value === "object") {
+      return value;
+    }
+    throw new TypeError("vsn-headers must resolve to an object, Headers, or header pairs");
   }
   getEventBindingConfig(element, flags, flagArgs, lifetime, rootScope) {
     let listenerTarget = element;
@@ -9556,16 +9846,43 @@ var Engine = class _Engine {
       id: "vsn-get",
       match: (name) => name === "vsn-get" || name.startsWith("vsn-get!"),
       handle: (element, name, _value, _scope, context) => {
-        const autoLoad = name.includes("!load");
-        const trusted = name.split("!").includes("trusted");
+        const modifiers = new Set(name.split("!").slice(1));
+        const autoLoad = modifiers.has("load");
+        const trusted = modifiers.has("trusted");
         const url = element.getAttribute(name) ?? "";
         const target = element.getAttribute("vsn-target") ?? void 0;
-        const swap = element.getAttribute("vsn-swap") ?? "inner";
+        const swapAttribute = element.getAttribute("vsn-swap")?.trim();
+        const swap = swapAttribute === "outer" || swapAttribute === "none" ? swapAttribute : "inner";
+        const historyAttribute = element.getAttribute("vsn-history")?.trim().toLowerCase();
+        const history = historyAttribute === "push" || historyAttribute === "replace" || historyAttribute === "none" ? historyAttribute : modifiers.has("push") ? "push" : modifiers.has("replace") ? "replace" : void 0;
+        const focusAttribute = element.getAttribute("vsn-focus");
+        const restoreFocus2 = focusAttribute === null ? modifiers.has("focus") ? true : void 0 : focusAttribute.trim() === "" || focusAttribute.trim().toLowerCase() === "true" ? true : focusAttribute.trim().toLowerCase() === "false" ? false : focusAttribute.trim();
+        const formSelector = element.getAttribute("vsn-form");
+        const loadingPath = element.getAttribute("vsn-loading")?.trim() || void 0;
+        const errorPath = element.getAttribute("vsn-error")?.trim() || void 0;
+        const dataPath = element.getAttribute("vsn-data")?.trim() || void 0;
+        const state = {
+          ...loadingPath ? { loading: loadingPath } : {},
+          ...errorPath ? { error: errorPath } : {},
+          ...dataPath ? { data: dataPath } : {}
+        };
+        const method = element.getAttribute("vsn-method")?.trim();
+        const bodyExpression = element.getAttribute("vsn-body");
+        const headersExpression = element.getAttribute("vsn-headers");
         const config = {
           url,
           swap,
           trusted,
-          ...target ? { targetSelector: target } : {}
+          ...method ? { method } : {},
+          ...target ? { targetSelector: target } : {},
+          ...bodyExpression === null ? {} : { bodyExpression },
+          ...headersExpression === null ? {} : { headersExpression },
+          ...formSelector === null ? {} : { formSelector },
+          ...element instanceof HTMLFormElement || modifiers.has("form") || formSelector !== null ? { useForm: true } : {},
+          ...history ? { history } : {},
+          ...element.hasAttribute("vsn-history-url") ? { historyUrl: element.getAttribute("vsn-history-url") ?? "" } : {},
+          ...restoreFocus2 === void 0 ? {} : { restoreFocus: restoreFocus2 },
+          ...Object.keys(state).length > 0 ? { state } : {}
         };
         this.getBindings.set(element, config);
         this.attachGetHandler(element, autoLoad, context?.lifetime);
@@ -9738,6 +10055,7 @@ export {
   Parser,
   ProgramNode,
   QueryExpression,
+  RequestError,
   RestElement,
   ReturnNode,
   Scope,

@@ -37,9 +37,10 @@ The examples use the current runtime semantics. In particular, `vsn-if`
 conditionally mounts and unmounts elements, `vsn-show` toggles the native
 `hidden` state without removing elements or overwriting display styles,
 `vsn-each` reuses rows when a unique `vsn-key` is provided and recreates them
-otherwise, and `vsn-get`
-swaps HTML fragments and processes new VSN behavior inside explicitly trusted
-fragments. Binding attributes resolve scope paths, so dotted
+otherwise, and `vsn-get` supports method/body/form requests, opt-in request
+state, data-only responses, and HTML fragment swaps. New VSN behavior is
+processed inside explicitly trusted fragments. Binding attributes resolve
+scope paths, so dotted
 paths such as `result.name` (or `item.0` for an array element) should be used
 with `vsn-bind`; bracket indexing belongs in CFS expressions and behavior
 declarations. The examples intentionally make those details visible so they can

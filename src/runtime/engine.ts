@@ -2,7 +2,8 @@ import { batch, computed, effect, Scope, unwrapReactiveValue } from "./scope";
 import type { ComputedGetter, ComputedRef, EffectCallback, EffectOptions, ReactiveOptions } from "./scope";
 import { applyBindToElement, applyBindToScope, BindDirection } from "./bindings";
 import { applyShow, readCondition } from "./conditionals";
-import { applyGet, GetConfig } from "./http";
+import { applyRequest, RequestError } from "./http";
+import type { RequestConfig, RequestResult, RequestStatePaths } from "./http";
 import { debounce, Debounced } from "./debounce";
 import {
   markTrustedHtml,
@@ -45,6 +46,14 @@ interface BindConfig {
   expr: string;
   direction: BindDirection;
   auto?: boolean;
+}
+
+interface GetBindingConfig extends RequestConfig {
+  bodyExpression?: string;
+  formSelector?: string;
+  headersExpression?: string;
+  useForm?: boolean;
+  state?: RequestStatePaths;
 }
 
 interface LifecycleConfig {
@@ -645,7 +654,7 @@ export class Engine {
   private ifBindings = new Map<Element, IfBinding>();
   private showBindings = new WeakMap<Element, string>();
   private htmlBindings = new WeakMap<Element, { expr: string; trusted: boolean }>();
-  private getBindings = new WeakMap<Element, GetConfig>();
+  private getBindings = new WeakMap<Element, GetBindingConfig>();
   private eachBindings = new WeakMap<Element, EachBinding>();
   private lifecycleBindings = new WeakMap<Element, LifecycleConfig>();
   private behaviorRegistry: RegisteredBehavior[] = [];
@@ -1499,6 +1508,27 @@ export class Engine {
     if (options.process !== false) {
       this.processHtml(element, { trusted: context.trusted });
     }
+  }
+
+  /**
+   * Sends a request and optionally applies its HTML response through the
+   * engine's sanitizer and behavior processor.
+  */
+  async request(element: Element, config: RequestConfig): Promise<RequestResult> {
+    const requestConfig = config.signal ? config : { ...config, signal: this.engineLifetime.signal };
+    return applyRequest(
+      element,
+      requestConfig,
+      (target) => {
+        this.handleHtmlBehaviors(target, Boolean(config.trusted));
+      },
+      (target, html) => {
+        this.setHtml(target, html, {
+          trusted: Boolean(config.trusted),
+          process: false
+        });
+      }
+    );
   }
 
   private toTrustedHtml(value: unknown): unknown {
@@ -3223,7 +3253,7 @@ export class Engine {
     lifetime = this.getInlineLifetime(element)
   ): void {
     let requestLifetime: Lifetime | undefined;
-    const handler = async () => {
+    const handler = async (event?: Event) => {
       if (lifetime.isDisposed || !element.isConnected) {
         return;
       }
@@ -3235,32 +3265,71 @@ export class Engine {
         operationLifetime.dispose();
         return;
       }
+      const scope = this.getScope(element);
+      const isCurrent = () => (
+        requestLifetime === operationLifetime
+        && !operationLifetime.signal.aborted
+        && !lifetime.isDisposed
+      );
+      const setState = (path: string | undefined, value: unknown) => {
+        if (isCurrent() && path?.trim()) {
+          scope.setPath(path, value);
+        }
+      };
       try {
-        await applyGet(
+        this.batch(() => {
+          setState(config.state?.loading, true);
+          setState(config.state?.error, "");
+          setState(config.state?.data, undefined);
+        });
+
+        const form = this.resolveRequestForm(element, config.formSelector, config.useForm);
+        const submitter = this.resolveRequestSubmitter(element, event);
+        const body = config.bodyExpression === undefined
+          ? config.body
+          : this.resolveRequestValue(element, config.bodyExpression);
+        const headers = config.headersExpression === undefined
+          ? config.headers
+          : this.resolveRequestHeaders(element, config.headersExpression);
+
+        const result = await this.request(
           element,
-          { ...config, signal: operationLifetime.signal },
-          this.getScope(element),
-          (target) => {
-            if (!operationLifetime.signal.aborted) {
-              this.handleHtmlBehaviors(target, Boolean(config.trusted));
-            }
-          },
-          (target, html) => {
-            this.setHtml(target, html, {
-              trusted: Boolean(config.trusted),
-              process: false
-            });
+          {
+            ...config,
+            ...(body === undefined ? {} : { body }),
+            ...(headers === undefined ? {} : { headers }),
+            ...(form ? { form } : {}),
+            ...(submitter ? { submitter } : {}),
+            signal: operationLifetime.signal
           }
         );
-        if (operationLifetime.signal.aborted || lifetime.isDisposed) {
+        if (!isCurrent()) {
           return;
         }
+        this.batch(() => {
+          setState(config.state?.data, result.body);
+          setState(config.state?.loading, false);
+        });
       } catch (error) {
-        if (operationLifetime.signal.aborted || lifetime.signal.aborted || isAbortError(error)) {
+        if (!isCurrent() || isAbortError(error)) {
           return;
         }
+        const message = error instanceof Error ? error.message : String(error);
+        this.batch(() => {
+          setState(config.state?.error, message);
+          setState(config.state?.data, undefined);
+          setState(config.state?.loading, false);
+        });
         console.warn("vsn:getError", error);
-        element.dispatchEvent(new CustomEvent("vsn:getError", { detail: { error }, bubbles: true }));
+        const detail = error instanceof RequestError
+          ? {
+              error,
+              response: error.response,
+              status: error.status,
+              statusText: error.statusText
+            }
+          : { error };
+        element.dispatchEvent(new CustomEvent("vsn:getError", { detail, bubbles: true }));
       } finally {
         if (requestLifetime === operationLifetime) {
           requestLifetime = undefined;
@@ -3269,16 +3338,92 @@ export class Engine {
       }
     };
 
-    const clickHandler = (event: Event) => {
-      if (event.target !== element) {
-        return;
-      }
-      void handler();
-    };
-    this.addEventListener(lifetime, element, "click", clickHandler);
-    if (autoLoad) {
-      Promise.resolve().then(handler);
+    if (element instanceof HTMLFormElement) {
+      const submitHandler = (event: Event) => {
+        event.preventDefault();
+        void handler(event);
+      };
+      this.addEventListener(lifetime, element, "submit", submitHandler);
+    } else {
+      const clickHandler = (event: Event) => {
+        if (event.target !== element) {
+          return;
+        }
+        event.preventDefault();
+        void handler(event);
+      };
+      this.addEventListener(lifetime, element, "click", clickHandler);
     }
+    if (autoLoad) {
+      Promise.resolve().then(() => void handler());
+    }
+  }
+
+  private resolveRequestForm(
+    element: Element,
+    selector?: string,
+    useForm = false
+  ): HTMLFormElement | undefined {
+    if (selector?.trim()) {
+      let candidate: Element | null = null;
+      try {
+        candidate = element.ownerDocument.querySelector(selector);
+      } catch {
+        throw new Error(`Invalid vsn-form selector '${selector}'`);
+      }
+      if (!(candidate instanceof HTMLFormElement)) {
+        throw new Error(`vsn-form selector '${selector}' did not match a form`);
+      }
+      return candidate;
+    }
+    if (element instanceof HTMLFormElement) {
+      return element;
+    }
+    if (!useForm) {
+      return undefined;
+    }
+    const form = element.closest("form");
+    if (!(form instanceof HTMLFormElement)) {
+      throw new Error("vsn-get!form requires a containing form");
+    }
+    return form;
+  }
+
+  private resolveRequestSubmitter(element: Element, event?: Event): HTMLElement | undefined {
+    const submitter = typeof SubmitEvent !== "undefined" && event instanceof SubmitEvent
+      ? event.submitter
+      : undefined;
+    if (submitter instanceof HTMLElement) {
+      return submitter;
+    }
+    return element instanceof HTMLElement && !(element instanceof HTMLFormElement) ? element : undefined;
+  }
+
+  private resolveRequestValue(element: Element, expression: string): unknown {
+    const source = expression.trim();
+    if (!source) {
+      return undefined;
+    }
+    const scope = this.getScope(element);
+    if (scope.hasPath(source)) {
+      return scope.getPath(source);
+    }
+    try {
+      return JSON.parse(source);
+    } catch {
+      return source;
+    }
+  }
+
+  private resolveRequestHeaders(element: Element, expression: string): HeadersInit | undefined {
+    const value = this.resolveRequestValue(element, expression);
+    if (value == null || value === "") {
+      return undefined;
+    }
+    if (typeof value === "object") {
+      return value as HeadersInit;
+    }
+    throw new TypeError("vsn-headers must resolve to an object, Headers, or header pairs");
   }
 
   private getEventBindingConfig(
@@ -4970,16 +5115,59 @@ export class Engine {
       id: "vsn-get",
       match: (name) => name === "vsn-get" || name.startsWith("vsn-get!"),
       handle: (element, name, _value, _scope, context) => {
-        const autoLoad = name.includes("!load");
-        const trusted = name.split("!").includes("trusted");
+        const modifiers = new Set(name.split("!").slice(1));
+        const autoLoad = modifiers.has("load");
+        const trusted = modifiers.has("trusted");
         const url = element.getAttribute(name) ?? "";
         const target = element.getAttribute("vsn-target") ?? undefined;
-        const swap = (element.getAttribute("vsn-swap") as "inner" | "outer" | null) ?? "inner";
-        const config: GetConfig = {
+        const swapAttribute = element.getAttribute("vsn-swap")?.trim();
+        const swap = swapAttribute === "outer" || swapAttribute === "none" ? swapAttribute : "inner";
+        const historyAttribute = element.getAttribute("vsn-history")?.trim().toLowerCase();
+        const history = historyAttribute === "push" || historyAttribute === "replace" || historyAttribute === "none"
+          ? historyAttribute
+          : modifiers.has("push")
+            ? "push"
+            : modifiers.has("replace")
+              ? "replace"
+              : undefined;
+        const focusAttribute = element.getAttribute("vsn-focus");
+        const restoreFocus = focusAttribute === null
+          ? (modifiers.has("focus") ? true : undefined)
+          : focusAttribute.trim() === "" || focusAttribute.trim().toLowerCase() === "true"
+            ? true
+            : focusAttribute.trim().toLowerCase() === "false"
+              ? false
+              : focusAttribute.trim();
+        const formSelector = element.getAttribute("vsn-form");
+        const loadingPath = element.getAttribute("vsn-loading")?.trim() || undefined;
+        const errorPath = element.getAttribute("vsn-error")?.trim() || undefined;
+        const dataPath = element.getAttribute("vsn-data")?.trim() || undefined;
+        const state: RequestStatePaths = {
+          ...(loadingPath ? { loading: loadingPath } : {}),
+          ...(errorPath ? { error: errorPath } : {}),
+          ...(dataPath ? { data: dataPath } : {})
+        };
+        const method = element.getAttribute("vsn-method")?.trim();
+        const bodyExpression = element.getAttribute("vsn-body");
+        const headersExpression = element.getAttribute("vsn-headers");
+        const config: GetBindingConfig = {
           url,
           swap,
           trusted,
-          ...(target ? { targetSelector: target } : {})
+          ...(method ? { method } : {}),
+          ...(target ? { targetSelector: target } : {}),
+          ...(bodyExpression === null ? {} : { bodyExpression }),
+          ...(headersExpression === null ? {} : { headersExpression }),
+          ...(formSelector === null ? {} : { formSelector }),
+          ...(element instanceof HTMLFormElement || modifiers.has("form") || formSelector !== null
+            ? { useForm: true }
+            : {}),
+          ...(history ? { history } : {}),
+          ...(element.hasAttribute("vsn-history-url")
+            ? { historyUrl: element.getAttribute("vsn-history-url") ?? "" }
+            : {}),
+          ...(restoreFocus === undefined ? {} : { restoreFocus }),
+          ...(Object.keys(state).length > 0 ? { state } : {})
         };
         this.getBindings.set(element, config);
         this.attachGetHandler(element, autoLoad, context?.lifetime);

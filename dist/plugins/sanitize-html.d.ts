@@ -77,6 +77,30 @@ declare class Scope {
     private appendPath;
 }
 
+type RequestSwap = "inner" | "outer" | "none";
+type RequestHistory = "none" | "push" | "replace";
+interface RequestConfig {
+    url?: string;
+    method?: string;
+    headers?: HeadersInit;
+    body?: unknown;
+    form?: HTMLFormElement;
+    submitter?: HTMLElement;
+    targetSelector?: string;
+    swap?: RequestSwap;
+    trusted?: boolean;
+    history?: RequestHistory;
+    historyUrl?: string;
+    restoreFocus?: boolean | string;
+    signal?: AbortSignal;
+}
+interface RequestResult {
+    response: Response;
+    body: string;
+    target: Element | null;
+    swapped: boolean;
+}
+
 type HtmlSanitizer = (html: string) => string;
 type HtmlSanitizerOptions = {
     dompurifyConfig?: Record<string, any>;
@@ -575,6 +599,11 @@ declare class Engine {
     private addEventListener;
     private cleanupBehaviorBindings;
     setHtml(element: Element, value: unknown, options?: HtmlSetOptions): void;
+    /**
+     * Sends a request and optionally applies its HTML response through the
+    * engine's sanitizer and behavior processor.
+    */
+    request(element: Element, config: RequestConfig): Promise<RequestResult>;
     private toTrustedHtml;
     private isNativeTrustedHtml;
     private getTrustedTypesPolicy;
@@ -665,6 +694,10 @@ declare class Engine {
     private attachOnHandler;
     private attachBehaviorOnHandler;
     private attachGetHandler;
+    private resolveRequestForm;
+    private resolveRequestSubmitter;
+    private resolveRequestValue;
+    private resolveRequestHeaders;
     private getEventBindingConfig;
     private applyEventFlagBefore;
     private applyEventFlagAfter;

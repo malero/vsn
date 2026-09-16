@@ -36,7 +36,7 @@ HTML-first, selector-driven character. The priority labels are directional:
 - [x] Add transitions and lifecycle hooks for enter/leave behavior.
 - [x] Define an explicit hydration API and document how server state, form
   values, and client behavior interact during hydration.
-- [ ] Expand `vsn-get` into a request primitive with methods, bodies, form
+- [x] Expand `vsn-get` into a request primitive with methods, bodies, form
   submission, loading/error/data state, cancellation, history, focus
   restoration, and clear non-2xx behavior.
 - [ ] Add explicit behavior/module boundaries, namespacing, state-root
