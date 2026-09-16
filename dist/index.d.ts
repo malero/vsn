@@ -147,6 +147,7 @@ interface ExecutionContext {
             trusted?: boolean;
         }): void;
         withExecutionContext?<T>(element: Element | undefined, lifetime: Lifetime | undefined, fn: () => T): T;
+        batch?<T>(fn: () => T): T;
     };
     element?: Element;
     self?: any;
@@ -601,6 +602,12 @@ declare class Parser {
     private parseIdentifierPath;
 }
 
+/**
+ * Coalesces scope notifications until the synchronous callback completes.
+ * Async callbacks are not held open across an await; wrap each synchronous
+ * update phase separately when needed.
+ */
+declare function batch<T>(callback: () => T): T;
 declare class Scope {
     parent?: Scope | undefined;
     private data;
@@ -614,6 +621,7 @@ declare class Scope {
     setParent(parent: Scope): void;
     get(key: string): any;
     set(key: string, value: any): void;
+    batch<T>(callback: () => T): T;
     hasKey(path: string): boolean;
     getPath(path: string): any;
     setPath(path: string, value: any): void;
@@ -819,6 +827,7 @@ declare class Engine {
      */
     getLifetime(element: Element): Lifetime;
     get signal(): AbortSignal;
+    batch<T>(callback: () => T): T;
     dispose(): void;
     private getInlineLifetime;
     private resetInlineLifetime;
@@ -948,4 +957,4 @@ declare const VERSION: string;
 declare function parseCFS(source: string): ProgramNode;
 declare function autoMount(root?: HTMLElement | Document): Engine | null;
 
-export { type ArrayElement, ArrayExpression, ArrayPattern, type ArrayPatternElement, AssertError, AssertNode, AssignmentNode, type AssignmentTarget, type AttributeHandler, type AttributeHandlerContext, AwaitExpression, BaseNode, type BehaviorFlagArgs, type BehaviorFlags, type BehaviorModifierContext, type BehaviorModifierHandler, BehaviorNode, BinaryExpression, BlockNode, BreakNode, type CFSNode, CallExpression, ContinueNode, type DeclarationFlagArgs, type DeclarationFlags, DeclarationNode, type DeclarationTarget, DirectiveExpression, type Disposer, ElementDirectiveExpression, ElementPropertyExpression, ElementRefExpression, Engine, type EngineOptions, type EventBindPatch, type EventFlagContext, type ExecutionContext, type ExpressionNode, type FlagApplyContext, type FlagHandler, ForEachNode, ForNode, FunctionDeclarationNode, FunctionExpression, type FunctionParam, type HtmlSetOptions, type HtmlTransformContext, type HtmlTransformOptions, type HtmlTransformer, IdentifierExpression, IfNode, IndexExpression, Lexer, Lifetime, LiteralExpression, MemberExpression, type ObjectEntry, ObjectExpression, ObjectPattern, type ObjectPatternEntry, OnBlockNode, Parser, type PatternNode, ProgramNode, QueryExpression, type RegisteredBehavior, RestElement, ReturnNode, SelectorNode, SpreadElement, TaggedTemplateExpression, TemplateExpression, TernaryExpression, TokenType, TryNode, UnaryExpression, type UseFlagArgs, type UseFlags, UseNode, VERSION, WhileNode, autoMount, isAbortError, parseCFS, throwIfAborted };
+export { type ArrayElement, ArrayExpression, ArrayPattern, type ArrayPatternElement, AssertError, AssertNode, AssignmentNode, type AssignmentTarget, type AttributeHandler, type AttributeHandlerContext, AwaitExpression, BaseNode, type BehaviorFlagArgs, type BehaviorFlags, type BehaviorModifierContext, type BehaviorModifierHandler, BehaviorNode, BinaryExpression, BlockNode, BreakNode, type CFSNode, CallExpression, ContinueNode, type DeclarationFlagArgs, type DeclarationFlags, DeclarationNode, type DeclarationTarget, DirectiveExpression, type Disposer, ElementDirectiveExpression, ElementPropertyExpression, ElementRefExpression, Engine, type EngineOptions, type EventBindPatch, type EventFlagContext, type ExecutionContext, type ExpressionNode, type FlagApplyContext, type FlagHandler, ForEachNode, ForNode, FunctionDeclarationNode, FunctionExpression, type FunctionParam, type HtmlSetOptions, type HtmlTransformContext, type HtmlTransformOptions, type HtmlTransformer, IdentifierExpression, IfNode, IndexExpression, Lexer, Lifetime, LiteralExpression, MemberExpression, type ObjectEntry, ObjectExpression, ObjectPattern, type ObjectPatternEntry, OnBlockNode, Parser, type PatternNode, ProgramNode, QueryExpression, type RegisteredBehavior, RestElement, ReturnNode, SelectorNode, SpreadElement, TaggedTemplateExpression, TemplateExpression, TernaryExpression, TokenType, TryNode, UnaryExpression, type UseFlagArgs, type UseFlags, UseNode, VERSION, WhileNode, autoMount, batch, isAbortError, parseCFS, throwIfAborted };

@@ -112,6 +112,18 @@ The same signal is available as `context.signal` in extension hooks. Async expre
 
 Plain objects and arrays stored in a scope are observable. Mutating a nested value returned by `scope.get()`—for example, `state.user.name = "Ada"`, `state.items.push(item)`, or `delete state.filters.archived`—notifies bindings that read the affected path, its ancestors, or a replaced descendant. `scope.setPath()` remains available for explicit updates and replacing a whole object or array also refreshes nested bindings.
 
+Use `batch()` when several state changes belong to one update. Reactive handlers run once after the synchronous callback completes; `engine.batch()` and the CFS `batch(() => { ... })` helper are equivalent conveniences. Synchronous writes from CFS event, lifecycle, and function bodies are batched automatically. An async callback is not held across `await`, so start another batch around a later synchronous update phase when needed:
+
+```ts
+import { batch } from "vsn";
+
+batch(() => {
+  scope.set("page", 2);
+  state.filters.archived = true;
+  state.items.push(nextItem);
+});
+```
+
 For browser auto-mount, load the root package and any plugin entry points as modules. VSN creates an engine when an element with `auto-mount` is present, applies registered plugins, loads `script[type="text/vsn"]` blocks, and mounts the document body. Behavior scripts may also use `src`; VSN fetches the file and ignores any inline text when `src` is present:
 
 ```html

@@ -1,4 +1,4 @@
-import { Scope } from "./scope";
+import { batch, Scope } from "./scope";
 import { applyBindToElement, applyBindToScope, BindDirection } from "./bindings";
 import { applyIf, applyShow } from "./conditionals";
 import { applyGet, GetConfig } from "./http";
@@ -639,6 +639,7 @@ export class Engine {
     this.diagnostics = options.diagnostics ?? false;
     this.logger = options.logger ?? console;
     this.registerGlobal("console", console);
+    this.registerGlobal("batch", batch);
     this.registerGlobal("onCleanup", (disposer: Disposer) => {
       const lifetime = this.getCurrentLifetime();
       return lifetime ? lifetime.onCleanup(disposer) : () => undefined;
@@ -1200,6 +1201,10 @@ export class Engine {
 
   get signal(): AbortSignal {
     return this.engineLifetime.signal;
+  }
+
+  batch<T>(callback: () => T): T {
+    return batch(callback);
   }
 
   dispose(): void {
@@ -2755,7 +2760,7 @@ export class Engine {
       block = Parser.parseInline(code);
       this.codeCache.set(code, block);
     }
-    await this.withExecutionElement(element, lifetime, async () => {
+    await batch(() => this.withExecutionElement(element, lifetime, async () => {
       const selfRef = this.getGroupProxy(scope);
       const context: ExecutionContext = {
         scope,
@@ -2767,7 +2772,7 @@ export class Engine {
         ...(lifetime ? { lifetime, signal: lifetime.signal } : {})
       };
       await block.evaluate(context);
-    });
+    }));
   }
 
   private async executeBlock(
@@ -2779,7 +2784,7 @@ export class Engine {
     signal: AbortSignal | null | undefined = lifetime?.signal
   ): Promise<void> {
     throwIfAborted(signal);
-    await this.withExecutionElement(element, lifetime, async () => {
+    await batch(() => this.withExecutionElement(element, lifetime, async () => {
       const selfRef = this.getGroupProxy(scope);
       const context: ExecutionContext = {
         scope,
@@ -2791,7 +2796,7 @@ export class Engine {
         ...(lifetime ? { lifetime, ...(signal ? { signal } : {}) } : {})
       };
       await block.evaluate(context);
-    });
+    }));
   }
 
   private async safeExecute(
@@ -3366,7 +3371,7 @@ export class Engine {
         return undefined;
       }
       const signal = lifetime.isDisposing ? undefined : lifetime.signal;
-      return this.withExecutionContext(element, lifetime, () => {
+      return batch(() => this.withExecutionContext(element, lifetime, () => {
         const callScope = scope.createChild ? scope.createChild() : scope;
         const context: ExecutionContext = {
           scope: callScope,
@@ -3408,7 +3413,7 @@ export class Engine {
         }
         restore();
         return context.returnValue;
-      });
+      }));
     };
     scope.setPath(declaration.name, fn);
   }

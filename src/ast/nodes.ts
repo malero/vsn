@@ -18,6 +18,7 @@ export interface ExecutionContext {
       lifetime: Lifetime | undefined,
       fn: () => T
     ): T;
+    batch?<T>(fn: () => T): T;
   };
   element?: Element;
   self?: any;
@@ -966,9 +967,10 @@ export class FunctionExpression extends BaseNode {
             }
           });
         };
-        return context.engine?.withExecutionContext
-          ? context.engine.withExecutionContext(element, lifetime, invoke)
-          : invoke();
+        const run = context.engine?.withExecutionContext
+          ? () => context.engine!.withExecutionContext!(element, lifetime, invoke)
+          : invoke;
+        return context.engine?.batch ? context.engine.batch(run) : run();
       };
     }
 
@@ -1008,9 +1010,10 @@ export class FunctionExpression extends BaseNode {
         }
         return finalResult;
       };
-      return context.engine?.withExecutionContext
-        ? context.engine.withExecutionContext(element, lifetime, invoke)
-        : invoke();
+      const run = context.engine?.withExecutionContext
+        ? () => context.engine!.withExecutionContext!(element, lifetime, invoke)
+        : invoke;
+      return context.engine?.batch ? context.engine.batch(run) : run();
     };
   }
 

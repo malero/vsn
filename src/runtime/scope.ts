@@ -1,6 +1,85 @@
 type ReactiveContainer = Record<PropertyKey, any> | any[];
+type Listener = () => void;
+type ListenerEntry = {
+  handler: Listener;
+  active: boolean;
+};
 
 const proxyToRaw = new WeakMap<object, object>();
+let batchDepth = 0;
+let flushing = false;
+const pendingListeners = new Map<Listener, Set<ListenerEntry>>();
+
+/**
+ * Coalesces scope notifications until the synchronous callback completes.
+ * Async callbacks are not held open across an await; wrap each synchronous
+ * update phase separately when needed.
+ */
+export function batch<T>(callback: () => T): T {
+  batchDepth += 1;
+  let result: T;
+  try {
+    result = callback();
+  } catch (error) {
+    endBatch();
+    throw error;
+  }
+  endBatch();
+  return result;
+}
+
+function endBatch(): void {
+  batchDepth -= 1;
+  if (batchDepth === 0) {
+    flushPendingListeners();
+  }
+}
+
+function notifyListener(entry: ListenerEntry): void {
+  if (!entry.active) {
+    return;
+  }
+  if (batchDepth > 0 || flushing) {
+    const entries = pendingListeners.get(entry.handler) ?? new Set<ListenerEntry>();
+    entries.add(entry);
+    pendingListeners.set(entry.handler, entries);
+    return;
+  }
+  entry.handler();
+}
+
+function flushPendingListeners(): void {
+  if (flushing) {
+    return;
+  }
+  flushing = true;
+  let failed = false;
+  let firstError: unknown;
+  try {
+    while (pendingListeners.size > 0) {
+      const entries = Array.from(pendingListeners.entries());
+      pendingListeners.clear();
+      for (const [handler, registrations] of entries) {
+        if (!Array.from(registrations).some((entry) => entry.active)) {
+          continue;
+        }
+        try {
+          handler();
+        } catch (error) {
+          if (!failed) {
+            failed = true;
+            firstError = error;
+          }
+        }
+      }
+    }
+  } finally {
+    flushing = false;
+  }
+  if (failed) {
+    throw firstError;
+  }
+}
 
 function isReactiveContainer(value: unknown): value is ReactiveContainer {
   if (!value || typeof value !== "object") {
@@ -26,8 +105,8 @@ function unwrapProxy(value: any): any {
 export class Scope {
   private data = new Map<string, any>();
   private root: Scope;
-  private listeners = new Map<string, Set<() => void>>();
-  private anyListeners = new Set<() => void>();
+  private listeners = new Map<string, Set<ListenerEntry>>();
+  private anyListeners = new Set<ListenerEntry>();
   private reactiveProxies = new WeakMap<object, Map<string, object>>();
   public isEachItem = false;
 
@@ -53,6 +132,10 @@ export class Scope {
 
   set(key: string, value: any): void {
     this.setPath(key, value);
+  }
+
+  batch<T>(callback: () => T): T {
+    return batch(callback);
   }
 
   hasKey(path: string): boolean {
@@ -137,8 +220,10 @@ export class Scope {
     if (!key) {
       return;
     }
-    const set = this.listeners.get(key) ?? new Set<() => void>();
-    set.add(handler);
+    const set = this.listeners.get(key) ?? new Set<ListenerEntry>();
+    if (!Array.from(set).some((entry) => entry.active && entry.handler === handler)) {
+      set.add({ handler, active: true });
+    }
     this.listeners.set(key, set);
   }
 
@@ -148,18 +233,30 @@ export class Scope {
     if (!set) {
       return;
     }
-    set.delete(handler);
+    for (const entry of set) {
+      if (entry.handler === handler) {
+        entry.active = false;
+        set.delete(entry);
+      }
+    }
     if (set.size === 0) {
       this.listeners.delete(key);
     }
   }
 
   onAny(handler: () => void): void {
-    this.anyListeners.add(handler);
+    if (!Array.from(this.anyListeners).some((entry) => entry.active && entry.handler === handler)) {
+      this.anyListeners.add({ handler, active: true });
+    }
   }
 
   offAny(handler: () => void): void {
-    this.anyListeners.delete(handler);
+    for (const entry of this.anyListeners) {
+      if (entry.handler === handler) {
+        entry.active = false;
+        this.anyListeners.delete(entry);
+      }
+    }
   }
 
   private emitChange(path: string): void {
@@ -168,7 +265,7 @@ export class Scope {
       return;
     }
 
-    const handlers = new Set<() => void>();
+    const handlers = new Set<ListenerEntry>();
     for (const [watchedPath, listeners] of this.listeners.entries()) {
       if (
         watchedPath === key
@@ -178,8 +275,8 @@ export class Scope {
         listeners.forEach((handler) => handlers.add(handler));
       }
     }
-    handlers.forEach((handler) => handler());
-    this.anyListeners.forEach((handler) => handler());
+    handlers.forEach((entry) => notifyListener(entry));
+    this.anyListeners.forEach((entry) => notifyListener(entry));
   }
 
   private resolveScope(path: string): { targetScope: Scope | undefined; targetPath: string | undefined } {

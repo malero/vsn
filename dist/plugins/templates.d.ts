@@ -11,6 +11,7 @@ declare class Scope {
     setParent(parent: Scope): void;
     get(key: string): any;
     set(key: string, value: any): void;
+    batch<T>(callback: () => T): T;
     hasKey(path: string): boolean;
     getPath(path: string): any;
     setPath(path: string, value: any): void;
@@ -64,6 +65,7 @@ interface ExecutionContext {
             trusted?: boolean;
         }): void;
         withExecutionContext?<T>(element: Element | undefined, lifetime: Lifetime | undefined, fn: () => T): T;
+        batch?<T>(fn: () => T): T;
     };
     element?: Element;
     self?: any;
@@ -503,6 +505,7 @@ declare class Engine {
      */
     getLifetime(element: Element): Lifetime;
     get signal(): AbortSignal;
+    batch<T>(callback: () => T): T;
     dispose(): void;
     private getInlineLifetime;
     private resetInlineLifetime;

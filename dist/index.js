@@ -1391,7 +1391,8 @@ var FunctionExpression = class extends BaseNode {
             }
           });
         };
-        return context.engine?.withExecutionContext ? context.engine.withExecutionContext(element, lifetime, invoke) : invoke();
+        const run = context.engine?.withExecutionContext ? () => context.engine.withExecutionContext(element, lifetime, invoke) : invoke;
+        return context.engine?.batch ? context.engine.batch(run) : run();
       };
     }
     return (...args) => {
@@ -1428,7 +1429,8 @@ var FunctionExpression = class extends BaseNode {
         }
         return finalResult;
       };
-      return context.engine?.withExecutionContext ? context.engine.withExecutionContext(element, lifetime, invoke) : invoke();
+      const run = context.engine?.withExecutionContext ? () => context.engine.withExecutionContext(element, lifetime, invoke) : invoke;
+      return context.engine?.batch ? context.engine.batch(run) : run();
     };
   }
   applyParams(scope, previousValues, context, args) {
@@ -4278,6 +4280,71 @@ ${caret}`;
 
 // src/runtime/scope.ts
 var proxyToRaw = /* @__PURE__ */ new WeakMap();
+var batchDepth = 0;
+var flushing = false;
+var pendingListeners = /* @__PURE__ */ new Map();
+function batch(callback) {
+  batchDepth += 1;
+  let result;
+  try {
+    result = callback();
+  } catch (error) {
+    endBatch();
+    throw error;
+  }
+  endBatch();
+  return result;
+}
+function endBatch() {
+  batchDepth -= 1;
+  if (batchDepth === 0) {
+    flushPendingListeners();
+  }
+}
+function notifyListener(entry) {
+  if (!entry.active) {
+    return;
+  }
+  if (batchDepth > 0 || flushing) {
+    const entries = pendingListeners.get(entry.handler) ?? /* @__PURE__ */ new Set();
+    entries.add(entry);
+    pendingListeners.set(entry.handler, entries);
+    return;
+  }
+  entry.handler();
+}
+function flushPendingListeners() {
+  if (flushing) {
+    return;
+  }
+  flushing = true;
+  let failed = false;
+  let firstError;
+  try {
+    while (pendingListeners.size > 0) {
+      const entries = Array.from(pendingListeners.entries());
+      pendingListeners.clear();
+      for (const [handler, registrations] of entries) {
+        if (!Array.from(registrations).some((entry) => entry.active)) {
+          continue;
+        }
+        try {
+          handler();
+        } catch (error) {
+          if (!failed) {
+            failed = true;
+            firstError = error;
+          }
+        }
+      }
+    }
+  } finally {
+    flushing = false;
+  }
+  if (failed) {
+    throw firstError;
+  }
+}
 function isReactiveContainer(value) {
   if (!value || typeof value !== "object") {
     return false;
@@ -4323,6 +4390,9 @@ var Scope = class _Scope {
   }
   set(key, value) {
     this.setPath(key, value);
+  }
+  batch(callback) {
+    return batch(callback);
   }
   hasKey(path) {
     const parts = path.split(".");
@@ -4402,7 +4472,9 @@ var Scope = class _Scope {
       return;
     }
     const set = this.listeners.get(key) ?? /* @__PURE__ */ new Set();
-    set.add(handler);
+    if (!Array.from(set).some((entry) => entry.active && entry.handler === handler)) {
+      set.add({ handler, active: true });
+    }
     this.listeners.set(key, set);
   }
   off(path, handler) {
@@ -4411,16 +4483,28 @@ var Scope = class _Scope {
     if (!set) {
       return;
     }
-    set.delete(handler);
+    for (const entry of set) {
+      if (entry.handler === handler) {
+        entry.active = false;
+        set.delete(entry);
+      }
+    }
     if (set.size === 0) {
       this.listeners.delete(key);
     }
   }
   onAny(handler) {
-    this.anyListeners.add(handler);
+    if (!Array.from(this.anyListeners).some((entry) => entry.active && entry.handler === handler)) {
+      this.anyListeners.add({ handler, active: true });
+    }
   }
   offAny(handler) {
-    this.anyListeners.delete(handler);
+    for (const entry of this.anyListeners) {
+      if (entry.handler === handler) {
+        entry.active = false;
+        this.anyListeners.delete(entry);
+      }
+    }
   }
   emitChange(path) {
     const key = path.trim();
@@ -4433,8 +4517,8 @@ var Scope = class _Scope {
         listeners.forEach((handler) => handlers.add(handler));
       }
     }
-    handlers.forEach((handler) => handler());
-    this.anyListeners.forEach((handler) => handler());
+    handlers.forEach((entry) => notifyListener(entry));
+    this.anyListeners.forEach((entry) => notifyListener(entry));
   }
   resolveScope(path) {
     let targetScope = this;
@@ -5151,6 +5235,7 @@ var Engine = class _Engine {
     this.diagnostics = options.diagnostics ?? false;
     this.logger = options.logger ?? console;
     this.registerGlobal("console", console);
+    this.registerGlobal("batch", batch);
     this.registerGlobal("onCleanup", (disposer) => {
       const lifetime = this.getCurrentLifetime();
       return lifetime ? lifetime.onCleanup(disposer) : () => void 0;
@@ -5678,6 +5763,9 @@ var Engine = class _Engine {
   }
   get signal() {
     return this.engineLifetime.signal;
+  }
+  batch(callback) {
+    return batch(callback);
   }
   dispose() {
     const documents = Array.from(this.mountedDocuments);
@@ -7006,7 +7094,7 @@ var Engine = class _Engine {
       block = Parser.parseInline(code);
       this.codeCache.set(code, block);
     }
-    await this.withExecutionElement(element, lifetime, async () => {
+    await batch(() => this.withExecutionElement(element, lifetime, async () => {
       const selfRef = this.getGroupProxy(scope);
       const context = {
         scope,
@@ -7018,11 +7106,11 @@ var Engine = class _Engine {
         ...lifetime ? { lifetime, signal: lifetime.signal } : {}
       };
       await block.evaluate(context);
-    });
+    }));
   }
   async executeBlock(block, scope, element, rootScope, lifetime, signal = lifetime?.signal) {
     throwIfAborted(signal);
-    await this.withExecutionElement(element, lifetime, async () => {
+    await batch(() => this.withExecutionElement(element, lifetime, async () => {
       const selfRef = this.getGroupProxy(scope);
       const context = {
         scope,
@@ -7034,7 +7122,7 @@ var Engine = class _Engine {
         ...lifetime ? { lifetime, ...signal ? { signal } : {} } : {}
       };
       await block.evaluate(context);
-    });
+    }));
   }
   async safeExecute(code, scope, element, rootScope, lifetime) {
     try {
@@ -7534,7 +7622,7 @@ var Engine = class _Engine {
         return void 0;
       }
       const signal = lifetime.isDisposing ? void 0 : lifetime.signal;
-      return this.withExecutionContext(element, lifetime, () => {
+      return batch(() => this.withExecutionContext(element, lifetime, () => {
         const callScope = scope.createChild ? scope.createChild() : scope;
         const context = {
           scope: callScope,
@@ -7576,7 +7664,7 @@ var Engine = class _Engine {
         }
         restore();
         return context.returnValue;
-      });
+      }));
     };
     scope.setPath(declaration.name, fn);
   }
@@ -8358,6 +8446,7 @@ export {
   VERSION,
   WhileNode,
   autoMount,
+  batch,
   isAbortError,
   parseCFS,
   throwIfAborted
