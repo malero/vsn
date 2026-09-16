@@ -34,9 +34,10 @@ not to provide a component framework or an application architecture.
 ## Reading these examples
 
 The examples use the current runtime semantics. In particular, `vsn-if`
-conditionally mounts and unmounts elements, `vsn-show` toggles visibility
-without removing elements, `vsn-each` reuses rows when a unique `vsn-key` is
-provided and recreates them otherwise, and `vsn-get`
+conditionally mounts and unmounts elements, `vsn-show` toggles the native
+`hidden` state without removing elements or overwriting display styles,
+`vsn-each` reuses rows when a unique `vsn-key` is provided and recreates them
+otherwise, and `vsn-get`
 swaps HTML fragments and processes new VSN behavior inside explicitly trusted
 fragments. Binding attributes resolve scope paths, so dotted
 paths such as `result.name` (or `item.0` for an array element) should be used

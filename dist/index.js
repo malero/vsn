@@ -5319,11 +5319,8 @@ function readCondition(expression, scope) {
   }
   return !!scope.get(key);
 }
-function applyDisplay(element, expression, scope) {
-  element.style.display = readCondition(expression, scope) ? "" : "none";
-}
 function applyShow(element, expression, scope) {
-  applyDisplay(element, expression, scope);
+  element.hidden = !readCondition(expression, scope);
 }
 
 // src/runtime/html.ts

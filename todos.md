@@ -31,7 +31,7 @@ HTML-first, selector-driven character. The priority labels are directional:
   focus, input state, animations, and child behavior.
 - [x] Give `vsn-if` true conditional mount/unmount semantics and keep
   `vsn-show` as visibility-only; document lifecycle behavior for both.
-- [ ] Prefer semantic visibility APIs (`hidden`, `aria-hidden`, or an
+- [x] Prefer semantic visibility APIs (`hidden`, `aria-hidden`, or an
   equivalent managed attribute) over blindly overwriting `display`.
 - [ ] Add transitions and lifecycle hooks for enter/leave behavior.
 - [ ] Define an explicit hydration API and document how server state, form

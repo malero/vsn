@@ -60,11 +60,6 @@
         root.open = false;
       }
     }
-
-    .cookbook-dropdown-menu {
-      @aria-hidden :< !root.open;
-    }
-
     .cookbook-dropdown-option {
       @data-value :> value;
       @aria-selected :< (root.selected == value);

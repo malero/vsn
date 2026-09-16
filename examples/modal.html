@@ -25,7 +25,7 @@
       </p>
     </div>
     <p class="cookbook-note">
-      <code>vsn-show</code> hides the backdrop without removing it from the DOM.
+      <code>vsn-show</code> hides the backdrop semantically without removing it from the DOM.
       The close function restores focus to the launch button.
     </p>
   </div>
@@ -96,10 +96,6 @@
 
     on keyup!escape() {
       open ? closeDialog() : null;
-    }
-
-    #modal-backdrop {
-      @aria-hidden :< !root.open;
     }
   }
 </script>

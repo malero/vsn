@@ -28,12 +28,12 @@ describe("modal cookbook example", () => {
       const backdrop = document.getElementById("modal-backdrop") as HTMLElement;
       const root = document.getElementById("modal-example") as HTMLElement;
 
-      expect(backdrop.style.display).toBe("none");
+      expect(backdrop.hidden).toBe(true);
       launch.dispatchEvent(new MouseEvent("click", { bubbles: true }));
       await new Promise((resolve) => setTimeout(resolve, 0));
 
       expect(engine.getScope(root).get("open")).toBe(true);
-      expect(backdrop.style.display).toBe("");
+      expect(backdrop.hidden).toBe(false);
     } finally {
       globalThis.fetch = originalFetch;
     }

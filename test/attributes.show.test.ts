@@ -4,9 +4,9 @@ import { describe, expect, it } from "vitest";
 import { Engine } from "../src/index";
 
 describe("vsn-show", () => {
-  it("toggles display without removing element", async () => {
+  it("toggles semantic hidden state without removing or restyling the element", async () => {
     document.body.innerHTML = `
-      <div id="box" vsn-show="visible">Hello</div>
+      <div id="box" style="display: inline-flex" vsn-show="visible">Hello</div>
     `;
 
     const engine = new Engine();
@@ -15,10 +15,16 @@ describe("vsn-show", () => {
     const element = document.getElementById("box") as HTMLDivElement;
     const scope = engine.getScope(element);
 
-    expect(element.style.display).toBe("none");
+    expect(element.hidden).toBe(true);
+    expect(element.hasAttribute("hidden")).toBe(true);
+    expect(element.style.display).toBe("inline-flex");
+    expect(element.isConnected).toBe(true);
 
     scope.set("visible", true);
     engine.evaluate(element);
-    expect(element.style.display).toBe("");
+    expect(element.hidden).toBe(false);
+    expect(element.hasAttribute("hidden")).toBe(false);
+    expect(element.style.display).toBe("inline-flex");
+    expect(element.isConnected).toBe(true);
   });
 });
