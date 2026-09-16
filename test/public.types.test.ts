@@ -7,12 +7,14 @@ import type {
   EventFlagContext,
   FlagApplyContext,
   FlagHandler,
+  HydrationOptions,
   RegisteredBehavior
 } from "../src";
 
 describe("public extension types", () => {
   it("can type-check extension implementations from the package root", () => {
     const options: EngineOptions = { diagnostics: true };
+    const hydration: HydrationOptions = { state: { ready: true } };
     const attribute: AttributeHandler = {
       id: "example",
       match: (name) => name === "vsn-example",
@@ -33,6 +35,6 @@ describe("public extension types", () => {
       }
     };
 
-    expect([options, attribute, flag, modifier]).toHaveLength(4);
+    expect([options, hydration, attribute, flag, modifier]).toHaveLength(5);
   });
 });

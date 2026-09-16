@@ -57,6 +57,8 @@ declare class Scope {
     computed<T>(name: string, getter: ComputedGetter<T>, options?: ReactiveOptions): ComputedRef<T>;
     effect(callback: EffectCallback, options?: EffectOptions): Disposer;
     hasKey(path: string): boolean;
+    /** Returns whether a path is defined on this scope or one of its parents. */
+    hasPath(path: string): boolean;
     getPath(path: string): any;
     setPath(path: string, value: any): void;
     on(path: string, handler: () => void): void;
@@ -380,6 +382,7 @@ type AttributeHandler = {
 type AttributeHandlerContext = {
     lifetime: Lifetime;
     signal: AbortSignal;
+    hydrating: boolean;
     onCleanup: (disposer: Disposer) => Disposer;
 };
 type HtmlTransformContext = {
@@ -428,6 +431,7 @@ type BehaviorModifierContext = {
     engine: Engine;
     lifetime: Lifetime;
     signal: AbortSignal;
+    hydrating: boolean;
     onCleanup: (disposer: Disposer) => Disposer;
 };
 type EventBindPatch = {
@@ -453,6 +457,9 @@ type EngineOptions = {
     htmlSanitizer?: HtmlSanitizer;
     trustedTypesPolicy?: TrustedTypesPolicy;
     trustedTypesPolicyName?: string;
+};
+type HydrationOptions = {
+    state?: Record<string, any>;
 };
 type TrustedTypesPolicy = {
     createHTML: (value: string) => unknown;
@@ -512,6 +519,7 @@ declare class Engine {
     private mountedRoots;
     private mountedDocuments;
     private inactiveSubtrees;
+    private hydratingElements;
     constructor(options?: EngineOptions);
     private matchesMinWidth;
     private matchesMaxWidth;
@@ -520,6 +528,12 @@ declare class Engine {
     private getGroupTargetScope;
     private getGroupProxy;
     mount(root: HTMLElement): Promise<void>;
+    /**
+     * Attaches VSN to server-rendered markup while preserving DOM values that
+     * do not have client state yet.
+     */
+    hydrate(root: HTMLElement, options?: HydrationOptions): Promise<void>;
+    private initializeRoot;
     unmount(element: Element): void;
     registerBehaviors(source: string): void;
     private registerBehaviorSource;
@@ -597,6 +611,7 @@ declare class Engine {
     private handleUpdatedNode;
     private applyBehaviors;
     private isInactive;
+    private isHydrating;
     private reapplyBehaviorsForElement;
     private applyBehaviorForElement;
     private unbindBehaviorForElement;

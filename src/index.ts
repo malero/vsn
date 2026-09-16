@@ -35,6 +35,7 @@ export type {
   HtmlTransformContext,
   HtmlTransformer,
   HtmlTransformOptions,
+  HydrationOptions,
   RegisteredBehavior,
   TrustedTypesPolicy
 } from "./runtime/engine";

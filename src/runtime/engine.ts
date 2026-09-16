@@ -512,6 +512,7 @@ export type AttributeHandler = {
 export type AttributeHandlerContext = {
   lifetime: Lifetime;
   signal: AbortSignal;
+  hydrating: boolean;
   onCleanup: (disposer: Disposer) => Disposer;
 };
 
@@ -598,6 +599,7 @@ export type BehaviorModifierContext = {
   engine: Engine;
   lifetime: Lifetime;
   signal: AbortSignal;
+  hydrating: boolean;
   onCleanup: (disposer: Disposer) => Disposer;
 };
 
@@ -626,6 +628,10 @@ export type EngineOptions = {
   htmlSanitizer?: HtmlSanitizer;
   trustedTypesPolicy?: TrustedTypesPolicy;
   trustedTypesPolicyName?: string;
+};
+
+export type HydrationOptions = {
+  state?: Record<string, any>;
 };
 
 export type TrustedTypesPolicy = {
@@ -687,6 +693,7 @@ export class Engine {
   private mountedRoots = new Set<HTMLElement>();
   private mountedDocuments = new Set<Document>();
   private inactiveSubtrees = new WeakSet<Element>();
+  private hydratingElements = new WeakSet<Element>();
 
   constructor(options: EngineOptions = {}) {
     this.diagnostics = options.diagnostics ?? false;
@@ -1045,6 +1052,22 @@ export class Engine {
   }
 
   async mount(root: HTMLElement): Promise<void> {
+    await this.initializeRoot(root, false);
+  }
+
+  /**
+   * Attaches VSN to server-rendered markup while preserving DOM values that
+   * do not have client state yet.
+   */
+  async hydrate(root: HTMLElement, options: HydrationOptions = {}): Promise<void> {
+    await this.initializeRoot(root, true, options.state);
+  }
+
+  private async initializeRoot(
+    root: HTMLElement,
+    hydrating: boolean,
+    state?: Record<string, any>
+  ): Promise<void> {
     if (this.engineLifetime.isDisposed) {
       this.engineLifetime = new Lifetime();
     }
@@ -1056,31 +1079,55 @@ export class Engine {
     Engine.activeEngines.set(documentRoot, this);
     this.mountedDocuments.add(documentRoot);
     const elements: Element[] = [root, ...Array.from(root.querySelectorAll("*"))];
+    if (hydrating) {
+      for (const element of elements) {
+        this.hydratingElements.add(element);
+      }
+    }
     for (const element of elements) {
       this.inactiveSubtrees.delete(element);
     }
-    for (const element of elements) {
-      if (element === root && root === root.ownerDocument.body && !this.hasVsnAttributes(element)) {
-        continue;
+    if (state) {
+      const rootScope = this.getScope(root, this.findParentScope(root));
+      for (const [key, value] of Object.entries(state)) {
+        rootScope.set(key, value);
       }
-      this.getScope(element, this.findParentScope(element));
     }
-    for (const element of elements) {
-      if (this.isInactive(element)) {
-        continue;
+    try {
+      for (const element of elements) {
+        if (element === root && root === root.ownerDocument.body && !this.hasVsnAttributes(element)) {
+          continue;
+        }
+        this.getScope(element, this.findParentScope(element));
       }
-      if (!this.hasVsnAttributes(element)) {
-        continue;
+      for (const element of elements) {
+        if (this.isInactive(element)) {
+          continue;
+        }
+        if (!this.hasVsnAttributes(element)) {
+          continue;
+        }
+        const parentScope = this.findParentScope(element);
+        this.getScope(element, parentScope);
+        this.attachAttributes(element);
+        if (this.isInactive(element)) {
+          continue;
+        }
+        this.runConstruct(element);
       }
-      const parentScope = this.findParentScope(element);
-      this.getScope(element, parentScope);
-      this.attachAttributes(element);
-      if (this.isInactive(element)) {
-        continue;
+      if (hydrating) {
+        // Give server-rendered form/display values a chance to become state
+        // before behavior declarations initialize their defaults.
+        this.flushAutoBindQueue();
       }
-      this.runConstruct(element);
+      await this.applyBehaviors(root);
+    } finally {
+      if (hydrating) {
+        for (const element of elements) {
+          this.hydratingElements.delete(element);
+        }
+      }
     }
-    await this.applyBehaviors(root);
     this.attachObserver(root);
   }
 
@@ -2069,6 +2116,16 @@ export class Engine {
 
     const currentBinding = binding;
     this.ensureIfMarker(element, currentBinding);
+    const hydrationStateAvailable = this.isHydrating(element) && scope.hasPath(value);
+    if (this.isHydrating(element) && !hydrationStateAvailable) {
+      // The server already decided that this element is present. Keep it
+      // mounted until client state supplies an explicit condition.
+      currentBinding.active = true;
+      currentBinding.mounted = true;
+      currentBinding.suspended = false;
+      currentBinding.entering = true;
+      return true;
+    }
     if (!readCondition(value, scope)) {
       this.deactivateIf(element, currentBinding);
       return false;
@@ -2076,6 +2133,11 @@ export class Engine {
     currentBinding.active = true;
     currentBinding.mounted = true;
     currentBinding.suspended = false;
+    if (this.isHydrating(element)) {
+      // Existing server-rendered DOM is already entered; do not replay an
+      // entry transition or hook during hydration.
+      currentBinding.entering = true;
+    }
     return true;
   }
 
@@ -2178,6 +2240,10 @@ export class Engine {
       current = current.parentElement;
     }
     return false;
+  }
+
+  private isHydrating(element: Element): boolean {
+    return this.hydratingElements.has(element);
   }
 
   private async reapplyBehaviorsForElement(element: Element): Promise<void> {
@@ -2341,6 +2407,7 @@ export class Engine {
     const context: AttributeHandlerContext = {
       lifetime,
       signal: lifetime.signal,
+      hydrating: this.isHydrating(element),
       onCleanup: (disposer) => lifetime.onCleanup(disposer)
     };
     const names = element.getAttributeNames();
@@ -2712,15 +2779,23 @@ export class Engine {
       return { direction: "both", seedFromScope: false, syncToScope: false, deferToScope: false };
     }
 
+    const hasScopeValue = this.hasScopeValue(scope, expr);
+    const hasHydrationState = this.isHydrating(element) && scope.hasPath(expr);
+
     if (this.isFormControl(element)) {
-      if (this.hasScopeValue(scope, expr)) {
+      if (hasScopeValue || hasHydrationState) {
         return { direction: "both", seedFromScope: true, syncToScope: false, deferToScope: false };
       }
       return { direction: "both", seedFromScope: false, syncToScope: false, deferToScope: true };
     }
 
-    if (this.hasScopeValue(scope, expr)) {
-      return { direction: "both", seedFromScope: false, syncToScope: false, deferToScope: false };
+    if (hasScopeValue || hasHydrationState) {
+      return {
+        direction: "both",
+        seedFromScope: hasHydrationState,
+        syncToScope: false,
+        deferToScope: false
+      };
     }
 
     if (this.hasElementValue(element)) {
@@ -4232,6 +4307,11 @@ export class Engine {
     this.applyCustomFlags(element, scope, declaration, lifetime);
 
     if (declaration.target instanceof IdentifierExpression) {
+      if (this.isHydrating(element) && scope.hasPath(declaration.target.name)) {
+        // Server state is authoritative during hydration; declarations remain
+        // initializers for values that were not supplied by the server.
+        return;
+      }
       const value = await declaration.value.evaluate(context);
       if (lifetime.isDisposed) {
         return;
@@ -4404,6 +4484,7 @@ export class Engine {
         engine: this,
         lifetime,
         signal: lifetime.signal,
+        hydrating: this.isHydrating(element),
         onCleanup: (disposer) => lifetime.onCleanup(disposer)
       });
     }
@@ -4827,7 +4908,7 @@ export class Engine {
       match: (name) => name === "vsn-show",
       handle: (element, _name, value, scope) => {
         this.showBindings.set(element, value);
-        if (element instanceof HTMLElement) {
+        if (element instanceof HTMLElement && !(this.isHydrating(element) && !scope.hasPath(value))) {
           applyShow(element, value, scope);
         }
         this.watch(scope, value, () => this.evaluate(element), element);
@@ -4845,7 +4926,9 @@ export class Engine {
           const nextValue = scope.get(value.trim());
           element.textContent = nextValue == null ? "" : String(nextValue);
         };
-        update();
+        if (!(this.isHydrating(element) && !scope.hasPath(value))) {
+          update();
+        }
         this.watch(scope, value, update, element);
       }
     });
@@ -4857,7 +4940,7 @@ export class Engine {
         const trusted = _name.split("!").includes("trusted");
         this.htmlBindings.set(element, { expr: value, trusted });
         this.markInlineDeclaration(element, "attr:html");
-        if (element instanceof HTMLElement) {
+        if (element instanceof HTMLElement && !(this.isHydrating(element) && !scope.hasPath(value))) {
           this.setHtml(element, scope.get(value.trim()), { trusted });
         }
         this.watch(scope, value, () => this.evaluate(element), element);

@@ -34,6 +34,37 @@ engine.registerBehaviors(`
 await engine.mount(document.body);
 ```
 
+When the root already contains server-rendered VSN markup, use the explicit
+hydration entry point instead:
+
+```ts
+const engine = new Engine();
+engine.registerBehaviors(`
+  behavior #app {
+    count: 0;
+  }
+`);
+
+await engine.hydrate(document.body, {
+  state: (globalThis as any).__VSN_STATE__ ?? {}
+});
+```
+
+`hydrate()` copies `state` into the root scope before behavior declarations and
+construct hooks run. Supplied state wins over behavior initializers. If a state
+path is not supplied, existing server text, HTML, `hidden` state, and mounted
+`vsn-if` elements are preserved until client code initializes that path;
+initial `vsn-enter` hooks and transitions are not replayed for already-rendered
+conditional elements. Behaviors still bind normally, including construct hooks
+and event handlers.
+
+For bindings, a supplied value wins for an automatic `vsn-bind`. Without a
+supplied value, a non-empty server-rendered control or display value seeds the
+scope before behavior defaults run. Use `vsn-bind:to` when the element should
+be the source of truth, and `vsn-bind:from` when the scope should be the source
+of truth. Hydration expects the root DOM to match the server output; it does not
+infer ownership of arbitrary nodes around a `vsn-each` template.
+
 The `behavior` keyword is optional, so CSS-like declarations are valid. Selectors are passed to `Element.matches()` and may use classes, IDs, attributes, combinators, pseudo-classes, and comma-separated groups:
 
 ```less
@@ -144,6 +175,9 @@ engine.registerBehaviorModifier("resize", {
 ```
 
 The same `onCleanup` callback is available to custom attribute handlers and flag handlers. CFS lifecycle code can call `onCleanup(() => { /* ... */ })`; `engine.getLifetime(element)` exposes the inline lifetime directly, and `engine.dispose()` tears down all mounted roots.
+
+Custom attribute handlers and behavior modifier hooks receive `hydrating: true`
+while they are attached by `hydrate()`.
 
 Each lifetime also exposes an `AbortSignal`. CFS code can reference the current signal as `signal` and pass it to async APIs so pending work is canceled when its element or behavior unmounts:
 

@@ -593,6 +593,34 @@ export class Scope {
     return this.data.has(root) || this.computedValues.has(root);
   }
 
+  /** Returns whether a path is defined on this scope or one of its parents. */
+  hasPath(path: string): boolean {
+    const key = path.trim();
+    if (!key) {
+      return false;
+    }
+    const explicit = key.startsWith("parent.") || key.startsWith("root.") || key.startsWith("self.");
+    const { targetScope, targetPath } = this.resolveScope(key);
+    if (!targetScope || !targetPath) {
+      return false;
+    }
+    const root = targetPath.split(".")[0];
+    if (!root) {
+      return false;
+    }
+    if (explicit) {
+      return targetScope.hasKey(root);
+    }
+    let cursor: Scope | undefined = targetScope;
+    while (cursor) {
+      if (cursor.hasKey(root)) {
+        return true;
+      }
+      cursor = cursor.parent;
+    }
+    return false;
+  }
+
   getPath(path: string): any {
     const explicit = path.startsWith("parent.") || path.startsWith("root.") || path.startsWith("self.");
     const { targetScope, targetPath } = this.resolveScope(path);

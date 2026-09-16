@@ -4897,6 +4897,33 @@ var Scope = class _Scope {
     }
     return this.data.has(root) || this.computedValues.has(root);
   }
+  /** Returns whether a path is defined on this scope or one of its parents. */
+  hasPath(path) {
+    const key = path.trim();
+    if (!key) {
+      return false;
+    }
+    const explicit = key.startsWith("parent.") || key.startsWith("root.") || key.startsWith("self.");
+    const { targetScope, targetPath } = this.resolveScope(key);
+    if (!targetScope || !targetPath) {
+      return false;
+    }
+    const root = targetPath.split(".")[0];
+    if (!root) {
+      return false;
+    }
+    if (explicit) {
+      return targetScope.hasKey(root);
+    }
+    let cursor = targetScope;
+    while (cursor) {
+      if (cursor.hasKey(root)) {
+        return true;
+      }
+      cursor = cursor.parent;
+    }
+    return false;
+  }
   getPath(path) {
     const explicit = path.startsWith("parent.") || path.startsWith("root.") || path.startsWith("self.");
     const { targetScope, targetPath } = this.resolveScope(path);
@@ -5829,6 +5856,7 @@ var Engine = class _Engine {
   mountedRoots = /* @__PURE__ */ new Set();
   mountedDocuments = /* @__PURE__ */ new Set();
   inactiveSubtrees = /* @__PURE__ */ new WeakSet();
+  hydratingElements = /* @__PURE__ */ new WeakSet();
   constructor(options = {}) {
     this.diagnostics = options.diagnostics ?? false;
     this.logger = options.logger ?? console;
@@ -6174,6 +6202,16 @@ var Engine = class _Engine {
     return proxy;
   }
   async mount(root) {
+    await this.initializeRoot(root, false);
+  }
+  /**
+   * Attaches VSN to server-rendered markup while preserving DOM values that
+   * do not have client state yet.
+   */
+  async hydrate(root, options = {}) {
+    await this.initializeRoot(root, true, options.state);
+  }
+  async initializeRoot(root, hydrating, state) {
     if (this.engineLifetime.isDisposed) {
       this.engineLifetime = new Lifetime();
     }
@@ -6185,31 +6223,53 @@ var Engine = class _Engine {
     _Engine.activeEngines.set(documentRoot, this);
     this.mountedDocuments.add(documentRoot);
     const elements = [root, ...Array.from(root.querySelectorAll("*"))];
+    if (hydrating) {
+      for (const element of elements) {
+        this.hydratingElements.add(element);
+      }
+    }
     for (const element of elements) {
       this.inactiveSubtrees.delete(element);
     }
-    for (const element of elements) {
-      if (element === root && root === root.ownerDocument.body && !this.hasVsnAttributes(element)) {
-        continue;
+    if (state) {
+      const rootScope = this.getScope(root, this.findParentScope(root));
+      for (const [key, value] of Object.entries(state)) {
+        rootScope.set(key, value);
       }
-      this.getScope(element, this.findParentScope(element));
     }
-    for (const element of elements) {
-      if (this.isInactive(element)) {
-        continue;
+    try {
+      for (const element of elements) {
+        if (element === root && root === root.ownerDocument.body && !this.hasVsnAttributes(element)) {
+          continue;
+        }
+        this.getScope(element, this.findParentScope(element));
       }
-      if (!this.hasVsnAttributes(element)) {
-        continue;
+      for (const element of elements) {
+        if (this.isInactive(element)) {
+          continue;
+        }
+        if (!this.hasVsnAttributes(element)) {
+          continue;
+        }
+        const parentScope = this.findParentScope(element);
+        this.getScope(element, parentScope);
+        this.attachAttributes(element);
+        if (this.isInactive(element)) {
+          continue;
+        }
+        this.runConstruct(element);
       }
-      const parentScope = this.findParentScope(element);
-      this.getScope(element, parentScope);
-      this.attachAttributes(element);
-      if (this.isInactive(element)) {
-        continue;
+      if (hydrating) {
+        this.flushAutoBindQueue();
       }
-      this.runConstruct(element);
+      await this.applyBehaviors(root);
+    } finally {
+      if (hydrating) {
+        for (const element of elements) {
+          this.hydratingElements.delete(element);
+        }
+      }
     }
-    await this.applyBehaviors(root);
     this.attachObserver(root);
   }
   unmount(element) {
@@ -7111,6 +7171,14 @@ var Engine = class _Engine {
     }
     const currentBinding = binding;
     this.ensureIfMarker(element, currentBinding);
+    const hydrationStateAvailable = this.isHydrating(element) && scope.hasPath(value);
+    if (this.isHydrating(element) && !hydrationStateAvailable) {
+      currentBinding.active = true;
+      currentBinding.mounted = true;
+      currentBinding.suspended = false;
+      currentBinding.entering = true;
+      return true;
+    }
     if (!readCondition(value, scope)) {
       this.deactivateIf(element, currentBinding);
       return false;
@@ -7118,6 +7186,9 @@ var Engine = class _Engine {
     currentBinding.active = true;
     currentBinding.mounted = true;
     currentBinding.suspended = false;
+    if (this.isHydrating(element)) {
+      currentBinding.entering = true;
+    }
     return true;
   }
   teardownElement(element, options = {}) {
@@ -7212,6 +7283,9 @@ var Engine = class _Engine {
       current = current.parentElement;
     }
     return false;
+  }
+  isHydrating(element) {
+    return this.hydratingElements.has(element);
   }
   async reapplyBehaviorsForElement(element) {
     if (this.behaviorRegistry.length === 0 || this.isInactive(element)) {
@@ -7355,6 +7429,7 @@ var Engine = class _Engine {
     const context = {
       lifetime,
       signal: lifetime.signal,
+      hydrating: this.isHydrating(element),
       onCleanup: (disposer) => lifetime.onCleanup(disposer)
     };
     const names = element.getAttributeNames();
@@ -7650,14 +7725,21 @@ var Engine = class _Engine {
     if (this.isInEachScope(scope)) {
       return { direction: "both", seedFromScope: false, syncToScope: false, deferToScope: false };
     }
+    const hasScopeValue = this.hasScopeValue(scope, expr);
+    const hasHydrationState = this.isHydrating(element) && scope.hasPath(expr);
     if (this.isFormControl(element)) {
-      if (this.hasScopeValue(scope, expr)) {
+      if (hasScopeValue || hasHydrationState) {
         return { direction: "both", seedFromScope: true, syncToScope: false, deferToScope: false };
       }
       return { direction: "both", seedFromScope: false, syncToScope: false, deferToScope: true };
     }
-    if (this.hasScopeValue(scope, expr)) {
-      return { direction: "both", seedFromScope: false, syncToScope: false, deferToScope: false };
+    if (hasScopeValue || hasHydrationState) {
+      return {
+        direction: "both",
+        seedFromScope: hasHydrationState,
+        syncToScope: false,
+        deferToScope: false
+      };
     }
     if (this.hasElementValue(element)) {
       return { direction: "both", seedFromScope: false, syncToScope: false, deferToScope: true };
@@ -8914,6 +8996,9 @@ var Engine = class _Engine {
     }
     this.applyCustomFlags(element, scope, declaration, lifetime);
     if (declaration.target instanceof IdentifierExpression) {
+      if (this.isHydrating(element) && scope.hasPath(declaration.target.name)) {
+        return;
+      }
       const value = await declaration.value.evaluate(context);
       if (lifetime.isDisposed) {
         return;
@@ -9058,6 +9143,7 @@ var Engine = class _Engine {
         engine: this,
         lifetime,
         signal: lifetime.signal,
+        hydrating: this.isHydrating(element),
         onCleanup: (disposer) => lifetime.onCleanup(disposer)
       });
     }
@@ -9412,7 +9498,7 @@ var Engine = class _Engine {
       match: (name) => name === "vsn-show",
       handle: (element, _name, value, scope) => {
         this.showBindings.set(element, value);
-        if (element instanceof HTMLElement) {
+        if (element instanceof HTMLElement && !(this.isHydrating(element) && !scope.hasPath(value))) {
           applyShow(element, value, scope);
         }
         this.watch(scope, value, () => this.evaluate(element), element);
@@ -9429,7 +9515,9 @@ var Engine = class _Engine {
           const nextValue = scope.get(value.trim());
           element.textContent = nextValue == null ? "" : String(nextValue);
         };
-        update();
+        if (!(this.isHydrating(element) && !scope.hasPath(value))) {
+          update();
+        }
         this.watch(scope, value, update, element);
       }
     });
@@ -9440,7 +9528,7 @@ var Engine = class _Engine {
         const trusted = _name.split("!").includes("trusted");
         this.htmlBindings.set(element, { expr: value, trusted });
         this.markInlineDeclaration(element, "attr:html");
-        if (element instanceof HTMLElement) {
+        if (element instanceof HTMLElement && !(this.isHydrating(element) && !scope.hasPath(value))) {
           this.setHtml(element, scope.get(value.trim()), { trusted });
         }
         this.watch(scope, value, () => this.evaluate(element), element);

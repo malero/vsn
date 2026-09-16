@@ -34,7 +34,7 @@ HTML-first, selector-driven character. The priority labels are directional:
 - [x] Prefer semantic visibility APIs (`hidden`, `aria-hidden`, or an
   equivalent managed attribute) over blindly overwriting `display`.
 - [x] Add transitions and lifecycle hooks for enter/leave behavior.
-- [ ] Define an explicit hydration API and document how server state, form
+- [x] Define an explicit hydration API and document how server state, form
   values, and client behavior interact during hydration.
 - [ ] Expand `vsn-get` into a request primitive with methods, bodies, form
   submission, loading/error/data state, cancellation, history, focus

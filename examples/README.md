@@ -51,4 +51,7 @@ Use `vsn-enter` and `vsn-leave` for CFS hooks when a transition phase starts.
 
 The gallery loads the templates and sanitize plugins before mounting VSN. A
 standalone page can use the same plugin entry points, or use the explicit
-`Engine` API described in the root README.
+`Engine` API described in the root README. Server-rendered pages should call
+`engine.hydrate(root, { state })` once the behavior source and serialized state
+are available; `hydrate()` preserves existing SSR values when a client state
+path has not been initialized yet.
