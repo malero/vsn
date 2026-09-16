@@ -1,5 +1,5 @@
 import { batch, computed, effect, Scope } from "./scope";
-import type { ComputedGetter, ComputedRef, EffectCallback, ReactiveOptions } from "./scope";
+import type { ComputedGetter, ComputedRef, EffectCallback, EffectOptions, ReactiveOptions } from "./scope";
 import { applyBindToElement, applyBindToScope, BindDirection } from "./bindings";
 import { applyIf, applyShow } from "./conditionals";
 import { applyGet, GetConfig } from "./http";
@@ -1242,7 +1242,7 @@ export class Engine {
     return computed(scope, getter, options);
   }
 
-  effect(scope: Scope, callback: EffectCallback, options?: ReactiveOptions): Disposer {
+  effect(scope: Scope, callback: EffectCallback, options?: EffectOptions): Disposer {
     return effect(scope, callback, options);
   }
 
@@ -2050,197 +2050,22 @@ export class Engine {
 
   private watchExpression(
     scope: Scope,
-    rootScope: Scope | undefined,
-    expression: ExpressionNode,
     handler: () => void,
     debounceMs?: number,
-    element?: Element,
-    behaviorId?: number,
     lifetime?: Lifetime
   ): void {
-    const dependencies = this.getExpressionDependencies(expression);
-    if (dependencies.length === 0) {
-      return;
-    }
-    const effectiveHandler = debounceMs ? debounce(handler, debounceMs) : handler;
-    const owner = lifetime ?? (element ? this.getInlineLifetime(element) : undefined);
-    if (debounceMs && owner) {
-      owner.onCleanup((effectiveHandler as Debounced).cancel);
-    }
-    for (const dependency of dependencies) {
-      this.watchExpressionDependency(
-        scope,
-        rootScope,
-        dependency,
-        effectiveHandler,
-        element,
-        behaviorId,
-        owner
-      );
-    }
-  }
-
-  private getExpressionDependencies(expression: ExpressionNode): string[] {
-    const dependencies = new Set<string>();
-    const visit = (node: any): void => {
-      if (!node || typeof node !== "object") {
-        return;
-      }
-      if (node instanceof IdentifierExpression) {
-        if (node.name !== "self" && node.name !== "signal") {
-          dependencies.add(node.name);
+    const owner = lifetime;
+    const scheduler = debounceMs
+      ? (run: () => void): Disposer => {
+          const scheduled = debounce(run, debounceMs);
+          scheduled();
+          return scheduled.cancel;
         }
-        return;
-      }
-      if (node.type === "MemberExpression") {
-        const path = node.getIdentifierPath?.()?.path;
-        if (path) {
-          dependencies.add(path);
-          return;
-        }
-        visit(node.target);
-        return;
-      }
-      switch (node.type) {
-        case "Assignment":
-          visit(node.target);
-          visit(node.value);
-          return;
-        case "ArrayExpression":
-          for (const element of node.elements ?? []) {
-            visit(element);
-          }
-          return;
-        case "ObjectExpression":
-          for (const entry of node.entries ?? []) {
-            if (entry?.spread) {
-              visit(entry.spread);
-              continue;
-            }
-            if (entry?.computed) {
-              visit(entry.keyExpr);
-            }
-            visit(entry?.value);
-          }
-          return;
-        case "ElementDirective":
-        case "ElementProperty":
-          visit(node.element);
-          return;
-        case "TemplateExpression":
-          for (const part of node.parts ?? []) {
-            visit(part);
-          }
-          return;
-        case "TaggedTemplateExpression":
-          visit(node.tag);
-          visit(node.template);
-          return;
-        case "UnaryExpression":
-        case "AwaitExpression":
-          visit(node.argument);
-          return;
-        case "BinaryExpression":
-          visit(node.left);
-          visit(node.right);
-          return;
-        case "TernaryExpression":
-          visit(node.test);
-          visit(node.consequent);
-          visit(node.alternate);
-          return;
-        case "CallExpression":
-          visit(node.callee);
-          for (const arg of node.args ?? []) {
-            visit(arg);
-          }
-          return;
-        case "IndexExpression":
-          visit(node.target);
-          visit(node.index);
-          return;
-        default:
-          return;
-      }
-    };
-    visit(expression);
-    return Array.from(dependencies);
-  }
-
-  private watchExpressionDependency(
-    scope: Scope,
-    rootScope: Scope | undefined,
-    dependency: string,
-    handler: () => void,
-    element?: Element,
-    behaviorId?: number,
-    lifetime?: Lifetime
-  ): void {
-    const path = dependency.trim();
-    if (!path) {
-      return;
-    }
-    if (path.startsWith("root.")) {
-      const target = rootScope ?? this.getRootScope(scope);
-      this.watchDirectScope(target, path.slice("root.".length), handler, element, behaviorId, lifetime);
-      return;
-    }
-    if (path.startsWith("parent.")) {
-      let target: Scope | undefined = scope;
-      let targetPath = path;
-      while (targetPath.startsWith("parent.")) {
-        target = target?.parent;
-        targetPath = targetPath.slice("parent.".length);
-      }
-      if (target) {
-        this.watchDirectScope(target, targetPath, handler, element, behaviorId, lifetime);
-      }
-      return;
-    }
-    if (path.startsWith("self.")) {
-      this.watchDirectScope(scope, path.slice("self.".length), handler, element, behaviorId, lifetime);
-      return;
-    }
-    const root = path.split(".")[0];
-    if (!root || (!this.hasScopeKey(scope, root) && root in this.globals)) {
-      return;
-    }
-    this.watch(scope, path, handler, element, behaviorId, lifetime);
-  }
-
-  private watchDirectScope(
-    scope: Scope | undefined,
-    path: string,
-    handler: () => void,
-    element?: Element,
-    behaviorId?: number,
-    lifetime?: Lifetime
-  ): void {
-    if (!scope || !path) {
-      return;
-    }
-    scope.on(path, handler);
-    const owner = lifetime ?? (element ? this.getInlineLifetime(element) : undefined);
-    this.trackScopeWatcher(scope, "path", handler, path, owner);
-  }
-
-  private hasScopeKey(scope: Scope, key: string): boolean {
-    let cursor: Scope | undefined = scope;
-    while (cursor) {
-      if (cursor.hasKey(key)) {
-        return true;
-      }
-      cursor = cursor.parent;
-    }
-    return false;
-  }
-
-  private getRootScope(scope: Scope): Scope {
-    let root = scope;
-    while (root.parent) {
-      root = root.parent;
-    }
-    return root;
+      : undefined;
+    effect(scope, () => handler(), {
+      ...(owner ? { lifetime: owner } : {}),
+      ...(scheduler ? { scheduler } : {})
+    });
   }
 
   private trackScopeWatcher(
@@ -3612,15 +3437,9 @@ export class Engine {
     }
 
     if (!exprIdentifier) {
-      const value = await declaration.value.evaluate(context);
-      if (lifetime.isDisposed) {
-        return;
-      }
-      const transformed = this.applyCustomFlagTransforms(value, element, scope, declaration, lifetime);
-      this.setDirectiveValue(element, target, transformed, declaration);
       const shouldWatch = operator === ":<" || operator === ":=";
       if (shouldWatch) {
-        this.applyDirectiveFromExpression(
+        await this.applyDirectiveFromExpression(
           element,
           target,
           declaration.value,
@@ -3629,8 +3448,16 @@ export class Engine {
           rootScope,
           declaration,
           behaviorId,
-          lifetime
+          lifetime,
+          transform
         );
+      } else {
+        const value = await declaration.value.evaluate(context);
+        if (lifetime.isDisposed) {
+          return;
+        }
+        const transformed = this.applyCustomFlagTransforms(value, element, scope, declaration, lifetime);
+        this.setDirectiveValue(element, target, transformed, declaration);
       }
       if (declaration.flags.important && importantKey) {
         this.markImportant(element, importantKey);
@@ -3820,7 +3647,7 @@ export class Engine {
     }
   }
 
-  private applyDirectiveFromExpression(
+  private async applyDirectiveFromExpression(
     element: Element,
     target: DirectiveExpression,
     expr: ExpressionNode,
@@ -3829,8 +3656,9 @@ export class Engine {
     rootScope?: Scope,
     binding?: object,
     behaviorId?: number,
-    lifetime?: Lifetime
-  ): void {
+    lifetime?: Lifetime,
+    transform?: (value: any) => any
+  ): Promise<void> {
     let version = 0;
     if (lifetime) {
       this.trackBehaviorInvalidator(() => {
@@ -3853,32 +3681,40 @@ export class Engine {
         self: selfRef,
         ...(lifetime ? { lifetime, signal: lifetime.signal } : {})
       };
-      const value = await expr.evaluate(context);
-      if (currentVersion !== version || lifetime?.isDisposed) {
-        return;
+      const applyValue = (value: any): void => {
+        if (currentVersion !== version || lifetime?.isDisposed) {
+          return;
+        }
+        const transformed = transform ? transform(value) : value;
+        this.setDirectiveValue(element, target, transformed, binding);
+      };
+      const evaluated = expr.evaluate(context);
+      if (isPromiseLike(evaluated)) {
+        applyValue(await evaluated);
+      } else {
+        applyValue(evaluated);
       }
-      this.setDirectiveValue(element, target, value, binding);
+    };
+    let firstRun: Promise<void> | undefined;
+    const reportError = (error: unknown) => {
+      if (!lifetime?.signal.aborted && !isAbortError(error)) {
+        this.emitError(element, error);
+      }
     };
     const run = () => {
-      void handler().catch((error) => {
-        if (!lifetime?.signal.aborted && !isAbortError(error)) {
-          this.emitError(element, error);
-        }
-      });
+      const pending = handler();
+      if (!firstRun) {
+        firstRun = pending.catch((error) => {
+          reportError(error);
+        });
+        return;
+      }
+      void pending.catch(reportError);
     };
-    run();
-    this.watchExpression(
-      scope,
-      rootScope,
-      expr,
-      () => {
-        run();
-      },
-      debounceMs,
-      element,
-      behaviorId,
-      lifetime
-    );
+    this.watchExpression(scope, run, debounceMs, lifetime);
+    if (firstRun) {
+      await firstRun;
+    }
   }
 
   private applyDirectiveToScope(

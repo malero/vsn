@@ -16,7 +16,7 @@ HTML-first, selector-driven character. The priority labels are directional:
 - [x] Add first-class computed/derived state and effects instead of requiring
   users to manually maintain values such as counts, filtered lists, and
   summaries.
-- [ ] Replace static-only dependency discovery with a more precise dependency
+- [x] Replace static-only dependency discovery with a more precise dependency
   model, including dynamic indexes and conditional reads.
 - [x] Add a unified lifetime/disposer API for watchers, event listeners,
   timers, observers, dynamic behavior registrations, and plugin resources.

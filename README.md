@@ -110,7 +110,12 @@ async load(url) {
 
 The same signal is available as `context.signal` in extension hooks. Async expression bindings ignore completions from disposed lifetimes, and `vsn-get` aborts an active request when its trigger unmounts or a newer request starts. Cancellation errors are treated as normal teardown rather than reported through `vsn:error`.
 
-Plain objects and arrays stored in a scope are observable. Mutating a nested value returned by `scope.get()`—for example, `state.user.name = "Ada"`, `state.items.push(item)`, or `delete state.filters.archived`—notifies bindings that read the affected path, its ancestors, or a replaced descendant. `scope.setPath()` remains available for explicit updates and replacing a whole object or array also refreshes nested bindings.
+Plain objects and arrays stored in a scope are observable. Mutating a nested value returned by `scope.get()`—for example, `state.user.name = "Ada"`, `state.items.push(item)`, or `delete state.filters.archived`—emits a path-aware change. `scope.setPath()` remains available for explicit updates and replacing a whole object or array also refreshes nested bindings.
+
+Expression bindings collect the reads they actually perform at runtime. That
+means a binding such as `items[selected].label` follows the selected item, and
+short-circuit or conditional expressions only react to the branch currently in
+use. Replacing a parent object or array still invalidates any reads below it.
 
 Use `batch()` when several state changes belong to one update. Reactive handlers run once after the synchronous callback completes; `engine.batch()` and the CFS `batch(() => { ... })` helper are equivalent conveniences. Synchronous writes from CFS event, lifecycle, and function bodies are batched automatically. An async callback is not held across `await`, so start another batch around a later synchronous update phase when needed:
 

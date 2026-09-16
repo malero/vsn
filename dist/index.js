@@ -4291,6 +4291,7 @@ var arrayMutators = /* @__PURE__ */ new Set([
   "splice",
   "unshift"
 ]);
+var reactiveKeysProperty = "\0keys";
 var batchDepth = 0;
 var flushing = false;
 var pendingListeners = /* @__PURE__ */ new Map();
@@ -4438,7 +4439,7 @@ var ReactiveTracker = class {
     this.isDisposed = true;
     for (const [scope, paths] of this.scopeDependencies) {
       for (const path of paths) {
-        scope.off(path, this.invalidateListener);
+        scope.offDependency(path, this.invalidateListener);
       }
     }
     this.scopeDependencies.clear();
@@ -4453,7 +4454,7 @@ var ReactiveTracker = class {
     }
     for (const [scope, paths] of this.scopeDependencies) {
       for (const path of paths) {
-        scope.off(path, this.invalidateListener);
+        scope.offDependency(path, this.invalidateListener);
       }
     }
     this.scopeDependencies = this.nextScopeDependencies;
@@ -4474,7 +4475,7 @@ var ReactiveTracker = class {
     this.computedDependencies = nextComputedDependencies;
     for (const [scope, paths] of this.scopeDependencies) {
       for (const path of paths) {
-        scope.on(path, this.invalidateListener);
+        scope.onDependency(path, this.invalidateListener);
       }
     }
   }
@@ -4585,10 +4586,11 @@ var ComputedState = class extends ReactiveTracker {
   }
 };
 var ReactiveEffect = class extends ReactiveTracker {
-  constructor(scope, callback, lifetime) {
+  constructor(scope, callback, lifetime, scheduler) {
     super();
     this.scope = scope;
     this.callback = callback;
+    this.scheduler = scheduler;
     if (lifetime) {
       this.removeLifetime = lifetime.onCleanup(() => this.dispose());
     }
@@ -4603,10 +4605,12 @@ var ReactiveEffect = class extends ReactiveTracker {
   rerunRequested = false;
   cleanup;
   removeLifetime;
+  scheduledCleanup;
   dispose() {
     if (this.isDisposed) {
       return;
     }
+    this.cancelScheduled();
     this.removeLifetime?.();
     this.removeLifetime = void 0;
     this.disposeTracking();
@@ -4622,7 +4626,25 @@ var ReactiveEffect = class extends ReactiveTracker {
       this.rerunRequested = true;
       return;
     }
+    if (this.scheduler) {
+      this.cancelScheduled();
+      let completed = false;
+      const remove = this.scheduler(() => {
+        completed = true;
+        this.scheduledCleanup = void 0;
+        this.run();
+      });
+      if (!completed && typeof remove === "function") {
+        this.scheduledCleanup = remove;
+      }
+      return;
+    }
     this.run();
+  }
+  cancelScheduled() {
+    const cleanup = this.scheduledCleanup;
+    this.scheduledCleanup = void 0;
+    cleanup?.();
   }
   run() {
     if (this.isDisposed || this.running) {
@@ -4674,6 +4696,7 @@ var Scope = class _Scope {
   computedValues = /* @__PURE__ */ new Map();
   root;
   listeners = /* @__PURE__ */ new Map();
+  dependencyListeners = /* @__PURE__ */ new Map();
   anyListeners = /* @__PURE__ */ new Set();
   reactiveProxies = /* @__PURE__ */ new WeakMap();
   isEachItem = false;
@@ -4784,7 +4807,7 @@ var Scope = class _Scope {
     if (!root) {
       return;
     }
-    const nextValue = unwrapProxy(value);
+    const nextValue = value && typeof value === "object" && proxyToRaw.has(value) ? value : unwrapProxy(value);
     if (parts.length === 1) {
       if (scopeForSet.computedValues.has(root)) {
         throw new Error(`Cannot assign to computed state '${root}'`);
@@ -4849,6 +4872,35 @@ var Scope = class _Scope {
       this.listeners.delete(key);
     }
   }
+  /** @internal Subscribe to an exact read and to replacements of its parents. */
+  onDependency(path, handler) {
+    const key = path.trim();
+    if (!key) {
+      return;
+    }
+    const set = this.dependencyListeners.get(key) ?? /* @__PURE__ */ new Set();
+    if (!Array.from(set).some((entry) => entry.active && entry.handler === handler)) {
+      set.add({ handler, active: true });
+    }
+    this.dependencyListeners.set(key, set);
+  }
+  /** @internal Remove an exact dependency subscription. */
+  offDependency(path, handler) {
+    const key = path.trim();
+    const set = this.dependencyListeners.get(key);
+    if (!set) {
+      return;
+    }
+    for (const entry of set) {
+      if (entry.handler === handler) {
+        entry.active = false;
+        set.delete(entry);
+      }
+    }
+    if (set.size === 0) {
+      this.dependencyListeners.delete(key);
+    }
+  }
   onAny(handler) {
     if (!Array.from(this.anyListeners).some((entry) => entry.active && entry.handler === handler)) {
       this.anyListeners.add({ handler, active: true });
@@ -4867,6 +4919,12 @@ var Scope = class _Scope {
     if (!key) {
       return;
     }
+    const dependencyHandlers = /* @__PURE__ */ new Set();
+    for (const [watchedPath, listeners] of this.dependencyListeners.entries()) {
+      if (watchedPath === key || watchedPath.startsWith(`${key}.`)) {
+        listeners.forEach((handler) => dependencyHandlers.add(handler));
+      }
+    }
     const handlers = /* @__PURE__ */ new Set();
     for (const [watchedPath, listeners] of this.listeners.entries()) {
       if (watchedPath === key || watchedPath.startsWith(`${key}.`) || key.startsWith(`${watchedPath}.`)) {
@@ -4874,6 +4932,7 @@ var Scope = class _Scope {
       }
     }
     batch(() => {
+      dependencyHandlers.forEach((entry) => notifyListener(entry));
       handlers.forEach((entry) => notifyListener(entry));
       this.anyListeners.forEach((entry) => notifyListener(entry));
     });
@@ -4911,9 +4970,10 @@ var Scope = class _Scope {
       if (!key) {
         return void 0;
       }
-      value = unwrapProxy(value)[key];
+      const target = value && typeof value === "object" && proxyToRaw.has(value) ? value : unwrapProxy(value);
+      value = target[key];
     }
-    return unwrapProxy(value);
+    return value && typeof value === "object" && proxyToRaw.has(value) ? value : unwrapProxy(value);
   }
   findNearestScopeWithKey(start, path) {
     const root = path.split(".")[0];
@@ -4930,6 +4990,9 @@ var Scope = class _Scope {
     return void 0;
   }
   wrapValue(value, path) {
+    if (value && typeof value === "object" && proxyToRaw.has(value)) {
+      return value;
+    }
     const rawValue = unwrapProxy(value);
     if (!isReactiveContainer(rawValue)) {
       return value;
@@ -4966,7 +5029,12 @@ var Scope = class _Scope {
         trackScopeRead(scope, propertyPath);
         return scope.wrapValue(nextValue, propertyPath);
       },
+      ownKeys(target) {
+        trackScopeRead(scope, scope.appendPath(path, reactiveKeysProperty));
+        return Reflect.ownKeys(target);
+      },
       set(target, property, nextValue) {
+        const hadProperty = Reflect.has(target, property);
         const rawNextValue = unwrapProxy(nextValue);
         const previousValue = Reflect.get(target, property, target);
         const previousLength = Array.isArray(target) ? target.length : void 0;
@@ -4977,6 +5045,9 @@ var Scope = class _Scope {
         if (!Object.is(previousValue, rawNextValue)) {
           const propertyPath = typeof property === "string" ? scope.appendPath(path, property) : path;
           scope.emitChange(propertyPath);
+          if (!hadProperty) {
+            scope.emitChange(scope.appendPath(path, reactiveKeysProperty));
+          }
           if (Array.isArray(target) && previousLength !== target.length) {
             scope.emitChange(scope.appendPath(path, "length"));
           }
@@ -4989,10 +5060,12 @@ var Scope = class _Scope {
         if (success && existed) {
           const propertyPath = typeof property === "string" ? scope.appendPath(path, property) : path;
           scope.emitChange(propertyPath);
+          scope.emitChange(scope.appendPath(path, reactiveKeysProperty));
         }
         return success;
       },
       defineProperty(target, property, descriptor) {
+        const hadProperty = Reflect.has(target, property);
         const previousLength = Array.isArray(target) ? target.length : void 0;
         const nextDescriptor = { ...descriptor };
         if ("value" in nextDescriptor) {
@@ -5002,6 +5075,9 @@ var Scope = class _Scope {
         if (success) {
           const propertyPath = typeof property === "string" ? scope.appendPath(path, property) : path;
           scope.emitChange(propertyPath);
+          if (!hadProperty) {
+            scope.emitChange(scope.appendPath(path, reactiveKeysProperty));
+          }
           if (Array.isArray(target) && previousLength !== target.length) {
             scope.emitChange(scope.appendPath(path, "length"));
           }
@@ -5038,7 +5114,7 @@ function effect(scope, callback, options) {
   if (typeof callback !== "function") {
     throw new TypeError("Effects require a callback function");
   }
-  const reactiveEffect = new ReactiveEffect(scope, callback, options?.lifetime);
+  const reactiveEffect = new ReactiveEffect(scope, callback, options?.lifetime, options?.scheduler);
   return () => reactiveEffect.dispose();
 }
 
@@ -6896,170 +6972,17 @@ var Engine = class _Engine {
     }
     this.watch(scope, expr, effectiveHandler, element, behaviorId, owner);
   }
-  watchExpression(scope, rootScope, expression, handler, debounceMs, element, behaviorId, lifetime) {
-    const dependencies = this.getExpressionDependencies(expression);
-    if (dependencies.length === 0) {
-      return;
-    }
-    const effectiveHandler = debounceMs ? debounce(handler, debounceMs) : handler;
-    const owner = lifetime ?? (element ? this.getInlineLifetime(element) : void 0);
-    if (debounceMs && owner) {
-      owner.onCleanup(effectiveHandler.cancel);
-    }
-    for (const dependency of dependencies) {
-      this.watchExpressionDependency(
-        scope,
-        rootScope,
-        dependency,
-        effectiveHandler,
-        element,
-        behaviorId,
-        owner
-      );
-    }
-  }
-  getExpressionDependencies(expression) {
-    const dependencies = /* @__PURE__ */ new Set();
-    const visit = (node) => {
-      if (!node || typeof node !== "object") {
-        return;
-      }
-      if (node instanceof IdentifierExpression) {
-        if (node.name !== "self" && node.name !== "signal") {
-          dependencies.add(node.name);
-        }
-        return;
-      }
-      if (node.type === "MemberExpression") {
-        const path = node.getIdentifierPath?.()?.path;
-        if (path) {
-          dependencies.add(path);
-          return;
-        }
-        visit(node.target);
-        return;
-      }
-      switch (node.type) {
-        case "Assignment":
-          visit(node.target);
-          visit(node.value);
-          return;
-        case "ArrayExpression":
-          for (const element of node.elements ?? []) {
-            visit(element);
-          }
-          return;
-        case "ObjectExpression":
-          for (const entry of node.entries ?? []) {
-            if (entry?.spread) {
-              visit(entry.spread);
-              continue;
-            }
-            if (entry?.computed) {
-              visit(entry.keyExpr);
-            }
-            visit(entry?.value);
-          }
-          return;
-        case "ElementDirective":
-        case "ElementProperty":
-          visit(node.element);
-          return;
-        case "TemplateExpression":
-          for (const part of node.parts ?? []) {
-            visit(part);
-          }
-          return;
-        case "TaggedTemplateExpression":
-          visit(node.tag);
-          visit(node.template);
-          return;
-        case "UnaryExpression":
-        case "AwaitExpression":
-          visit(node.argument);
-          return;
-        case "BinaryExpression":
-          visit(node.left);
-          visit(node.right);
-          return;
-        case "TernaryExpression":
-          visit(node.test);
-          visit(node.consequent);
-          visit(node.alternate);
-          return;
-        case "CallExpression":
-          visit(node.callee);
-          for (const arg of node.args ?? []) {
-            visit(arg);
-          }
-          return;
-        case "IndexExpression":
-          visit(node.target);
-          visit(node.index);
-          return;
-        default:
-          return;
-      }
-    };
-    visit(expression);
-    return Array.from(dependencies);
-  }
-  watchExpressionDependency(scope, rootScope, dependency, handler, element, behaviorId, lifetime) {
-    const path = dependency.trim();
-    if (!path) {
-      return;
-    }
-    if (path.startsWith("root.")) {
-      const target = rootScope ?? this.getRootScope(scope);
-      this.watchDirectScope(target, path.slice("root.".length), handler, element, behaviorId, lifetime);
-      return;
-    }
-    if (path.startsWith("parent.")) {
-      let target = scope;
-      let targetPath = path;
-      while (targetPath.startsWith("parent.")) {
-        target = target?.parent;
-        targetPath = targetPath.slice("parent.".length);
-      }
-      if (target) {
-        this.watchDirectScope(target, targetPath, handler, element, behaviorId, lifetime);
-      }
-      return;
-    }
-    if (path.startsWith("self.")) {
-      this.watchDirectScope(scope, path.slice("self.".length), handler, element, behaviorId, lifetime);
-      return;
-    }
-    const root = path.split(".")[0];
-    if (!root || !this.hasScopeKey(scope, root) && root in this.globals) {
-      return;
-    }
-    this.watch(scope, path, handler, element, behaviorId, lifetime);
-  }
-  watchDirectScope(scope, path, handler, element, behaviorId, lifetime) {
-    if (!scope || !path) {
-      return;
-    }
-    scope.on(path, handler);
-    const owner = lifetime ?? (element ? this.getInlineLifetime(element) : void 0);
-    this.trackScopeWatcher(scope, "path", handler, path, owner);
-  }
-  hasScopeKey(scope, key) {
-    let cursor = scope;
-    while (cursor) {
-      if (cursor.hasKey(key)) {
-        return true;
-      }
-      cursor = cursor.parent;
-    }
-    return false;
-  }
-  getRootScope(scope) {
-    let root = scope;
-    while (root.parent) {
-      root = root.parent;
-    }
-    return root;
+  watchExpression(scope, handler, debounceMs, lifetime) {
+    const owner = lifetime;
+    const scheduler = debounceMs ? (run) => {
+      const scheduled = debounce(run, debounceMs);
+      scheduled();
+      return scheduled.cancel;
+    } : void 0;
+    effect(scope, () => handler(), {
+      ...owner ? { lifetime: owner } : {},
+      ...scheduler ? { scheduler } : {}
+    });
   }
   trackScopeWatcher(scope, kind, handler, key, lifetime) {
     if (!lifetime) {
@@ -8208,15 +8131,9 @@ var Engine = class _Engine {
       this.applyDirectiveToScope(element, target, exprIdentifier, scope, debounceMs, rootScope, transform, lifetime);
     }
     if (!exprIdentifier) {
-      const value = await declaration.value.evaluate(context);
-      if (lifetime.isDisposed) {
-        return;
-      }
-      const transformed = this.applyCustomFlagTransforms(value, element, scope, declaration, lifetime);
-      this.setDirectiveValue(element, target, transformed, declaration);
       const shouldWatch2 = operator === ":<" || operator === ":=";
       if (shouldWatch2) {
-        this.applyDirectiveFromExpression(
+        await this.applyDirectiveFromExpression(
           element,
           target,
           declaration.value,
@@ -8225,8 +8142,16 @@ var Engine = class _Engine {
           rootScope,
           declaration,
           behaviorId,
-          lifetime
+          lifetime,
+          transform
         );
+      } else {
+        const value = await declaration.value.evaluate(context);
+        if (lifetime.isDisposed) {
+          return;
+        }
+        const transformed = this.applyCustomFlagTransforms(value, element, scope, declaration, lifetime);
+        this.setDirectiveValue(element, target, transformed, declaration);
       }
       if (declaration.flags.important && importantKey) {
         this.markImportant(element, importantKey);
@@ -8380,7 +8305,7 @@ var Engine = class _Engine {
       this.watchWithDebounce(sourceScope, watchExpr, handler, debounceMs, element, behaviorId, lifetime);
     }
   }
-  applyDirectiveFromExpression(element, target, expr, scope, debounceMs, rootScope, binding, behaviorId, lifetime) {
+  async applyDirectiveFromExpression(element, target, expr, scope, debounceMs, rootScope, binding, behaviorId, lifetime, transform) {
     let version = 0;
     if (lifetime) {
       this.trackBehaviorInvalidator(() => {
@@ -8403,32 +8328,40 @@ var Engine = class _Engine {
         self: selfRef,
         ...lifetime ? { lifetime, signal: lifetime.signal } : {}
       };
-      const value = await expr.evaluate(context);
-      if (currentVersion !== version || lifetime?.isDisposed) {
-        return;
+      const applyValue = (value) => {
+        if (currentVersion !== version || lifetime?.isDisposed) {
+          return;
+        }
+        const transformed = transform ? transform(value) : value;
+        this.setDirectiveValue(element, target, transformed, binding);
+      };
+      const evaluated = expr.evaluate(context);
+      if (isPromiseLike2(evaluated)) {
+        applyValue(await evaluated);
+      } else {
+        applyValue(evaluated);
       }
-      this.setDirectiveValue(element, target, value, binding);
+    };
+    let firstRun;
+    const reportError = (error) => {
+      if (!lifetime?.signal.aborted && !isAbortError(error)) {
+        this.emitError(element, error);
+      }
     };
     const run = () => {
-      void handler().catch((error) => {
-        if (!lifetime?.signal.aborted && !isAbortError(error)) {
-          this.emitError(element, error);
-        }
-      });
+      const pending = handler();
+      if (!firstRun) {
+        firstRun = pending.catch((error) => {
+          reportError(error);
+        });
+        return;
+      }
+      void pending.catch(reportError);
     };
-    run();
-    this.watchExpression(
-      scope,
-      rootScope,
-      expr,
-      () => {
-        run();
-      },
-      debounceMs,
-      element,
-      behaviorId,
-      lifetime
-    );
+    this.watchExpression(scope, run, debounceMs, lifetime);
+    if (firstRun) {
+      await firstRun;
+    }
   }
   applyDirectiveToScope(element, target, expr, scope, debounceMs, rootScope, transform, lifetime) {
     const useRoot = expr.startsWith("root.") && rootScope;

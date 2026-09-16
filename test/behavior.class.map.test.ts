@@ -68,6 +68,15 @@ describe("behavior class maps", () => {
     expect(item.classList.contains("first")).toBe(false);
     expect(item.classList.contains("second")).toBe(true);
     expect(item.classList.contains("item")).toBe(true);
+
+    const classes = scope.get("classes") as Record<string, boolean>;
+    classes.third = true;
+    await tick();
+    expect(item.classList.contains("third")).toBe(true);
+
+    delete classes.second;
+    await tick();
+    expect(item.classList.contains("second")).toBe(false);
   });
 
   it("preserves static classes when an expression-backed map becomes null", async () => {

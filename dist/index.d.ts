@@ -606,6 +606,10 @@ type Listener = () => void;
 type ReactiveOptions = {
     lifetime?: Lifetime;
 };
+type ReactiveScheduler = (run: () => void) => Disposer | void;
+type EffectOptions = ReactiveOptions & {
+    scheduler?: ReactiveScheduler;
+};
 type ComputedGetter<T> = (scope: Scope) => T;
 type EffectCallback = (scope: Scope) => void | Disposer;
 interface ComputedRef<T> {
@@ -626,6 +630,7 @@ declare class Scope {
     private computedValues;
     private root;
     private listeners;
+    private dependencyListeners;
     private anyListeners;
     private reactiveProxies;
     isEachItem: boolean;
@@ -637,12 +642,16 @@ declare class Scope {
     batch<T>(callback: () => T): T;
     computed<T>(getter: ComputedGetter<T>, options?: ReactiveOptions): ComputedRef<T>;
     computed<T>(name: string, getter: ComputedGetter<T>, options?: ReactiveOptions): ComputedRef<T>;
-    effect(callback: EffectCallback, options?: ReactiveOptions): Disposer;
+    effect(callback: EffectCallback, options?: EffectOptions): Disposer;
     hasKey(path: string): boolean;
     getPath(path: string): any;
     setPath(path: string, value: any): void;
     on(path: string, handler: () => void): void;
     off(path: string, handler: () => void): void;
+    /** @internal Subscribe to an exact read and to replacements of its parents. */
+    onDependency(path: string, handler: () => void): void;
+    /** @internal Remove an exact dependency subscription. */
+    offDependency(path: string, handler: () => void): void;
     onAny(handler: () => void): void;
     offAny(handler: () => void): void;
     private emitChange;
@@ -653,7 +662,7 @@ declare class Scope {
     private appendPath;
 }
 declare function computed<T>(scope: Scope, getter: ComputedGetter<T>, options?: ReactiveOptions): ComputedRef<T>;
-declare function effect(scope: Scope, callback: EffectCallback, options?: ReactiveOptions): Disposer;
+declare function effect(scope: Scope, callback: EffectCallback, options?: EffectOptions): Disposer;
 
 interface RegisteredBehavior {
     id: number;
@@ -847,7 +856,7 @@ declare class Engine {
     get signal(): AbortSignal;
     batch<T>(callback: () => T): T;
     computed<T>(scope: Scope, getter: ComputedGetter<T>, options?: ReactiveOptions): ComputedRef<T>;
-    effect(scope: Scope, callback: EffectCallback, options?: ReactiveOptions): Disposer;
+    effect(scope: Scope, callback: EffectCallback, options?: EffectOptions): Disposer;
     dispose(): void;
     private getInlineLifetime;
     private resetInlineLifetime;
@@ -898,11 +907,6 @@ declare class Engine {
     private watch;
     private watchWithDebounce;
     private watchExpression;
-    private getExpressionDependencies;
-    private watchExpressionDependency;
-    private watchDirectScope;
-    private hasScopeKey;
-    private getRootScope;
     private trackScopeWatcher;
     private trackBehaviorClassMapBinding;
     private trackBehaviorInvalidator;
@@ -978,4 +982,4 @@ declare const VERSION: string;
 declare function parseCFS(source: string): ProgramNode;
 declare function autoMount(root?: HTMLElement | Document): Engine | null;
 
-export { type ArrayElement, ArrayExpression, ArrayPattern, type ArrayPatternElement, AssertError, AssertNode, AssignmentNode, type AssignmentTarget, type AttributeHandler, type AttributeHandlerContext, AwaitExpression, BaseNode, type BehaviorFlagArgs, type BehaviorFlags, type BehaviorModifierContext, type BehaviorModifierHandler, BehaviorNode, BinaryExpression, BlockNode, BreakNode, type CFSNode, CallExpression, type ComputedGetter, type ComputedRef, ContinueNode, type DeclarationFlagArgs, type DeclarationFlags, DeclarationNode, type DeclarationTarget, DirectiveExpression, type Disposer, type EffectCallback, ElementDirectiveExpression, ElementPropertyExpression, ElementRefExpression, Engine, type EngineOptions, type EventBindPatch, type EventFlagContext, type ExecutionContext, type ExpressionNode, type FlagApplyContext, type FlagHandler, ForEachNode, ForNode, FunctionDeclarationNode, FunctionExpression, type FunctionParam, type HtmlSetOptions, type HtmlTransformContext, type HtmlTransformOptions, type HtmlTransformer, IdentifierExpression, IfNode, IndexExpression, Lexer, Lifetime, LiteralExpression, MemberExpression, type ObjectEntry, ObjectExpression, ObjectPattern, type ObjectPatternEntry, OnBlockNode, Parser, type PatternNode, ProgramNode, QueryExpression, type ReactiveOptions, type RegisteredBehavior, RestElement, ReturnNode, Scope, SelectorNode, SpreadElement, TaggedTemplateExpression, TemplateExpression, TernaryExpression, TokenType, TryNode, UnaryExpression, type UseFlagArgs, type UseFlags, UseNode, VERSION, WhileNode, autoMount, batch, computed, effect, isAbortError, parseCFS, throwIfAborted };
+export { type ArrayElement, ArrayExpression, ArrayPattern, type ArrayPatternElement, AssertError, AssertNode, AssignmentNode, type AssignmentTarget, type AttributeHandler, type AttributeHandlerContext, AwaitExpression, BaseNode, type BehaviorFlagArgs, type BehaviorFlags, type BehaviorModifierContext, type BehaviorModifierHandler, BehaviorNode, BinaryExpression, BlockNode, BreakNode, type CFSNode, CallExpression, type ComputedGetter, type ComputedRef, ContinueNode, type DeclarationFlagArgs, type DeclarationFlags, DeclarationNode, type DeclarationTarget, DirectiveExpression, type Disposer, type EffectCallback, type EffectOptions, ElementDirectiveExpression, ElementPropertyExpression, ElementRefExpression, Engine, type EngineOptions, type EventBindPatch, type EventFlagContext, type ExecutionContext, type ExpressionNode, type FlagApplyContext, type FlagHandler, ForEachNode, ForNode, FunctionDeclarationNode, FunctionExpression, type FunctionParam, type HtmlSetOptions, type HtmlTransformContext, type HtmlTransformOptions, type HtmlTransformer, IdentifierExpression, IfNode, IndexExpression, Lexer, Lifetime, LiteralExpression, MemberExpression, type ObjectEntry, ObjectExpression, ObjectPattern, type ObjectPatternEntry, OnBlockNode, Parser, type PatternNode, ProgramNode, QueryExpression, type ReactiveOptions, type ReactiveScheduler, type RegisteredBehavior, RestElement, ReturnNode, Scope, SelectorNode, SpreadElement, TaggedTemplateExpression, TemplateExpression, TernaryExpression, TokenType, TryNode, UnaryExpression, type UseFlagArgs, type UseFlags, UseNode, VERSION, WhileNode, autoMount, batch, computed, effect, isAbortError, parseCFS, throwIfAborted };

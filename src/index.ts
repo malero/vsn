@@ -15,7 +15,9 @@ export type {
   ComputedGetter,
   ComputedRef,
   EffectCallback,
-  ReactiveOptions
+  EffectOptions,
+  ReactiveOptions,
+  ReactiveScheduler
 } from "./runtime/scope";
 export { isAbortError, Lifetime, throwIfAborted } from "./runtime/lifetime";
 export type { Disposer } from "./runtime/lifetime";

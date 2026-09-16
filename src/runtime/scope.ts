@@ -11,6 +11,12 @@ export type ReactiveOptions = {
   lifetime?: Lifetime;
 };
 
+export type ReactiveScheduler = (run: () => void) => Disposer | void;
+
+export type EffectOptions = ReactiveOptions & {
+  scheduler?: ReactiveScheduler;
+};
+
 export type ComputedGetter<T> = (scope: Scope) => T;
 
 export type EffectCallback = (scope: Scope) => void | Disposer;
@@ -34,6 +40,7 @@ const arrayMutators = new Set([
   "splice",
   "unshift"
 ]);
+const reactiveKeysProperty = "\u0000keys";
 let batchDepth = 0;
 let flushing = false;
 const pendingListeners = new Map<Listener, Set<ListenerEntry>>();
@@ -215,7 +222,7 @@ abstract class ReactiveTracker implements ReactiveTrackingTarget {
     this.isDisposed = true;
     for (const [scope, paths] of this.scopeDependencies) {
       for (const path of paths) {
-        scope.off(path, this.invalidateListener);
+        scope.offDependency(path, this.invalidateListener);
       }
     }
     this.scopeDependencies.clear();
@@ -231,7 +238,7 @@ abstract class ReactiveTracker implements ReactiveTrackingTarget {
     }
     for (const [scope, paths] of this.scopeDependencies) {
       for (const path of paths) {
-        scope.off(path, this.invalidateListener);
+        scope.offDependency(path, this.invalidateListener);
       }
     }
     this.scopeDependencies = this.nextScopeDependencies;
@@ -252,7 +259,7 @@ abstract class ReactiveTracker implements ReactiveTrackingTarget {
     this.computedDependencies = nextComputedDependencies;
     for (const [scope, paths] of this.scopeDependencies) {
       for (const path of paths) {
-        scope.on(path, this.invalidateListener);
+        scope.onDependency(path, this.invalidateListener);
       }
     }
   }
@@ -378,11 +385,13 @@ class ReactiveEffect extends ReactiveTracker {
   private rerunRequested = false;
   private cleanup: Disposer | undefined;
   private removeLifetime: Disposer | undefined;
+  private scheduledCleanup: Disposer | undefined;
 
   constructor(
     private readonly scope: Scope,
     private readonly callback: EffectCallback,
-    lifetime?: Lifetime
+    lifetime?: Lifetime,
+    private readonly scheduler?: ReactiveScheduler
   ) {
     super();
     if (lifetime) {
@@ -400,6 +409,7 @@ class ReactiveEffect extends ReactiveTracker {
     if (this.isDisposed) {
       return;
     }
+    this.cancelScheduled();
     this.removeLifetime?.();
     this.removeLifetime = undefined;
     this.disposeTracking();
@@ -416,7 +426,26 @@ class ReactiveEffect extends ReactiveTracker {
       this.rerunRequested = true;
       return;
     }
+    if (this.scheduler) {
+      this.cancelScheduled();
+      let completed = false;
+      const remove = this.scheduler(() => {
+        completed = true;
+        this.scheduledCleanup = undefined;
+        this.run();
+      });
+      if (!completed && typeof remove === "function") {
+        this.scheduledCleanup = remove;
+      }
+      return;
+    }
     this.run();
+  }
+
+  private cancelScheduled(): void {
+    const cleanup = this.scheduledCleanup;
+    this.scheduledCleanup = undefined;
+    cleanup?.();
   }
 
   private run(): void {
@@ -468,6 +497,7 @@ export class Scope {
   private computedValues = new Map<string, ComputedState<any>>();
   private root: Scope;
   private listeners = new Map<string, Set<ListenerEntry>>();
+  private dependencyListeners = new Map<string, Set<ListenerEntry>>();
   private anyListeners = new Set<ListenerEntry>();
   private reactiveProxies = new WeakMap<object, Map<string, object>>();
   public isEachItem = false;
@@ -545,7 +575,7 @@ export class Scope {
     return state;
   }
 
-  effect(callback: EffectCallback, options?: ReactiveOptions): Disposer {
+  effect(callback: EffectCallback, options?: EffectOptions): Disposer {
     return effect(this, callback, options);
   }
 
@@ -602,7 +632,9 @@ export class Scope {
     if (!root) {
       return;
     }
-    const nextValue = unwrapProxy(value);
+    const nextValue = value && typeof value === "object" && proxyToRaw.has(value)
+      ? value
+      : unwrapProxy(value);
     if (parts.length === 1) {
       if (scopeForSet.computedValues.has(root)) {
         throw new Error(`Cannot assign to computed state '${root}'`);
@@ -670,6 +702,37 @@ export class Scope {
     }
   }
 
+  /** @internal Subscribe to an exact read and to replacements of its parents. */
+  onDependency(path: string, handler: () => void): void {
+    const key = path.trim();
+    if (!key) {
+      return;
+    }
+    const set = this.dependencyListeners.get(key) ?? new Set<ListenerEntry>();
+    if (!Array.from(set).some((entry) => entry.active && entry.handler === handler)) {
+      set.add({ handler, active: true });
+    }
+    this.dependencyListeners.set(key, set);
+  }
+
+  /** @internal Remove an exact dependency subscription. */
+  offDependency(path: string, handler: () => void): void {
+    const key = path.trim();
+    const set = this.dependencyListeners.get(key);
+    if (!set) {
+      return;
+    }
+    for (const entry of set) {
+      if (entry.handler === handler) {
+        entry.active = false;
+        set.delete(entry);
+      }
+    }
+    if (set.size === 0) {
+      this.dependencyListeners.delete(key);
+    }
+  }
+
   onAny(handler: () => void): void {
     if (!Array.from(this.anyListeners).some((entry) => entry.active && entry.handler === handler)) {
       this.anyListeners.add({ handler, active: true });
@@ -691,6 +754,13 @@ export class Scope {
       return;
     }
 
+    const dependencyHandlers = new Set<ListenerEntry>();
+    for (const [watchedPath, listeners] of this.dependencyListeners.entries()) {
+      if (watchedPath === key || watchedPath.startsWith(`${key}.`)) {
+        listeners.forEach((handler) => dependencyHandlers.add(handler));
+      }
+    }
+
     const handlers = new Set<ListenerEntry>();
     for (const [watchedPath, listeners] of this.listeners.entries()) {
       if (
@@ -702,6 +772,7 @@ export class Scope {
       }
     }
     batch(() => {
+      dependencyHandlers.forEach((entry) => notifyListener(entry));
       handlers.forEach((entry) => notifyListener(entry));
       this.anyListeners.forEach((entry) => notifyListener(entry));
     });
@@ -741,9 +812,14 @@ export class Scope {
       if (!key) {
         return undefined;
       }
-      value = unwrapProxy(value)[key];
+      const target = value && typeof value === "object" && proxyToRaw.has(value)
+        ? value
+        : unwrapProxy(value);
+      value = target[key];
     }
-    return unwrapProxy(value);
+    return value && typeof value === "object" && proxyToRaw.has(value)
+      ? value
+      : unwrapProxy(value);
   }
 
   private findNearestScopeWithKey(start: Scope, path: string): Scope | undefined {
@@ -762,6 +838,9 @@ export class Scope {
   }
 
   private wrapValue<T>(value: T, path: string): T {
+    if (value && typeof value === "object" && proxyToRaw.has(value)) {
+      return value;
+    }
     const rawValue = unwrapProxy(value);
     if (!isReactiveContainer(rawValue)) {
       return value;
@@ -799,7 +878,12 @@ export class Scope {
         trackScopeRead(scope, propertyPath);
         return scope.wrapValue(nextValue, propertyPath);
       },
+      ownKeys(target) {
+        trackScopeRead(scope, scope.appendPath(path, reactiveKeysProperty));
+        return Reflect.ownKeys(target);
+      },
       set(target, property, nextValue) {
+        const hadProperty = Reflect.has(target, property);
         const rawNextValue = unwrapProxy(nextValue);
         const previousValue = Reflect.get(target, property, target);
         const previousLength = Array.isArray(target) ? target.length : undefined;
@@ -812,6 +896,9 @@ export class Scope {
             ? scope.appendPath(path, property)
             : path;
           scope.emitChange(propertyPath);
+          if (!hadProperty) {
+            scope.emitChange(scope.appendPath(path, reactiveKeysProperty));
+          }
           if (Array.isArray(target) && previousLength !== target.length) {
             scope.emitChange(scope.appendPath(path, "length"));
           }
@@ -826,10 +913,12 @@ export class Scope {
             ? scope.appendPath(path, property)
             : path;
           scope.emitChange(propertyPath);
+          scope.emitChange(scope.appendPath(path, reactiveKeysProperty));
         }
         return success;
       },
       defineProperty(target, property, descriptor) {
+        const hadProperty = Reflect.has(target, property);
         const previousLength = Array.isArray(target) ? target.length : undefined;
         const nextDescriptor = { ...descriptor };
         if ("value" in nextDescriptor) {
@@ -841,6 +930,9 @@ export class Scope {
             ? scope.appendPath(path, property)
             : path;
           scope.emitChange(propertyPath);
+          if (!hadProperty) {
+            scope.emitChange(scope.appendPath(path, reactiveKeysProperty));
+          }
           if (Array.isArray(target) && previousLength !== target.length) {
             scope.emitChange(scope.appendPath(path, "length"));
           }
@@ -880,7 +972,7 @@ export function computed<T>(
 export function effect(
   scope: Scope,
   callback: EffectCallback,
-  options?: ReactiveOptions
+  options?: EffectOptions
 ): Disposer {
   if (!(scope instanceof Scope)) {
     throw new TypeError("Effects require a Scope");
@@ -888,6 +980,6 @@ export function effect(
   if (typeof callback !== "function") {
     throw new TypeError("Effects require a callback function");
   }
-  const reactiveEffect = new ReactiveEffect(scope, callback, options?.lifetime);
+  const reactiveEffect = new ReactiveEffect(scope, callback, options?.lifetime, options?.scheduler);
   return () => reactiveEffect.dispose();
 }
