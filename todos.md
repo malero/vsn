@@ -9,8 +9,8 @@ HTML-first, selector-driven character. The priority labels are directional:
 
 ## P0 — Runtime foundations
 
-- [ ] Make reactivity reliable for nested objects and arrays. Decide between
-  observable proxies/signals and an explicit immutable-update API.
+- [x] Make reactivity reliable for nested objects and arrays using observable
+  proxies while retaining the explicit `setPath()` update API.
 - [ ] Add `batch()`/transaction support so several state writes produce one
   reactive flush.
 - [ ] Add first-class computed/derived state and effects instead of requiring

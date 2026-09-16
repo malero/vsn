@@ -4355,6 +4355,26 @@ ${caret}`;
 };
 
 // src/runtime/scope.ts
+var proxyToRaw = /* @__PURE__ */ new WeakMap();
+function isReactiveContainer(value) {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+  if (Array.isArray(value)) {
+    return true;
+  }
+  const prototype = Object.getPrototypeOf(value);
+  return prototype === Object.prototype || prototype === null;
+}
+function unwrapProxy(value) {
+  let current = value;
+  let raw = current && typeof current === "object" ? proxyToRaw.get(current) : void 0;
+  while (raw && raw !== current) {
+    current = raw;
+    raw = current && typeof current === "object" ? proxyToRaw.get(current) : void 0;
+  }
+  return current;
+}
 var Scope = class _Scope {
   constructor(parent) {
     this.parent = parent;
@@ -4364,6 +4384,7 @@ var Scope = class _Scope {
   root;
   listeners = /* @__PURE__ */ new Map();
   anyListeners = /* @__PURE__ */ new Set();
+  reactiveProxies = /* @__PURE__ */ new WeakMap();
   isEachItem = false;
   createChild() {
     return new _Scope(this);
@@ -4397,13 +4418,13 @@ var Scope = class _Scope {
     }
     const localValue = this.getLocalPathValue(targetScope, targetPath);
     if (explicit || targetScope.hasKey(targetPath)) {
-      return localValue;
+      return targetScope.wrapValue(localValue, targetPath);
     }
     let cursor = targetScope.parent;
     while (cursor) {
       const value = this.getLocalPathValue(cursor, targetPath);
       if (cursor.hasKey(targetPath)) {
-        return value;
+        return cursor.wrapValue(value, targetPath);
       }
       cursor = cursor.parent;
     }
@@ -4421,12 +4442,13 @@ var Scope = class _Scope {
     if (!root) {
       return;
     }
+    const nextValue = unwrapProxy(value);
     if (parts.length === 1) {
-      scopeForSet.data.set(root, value);
+      scopeForSet.data.set(root, nextValue);
       scopeForSet.emitChange(targetPath);
       return;
     }
-    let obj = scopeForSet.data.get(root);
+    let obj = unwrapProxy(scopeForSet.data.get(root));
     if (obj == null || typeof obj !== "object") {
       obj = {};
       scopeForSet.data.set(root, obj);
@@ -4437,8 +4459,11 @@ var Scope = class _Scope {
       if (!key) {
         return;
       }
-      if (cursor[key] == null || typeof cursor[key] !== "object") {
+      const current = unwrapProxy(cursor[key]);
+      if (current == null || typeof current !== "object") {
         cursor[key] = {};
+      } else if (current !== cursor[key]) {
+        cursor[key] = current;
       }
       cursor = cursor[key];
     }
@@ -4446,7 +4471,7 @@ var Scope = class _Scope {
     if (!lastKey) {
       return;
     }
-    cursor[lastKey] = value;
+    cursor[lastKey] = nextValue;
     scopeForSet.emitChange(targetPath);
   }
   on(path, handler) {
@@ -4480,12 +4505,14 @@ var Scope = class _Scope {
     if (!key) {
       return;
     }
-    this.listeners.get(key)?.forEach((fn) => fn());
-    const rootKey = key.split(".")[0];
-    if (rootKey && rootKey !== key) {
-      this.listeners.get(rootKey)?.forEach((fn) => fn());
+    const handlers = /* @__PURE__ */ new Set();
+    for (const [watchedPath, listeners] of this.listeners.entries()) {
+      if (watchedPath === key || watchedPath.startsWith(`${key}.`) || key.startsWith(`${watchedPath}.`)) {
+        listeners.forEach((handler) => handlers.add(handler));
+      }
     }
-    this.anyListeners.forEach((fn) => fn());
+    handlers.forEach((handler) => handler());
+    this.anyListeners.forEach((handler) => handler());
   }
   resolveScope(path) {
     let targetScope = this;
@@ -4519,9 +4546,9 @@ var Scope = class _Scope {
       if (!key) {
         return void 0;
       }
-      value = value[key];
+      value = unwrapProxy(value)[key];
     }
-    return value;
+    return unwrapProxy(value);
   }
   findNearestScopeWithKey(start, path) {
     const root = path.split(".")[0];
@@ -4536,6 +4563,87 @@ var Scope = class _Scope {
       cursor = cursor.parent;
     }
     return void 0;
+  }
+  wrapValue(value, path) {
+    const rawValue = unwrapProxy(value);
+    if (!isReactiveContainer(rawValue)) {
+      return value;
+    }
+    const existing = this.reactiveProxies.get(rawValue);
+    const cached = existing?.get(path);
+    if (cached) {
+      return cached;
+    }
+    const scope = this;
+    const proxy = new Proxy(rawValue, {
+      get(target, property, receiver) {
+        if (Array.isArray(target) && property === Symbol.iterator) {
+          return function* iterator() {
+            for (let index = 0; index < target.length; index += 1) {
+              yield scope.wrapValue(target[index], scope.appendPath(path, String(index)));
+            }
+          };
+        }
+        const nextValue = Reflect.get(target, property, receiver);
+        if (typeof property !== "string") {
+          return nextValue;
+        }
+        return scope.wrapValue(nextValue, scope.appendPath(path, property));
+      },
+      set(target, property, nextValue) {
+        const rawNextValue = unwrapProxy(nextValue);
+        const previousValue = Reflect.get(target, property, target);
+        const previousLength = Array.isArray(target) ? target.length : void 0;
+        const success = Reflect.set(target, property, rawNextValue, target);
+        if (!success) {
+          return false;
+        }
+        if (!Object.is(previousValue, rawNextValue)) {
+          const propertyPath = typeof property === "string" ? scope.appendPath(path, property) : path;
+          scope.emitChange(propertyPath);
+          if (Array.isArray(target) && previousLength !== target.length) {
+            scope.emitChange(scope.appendPath(path, "length"));
+          }
+        }
+        return true;
+      },
+      deleteProperty(target, property) {
+        const existed = Reflect.has(target, property);
+        const success = Reflect.deleteProperty(target, property);
+        if (success && existed) {
+          const propertyPath = typeof property === "string" ? scope.appendPath(path, property) : path;
+          scope.emitChange(propertyPath);
+        }
+        return success;
+      },
+      defineProperty(target, property, descriptor) {
+        const previousLength = Array.isArray(target) ? target.length : void 0;
+        const nextDescriptor = { ...descriptor };
+        if ("value" in nextDescriptor) {
+          nextDescriptor.value = unwrapProxy(nextDescriptor.value);
+        }
+        const success = Reflect.defineProperty(target, property, nextDescriptor);
+        if (success) {
+          const propertyPath = typeof property === "string" ? scope.appendPath(path, property) : path;
+          scope.emitChange(propertyPath);
+          if (Array.isArray(target) && previousLength !== target.length) {
+            scope.emitChange(scope.appendPath(path, "length"));
+          }
+        }
+        return success;
+      }
+    });
+    proxyToRaw.set(proxy, rawValue);
+    const cache = existing ?? /* @__PURE__ */ new Map();
+    cache.set(path, proxy);
+    this.reactiveProxies.set(rawValue, cache);
+    return proxy;
+  }
+  appendPath(path, property) {
+    if (!property) {
+      return path;
+    }
+    return path ? `${path}.${property}` : property;
   }
 };
 

@@ -607,6 +607,7 @@ declare class Scope {
     private root;
     private listeners;
     private anyListeners;
+    private reactiveProxies;
     isEachItem: boolean;
     constructor(parent?: Scope | undefined);
     createChild(): Scope;
@@ -624,6 +625,8 @@ declare class Scope {
     private resolveScope;
     private getLocalPathValue;
     private findNearestScopeWithKey;
+    private wrapValue;
+    private appendPath;
 }
 
 interface RegisteredBehavior {
