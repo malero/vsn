@@ -6821,9 +6821,12 @@ var Engine = class _Engine {
     return void 0;
   }
   disposeIfBinding(element, binding) {
+    this.cancelIfTransition(binding);
     binding.active = false;
     binding.mounted = false;
     binding.suspended = true;
+    binding.entering = false;
+    binding.leaving = false;
     this.ifBindings.delete(element);
     if (!binding.lifetime.isDisposed) {
       this.disposeLifetime(element, binding.lifetime);
@@ -6838,6 +6841,173 @@ var Engine = class _Engine {
         this.disposeIfBinding(element, binding);
       }
     }
+  }
+  getIfTransitionName(element) {
+    const value = element.getAttribute("vsn-transition");
+    if (value === null) {
+      return void 0;
+    }
+    const name = value.trim().split(/\s+/)[0] ?? "";
+    if (!name) {
+      return "vsn";
+    }
+    return /^[A-Za-z_][A-Za-z0-9_-]*$/.test(name) ? name : "vsn";
+  }
+  parseCssTimes(value) {
+    if (!value.trim()) {
+      return [];
+    }
+    return value.split(",").map((part) => {
+      const match = part.trim().match(/^(-?(?:\d+\.?\d*|\.\d+))(ms|s)$/);
+      if (!match) {
+        return 0;
+      }
+      const amount = Number(match[1]);
+      return match[2] === "s" ? Math.max(0, amount * 1e3) : Math.max(0, amount);
+    });
+  }
+  getIfTransitionDuration(element) {
+    const view = element.ownerDocument.defaultView;
+    if (!view) {
+      return 0;
+    }
+    const style = view.getComputedStyle(element);
+    const longest = (durationsValue, delaysValue) => {
+      const durations = this.parseCssTimes(durationsValue);
+      const delays = this.parseCssTimes(delaysValue);
+      return durations.reduce((max, duration, index) => {
+        const delay = delays[index % (delays.length || 1)] ?? 0;
+        return Math.max(max, duration + delay);
+      }, 0);
+    };
+    return Math.max(
+      longest(style.transitionDuration, style.transitionDelay),
+      longest(style.animationDuration, style.animationDelay)
+    );
+  }
+  scheduleIfTransitionFrame(element, callback) {
+    const view = element.ownerDocument.defaultView;
+    if (view && typeof view.requestAnimationFrame === "function") {
+      const frame = view.requestAnimationFrame(callback);
+      return () => view.cancelAnimationFrame(frame);
+    }
+    const timer = setTimeout(callback, 0);
+    return () => clearTimeout(timer);
+  }
+  cancelIfTransition(binding) {
+    const transition = binding.transition;
+    if (!transition) {
+      return;
+    }
+    transition.cancel();
+    if (binding.transition === transition) {
+      binding.transition = void 0;
+    }
+  }
+  startIfTransition(element, binding, phase, onFinish) {
+    const name = this.getIfTransitionName(element);
+    if (!name) {
+      onFinish();
+      return;
+    }
+    this.cancelIfTransition(binding);
+    const from = `${name}-${phase}`;
+    const active = `${name}-${phase}-active`;
+    const to = `${name}-${phase}-to`;
+    const addedClasses = [from, active].filter((className) => !element.classList.contains(className));
+    const addToClass = !element.classList.contains(to);
+    element.classList.add(...addedClasses);
+    let finished = false;
+    let frameCancel;
+    let timeout;
+    const onEnd = (event) => {
+      if (event.target === element) {
+        finish();
+      }
+    };
+    const cleanup = () => {
+      frameCancel?.();
+      if (timeout) {
+        clearTimeout(timeout);
+      }
+      element.removeEventListener("transitionend", onEnd);
+      element.removeEventListener("transitioncancel", onEnd);
+      element.removeEventListener("animationend", onEnd);
+      element.removeEventListener("animationcancel", onEnd);
+      element.classList.remove(...addedClasses);
+    };
+    const finish = () => {
+      if (finished) {
+        return;
+      }
+      finished = true;
+      cleanup();
+      if (binding.transition?.cancel === cancel) {
+        binding.transition = void 0;
+        onFinish();
+      }
+    };
+    const cancel = () => {
+      if (finished) {
+        return;
+      }
+      finished = true;
+      cleanup();
+    };
+    const transition = { phase, cancel };
+    binding.transition = transition;
+    element.addEventListener("transitionend", onEnd);
+    element.addEventListener("transitioncancel", onEnd);
+    element.addEventListener("animationend", onEnd);
+    element.addEventListener("animationcancel", onEnd);
+    frameCancel = this.scheduleIfTransitionFrame(element, () => {
+      element.classList.remove(from);
+      if (addToClass) {
+        element.classList.add(to);
+        addedClasses.push(to);
+      }
+      const duration = this.getIfTransitionDuration(element);
+      timeout = setTimeout(finish, duration > 0 ? duration + 50 : 0);
+    });
+  }
+  runIfHook(element, code) {
+    void this.safeExecute(code, this.getScope(element), element, void 0, this.getInlineLifetime(element));
+  }
+  beginIfEnter(element, binding) {
+    if (binding.suspended || !binding.active || !binding.mounted || binding.entering || binding.leaving) {
+      return;
+    }
+    const lifecycle = this.lifecycleBindings.get(element);
+    const transition = this.getIfTransitionName(element);
+    if (!lifecycle?.enter && !transition) {
+      binding.entering = true;
+      return;
+    }
+    binding.entering = true;
+    if (lifecycle?.enter) {
+      this.runIfHook(element, lifecycle.enter);
+    }
+    if (transition) {
+      this.startIfTransition(element, binding, "enter", () => void 0);
+    }
+  }
+  beginIfLeave(element, binding) {
+    const lifecycle = this.lifecycleBindings.get(element);
+    const transition = this.getIfTransitionName(element);
+    if (!lifecycle?.leave && !transition) {
+      return false;
+    }
+    binding.entering = false;
+    binding.leaving = true;
+    if (lifecycle?.leave) {
+      this.runIfHook(element, lifecycle.leave);
+    }
+    if (transition) {
+      this.startIfTransition(element, binding, "leave", () => this.finishDeactivateIf(element, binding));
+    } else {
+      this.finishDeactivateIf(element, binding);
+    }
+    return true;
   }
   ensureIfMarker(element, binding) {
     const parent = element.parentNode;
@@ -6857,8 +7027,11 @@ var Engine = class _Engine {
       if (binding === rootBinding) {
         continue;
       }
+      this.cancelIfTransition(binding);
       binding.suspended = true;
       binding.mounted = false;
+      binding.entering = false;
+      binding.leaving = false;
     }
     const elements = [element, ...Array.from(element.querySelectorAll("*"))];
     for (const current of elements) {
@@ -6886,17 +7059,41 @@ var Engine = class _Engine {
     }
   }
   deactivateIf(element, binding) {
+    if (binding.leaving) {
+      return;
+    }
     const wasMounted = binding.mounted;
     const wasActive = binding.active;
     binding.active = false;
     if (wasMounted || wasActive) {
-      this.suspendIfDescendants(element, binding);
-    } else {
-      const inlineLifetime = this.inlineLifetimes.get(element);
-      if (inlineLifetime && !inlineLifetime.isDisposed) {
-        this.disposeLifetime(element, inlineLifetime);
+      if (this.beginIfLeave(element, binding)) {
+        return;
       }
+      this.finishDeactivateIf(element, binding);
+      return;
     }
+    const inlineLifetime = this.inlineLifetimes.get(element);
+    if (inlineLifetime && !inlineLifetime.isDisposed) {
+      this.disposeLifetime(element, inlineLifetime);
+    }
+    binding.mounted = false;
+    this.ensureIfMarker(element, binding);
+    const parent = element.parentNode;
+    if (!parent) {
+      return;
+    }
+    if (this.observer) {
+      this.ignoredRemoved.set(element, true);
+    }
+    parent.removeChild(element);
+  }
+  finishDeactivateIf(element, binding) {
+    if (this.ifBindings.get(element) !== binding || binding.active) {
+      return;
+    }
+    binding.entering = false;
+    binding.leaving = false;
+    this.suspendIfDescendants(element, binding);
     binding.mounted = false;
     this.ensureIfMarker(element, binding);
     const parent = element.parentNode;
@@ -6910,6 +7107,15 @@ var Engine = class _Engine {
   }
   activateIf(element, binding) {
     if (binding.suspended) {
+      return;
+    }
+    if (binding.leaving) {
+      this.cancelIfTransition(binding);
+      binding.leaving = false;
+      binding.entering = false;
+      binding.active = true;
+      this.beginIfEnter(element, binding);
+      this.resumeIfDescendants(element);
       return;
     }
     binding.active = true;
@@ -6937,7 +7143,7 @@ var Engine = class _Engine {
     this.resumeIfDescendants(element);
   }
   updateIfBinding(element, binding) {
-    if (binding.suspended) {
+    if (binding.suspended || binding.parent && !binding.parent.active) {
       return;
     }
     const active = readCondition(binding.expr, this.getScope(element));
@@ -6966,7 +7172,10 @@ var Engine = class _Engine {
         lifetime: this.engineLifetime.child(),
         active: false,
         mounted: false,
-        suspended: false
+        suspended: false,
+        entering: false,
+        leaving: false,
+        transition: void 0
       };
       this.ifBindings.set(element, binding);
       const createdBinding = binding;
@@ -6997,7 +7206,10 @@ var Engine = class _Engine {
     const ifBinding = this.ifBindings.get(element);
     if (ifBinding) {
       if (options.preserveIfController) {
+        this.cancelIfTransition(ifBinding);
         ifBinding.mounted = false;
+        ifBinding.entering = false;
+        ifBinding.leaving = false;
       } else {
         this.disposeIfBinding(element, ifBinding);
       }
@@ -7264,11 +7476,14 @@ var Engine = class _Engine {
       return;
     }
     const config = this.lifecycleBindings.get(element);
-    if (!config?.construct) {
-      return;
+    if (config?.construct) {
+      const scope = this.getScope(element);
+      void this.safeExecute(config.construct, scope, element, void 0, this.getInlineLifetime(element));
     }
-    const scope = this.getScope(element);
-    void this.safeExecute(config.construct, scope, element, void 0, this.getInlineLifetime(element));
+    const ifBinding = this.ifBindings.get(element);
+    if (ifBinding) {
+      this.beginIfEnter(element, ifBinding);
+    }
   }
   runDestruct(element, lifetime = this.getInlineLifetime(element)) {
     const config = this.lifecycleBindings.get(element);
@@ -9362,6 +9577,20 @@ var Engine = class _Engine {
       match: (name) => name === "vsn-destruct",
       handle: (element, _name, value) => {
         this.setLifecycle(element, { destruct: value });
+      }
+    });
+    this.registerAttributeHandler({
+      id: "vsn-enter",
+      match: (name) => name === "vsn-enter",
+      handle: (element, _name, value) => {
+        this.setLifecycle(element, { enter: value });
+      }
+    });
+    this.registerAttributeHandler({
+      id: "vsn-leave",
+      match: (name) => name === "vsn-leave",
+      handle: (element, _name, value) => {
+        this.setLifecycle(element, { leave: value });
       }
     });
     this.registerAttributeHandler({

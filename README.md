@@ -65,7 +65,7 @@ $color :< theme.color;
 
 `construct` runs when a behavior binds and `destruct` runs when it unbinds. `self`, `parent`, and `root` address the current, parent, and behavior-root scopes. Named functions are synchronous unless declared `async`; async functions return promises and may use `await`.
 
-Inline attributes include `vsn-bind`, `vsn-if`, `vsn-show`, `vsn-text`, `vsn-html`, `vsn-each`, `vsn-get`, and `vsn-on:<event>`. `vsn-text` writes literal text with `textContent`; `vsn-html` sanitizes HTML by default, while `vsn-html!trusted` explicitly bypasses sanitization. Untrusted HTML never activates VSN behavior scripts or `vsn-*` attributes. `vsn-if` conditionally mounts and unmounts an element, running its lifecycle cleanup and setup each time; `vsn-show` keeps the element mounted and toggles the native `hidden` state without overwriting inline display styles. `vsn-get` sends htmx-compatible partial-request headers: `HX-Request`, `HX-Current-URL`, and, when available, `HX-Target`, `HX-Trigger`, and `HX-Trigger-Name`.
+Inline attributes include `vsn-bind`, `vsn-if`, `vsn-show`, `vsn-text`, `vsn-html`, `vsn-each`, `vsn-get`, `vsn-transition`, `vsn-enter`, `vsn-leave`, and `vsn-on:<event>`. `vsn-text` writes literal text with `textContent`; `vsn-html` sanitizes HTML by default, while `vsn-html!trusted` explicitly bypasses sanitization. Untrusted HTML never activates VSN behavior scripts or `vsn-*` attributes. `vsn-if` conditionally mounts and unmounts an element, running its lifecycle cleanup and setup each time; `vsn-show` keeps the element mounted and toggles the native `hidden` state without overwriting inline display styles. `vsn-get` sends htmx-compatible partial-request headers: `HX-Request`, `HX-Current-URL`, and, when available, `HX-Target`, `HX-Trigger`, and `HX-Trigger-Name`.
 
 `vsn-each` renders the content of a `<template>` once per array item. Add `vsn-key` to reuse rows across list updates and preserve their DOM identity, focus, form state, animations, and child behaviors:
 
@@ -78,6 +78,38 @@ Inline attributes include `vsn-bind`, `vsn-if`, `vsn-show`, `vsn-text`, `vsn-htm
 The key expression is evaluated in each item scope. Keys must be unique and
 must not be `null` or `undefined`; omit `vsn-key` when index-based rendering is
 acceptable.
+
+Conditional transitions are opt-in with `vsn-transition` on a `vsn-if`
+element. For `vsn-transition="fade"`, VSN applies `fade-enter`,
+`fade-enter-active`, and `fade-enter-to` during entry, and the corresponding
+`fade-leave` classes during exit. The transition ends on `transitionend` or
+`animationend`, with a computed-duration fallback. `vsn-enter` and `vsn-leave`
+run CFS lifecycle code when each phase starts; `vsn-destruct` runs after a leave
+transition completes. Reopening an element during leave cancels the leave and
+starts a fresh enter phase:
+
+```html
+<div
+  vsn-if="open"
+  vsn-transition="fade"
+  vsn-enter="entered = true;"
+  vsn-leave="leaving = true;"
+>
+  Dialog content
+</div>
+```
+
+```css
+.fade-enter,
+.fade-leave-to {
+  opacity: 0;
+}
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 150ms ease;
+}
+```
 
 ## Plugins
 

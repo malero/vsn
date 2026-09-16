@@ -3,6 +3,8 @@ import { describe, expect, it } from "vitest";
 
 import { Engine } from "../src/index";
 
+const tick = (ms = 0) => new Promise((resolve) => setTimeout(resolve, ms));
+
 describe("vsn-if", () => {
   it("mounts and unmounts the element while preserving its identity", async () => {
     document.body.innerHTML = `
@@ -106,5 +108,73 @@ describe("vsn-if", () => {
 
     expect(child.isConnected).toBe(true);
     expect(panel.contains(child)).toBe(true);
+  });
+
+  it("runs enter and leave hooks and waits for leave transitions before unmounting", async () => {
+    document.body.innerHTML = `
+      <div id="host">
+        <div
+          id="box"
+          style="transition-duration: 1s"
+          vsn-if="visible"
+          vsn-transition="fade"
+          vsn-enter="enters = (enters ?? 0) + 1;"
+          vsn-leave="leaves = (leaves ?? 0) + 1;"
+          vsn-destruct="destroyed = true;"
+        >Hello</div>
+      </div>
+    `;
+
+    const engine = new Engine();
+    const host = document.getElementById("host") as HTMLDivElement;
+    const element = document.getElementById("box") as HTMLDivElement;
+    const scope = engine.getScope(host);
+    scope.set("visible", true);
+    await engine.mount(document.body);
+
+    const elementScope = engine.getScope(element);
+    expect(element.classList.contains("fade-enter")).toBe(true);
+    expect(element.classList.contains("fade-enter-active")).toBe(true);
+    expect(element.classList.contains("fade-enter-to")).toBe(false);
+    await tick(25);
+    expect(element.classList.contains("fade-enter")).toBe(false);
+    expect(element.classList.contains("fade-enter-to")).toBe(true);
+    expect(elementScope.get("enters")).toBe(1);
+
+    element.dispatchEvent(new Event("transitionend"));
+    await tick();
+    expect(element.classList.contains("fade-enter-to")).toBe(false);
+
+    scope.set("visible", false);
+    expect(element.isConnected).toBe(true);
+    expect(element.classList.contains("fade-leave")).toBe(true);
+    expect(element.classList.contains("fade-leave-active")).toBe(true);
+    expect(element.classList.contains("fade-leave-to")).toBe(false);
+    await tick(25);
+    expect(element.isConnected).toBe(true);
+    expect(element.classList.contains("fade-leave")).toBe(false);
+    expect(element.classList.contains("fade-leave-active")).toBe(true);
+    expect(element.classList.contains("fade-leave-to")).toBe(true);
+    expect(elementScope.get("leaves")).toBe(1);
+    expect(elementScope.get("destroyed")).toBeUndefined();
+
+    scope.set("visible", true);
+    await tick();
+    expect(element.isConnected).toBe(true);
+    expect(element.classList.contains("fade-leave")).toBe(false);
+    expect(element.classList.contains("fade-enter")).toBe(true);
+    expect(elementScope.get("enters")).toBe(2);
+
+    element.dispatchEvent(new Event("transitionend"));
+    await tick();
+    expect(element.isConnected).toBe(true);
+    expect(elementScope.get("destroyed")).toBeUndefined();
+
+    scope.set("visible", false);
+    await tick(25);
+    element.dispatchEvent(new Event("transitionend"));
+    await tick();
+    expect(element.isConnected).toBe(false);
+    expect(elementScope.get("destroyed")).toBe(true);
   });
 });

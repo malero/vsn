@@ -45,6 +45,10 @@ with `vsn-bind`; bracket indexing belongs in CFS expressions and behavior
 declarations. The examples intentionally make those details visible so they can
 serve as implementation references and regression fixtures.
 
+`vsn-if` transitions are opt-in with `vsn-transition="name"`; the runtime adds
+the corresponding enter/leave class phases and waits before completing a leave.
+Use `vsn-enter` and `vsn-leave` for CFS hooks when a transition phase starts.
+
 The gallery loads the templates and sanitize plugins before mounting VSN. A
 standalone page can use the same plugin entry points, or use the explicit
 `Engine` API described in the root README.
