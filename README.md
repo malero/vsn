@@ -124,6 +124,33 @@ batch(() => {
 });
 ```
 
+Computed state and effects track the scope reads they perform, so derived
+values do not need to be maintained manually:
+
+```ts
+import { computed, effect } from "vsn";
+
+const completed = computed(scope, (current) => {
+  const items = current.get("items") ?? [];
+  return items.filter((item: { done: boolean }) => item.done).length;
+});
+
+const stop = effect(scope, (current) => {
+  current.set("summary", `${completed.value} complete`);
+});
+
+stop();
+```
+
+Computed values are memoized until one of their reads changes, and effects run
+once immediately before reacting to later changes. Both APIs support
+`{ lifetime }` for automatic cleanup. A named computed value can be exposed
+directly on a scope with `scope.computed("completed", getter)`, making it
+available to CFS bindings. Inside CFS, use
+`computed("completed", () => ...)` and `effect(() => { ... })`; these helpers
+use the current scope and behavior lifetime automatically. Treat computed
+results as read-only and keep getters/effects synchronous.
+
 For browser auto-mount, load the root package and any plugin entry points as modules. VSN creates an engine when an element with `auto-mount` is present, applies registered plugins, loads `script[type="text/vsn"]` blocks, and mounts the document body. Behavior scripts may also use `src`; VSN fetches the file and ignores any inline text when `src` is present:
 
 ```html

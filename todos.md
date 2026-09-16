@@ -13,7 +13,7 @@ HTML-first, selector-driven character. The priority labels are directional:
   proxies while retaining the explicit `setPath()` update API.
 - [x] Add `batch()`/transaction support so several state writes produce one
   reactive flush.
-- [ ] Add first-class computed/derived state and effects instead of requiring
+- [x] Add first-class computed/derived state and effects instead of requiring
   users to manually maintain values such as counts, filtered lists, and
   summaries.
 - [ ] Replace static-only dependency discovery with a more precise dependency

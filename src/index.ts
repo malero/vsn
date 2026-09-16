@@ -10,7 +10,13 @@ export { Parser };
 export { TokenType } from "./parser/token";
 export * from "./ast/nodes";
 export { Engine } from "./runtime/engine";
-export { batch } from "./runtime/scope";
+export { Scope, batch, computed, effect } from "./runtime/scope";
+export type {
+  ComputedGetter,
+  ComputedRef,
+  EffectCallback,
+  ReactiveOptions
+} from "./runtime/scope";
 export { isAbortError, Lifetime, throwIfAborted } from "./runtime/lifetime";
 export type { Disposer } from "./runtime/lifetime";
 export type {

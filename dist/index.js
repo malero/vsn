@@ -1364,9 +1364,9 @@ var FunctionExpression = class extends BaseNode {
     const lifetime = context.lifetime;
     if (this.isAsync) {
       return (...args) => {
+        const activeScope = scope?.createChild ? scope.createChild() : scope;
         const invoke = () => {
           const signal = lifetime?.isDisposing ? void 0 : context.signal;
-          const activeScope = scope?.createChild ? scope.createChild() : scope;
           const inner = {
             scope: activeScope,
             rootScope: context.rootScope,
@@ -1391,14 +1391,14 @@ var FunctionExpression = class extends BaseNode {
             }
           });
         };
-        const run = context.engine?.withExecutionContext ? () => context.engine.withExecutionContext(element, lifetime, invoke) : invoke;
+        const run = context.engine?.withExecutionContext ? () => context.engine.withExecutionContext(element, lifetime, invoke, activeScope) : invoke;
         return context.engine?.batch ? context.engine.batch(run) : run();
       };
     }
     return (...args) => {
+      const activeScope = scope?.createChild ? scope.createChild() : scope;
       const invoke = () => {
         const signal = lifetime?.isDisposing ? void 0 : context.signal;
-        const activeScope = scope?.createChild ? scope.createChild() : scope;
         const inner = {
           scope: activeScope,
           rootScope: context.rootScope,
@@ -1429,7 +1429,7 @@ var FunctionExpression = class extends BaseNode {
         }
         return finalResult;
       };
-      const run = context.engine?.withExecutionContext ? () => context.engine.withExecutionContext(element, lifetime, invoke) : invoke;
+      const run = context.engine?.withExecutionContext ? () => context.engine.withExecutionContext(element, lifetime, invoke, activeScope) : invoke;
       return context.engine?.batch ? context.engine.batch(run) : run();
     };
   }
@@ -4280,9 +4280,45 @@ ${caret}`;
 
 // src/runtime/scope.ts
 var proxyToRaw = /* @__PURE__ */ new WeakMap();
+var arrayMutators = /* @__PURE__ */ new Set([
+  "copyWithin",
+  "fill",
+  "pop",
+  "push",
+  "reverse",
+  "shift",
+  "sort",
+  "splice",
+  "unshift"
+]);
 var batchDepth = 0;
 var flushing = false;
 var pendingListeners = /* @__PURE__ */ new Map();
+var currentFlushHandlers;
+var processedFlushHandlers;
+var trackerStack = [];
+function trackScopeRead(scope, path) {
+  trackerStack[trackerStack.length - 1]?.trackScopeRead(scope, path);
+}
+function trackComputed(source) {
+  trackerStack[trackerStack.length - 1]?.trackComputed(source);
+}
+function withTracker(tracker, callback) {
+  trackerStack.push(tracker);
+  try {
+    return callback();
+  } finally {
+    trackerStack.pop();
+  }
+}
+function withoutTracking(callback) {
+  const activeTrackers = trackerStack.splice(0);
+  try {
+    return callback();
+  } finally {
+    trackerStack.push(...activeTrackers);
+  }
+}
 function batch(callback) {
   batchDepth += 1;
   let result;
@@ -4306,12 +4342,15 @@ function notifyListener(entry) {
     return;
   }
   if (batchDepth > 0 || flushing) {
+    if (flushing && currentFlushHandlers?.has(entry.handler) && !processedFlushHandlers?.has(entry.handler)) {
+      return;
+    }
     const entries = pendingListeners.get(entry.handler) ?? /* @__PURE__ */ new Set();
     entries.add(entry);
     pendingListeners.set(entry.handler, entries);
     return;
   }
-  entry.handler();
+  withoutTracking(entry.handler);
 }
 function flushPendingListeners() {
   if (flushing) {
@@ -4324,12 +4363,15 @@ function flushPendingListeners() {
     while (pendingListeners.size > 0) {
       const entries = Array.from(pendingListeners.entries());
       pendingListeners.clear();
+      currentFlushHandlers = new Set(entries.map(([handler]) => handler));
+      processedFlushHandlers = /* @__PURE__ */ new Set();
       for (const [handler, registrations] of entries) {
         if (!Array.from(registrations).some((entry) => entry.active)) {
           continue;
         }
+        processedFlushHandlers.add(handler);
         try {
-          handler();
+          withoutTracking(handler);
         } catch (error) {
           if (!failed) {
             failed = true;
@@ -4337,14 +4379,273 @@ function flushPendingListeners() {
           }
         }
       }
+      currentFlushHandlers = void 0;
+      processedFlushHandlers = void 0;
     }
   } finally {
+    currentFlushHandlers = void 0;
+    processedFlushHandlers = void 0;
     flushing = false;
   }
   if (failed) {
     throw firstError;
   }
 }
+var ReactiveTracker = class {
+  isDisposed = false;
+  scopeDependencies = /* @__PURE__ */ new Map();
+  computedDependencies = /* @__PURE__ */ new Map();
+  nextScopeDependencies = /* @__PURE__ */ new Map();
+  nextComputedDependencies = /* @__PURE__ */ new Set();
+  tracking = false;
+  invalidateListener = () => this.invalidate();
+  collect(callback) {
+    if (this.isDisposed) {
+      return callback();
+    }
+    this.nextScopeDependencies = /* @__PURE__ */ new Map();
+    this.nextComputedDependencies = /* @__PURE__ */ new Set();
+    this.tracking = true;
+    try {
+      return withTracker(this, callback);
+    } finally {
+      this.tracking = false;
+      this.commitDependencies();
+    }
+  }
+  trackScopeRead(scope, path) {
+    if (!this.tracking || this.isDisposed) {
+      return;
+    }
+    const key = path.trim();
+    if (!key) {
+      return;
+    }
+    const paths = this.nextScopeDependencies.get(scope) ?? /* @__PURE__ */ new Set();
+    paths.add(key);
+    this.nextScopeDependencies.set(scope, paths);
+  }
+  trackComputed(source) {
+    if (!this.tracking || this.isDisposed) {
+      return;
+    }
+    this.nextComputedDependencies.add(source);
+  }
+  disposeTracking() {
+    if (this.isDisposed) {
+      return;
+    }
+    this.isDisposed = true;
+    for (const [scope, paths] of this.scopeDependencies) {
+      for (const path of paths) {
+        scope.off(path, this.invalidateListener);
+      }
+    }
+    this.scopeDependencies.clear();
+    for (const remove of this.computedDependencies.values()) {
+      remove();
+    }
+    this.computedDependencies.clear();
+  }
+  commitDependencies() {
+    if (this.isDisposed) {
+      return;
+    }
+    for (const [scope, paths] of this.scopeDependencies) {
+      for (const path of paths) {
+        scope.off(path, this.invalidateListener);
+      }
+    }
+    this.scopeDependencies = this.nextScopeDependencies;
+    for (const [source, remove] of this.computedDependencies) {
+      if (!this.nextComputedDependencies.has(source)) {
+        remove();
+      }
+    }
+    const nextComputedDependencies = /* @__PURE__ */ new Map();
+    for (const source of this.nextComputedDependencies) {
+      const existing = this.computedDependencies.get(source);
+      if (existing) {
+        nextComputedDependencies.set(source, existing);
+      } else {
+        nextComputedDependencies.set(source, source.subscribe(this.invalidateListener));
+      }
+    }
+    this.computedDependencies = nextComputedDependencies;
+    for (const [scope, paths] of this.scopeDependencies) {
+      for (const path of paths) {
+        scope.on(path, this.invalidateListener);
+      }
+    }
+  }
+};
+var ComputedState = class extends ReactiveTracker {
+  constructor(scope, getter, lifetime, onDispose) {
+    super();
+    this.scope = scope;
+    this.getter = getter;
+    this.onDispose = onDispose;
+    if (lifetime) {
+      this.removeLifetime = lifetime.onCleanup(() => this.dispose());
+    }
+  }
+  currentValue;
+  dirty = true;
+  evaluating = false;
+  subscribers = /* @__PURE__ */ new Set();
+  removeLifetime;
+  get value() {
+    return this.get();
+  }
+  get() {
+    trackComputed(this);
+    if (this.isDisposed) {
+      return this.currentValue;
+    }
+    if (this.dirty) {
+      this.recompute();
+    }
+    return this.currentValue;
+  }
+  subscribe(listener) {
+    if (typeof listener !== "function") {
+      throw new TypeError("Computed subscribers must be functions");
+    }
+    if (this.isDisposed) {
+      return () => void 0;
+    }
+    const entry = { handler: listener, active: true };
+    const existing = Array.from(this.subscribers).find(
+      (candidate) => candidate.active && candidate.handler === listener
+    );
+    if (existing) {
+      return () => void 0;
+    }
+    this.subscribers.add(entry);
+    try {
+      this.get();
+    } catch (error) {
+      entry.active = false;
+      this.subscribers.delete(entry);
+      throw error;
+    }
+    return () => {
+      if (!entry.active) {
+        return;
+      }
+      entry.active = false;
+      this.subscribers.delete(entry);
+    };
+  }
+  dispose() {
+    if (this.isDisposed) {
+      return;
+    }
+    this.removeLifetime?.();
+    this.removeLifetime = void 0;
+    this.disposeTracking();
+    for (const entry of this.subscribers) {
+      entry.active = false;
+    }
+    this.subscribers.clear();
+    this.onDispose?.();
+  }
+  invalidate() {
+    if (this.isDisposed || this.dirty) {
+      return;
+    }
+    this.dirty = true;
+    if (this.subscribers.size === 0) {
+      return;
+    }
+    const previousValue = this.currentValue;
+    const nextValue = this.recompute();
+    if (!Object.is(previousValue, nextValue)) {
+      for (const entry of this.subscribers) {
+        notifyListener(entry);
+      }
+    }
+  }
+  recompute() {
+    if (this.evaluating) {
+      throw new Error("Computed state cannot depend on itself");
+    }
+    this.evaluating = true;
+    try {
+      const nextValue = this.collect(() => this.getter(this.scope));
+      this.currentValue = nextValue;
+      this.dirty = false;
+      return nextValue;
+    } catch (error) {
+      this.dirty = true;
+      throw error;
+    } finally {
+      this.evaluating = false;
+    }
+  }
+};
+var ReactiveEffect = class extends ReactiveTracker {
+  constructor(scope, callback, lifetime) {
+    super();
+    this.scope = scope;
+    this.callback = callback;
+    if (lifetime) {
+      this.removeLifetime = lifetime.onCleanup(() => this.dispose());
+    }
+    try {
+      this.run();
+    } catch (error) {
+      this.dispose();
+      throw error;
+    }
+  }
+  running = false;
+  rerunRequested = false;
+  cleanup;
+  removeLifetime;
+  dispose() {
+    if (this.isDisposed) {
+      return;
+    }
+    this.removeLifetime?.();
+    this.removeLifetime = void 0;
+    this.disposeTracking();
+    const cleanup = this.cleanup;
+    this.cleanup = void 0;
+    cleanup?.();
+  }
+  invalidate() {
+    if (this.isDisposed) {
+      return;
+    }
+    if (this.running) {
+      this.rerunRequested = true;
+      return;
+    }
+    this.run();
+  }
+  run() {
+    if (this.isDisposed || this.running) {
+      this.rerunRequested = true;
+      return;
+    }
+    do {
+      this.rerunRequested = false;
+      this.running = true;
+      const cleanup = this.cleanup;
+      this.cleanup = void 0;
+      try {
+        cleanup?.();
+        const nextCleanup = this.collect(() => this.callback(this.scope));
+        if (typeof nextCleanup === "function") {
+          this.cleanup = nextCleanup;
+        }
+      } finally {
+        this.running = false;
+      }
+    } while (this.rerunRequested && !this.isDisposed);
+  }
+};
 function isReactiveContainer(value) {
   if (!value || typeof value !== "object") {
     return false;
@@ -4370,6 +4671,7 @@ var Scope = class _Scope {
     this.root = parent ? parent.root : this;
   }
   data = /* @__PURE__ */ new Map();
+  computedValues = /* @__PURE__ */ new Map();
   root;
   listeners = /* @__PURE__ */ new Map();
   anyListeners = /* @__PURE__ */ new Set();
@@ -4394,13 +4696,52 @@ var Scope = class _Scope {
   batch(callback) {
     return batch(callback);
   }
+  computed(nameOrGetter, getterOrOptions, options) {
+    if (typeof nameOrGetter === "function") {
+      return computed(this, nameOrGetter, getterOrOptions);
+    }
+    const name = nameOrGetter.trim();
+    const getter = getterOrOptions;
+    if (!name || name.includes(".")) {
+      throw new Error("Named computed state requires a non-empty root key");
+    }
+    if (typeof getter !== "function") {
+      throw new TypeError("Computed state requires a getter function");
+    }
+    if (this.data.has(name) || this.computedValues.has(name)) {
+      throw new Error(`Cannot define computed state '${name}' more than once`);
+    }
+    const state = new ComputedState(
+      this,
+      getter,
+      options?.lifetime,
+      () => {
+        if (this.computedValues.get(name) === state) {
+          this.computedValues.delete(name);
+          this.emitChange(name);
+        }
+      }
+    );
+    this.computedValues.set(name, state);
+    try {
+      state.subscribe(() => this.emitChange(name));
+    } catch (error) {
+      state.dispose();
+      throw error;
+    }
+    this.emitChange(name);
+    return state;
+  }
+  effect(callback, options) {
+    return effect(this, callback, options);
+  }
   hasKey(path) {
     const parts = path.split(".");
     const root = parts[0];
     if (!root) {
       return false;
     }
-    return this.data.has(root);
+    return this.data.has(root) || this.computedValues.has(root);
   }
   getPath(path) {
     const explicit = path.startsWith("parent.") || path.startsWith("root.") || path.startsWith("self.");
@@ -4410,16 +4751,25 @@ var Scope = class _Scope {
     }
     const localValue = this.getLocalPathValue(targetScope, targetPath);
     if (explicit || targetScope.hasKey(targetPath)) {
+      if (!targetScope.computedValues.has(targetPath.split(".")[0] ?? "")) {
+        trackScopeRead(targetScope, targetPath);
+      }
       return targetScope.wrapValue(localValue, targetPath);
     }
+    const lookupScopes = [targetScope];
     let cursor = targetScope.parent;
     while (cursor) {
+      lookupScopes.push(cursor);
       const value = this.getLocalPathValue(cursor, targetPath);
       if (cursor.hasKey(targetPath)) {
+        if (!cursor.computedValues.has(targetPath.split(".")[0] ?? "")) {
+          trackScopeRead(cursor, targetPath);
+        }
         return cursor.wrapValue(value, targetPath);
       }
       cursor = cursor.parent;
     }
+    lookupScopes.forEach((scope) => trackScopeRead(scope, targetPath));
     return void 0;
   }
   setPath(path, value) {
@@ -4436,9 +4786,15 @@ var Scope = class _Scope {
     }
     const nextValue = unwrapProxy(value);
     if (parts.length === 1) {
+      if (scopeForSet.computedValues.has(root)) {
+        throw new Error(`Cannot assign to computed state '${root}'`);
+      }
       scopeForSet.data.set(root, nextValue);
       scopeForSet.emitChange(targetPath);
       return;
+    }
+    if (scopeForSet.computedValues.has(root)) {
+      throw new Error(`Cannot assign to computed state '${root}'`);
     }
     let obj = unwrapProxy(scopeForSet.data.get(root));
     if (obj == null || typeof obj !== "object") {
@@ -4517,8 +4873,10 @@ var Scope = class _Scope {
         listeners.forEach((handler) => handlers.add(handler));
       }
     }
-    handlers.forEach((entry) => notifyListener(entry));
-    this.anyListeners.forEach((entry) => notifyListener(entry));
+    batch(() => {
+      handlers.forEach((entry) => notifyListener(entry));
+      this.anyListeners.forEach((entry) => notifyListener(entry));
+    });
   }
   resolveScope(path) {
     let targetScope = this;
@@ -4543,7 +4901,8 @@ var Scope = class _Scope {
     if (!root) {
       return void 0;
     }
-    let value = scope.data.get(root);
+    const computed2 = scope.computedValues.get(root);
+    let value = computed2 ? computed2.get() : scope.data.get(root);
     for (let i = 1; i < parts.length; i += 1) {
       if (value == null) {
         return void 0;
@@ -4585,16 +4944,27 @@ var Scope = class _Scope {
       get(target, property, receiver) {
         if (Array.isArray(target) && property === Symbol.iterator) {
           return function* iterator() {
+            trackScopeRead(scope, scope.appendPath(path, "length"));
             for (let index = 0; index < target.length; index += 1) {
-              yield scope.wrapValue(target[index], scope.appendPath(path, String(index)));
+              const itemPath = scope.appendPath(path, String(index));
+              trackScopeRead(scope, itemPath);
+              yield scope.wrapValue(target[index], itemPath);
             }
           };
         }
         const nextValue = Reflect.get(target, property, receiver);
+        if (Array.isArray(target) && typeof property === "string" && arrayMutators.has(property)) {
+          if (typeof nextValue !== "function") {
+            return nextValue;
+          }
+          return (...args) => batch(() => Reflect.apply(nextValue, receiver, args));
+        }
         if (typeof property !== "string") {
           return nextValue;
         }
-        return scope.wrapValue(nextValue, scope.appendPath(path, property));
+        const propertyPath = scope.appendPath(path, property);
+        trackScopeRead(scope, propertyPath);
+        return scope.wrapValue(nextValue, propertyPath);
       },
       set(target, property, nextValue) {
         const rawNextValue = unwrapProxy(nextValue);
@@ -4652,6 +5022,25 @@ var Scope = class _Scope {
     return path ? `${path}.${property}` : property;
   }
 };
+function computed(scope, getter, options) {
+  if (!(scope instanceof Scope)) {
+    throw new TypeError("Computed state requires a Scope");
+  }
+  if (typeof getter !== "function") {
+    throw new TypeError("Computed state requires a getter function");
+  }
+  return new ComputedState(scope, getter, options?.lifetime);
+}
+function effect(scope, callback, options) {
+  if (!(scope instanceof Scope)) {
+    throw new TypeError("Effects require a Scope");
+  }
+  if (typeof callback !== "function") {
+    throw new TypeError("Effects require a callback function");
+  }
+  const reactiveEffect = new ReactiveEffect(scope, callback, options?.lifetime);
+  return () => reactiveEffect.dispose();
+}
 
 // src/runtime/bindings.ts
 function isCheckableInput(element) {
@@ -5236,6 +5625,36 @@ var Engine = class _Engine {
     this.logger = options.logger ?? console;
     this.registerGlobal("console", console);
     this.registerGlobal("batch", batch);
+    this.registerGlobal("computed", (nameOrGetter, getter) => {
+      const scope = this.getCurrentScope();
+      if (!scope) {
+        throw new Error("Computed state must be created during an engine execution");
+      }
+      const lifetime = this.getCurrentLifetime();
+      const computedOptions = lifetime ? { lifetime } : void 0;
+      if (typeof nameOrGetter === "string") {
+        if (typeof getter !== "function") {
+          throw new TypeError("Named computed state requires a getter function");
+        }
+        return scope.computed(nameOrGetter, getter, computedOptions);
+      }
+      if (typeof nameOrGetter !== "function") {
+        throw new TypeError("Computed state requires a getter function");
+      }
+      return computed(scope, nameOrGetter, computedOptions);
+    });
+    this.registerGlobal("effect", (callback) => {
+      const scope = this.getCurrentScope();
+      if (!scope) {
+        throw new Error("Effects must be created during an engine execution");
+      }
+      if (typeof callback !== "function") {
+        throw new TypeError("Effects require a callback function");
+      }
+      const lifetime = this.getCurrentLifetime();
+      const effectOptions = lifetime ? { lifetime } : void 0;
+      return effect(scope, callback, effectOptions);
+    });
     this.registerGlobal("onCleanup", (disposer) => {
       const lifetime = this.getCurrentLifetime();
       return lifetime ? lifetime.onCleanup(disposer) : () => void 0;
@@ -5766,6 +6185,12 @@ var Engine = class _Engine {
   }
   batch(callback) {
     return batch(callback);
+  }
+  computed(scope, getter, options) {
+    return computed(scope, getter, options);
+  }
+  effect(scope, callback, options) {
+    return effect(scope, callback, options);
   }
   dispose() {
     const documents = Array.from(this.mountedDocuments);
@@ -7054,11 +7479,15 @@ var Engine = class _Engine {
     const expectedKey = keyAliases[flag] ?? flag;
     return key === expectedKey;
   }
-  withExecutionFrame(element, lifetime, fn) {
-    if (!element) {
+  withExecutionFrame(element, lifetime, fn, scope) {
+    if (!element && !lifetime && !scope) {
       return fn();
     }
-    this.executionStack.push({ element, ...lifetime ? { lifetime } : {} });
+    this.executionStack.push({
+      ...element ? { element } : {},
+      ...lifetime ? { lifetime } : {},
+      ...scope ? { scope } : {}
+    });
     const pop = () => {
       this.executionStack.pop();
     };
@@ -7075,17 +7504,20 @@ var Engine = class _Engine {
     pop();
     return result;
   }
-  withExecutionContext(element, lifetime, fn) {
-    return this.withExecutionFrame(element, lifetime, fn);
+  withExecutionContext(element, lifetime, fn, scope) {
+    return this.withExecutionFrame(element, lifetime, fn, scope);
   }
-  async withExecutionElement(element, lifetime, fn) {
-    await this.withExecutionFrame(element, lifetime, fn);
+  async withExecutionElement(element, lifetime, fn, scope) {
+    await this.withExecutionFrame(element, lifetime, fn, scope);
   }
   getCurrentElement() {
     return this.executionStack[this.executionStack.length - 1]?.element;
   }
   getCurrentLifetime() {
     return this.executionStack[this.executionStack.length - 1]?.lifetime;
+  }
+  getCurrentScope() {
+    return this.executionStack[this.executionStack.length - 1]?.scope;
   }
   async execute(code, scope, element, rootScope, lifetime) {
     throwIfAborted(lifetime?.signal);
@@ -7106,7 +7538,7 @@ var Engine = class _Engine {
         ...lifetime ? { lifetime, signal: lifetime.signal } : {}
       };
       await block.evaluate(context);
-    }));
+    }, scope));
   }
   async executeBlock(block, scope, element, rootScope, lifetime, signal = lifetime?.signal) {
     throwIfAborted(signal);
@@ -7122,7 +7554,7 @@ var Engine = class _Engine {
         ...lifetime ? { lifetime, ...signal ? { signal } : {} } : {}
       };
       await block.evaluate(context);
-    }));
+    }, scope));
   }
   async safeExecute(code, scope, element, rootScope, lifetime) {
     try {
@@ -7622,8 +8054,8 @@ var Engine = class _Engine {
         return void 0;
       }
       const signal = lifetime.isDisposing ? void 0 : lifetime.signal;
+      const callScope = scope.createChild ? scope.createChild() : scope;
       return batch(() => this.withExecutionContext(element, lifetime, () => {
-        const callScope = scope.createChild ? scope.createChild() : scope;
         const context = {
           scope: callScope,
           rootScope: rootScope ?? callScope,
@@ -7664,7 +8096,7 @@ var Engine = class _Engine {
         }
         restore();
         return context.returnValue;
-      }));
+      }, callScope));
     };
     scope.setPath(declaration.name, fn);
   }
@@ -8434,6 +8866,7 @@ export {
   QueryExpression,
   RestElement,
   ReturnNode,
+  Scope,
   SelectorNode,
   SpreadElement,
   TaggedTemplateExpression,
@@ -8447,6 +8880,8 @@ export {
   WhileNode,
   autoMount,
   batch,
+  computed,
+  effect,
   isAbortError,
   parseCFS,
   throwIfAborted

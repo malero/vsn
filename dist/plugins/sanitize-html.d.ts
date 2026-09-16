@@ -1,32 +1,3 @@
-declare class Scope {
-    parent?: Scope | undefined;
-    private data;
-    private root;
-    private listeners;
-    private anyListeners;
-    private reactiveProxies;
-    isEachItem: boolean;
-    constructor(parent?: Scope | undefined);
-    createChild(): Scope;
-    setParent(parent: Scope): void;
-    get(key: string): any;
-    set(key: string, value: any): void;
-    batch<T>(callback: () => T): T;
-    hasKey(path: string): boolean;
-    getPath(path: string): any;
-    setPath(path: string, value: any): void;
-    on(path: string, handler: () => void): void;
-    off(path: string, handler: () => void): void;
-    onAny(handler: () => void): void;
-    offAny(handler: () => void): void;
-    private emitChange;
-    private resolveScope;
-    private getLocalPathValue;
-    private findNearestScopeWithKey;
-    private wrapValue;
-    private appendPath;
-}
-
 type Disposer = () => void;
 /**
  * Owns resources for one mounted element or behavior binding.
@@ -50,6 +21,51 @@ declare class Lifetime {
     dispose(): void;
 }
 
+type Listener = () => void;
+type ReactiveOptions = {
+    lifetime?: Lifetime;
+};
+type ComputedGetter<T> = (scope: Scope) => T;
+type EffectCallback = (scope: Scope) => void | Disposer;
+interface ComputedRef<T> {
+    readonly value: T;
+    get(): T;
+    subscribe(listener: Listener): Disposer;
+    dispose(): void;
+}
+declare class Scope {
+    parent?: Scope | undefined;
+    private data;
+    private computedValues;
+    private root;
+    private listeners;
+    private anyListeners;
+    private reactiveProxies;
+    isEachItem: boolean;
+    constructor(parent?: Scope | undefined);
+    createChild(): Scope;
+    setParent(parent: Scope): void;
+    get(key: string): any;
+    set(key: string, value: any): void;
+    batch<T>(callback: () => T): T;
+    computed<T>(getter: ComputedGetter<T>, options?: ReactiveOptions): ComputedRef<T>;
+    computed<T>(name: string, getter: ComputedGetter<T>, options?: ReactiveOptions): ComputedRef<T>;
+    effect(callback: EffectCallback, options?: ReactiveOptions): Disposer;
+    hasKey(path: string): boolean;
+    getPath(path: string): any;
+    setPath(path: string, value: any): void;
+    on(path: string, handler: () => void): void;
+    off(path: string, handler: () => void): void;
+    onAny(handler: () => void): void;
+    offAny(handler: () => void): void;
+    private emitChange;
+    private resolveScope;
+    private getLocalPathValue;
+    private findNearestScopeWithKey;
+    private wrapValue;
+    private appendPath;
+}
+
 interface ExecutionContext {
     scope: {
         getPath(key: string): any;
@@ -64,7 +80,7 @@ interface ExecutionContext {
         setHtml?(element: Element, value: unknown, options?: {
             trusted?: boolean;
         }): void;
-        withExecutionContext?<T>(element: Element | undefined, lifetime: Lifetime | undefined, fn: () => T): T;
+        withExecutionContext?<T>(element: Element | undefined, lifetime: Lifetime | undefined, fn: () => T, scope?: ExecutionContext["scope"]): T;
         batch?<T>(fn: () => T): T;
     };
     element?: Element;
@@ -506,6 +522,8 @@ declare class Engine {
     getLifetime(element: Element): Lifetime;
     get signal(): AbortSignal;
     batch<T>(callback: () => T): T;
+    computed<T>(scope: Scope, getter: ComputedGetter<T>, options?: ReactiveOptions): ComputedRef<T>;
+    effect(scope: Scope, callback: EffectCallback, options?: ReactiveOptions): Disposer;
     dispose(): void;
     private getInlineLifetime;
     private resetInlineLifetime;
@@ -580,10 +598,11 @@ declare class Engine {
     private applyEventFlagArgTransforms;
     private matchesKeyFlag;
     private withExecutionFrame;
-    withExecutionContext<T>(element: Element | undefined, lifetime: Lifetime | undefined, fn: () => T): T;
+    withExecutionContext<T>(element: Element | undefined, lifetime: Lifetime | undefined, fn: () => T, scope?: Scope): T;
     private withExecutionElement;
     getCurrentElement(): Element | undefined;
     getCurrentLifetime(): Lifetime | undefined;
+    getCurrentScope(): Scope | undefined;
     private execute;
     private executeBlock;
     private safeExecute;

@@ -1,4 +1,5 @@
-import { batch, Scope } from "./scope";
+import { batch, computed, effect, Scope } from "./scope";
+import type { ComputedGetter, ComputedRef, EffectCallback, ReactiveOptions } from "./scope";
 import { applyBindToElement, applyBindToScope, BindDirection } from "./bindings";
 import { applyIf, applyShow } from "./conditionals";
 import { applyGet, GetConfig } from "./http";
@@ -626,7 +627,7 @@ export class Engine {
   private engineLifetime = new Lifetime();
   private pendingUses: Promise<void>[] = [];
   private pendingAutoBindToScope: Array<{ element: Element; expr: string; scope: Scope }> = [];
-  private executionStack: Array<{ element: Element; lifetime?: Lifetime }> = [];
+  private executionStack: Array<{ element?: Element; lifetime?: Lifetime; scope?: Scope }> = [];
   private groupProxyCache = new WeakMap<Scope, Record<string, any>>();
   private scopeElements = new WeakMap<Scope, Element>();
   private classMapBindings = new WeakMap<Element, Map<object, Set<string>>>();
@@ -640,6 +641,36 @@ export class Engine {
     this.logger = options.logger ?? console;
     this.registerGlobal("console", console);
     this.registerGlobal("batch", batch);
+    this.registerGlobal("computed", (nameOrGetter: any, getter?: any) => {
+      const scope = this.getCurrentScope();
+      if (!scope) {
+        throw new Error("Computed state must be created during an engine execution");
+      }
+      const lifetime = this.getCurrentLifetime();
+      const computedOptions = lifetime ? { lifetime } : undefined;
+      if (typeof nameOrGetter === "string") {
+        if (typeof getter !== "function") {
+          throw new TypeError("Named computed state requires a getter function");
+        }
+        return scope.computed(nameOrGetter, getter, computedOptions);
+      }
+      if (typeof nameOrGetter !== "function") {
+        throw new TypeError("Computed state requires a getter function");
+      }
+      return computed(scope, nameOrGetter, computedOptions);
+    });
+    this.registerGlobal("effect", (callback: any) => {
+      const scope = this.getCurrentScope();
+      if (!scope) {
+        throw new Error("Effects must be created during an engine execution");
+      }
+      if (typeof callback !== "function") {
+        throw new TypeError("Effects require a callback function");
+      }
+      const lifetime = this.getCurrentLifetime();
+      const effectOptions = lifetime ? { lifetime } : undefined;
+      return effect(scope, callback, effectOptions);
+    });
     this.registerGlobal("onCleanup", (disposer: Disposer) => {
       const lifetime = this.getCurrentLifetime();
       return lifetime ? lifetime.onCleanup(disposer) : () => undefined;
@@ -1205,6 +1236,14 @@ export class Engine {
 
   batch<T>(callback: () => T): T {
     return batch(callback);
+  }
+
+  computed<T>(scope: Scope, getter: ComputedGetter<T>, options?: ReactiveOptions): ComputedRef<T> {
+    return computed(scope, getter, options);
+  }
+
+  effect(scope: Scope, callback: EffectCallback, options?: ReactiveOptions): Disposer {
+    return effect(scope, callback, options);
   }
 
   dispose(): void {
@@ -2700,12 +2739,17 @@ export class Engine {
   private withExecutionFrame<T>(
     element: Element | undefined,
     lifetime: Lifetime | undefined,
-    fn: () => T
+    fn: () => T,
+    scope?: Scope
   ): T {
-    if (!element) {
+    if (!element && !lifetime && !scope) {
       return fn();
     }
-    this.executionStack.push({ element, ...(lifetime ? { lifetime } : {}) });
+    this.executionStack.push({
+      ...(element ? { element } : {}),
+      ...(lifetime ? { lifetime } : {}),
+      ...(scope ? { scope } : {})
+    });
     const pop = () => {
       this.executionStack.pop();
     };
@@ -2726,17 +2770,19 @@ export class Engine {
   withExecutionContext<T>(
     element: Element | undefined,
     lifetime: Lifetime | undefined,
-    fn: () => T
+    fn: () => T,
+    scope?: Scope
   ): T {
-    return this.withExecutionFrame(element, lifetime, fn);
+    return this.withExecutionFrame(element, lifetime, fn, scope);
   }
 
   private async withExecutionElement(
     element: Element | undefined,
     lifetime: Lifetime | undefined,
-    fn: () => Promise<void>
+    fn: () => Promise<void>,
+    scope?: Scope
   ): Promise<void> {
-    await this.withExecutionFrame(element, lifetime, fn);
+    await this.withExecutionFrame(element, lifetime, fn, scope);
   }
 
   getCurrentElement(): Element | undefined {
@@ -2745,6 +2791,10 @@ export class Engine {
 
   getCurrentLifetime(): Lifetime | undefined {
     return this.executionStack[this.executionStack.length - 1]?.lifetime;
+  }
+
+  getCurrentScope(): Scope | undefined {
+    return this.executionStack[this.executionStack.length - 1]?.scope;
   }
 
   private async execute(
@@ -2772,7 +2822,7 @@ export class Engine {
         ...(lifetime ? { lifetime, signal: lifetime.signal } : {})
       };
       await block.evaluate(context);
-    }));
+    }, scope));
   }
 
   private async executeBlock(
@@ -2796,7 +2846,7 @@ export class Engine {
         ...(lifetime ? { lifetime, ...(signal ? { signal } : {}) } : {})
       };
       await block.evaluate(context);
-    }));
+    }, scope));
   }
 
   private async safeExecute(
@@ -3371,8 +3421,8 @@ export class Engine {
         return undefined;
       }
       const signal = lifetime.isDisposing ? undefined : lifetime.signal;
+      const callScope = scope.createChild ? scope.createChild() : scope;
       return batch(() => this.withExecutionContext(element, lifetime, () => {
-        const callScope = scope.createChild ? scope.createChild() : scope;
         const context: ExecutionContext = {
           scope: callScope,
           rootScope: rootScope ?? callScope,
@@ -3413,7 +3463,7 @@ export class Engine {
         }
         restore();
         return context.returnValue;
-      }));
+      }, callScope));
     };
     scope.setPath(declaration.name, fn);
   }

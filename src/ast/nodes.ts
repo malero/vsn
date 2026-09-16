@@ -16,7 +16,8 @@ export interface ExecutionContext {
     withExecutionContext?<T>(
       element: Element | undefined,
       lifetime: Lifetime | undefined,
-      fn: () => T
+      fn: () => T,
+      scope?: ExecutionContext["scope"]
     ): T;
     batch?<T>(fn: () => T): T;
   };
@@ -938,9 +939,9 @@ export class FunctionExpression extends BaseNode {
 
     if (this.isAsync) {
       return (...args: any[]) => {
+        const activeScope = scope?.createChild ? scope.createChild() : scope;
         const invoke = () => {
           const signal = lifetime?.isDisposing ? undefined : context.signal;
-          const activeScope = scope?.createChild ? scope.createChild() : scope;
           const inner: ExecutionContext = {
             scope: activeScope,
             rootScope: context.rootScope,
@@ -968,16 +969,16 @@ export class FunctionExpression extends BaseNode {
           });
         };
         const run = context.engine?.withExecutionContext
-          ? () => context.engine!.withExecutionContext!(element, lifetime, invoke)
+          ? () => context.engine!.withExecutionContext!(element, lifetime, invoke, activeScope)
           : invoke;
         return context.engine?.batch ? context.engine.batch(run) : run();
       };
     }
 
     return (...args: any[]) => {
+      const activeScope = scope?.createChild ? scope.createChild() : scope;
       const invoke = () => {
         const signal = lifetime?.isDisposing ? undefined : context.signal;
-        const activeScope = scope?.createChild ? scope.createChild() : scope;
         const inner: ExecutionContext = {
           scope: activeScope,
           rootScope: context.rootScope,
@@ -1011,7 +1012,7 @@ export class FunctionExpression extends BaseNode {
         return finalResult;
       };
       const run = context.engine?.withExecutionContext
-        ? () => context.engine!.withExecutionContext!(element, lifetime, invoke)
+        ? () => context.engine!.withExecutionContext!(element, lifetime, invoke, activeScope)
         : invoke;
       return context.engine?.batch ? context.engine.batch(run) : run();
     };
