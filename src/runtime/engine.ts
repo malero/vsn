@@ -1,7 +1,7 @@
 import { batch, computed, effect, Scope, unwrapReactiveValue } from "./scope";
 import type { ComputedGetter, ComputedRef, EffectCallback, EffectOptions, ReactiveOptions } from "./scope";
 import { applyBindToElement, applyBindToScope, BindDirection } from "./bindings";
-import { applyIf, applyShow } from "./conditionals";
+import { applyShow, readCondition } from "./conditionals";
 import { applyGet, GetConfig } from "./http";
 import { debounce, Debounced } from "./debounce";
 import {
@@ -51,6 +51,17 @@ interface LifecycleConfig {
   construct?: string;
   destruct?: string;
 }
+
+type IfBinding = {
+  element: Element;
+  parent: IfBinding | undefined;
+  expr: string;
+  marker: Comment;
+  lifetime: Lifetime;
+  active: boolean;
+  mounted: boolean;
+  suspended: boolean;
+};
 
 export interface RegisteredBehavior {
   id: number;
@@ -613,7 +624,7 @@ export class Engine {
   private static activeEngines = new WeakMap<Document, Engine>();
   private scopes = new WeakMap<Element, Scope>();
   private bindBindings = new WeakMap<Element, BindConfig>();
-  private ifBindings = new WeakMap<Element, string>();
+  private ifBindings = new Map<Element, IfBinding>();
   private showBindings = new WeakMap<Element, string>();
   private htmlBindings = new WeakMap<Element, { expr: string; trusted: boolean }>();
   private getBindings = new WeakMap<Element, GetConfig>();
@@ -1043,12 +1054,18 @@ export class Engine {
       this.getScope(element, this.findParentScope(element));
     }
     for (const element of elements) {
+      if (this.isInactive(element)) {
+        continue;
+      }
       if (!this.hasVsnAttributes(element)) {
         continue;
       }
       const parentScope = this.findParentScope(element);
       this.getScope(element, parentScope);
       this.attachAttributes(element);
+      if (this.isInactive(element)) {
+        continue;
+      }
       this.runConstruct(element);
     }
     await this.applyBehaviors(root);
@@ -1065,6 +1082,7 @@ export class Engine {
     for (const current of elements) {
       this.teardownElement(current);
     }
+    this.disposeIfBindingsInBoundary(element);
   }
 
   registerBehaviors(source: string): void {
@@ -1474,9 +1492,12 @@ export class Engine {
     if (bindConfig && (bindConfig.direction === "from" || bindConfig.direction === "both")) {
       applyBindToElement(element, bindConfig.expr, scope);
     }
-    const ifExpr = this.ifBindings.get(element);
-    if (ifExpr && element instanceof HTMLElement) {
-      applyIf(element, ifExpr, scope);
+    const ifBinding = this.ifBindings.get(element);
+    if (ifBinding) {
+      this.updateIfBinding(element, ifBinding);
+      if (this.isInactive(element)) {
+        return;
+      }
     }
     const showExpr = this.showBindings.get(element);
     if (showExpr && element instanceof HTMLElement) {
@@ -1553,6 +1574,7 @@ export class Engine {
       for (const element of [root, ...Array.from(root.querySelectorAll("*"))]) {
         this.teardownElement(element);
       }
+      this.disposeIfBindingsInBoundary(root);
     }
   }
 
@@ -1603,9 +1625,233 @@ export class Engine {
     for (const element of elements) {
       this.teardownElement(element);
     }
+    this.disposeIfBindingsInBoundary(node);
   }
 
-  private teardownElement(element: Element): void {
+  private getIfBindingsInBoundary(root: Element): Array<[Element, IfBinding]> {
+    const entries: Array<[Element, IfBinding]> = [];
+    for (const [element, binding] of this.ifBindings) {
+      let parent = binding.parent;
+      let related = element === root || root.contains(element) || root.contains(binding.marker);
+      while (!related && parent) {
+        related = parent.element === root || root.contains(parent.element) || root.contains(parent.marker);
+        parent = parent.parent;
+      }
+      if (related) {
+        entries.push([element, binding]);
+      }
+    }
+    return entries;
+  }
+
+  private findParentIfBinding(element: Element): IfBinding | undefined {
+    let parent = element.parentElement;
+    while (parent) {
+      const binding = this.ifBindings.get(parent);
+      if (binding) {
+        return binding;
+      }
+      parent = parent.parentElement;
+    }
+    return undefined;
+  }
+
+  private disposeIfBinding(element: Element, binding: IfBinding): void {
+    binding.active = false;
+    binding.mounted = false;
+    binding.suspended = true;
+    this.ifBindings.delete(element);
+    if (!binding.lifetime.isDisposed) {
+      this.disposeLifetime(element, binding.lifetime);
+    }
+    if (binding.marker.parentNode) {
+      binding.marker.parentNode.removeChild(binding.marker);
+    }
+  }
+
+  private disposeIfBindingsInBoundary(root: Element): void {
+    for (const [element, binding] of this.getIfBindingsInBoundary(root)) {
+      if (this.ifBindings.get(element) === binding) {
+        this.disposeIfBinding(element, binding);
+      }
+    }
+  }
+
+  private ensureIfMarker(element: Element, binding: IfBinding): void {
+    const parent = element.parentNode;
+    if (!parent || element.contains(binding.marker)) {
+      return;
+    }
+    if (element.nextSibling === binding.marker) {
+      return;
+    }
+    if (binding.marker.parentNode) {
+      binding.marker.parentNode.removeChild(binding.marker);
+    }
+    parent.insertBefore(binding.marker, element.nextSibling);
+  }
+
+  private suspendIfDescendants(element: Element, rootBinding: IfBinding): void {
+    for (const [boundElement, binding] of this.getIfBindingsInBoundary(element)) {
+      if (binding === rootBinding) {
+        continue;
+      }
+      binding.suspended = true;
+      binding.mounted = false;
+    }
+    const elements = [element, ...Array.from(element.querySelectorAll("*"))];
+    for (const current of elements) {
+      this.teardownElement(current, {
+        preserveIfController: true,
+        preserveDynamicBehaviors: true
+      });
+    }
+  }
+
+  private resumeIfDescendants(element: Element): void {
+    const descendants = this.getIfBindingsInBoundary(element)
+      .filter(([boundElement]) => boundElement !== element);
+    for (const [, binding] of descendants) {
+      binding.suspended = false;
+    }
+    for (const [boundElement, binding] of descendants) {
+      const active = readCondition(binding.expr, this.getScope(boundElement));
+      if (active) {
+        binding.active = true;
+        if (!binding.mounted) {
+          this.activateIf(boundElement, binding);
+        }
+      } else if (binding.active || binding.mounted || boundElement.parentNode) {
+        this.deactivateIf(boundElement, binding);
+      }
+    }
+  }
+
+  private deactivateIf(element: Element, binding: IfBinding): void {
+    const wasMounted = binding.mounted;
+    const wasActive = binding.active;
+    binding.active = false;
+    if (wasMounted || wasActive) {
+      this.suspendIfDescendants(element, binding);
+    } else {
+      const inlineLifetime = this.inlineLifetimes.get(element);
+      if (inlineLifetime && !inlineLifetime.isDisposed) {
+        this.disposeLifetime(element, inlineLifetime);
+      }
+    }
+    binding.mounted = false;
+    this.ensureIfMarker(element, binding);
+    const parent = element.parentNode;
+    if (!parent) {
+      return;
+    }
+    if (this.observer) {
+      this.ignoredRemoved.set(element, true);
+    }
+    parent.removeChild(element);
+  }
+
+  private activateIf(element: Element, binding: IfBinding): void {
+    if (binding.suspended) {
+      return;
+    }
+    binding.active = true;
+    this.ensureIfMarker(element, binding);
+    const markerParent = binding.marker.parentNode;
+    if (!markerParent) {
+      return;
+    }
+    if (element.parentNode !== markerParent || element.nextSibling !== binding.marker) {
+      if (this.observer && element.parentNode) {
+        this.ignoredRemoved.set(element, true);
+      }
+      if (this.observer) {
+        this.ignoredAdded.set(element, true);
+      }
+      markerParent.insertBefore(element, binding.marker);
+    }
+    binding.mounted = true;
+    for (const [boundElement, descendant] of this.getIfBindingsInBoundary(element)) {
+      if (boundElement !== element) {
+        descendant.suspended = false;
+      }
+    }
+    this.handleAddedNode(element);
+    this.resumeIfDescendants(element);
+  }
+
+  private updateIfBinding(element: Element, binding: IfBinding): void {
+    if (binding.suspended) {
+      return;
+    }
+    const active = readCondition(binding.expr, this.getScope(element));
+    if (active) {
+      if (!binding.active || !binding.mounted) {
+        this.activateIf(element, binding);
+      }
+      return;
+    }
+    if (binding.active || binding.mounted || element.parentNode) {
+      this.deactivateIf(element, binding);
+    }
+  }
+
+  private attachIfBinding(element: Element, value: string, scope: Scope): boolean {
+    let binding = this.ifBindings.get(element);
+    if (binding?.lifetime.isDisposed) {
+      this.ifBindings.delete(element);
+      binding = undefined;
+    }
+    if (!binding) {
+      binding = {
+        element,
+        parent: this.findParentIfBinding(element),
+        expr: value,
+        marker: element.ownerDocument.createComment("vsn-if"),
+        lifetime: this.engineLifetime.child(),
+        active: false,
+        mounted: false,
+        suspended: false
+      };
+      this.ifBindings.set(element, binding);
+      const createdBinding = binding;
+      this.watch(
+        scope,
+        value,
+        () => this.updateIfBinding(element, createdBinding),
+        element,
+        undefined,
+        createdBinding.lifetime
+      );
+    } else {
+      binding.parent = this.findParentIfBinding(element);
+      binding.expr = value;
+    }
+
+    const currentBinding = binding;
+    this.ensureIfMarker(element, currentBinding);
+    if (!readCondition(value, scope)) {
+      this.deactivateIf(element, currentBinding);
+      return false;
+    }
+    currentBinding.active = true;
+    currentBinding.mounted = true;
+    currentBinding.suspended = false;
+    return true;
+  }
+
+  private teardownElement(
+    element: Element,
+    options: { preserveIfController?: boolean; preserveDynamicBehaviors?: boolean } = {}
+  ): void {
+    const ifBinding = this.ifBindings.get(element);
+    if (ifBinding) {
+      if (options.preserveIfController) {
+        ifBinding.mounted = false;
+      } else {
+        this.disposeIfBinding(element, ifBinding);
+      }
+    }
     const inlineLifetime = this.inlineLifetimes.get(element);
     if (inlineLifetime && !inlineLifetime.isDisposed) {
       if (this.lifecycleBindings.has(element)) {
@@ -1618,7 +1864,9 @@ export class Engine {
       this.disposeBehaviorLifetimes(element);
       this.cleanupBehaviorBindings(element);
     }
-    this.disposeDynamicBehaviors(element);
+    if (!options.preserveDynamicBehaviors) {
+      this.disposeDynamicBehaviors(element);
+    }
   }
 
   private handleAddedNode(node: Element, applyBehaviors = true): void {
@@ -1630,12 +1878,18 @@ export class Engine {
       this.getScope(element, this.findParentScope(element));
     }
     for (const element of elements) {
+      if (element !== node && this.isInactive(element)) {
+        continue;
+      }
       if (!this.hasVsnAttributes(element)) {
         continue;
       }
       const parentScope = this.findParentScope(element);
       this.getScope(element, parentScope);
       this.attachAttributes(element);
+      if (this.isInactive(element)) {
+        continue;
+      }
       this.runConstruct(element);
     }
     if (applyBehaviors) {
@@ -1674,6 +1928,9 @@ export class Engine {
     let current: Element | null = element;
     while (current) {
       if (this.inactiveSubtrees.has(current)) {
+        return true;
+      }
+      if (this.ifBindings.get(current)?.active === false) {
         return true;
       }
       current = current.parentElement;
@@ -1844,7 +2101,19 @@ export class Engine {
       signal: lifetime.signal,
       onCleanup: (disposer) => lifetime.onCleanup(disposer)
     };
-    for (const name of element.getAttributeNames()) {
+    const names = element.getAttributeNames();
+    const ifName = names.find((name) => name === "vsn-if");
+    if (ifName) {
+      const ifHandler = this.attributeHandlers.find((handler) => handler.id === "vsn-if");
+      ifHandler?.handle(element, ifName, element.getAttribute(ifName) ?? "", scope, context);
+      if (this.isInactive(element)) {
+        return;
+      }
+    }
+    for (const name of names) {
+      if (name === "vsn-if") {
+        continue;
+      }
       if (!name.startsWith("vsn-")) {
         continue;
       }
@@ -1867,6 +2136,9 @@ export class Engine {
   }
 
   private runConstruct(element: Element): void {
+    if (this.isInactive(element)) {
+      return;
+    }
     const config = this.lifecycleBindings.get(element);
     if (!config?.construct) {
       return;
@@ -4301,11 +4573,7 @@ export class Engine {
       id: "vsn-if",
       match: (name) => name === "vsn-if",
       handle: (element, _name, value, scope) => {
-        this.ifBindings.set(element, value);
-        if (element instanceof HTMLElement) {
-          applyIf(element, value, scope);
-        }
-        this.watch(scope, value, () => this.evaluate(element), element);
+        return this.attachIfBinding(element, value, scope);
       }
     });
 

@@ -29,7 +29,7 @@ HTML-first, selector-driven character. The priority labels are directional:
 
 - [x] Add keyed `vsn-each` rendering so updates preserve element identity,
   focus, input state, animations, and child behavior.
-- [ ] Give `vsn-if` true conditional mount/unmount semantics and keep
+- [x] Give `vsn-if` true conditional mount/unmount semantics and keep
   `vsn-show` as visibility-only; document lifecycle behavior for both.
 - [ ] Prefer semantic visibility APIs (`hidden`, `aria-hidden`, or an
   equivalent managed attribute) over blindly overwriting `display`.

@@ -571,6 +571,17 @@ declare class Engine {
     private disconnectObserver;
     private flushObserverQueue;
     private handleRemovedNode;
+    private getIfBindingsInBoundary;
+    private findParentIfBinding;
+    private disposeIfBinding;
+    private disposeIfBindingsInBoundary;
+    private ensureIfMarker;
+    private suspendIfDescendants;
+    private resumeIfDescendants;
+    private deactivateIf;
+    private activateIf;
+    private updateIfBinding;
+    private attachIfBinding;
     private teardownElement;
     private handleAddedNode;
     private handleUpdatedNode;
