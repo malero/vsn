@@ -19,9 +19,10 @@ npm install vsn
 
 ## A complete page
 
-The usual browser setup has three parts.
+The usual browser setup has page markup with one CFS block and the built VSN
+module loaded with `auto-mount`.
 
-### 1. Server-rendered HTML
+### 1. Page markup and behavior
 
 ```html
 <main id="counter">
@@ -43,39 +44,15 @@ The usual browser setup has three parts.
   }
 </script>
 
-<script type="module" src="/src/main.ts"></script>
+<script type="module" src="../dist/index.min.js" auto-mount></script>
 ```
 
-### 2. One small JavaScript entry point
+That script tag is enough. When the module loads, VSN finds the
+`script[type="text/vsn"]` blocks, registers their behaviors, and mounts the
+document body. The repository's examples use this same pattern.
 
-```ts
-// src/main.ts
-import { autoMount } from "vsn";
-
-autoMount();
-```
-
-`autoMount()` finds the `text/vsn` blocks in the document, registers their
-behaviors, and mounts the document body. It returns the `Engine` if the
-application needs to inspect or dispose it later.
-
-If the application mounts a smaller root, pass it explicitly:
-
-```ts
-import { autoMount } from "vsn";
-
-const root = document.querySelector("#app");
-if (root instanceof HTMLElement) {
-  autoMount(root);
-}
-```
-
-With a static server, copy or serve the built browser file and add the
-`auto-mount` attribute to that module:
-
-```html
-<script type="module" src="/assets/vsn.min.js" auto-mount></script>
-```
+If the built file is served from another location, change the `src` path to
+match it.
 
 ## How the example works
 
@@ -94,14 +71,6 @@ selectors for behavior roots and a small JavaScript-like language for state,
 functions, expressions, and control flow.
 
 ## CFS behaviors
-
-The `behavior` keyword is optional. These two forms are equivalent:
-
-```cfs
-#counter {
-  count: 0;
-}
-```
 
 A behavior can contain state declarations, lifecycle blocks, functions, event
 handlers, and nested selectors:
@@ -213,9 +182,10 @@ attributes:
 | `vsn-each="items as item, index"` | Repeats a `<template>` for an array. |
 | `vsn-get="/url"` | Fetches a response and optionally swaps it into the page. |
 
-For form controls, `vsn-bind` is two-way. For display elements it can seed
-state from existing text during normal mounting or hydration. Prefer
-`:from`, `:to`, and `:=` when the direction should be obvious to a reader.
+For form controls, an unqualified `vsn-bind` is two-way. On display elements,
+the unqualified form can seed state from existing text during normal mounting
+or hydration. Prefer `:from`, `:to`, and `:=` when the direction should be
+obvious to a reader.
 
 Event flags can be added after `!`:
 
@@ -254,17 +224,30 @@ or updated:
 and event cleanup run for each lifecycle. `vsn-show` leaves the element in the
 DOM and toggles `hidden`.
 
-Transitions are opt-in:
+Transitions are opt-in. In this example the containing behavior owns
+`open`, `entered`, and `leaving`:
 
 ```html
-<div
-  vsn-if="open"
-  vsn-transition="fade"
-  vsn-enter="entered = true;"
-  vsn-leave="leaving = true;"
->
-  Panel
-</div>
+<section id="transition-demo">
+  <button type="button" vsn-on:click="open = !open;">Toggle panel</button>
+
+  <div
+    vsn-if="open"
+    vsn-transition="fade"
+    vsn-enter="entered = true;"
+    vsn-leave="leaving = true;"
+  >
+    Panel
+  </div>
+</section>
+
+<script type="text/vsn">
+  #transition-demo {
+    open: false;
+    entered: false;
+    leaving: false;
+  }
+</script>
 ```
 
 ```css
@@ -331,100 +314,27 @@ the application's control:
 Trusted fragments may contain VSN behavior scripts and are processed by the
 engine. Untrusted fragments do not activate scripts or `vsn-*` attributes.
 
-## Server rendering and hydration
+## Server-rendered pages
 
-Use `hydrate()` when the application owns the server-rendered state and needs
-to attach behavior without treating the existing DOM as a fresh client render:
-
-```ts
-import { Engine } from "vsn";
-
-const engine = new Engine();
-engine.registerBehaviors(`
-  behavior #app {
-    count: 0;
-  }
-`);
-
-const root = document.querySelector("#app");
-if (!(root instanceof HTMLElement)) {
-  throw new Error("#app was not found");
-}
-
-await engine.hydrate(root, {
-  state: { count: 3 }
-});
-```
-
-Hydration applies the supplied state before behavior declarations and
-`construct` hooks. Existing server-rendered text, HTML, and form values are
-preserved when the corresponding client state is not supplied. Use either
-`autoMount()` or an explicit `Engine`, not both for the same root.
+The auto-mounted module enhances the existing document in place. Keep the
+initial text, form values, and semantic HTML in the server response; VSN then
+connects those elements to reactive state and behavior.
 
 ## Plugins
 
-Plugins are opt-in package subpaths.
+Plugins are opt-in. Load their browser modules before the core module:
 
-For an explicit engine:
-
-```ts
-import { Engine } from "vsn";
-import { registerTemplates } from "vsn/plugins/templates";
-import { registerSanitizeHtml } from "vsn/plugins/sanitize-html";
-import { registerMicrodata } from "vsn/plugins/microdata";
-
-const engine = new Engine();
-registerTemplates(engine);
-registerSanitizeHtml(engine);
-registerMicrodata(engine);
-
-engine.registerBehaviors(behaviorSource);
-await engine.mount(document.body);
+```html
+<script type="module" src="../dist/plugins/templates.min.js"></script>
+<script type="module" src="../dist/plugins/sanitize-html.min.js"></script>
+<script type="module" src="../dist/plugins/microdata.min.js"></script>
+<script type="module" src="../dist/index.min.js" auto-mount></script>
 ```
 
 The templates plugin adds the `html` tagged template for composing HTML in
-CFS. The sanitize plugin replaces the engine's default sanitizer with a
-configured sanitizer (including DOMPurify when available). The microdata
-plugin adds the `!microdata` behavior modifier and the `microdata()` helper.
-
-For auto-mount, import plugin entry points before calling `autoMount()`:
-
-```ts
-import { autoMount } from "vsn";
-import "vsn/plugins/templates";
-import "vsn/plugins/sanitize-html";
-
-autoMount();
-```
-
-## Explicit engine API
-
-The `Engine` API is useful for tests, embedded widgets, custom bootstrapping,
-and applications that keep CFS outside the HTML document:
-
-```ts
-import { Engine } from "vsn";
-
-const engine = new Engine({ diagnostics: true });
-engine.registerBehaviors(behaviorSource);
-
-await engine.mount(root);
-// await engine.hydrate(root, { state });
-
-engine.unmount(child);
-engine.dispose();
-```
-
-`Engine.mount()` attaches VSN to a root; it does not discover behavior source
-blocks. `autoMount()` is the convenience API that loads inline or external
-`script[type="text/vsn"]` sources first.
-
-Applications and plugins can also use `registerGlobals`,
-`registerAttributeHandler`, `registerFlag`, `registerBehaviorModifier`, and
-`registerHtmlTransformer`. Attribute, flag, and behavior-modifier callbacks
-receive a lifetime and an `AbortSignal`; register cleanup with `onCleanup` so
-listeners, timers, and async work stop when the owning element or behavior
-unmounts.
+CFS. The sanitize plugin replaces the default sanitizer with a configured
+sanitizer (including DOMPurify when available). The microdata plugin adds the
+`!microdata` behavior modifier and the `microdata()` helper.
 
 ## Behavior libraries
 
