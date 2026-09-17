@@ -8656,7 +8656,9 @@ var Engine = class _Engine {
       this.addEventListener(lifetime, element, "submit", submitHandler);
     } else {
       const clickHandler = (event) => {
-        if (event.target !== element) {
+        const target = event.target;
+        const clickedTriggerDescendant = target instanceof Node && target !== element && (element instanceof HTMLAnchorElement || element instanceof HTMLButtonElement) && element.contains(target);
+        if (target !== element && !clickedTriggerDescendant) {
           return;
         }
         event.preventDefault();
@@ -10224,7 +10226,7 @@ var Engine = class _Engine {
 };
 
 // src/index.ts
-var VERSION = true ? "1.0.14" : "0.1.0";
+var VERSION = true ? "1.0.15" : "0.1.0";
 function parseCFS(source) {
   const parser = new Parser(source);
   return parser.parseProgram();
