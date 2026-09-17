@@ -1,210 +1,260 @@
-[![npm version](https://badge.fury.io/js/vsn.svg)](https://badge.fury.io/js/vsn) [![Build Status](https://travis-ci.org/malero/vsn.svg?branch=master)](https://travis-ci.org/malero/vsn) [![codecov](https://codecov.io/gh/malero/vsn/branch/master/graph/badge.svg)](https://codecov.io/gh/malero/vsn) [![npm](https://img.shields.io/npm/dw/vsn.svg)]() [![gzip bundle size](http://img.badgesize.io/https://unpkg.com/vsn@latest/dist/?compression=gzip&style=flat-square)](https://unpkg.com/vsn)
+# VSN
 
-# VSN Framework
-VSN is a small, server-rendered-friendly JavaScript/TypeScript framework. It adds behavior to existing HTML instead of requiring a component renderer.
+VSN is an HTML-first JavaScript/TypeScript framework for server-rendered
+pages. It adds state, events, bindings, conditional rendering, lists, and
+requests to HTML that already exists. There is no component renderer to learn
+and no virtual DOM to keep in sync: your markup is the starting point, and CFS
+behavior makes it reactive.
 
-Learn more at https://vsnjs.org.
+The important idea is this:
 
-## Installing
-Use NPM to install VisionJS with the following command:
+> Write the HTML first, put behavior in a `script[type="text/vsn"]` block next
+> to it, and mount VSN once.
+
+## Install
 
 ```bash
-npm i vsn
+npm install vsn
 ```
 
-## Usage
+## A complete page
 
-Create an engine, register behavior source, and mount it on a root element:
+The usual browser setup has three parts.
+
+### 1. Server-rendered HTML
+
+```html
+<main id="counter">
+  <h1>Counter</h1>
+
+  <p>Count: <strong vsn-bind:from="count">0</strong></p>
+
+  <button type="button" vsn-on:click="count = count - 1;">−1</button>
+  <button type="button" vsn-on:click="count = count + 1;">+1</button>
+  <button type="button" vsn-on:click="active = !active;">Toggle status</button>
+
+  <p vsn-show="active">The counter is active.</p>
+</main>
+
+<script type="text/vsn">
+  #counter {
+    count: 0;
+    active: false;
+  }
+</script>
+
+<script type="module" src="/src/main.ts"></script>
+```
+
+### 2. One small JavaScript entry point
 
 ```ts
-import { Engine } from "vsn";
+// src/main.ts
+import { autoMount } from "vsn";
 
-const engine = new Engine();
-engine.registerBehaviors(`
-  .todo-item {
-    done: false;
-    @class :< { done: done };
+autoMount();
+```
 
-    on click() {
-      done = !done;
+`autoMount()` finds the `text/vsn` blocks in the document, registers their
+behaviors, and mounts the document body. It returns the `Engine` if the
+application needs to inspect or dispose it later.
+
+If the application mounts a smaller root, pass it explicitly:
+
+```ts
+import { autoMount } from "vsn";
+
+const root = document.querySelector("#app");
+if (root instanceof HTMLElement) {
+  autoMount(root);
+}
+```
+
+With a static server, copy or serve the built browser file and add the
+`auto-mount` attribute to that module:
+
+```html
+<script type="module" src="/assets/vsn.min.js" auto-mount></script>
+```
+
+## How the example works
+
+The CFS block selects `#counter`, so that element becomes the behavior root.
+Its declarations (`count` and `active`) are reactive state in that root's
+scope. Descendants inherit the scope.
+
+- `vsn-bind:from="count"` writes scope state into the element.
+- `vsn-on:click="..."` runs CFS when the button is clicked.
+- `vsn-show="active"` toggles the element's native `hidden` state while
+  keeping it mounted.
+- Assigning `count` or `active` automatically updates every dependent binding.
+
+`script[type="text/vsn"]` contains CFS, not JavaScript. CFS uses CSS-like
+selectors for behavior roots and a small JavaScript-like language for state,
+functions, expressions, and control flow.
+
+## CFS behaviors
+
+The `behavior` keyword is optional. These two forms are equivalent:
+
+```cfs
+#counter {
+  count: 0;
+}
+```
+
+A behavior can contain state declarations, lifecycle blocks, functions, event
+handlers, and nested selectors:
+
+```html
+<section id="dialog">
+  <button class="dialog-toggle" type="button">Open</button>
+  <div class="dialog-panel" vsn-show="open">
+    Dialog content
+  </div>
+</section>
+
+<script type="text/vsn">
+  #dialog !as(dialog) {
+    open: false;
+
+    construct {
+      console.log("dialog mounted");
+    }
+
+    .dialog-toggle {
+      @aria-expanded :< dialog.open;
+
+      on click() {
+        dialog.open = !dialog.open;
+      }
+    }
+
+    .dialog-panel {
+      @aria-hidden :< !dialog.open;
     }
   }
-`);
-
-await engine.mount(document.body);
+</script>
 ```
 
-When the root already contains server-rendered VSN markup, use the explicit
-hydration entry point instead:
+Nested selectors match descendants. Use `&` when the nested selector should
+replace the parent selector, for example `&.active`.
 
-```ts
-const engine = new Engine();
-engine.registerBehaviors(`
-  behavior #app {
-    count: 0;
-  }
-`);
+Useful CFS constructs include:
 
-await engine.hydrate(document.body, {
-  state: (globalThis as any).__VSN_STATE__ ?? {}
-});
-```
+```cfs
+use fetch as request;
 
-`hydrate()` copies `state` into the root scope before behavior declarations and
-construct hooks run. Supplied state wins over behavior initializers. If a state
-path is not supplied, existing server text, HTML, `hidden` state, and mounted
-`vsn-if` elements are preserved until client code initializes that path;
-initial `vsn-enter` hooks and transitions are not replayed for already-rendered
-conditional elements. Behaviors still bind normally, including construct hooks
-and event handlers.
+.profile {
+  name: "Ada";
+  saved: false;
 
-For bindings, a supplied value wins for an automatic `vsn-bind`. Without a
-supplied value, a non-empty server-rendered control or display value seeds the
-scope before behavior defaults run. Use `vsn-bind:to` when the element should
-be the source of truth, and `vsn-bind:from` when the scope should be the source
-of truth. Hydration expects the root DOM to match the server output; it does not
-infer ownership of arbitrary nodes around a `vsn-each` template.
-
-The `behavior` keyword is optional, so CSS-like declarations are valid. Selectors are passed to `Element.matches()` and may use classes, IDs, attributes, combinators, pseudo-classes, and comma-separated groups:
-
-```less
-.todo-item {
-  @class :< {
-    done: todo[2],
-    "is-selected": selected,
-    "is-disabled": disabled
-  };
-}
-
-#dropdown {
-  open: false;
-}
-```
-
-Nested behavior selectors without `&` target descendants as usual. A nested selector containing `&` replaces it with the parent selector, so `&.active` targets the parent element when it also has the `active` class.
-
-Class maps reactively add and remove only the mapped classes; existing static classes are preserved. Hyphenated identifiers are supported. Write whitespace around subtraction (`count - 1`) to distinguish it from a hyphenated identifier.
-
-Declarations are evaluated before `construct`, `destruct`, and `on` blocks. Common directive directions are:
-
-```vsn
-@data-label :< label;  // scope -> element, reactive
-@value :> name;        // element -> scope
-@value := name;        // two-way binding
-$color :< theme.color;
-```
-
-`construct` runs when a behavior binds and `destruct` runs when it unbinds. `self`, `parent`, and `root` address the current, parent, and behavior-root scopes. Each top-level behavior starts an independent behavior tree, while nested selectors retain the parent tree's `root` scope.
-
-Use `!as(name)` to give a behavior's scope a stable name that is visible to
-that behavior and its nested descendants. The alias is a binding,
-not writable state: `dialog.open = true` updates the named behavior's state,
-but assigning `dialog = otherValue` is a scope collision. Use
-`!group("name")` on a nested behavior to add a live proxy for that child to
-the exact parent behavior scope. Groups are useful for parent-to-child calls
-and collection operations:
-
-```vsn
-behavior .dialog !as(dialog) {
-  open: false;
-
-  on click() {
-    dialog.open = panels.length > 0;
+  save() {
+    saved = true;
   }
 
-  .panel !group("panels") {
-    refresh() { }
+  async load() {
+    response = await request("/api/profile");
+    name = await response.text();
+  }
+
+  on keyup!escape() {
+    saved = false;
   }
 }
 ```
 
-Aliases and groups must use simple scope names. Reusing a visible state or
-alias name is reported as a scope collision instead of silently overwriting
-the existing binding. Named functions are synchronous unless declared `async`;
-async functions return promises and may use `await`.
+Named functions are synchronous unless declared `async`. Async functions can
+use `await` and return promises. State can contain plain objects and arrays;
+nested mutations are observable as well as assignments to a whole value.
 
-Inline attributes include `vsn-bind`, `vsn-if`, `vsn-show`, `vsn-text`, `vsn-html`, `vsn-each`, `vsn-get`, `vsn-transition`, `vsn-enter`, `vsn-leave`, and `vsn-on:<event>`. `vsn-text` writes literal text with `textContent`; `vsn-html` sanitizes HTML by default, while `vsn-html!trusted` explicitly bypasses sanitization. Untrusted HTML never activates VSN behavior scripts or `vsn-*` attributes. `vsn-if` conditionally mounts and unmounts an element, running its lifecycle cleanup and setup each time; `vsn-show` keeps the element mounted and toggles the native `hidden` state without overwriting inline display styles.
+### Directives in CFS
 
-### Requests
+Directives connect state to DOM attributes, properties, and styles:
 
-`vsn-get` is a request trigger as well as a partial HTML swap. It sends
-htmx-compatible headers (`HX-Request`, `HX-Current-URL`, and, when available,
-`HX-Target`, `HX-Trigger`, and `HX-Trigger-Name`) and supports methods, request
-bodies, forms, request state, history, and focus restoration:
+```cfs
+@aria-label :< label;                       // scope -> attribute
+@data-id :> id;                             // attribute -> scope
+@value := name;                             // two-way form binding
+@class :< { selected: active };             // reactive class map
+$display :< (visible ? "block" : "none"); // reactive style
+```
+
+The direction operators mean:
+
+| Operator | Direction |
+| --- | --- |
+| `:<` | scope to element |
+| `:>` | element to scope |
+| `:=` | two-way |
+
+`self`, `parent`, and `root` refer to the current, parent, and behavior-root
+scopes. `!as(name)` gives a behavior a stable scope alias. A nested behavior
+can use `!group("name")` to expose its live instances as a collection on the
+parent behavior.
+
+## HTML directives
+
+For simple behavior, keep the logic in the markup and use inline `vsn-*`
+attributes:
+
+| Attribute | What it does |
+| --- | --- |
+| `vsn-bind="name"` | Automatic binding; use an explicit direction when ownership matters. |
+| `vsn-bind:from="name"` | Writes scope state to a display element or control. |
+| `vsn-bind:to="name"` | Reads an element or control into scope state. |
+| `vsn-text="message"` | Writes text with `textContent`. |
+| `vsn-html="markup"` | Writes HTML through the configured sanitizer. |
+| `vsn-if="visible"` | Mounts and unmounts the element as the condition changes. |
+| `vsn-show="visible"` | Toggles `hidden` without unmounting the element. |
+| `vsn-on:event="..."` | Runs CFS in response to a DOM event. |
+| `vsn-construct="..."` | Runs CFS when the element binds. |
+| `vsn-destruct="..."` | Runs CFS when the element unbinds. |
+| `vsn-each="items as item, index"` | Repeats a `<template>` for an array. |
+| `vsn-get="/url"` | Fetches a response and optionally swaps it into the page. |
+
+For form controls, `vsn-bind` is two-way. For display elements it can seed
+state from existing text during normal mounting or hydration. Prefer
+`:from`, `:to`, and `:=` when the direction should be obvious to a reader.
+
+Event flags can be added after `!`:
 
 ```html
-<form
-  vsn-get="/api/search"
-  method="post"
-  vsn-target="#results"
-  vsn-loading="request.loading"
-  vsn-error="request.error"
-  vsn-data="request.data"
->
-  <input name="query" value="vsn" />
-  <button type="submit">Search</button>
+<form vsn-on:submit!prevent="save();">
+  <input vsn-bind="name" />
+  <button type="submit">Save</button>
 </form>
 
-<button
-  vsn-get="/api/items"
-  vsn-method="POST"
-  vsn-body="payload"
-  vsn-headers="headers"
-  vsn-swap="none"
->
-  Save
-</button>
+<button vsn-on:click!once="notify();">Notify once</button>
+<input vsn-on:input!debounce(300)="search();" />
 ```
 
-On a form, `vsn-get` uses the form's `action` and `method` when explicit
-attributes are not supplied. GET and HEAD forms become query parameters;
-other methods use `FormData`, including the clicked submitter. A button can use
-`vsn-get!form` to submit its containing form or `vsn-form="#filters"` to select
-another form. `vsn-body` and `vsn-headers` resolve a scope path first, then a
-JSON literal, and finally a plain string. Object bodies default to JSON and
-`vsn-swap="none"` makes a request data-only.
+Built-in flags include `prevent`, `stop`, `self`, `outside`, `once`,
+`passive`, `capture`, `debounce`, modifier keys, keyboard keys such as
+`enter` and `escape`, and viewport flags such as `minwidth` and `maxwidth`.
 
-`vsn-loading` is set to `true` while the request is active and `false` when it
-finishes. `vsn-error` receives an error message (or `""` after a new request)
-and `vsn-data` receives the response text on success. Data is cleared while a
-new request is active and after a failure. These state attributes are opt-in;
-VSN does not create state paths when they are omitted.
+## Lists and conditional UI
 
-Use `vsn-history="push"` or `vsn-history="replace"` (or the `!push` and
-`!replace` modifiers) to update browser history after a successful request.
-`vsn-history-url` overrides the URL written to history. Use `vsn-focus` with a
-CSS selector, or the `!focus` modifier, to restore focus after a successful
-swap. `!load` starts the request when the element mounts and `!trusted` permits
-trusted HTML behavior processing, subject to the same explicit trust rules as
-`vsn-html!trusted`.
-
-Non-2xx responses reject as `RequestError`, do not swap HTML, and do not update
-history or focus. They update `vsn-error` when configured and dispatch
-`vsn:getError` with the error, response, status, and status text. Requests are
-aborted when their trigger unmounts or a newer request starts. The equivalent
-programmatic API is `engine.request(element, config)`, which returns the
-response, response text, target, and whether a swap occurred.
-
-`vsn-each` renders the content of a `<template>` once per array item. Add `vsn-key` to reuse rows across list updates and preserve their DOM identity, focus, form state, animations, and child behaviors:
+Repeat a template with `vsn-each`. A unique `vsn-key` preserves row identity,
+focus, form values, animations, and child behaviors when the array is reordered
+or updated:
 
 ```html
-<template vsn-each="users as user, index" vsn-key="user.id">
-  <li><input vsn-bind="user.name" /></li>
-</template>
+<ul>
+  <template vsn-each="users as user, index" vsn-key="user.id">
+    <li>
+      <strong vsn-bind:from="user.name"></strong>
+      <span>#<span vsn-bind:from="index"></span></span>
+    </li>
+  </template>
+</ul>
 ```
 
-The key expression is evaluated in each item scope. Keys must be unique and
-must not be `null` or `undefined`; omit `vsn-key` when index-based rendering is
-acceptable.
+`vsn-if` really mounts and unmounts its element, so `construct`, `destruct`,
+and event cleanup run for each lifecycle. `vsn-show` leaves the element in the
+DOM and toggles `hidden`.
 
-Conditional transitions are opt-in with `vsn-transition` on a `vsn-if`
-element. For `vsn-transition="fade"`, VSN applies `fade-enter`,
-`fade-enter-active`, and `fade-enter-to` during entry, and the corresponding
-`fade-leave` classes during exit. The transition ends on `transitionend` or
-`animationend`, with a computed-duration fallback. `vsn-enter` and `vsn-leave`
-run CFS lifecycle code when each phase starts; `vsn-destruct` runs after a leave
-transition completes. Reopening an element during leave cancels the leave and
-starts a fresh enter phase:
+Transitions are opt-in:
 
 ```html
 <div
@@ -213,7 +263,7 @@ starts a fresh enter phase:
   vsn-enter="entered = true;"
   vsn-leave="leaving = true;"
 >
-  Dialog content
+  Panel
 </div>
 ```
 
@@ -229,9 +279,93 @@ starts a fresh enter phase:
 }
 ```
 
+## Requests and partial HTML
+
+`vsn-get` is a request trigger and an HTML swap primitive. It supports forms,
+methods, request bodies, headers, loading/error/data state, history, focus
+restoration, and cancellation:
+
+```html
+<section id="search">
+  <form
+    vsn-get="/search"
+    method="get"
+    vsn-target="#results"
+    vsn-swap="inner"
+    vsn-loading="loading"
+    vsn-error="error"
+    vsn-data="response"
+  >
+    <input name="query" value="vsn" />
+    <button type="submit">Search</button>
+  </form>
+
+  <p vsn-show="loading">Loading…</p>
+  <p vsn-show="error" vsn-text="error"></p>
+  <div id="results">Results appear here.</div>
+</section>
+
+<script type="text/vsn">
+  #search {
+    loading: false;
+    error: "";
+    response: "";
+  }
+</script>
+```
+
+Responses are sanitized by default. A non-2xx response does not swap HTML and
+dispatches `vsn:getError`. Add `!trusted` only for a response that is under
+the application's control:
+
+```html
+<button
+  type="button"
+  vsn-get!trusted="/trusted/fragment"
+  vsn-target="#panel"
+>
+  Load fragment
+</button>
+```
+
+Trusted fragments may contain VSN behavior scripts and are processed by the
+engine. Untrusted fragments do not activate scripts or `vsn-*` attributes.
+
+## Server rendering and hydration
+
+Use `hydrate()` when the application owns the server-rendered state and needs
+to attach behavior without treating the existing DOM as a fresh client render:
+
+```ts
+import { Engine } from "vsn";
+
+const engine = new Engine();
+engine.registerBehaviors(`
+  behavior #app {
+    count: 0;
+  }
+`);
+
+const root = document.querySelector("#app");
+if (!(root instanceof HTMLElement)) {
+  throw new Error("#app was not found");
+}
+
+await engine.hydrate(root, {
+  state: { count: 3 }
+});
+```
+
+Hydration applies the supplied state before behavior declarations and
+`construct` hooks. Existing server-rendered text, HTML, and form values are
+preserved when the corresponding client state is not supplied. Use either
+`autoMount()` or an explicit `Engine`, not both for the same root.
+
 ## Plugins
 
-Plugins can be imported from the package subpaths and registered on an engine:
+Plugins are opt-in package subpaths.
+
+For an explicit engine:
 
 ```ts
 import { Engine } from "vsn";
@@ -243,153 +377,87 @@ const engine = new Engine();
 registerTemplates(engine);
 registerSanitizeHtml(engine);
 registerMicrodata(engine);
+
+engine.registerBehaviors(behaviorSource);
+await engine.mount(document.body);
 ```
 
-HTML insertion is sanitized by the engine by default. `registerSanitizeHtml(engine)` is optional and can replace the built-in sanitizer with DOMPurify or a custom sanitizer; `dompurifyConfig` can be used to allow application-specific custom elements. HTML extensions should use `engine.registerHtmlTransformer(transform, { priority })`; lower priorities run first and the returned disposer removes a transformer. Transformers run before the sanitizer.
+The templates plugin adds the `html` tagged template for composing HTML in
+CFS. The sanitize plugin replaces the engine's default sanitizer with a
+configured sanitizer (including DOMPurify when available). The microdata
+plugin adds the `!microdata` behavior modifier and the `microdata()` helper.
 
-When Trusted Types is available, HTML output is passed through the engine's Trusted Types policy before it reaches `innerHTML`. Applications using a CSP-managed policy can provide `trustedTypesPolicy` or `trustedTypesPolicyName` through `Engine` options.
-
-Mounted elements and behavior bindings each have a `Lifetime`. Extensions can register teardown work with `onCleanup`, and cleanup runs once when the owning element or behavior unbinds:
+For auto-mount, import plugin entry points before calling `autoMount()`:
 
 ```ts
-engine.registerBehaviorModifier("resize", {
-  onBind: ({ element, onCleanup }) => {
-    const update = () => { /* ... */ };
-    window.addEventListener("resize", update);
-    onCleanup(() => window.removeEventListener("resize", update));
-  }
-});
+import { autoMount } from "vsn";
+import "vsn/plugins/templates";
+import "vsn/plugins/sanitize-html";
+
+autoMount();
 ```
 
-The same `onCleanup` callback is available to custom attribute handlers and flag handlers. CFS lifecycle code can call `onCleanup(() => { /* ... */ })`; `engine.getLifetime(element)` exposes the inline lifetime directly, and `engine.dispose()` tears down all mounted roots.
+## Explicit engine API
 
-Custom attribute handlers and behavior modifier hooks receive `hydrating: true`
-while they are attached by `hydrate()`.
-
-Each lifetime also exposes an `AbortSignal`. CFS code can reference the current signal as `signal` and pass it to async APIs so pending work is canceled when its element or behavior unmounts:
-
-```vsn
-async load(url) {
-  const response = await request(url, { signal });
-  result = await response.text();
-}
-```
-
-The same signal is available as `context.signal` in extension hooks. Async expression bindings ignore completions from disposed lifetimes, and `vsn-get` aborts an active request when its trigger unmounts or a newer request starts. Cancellation errors are treated as normal teardown rather than reported through `vsn:error`.
-
-Plain objects and arrays stored in a scope are observable. Mutating a nested value returned by `scope.get()`—for example, `state.user.name = "Ada"`, `state.items.push(item)`, or `delete state.filters.archived`—emits a path-aware change. `scope.setPath()` remains available for explicit updates and replacing a whole object or array also refreshes nested bindings.
-
-Expression bindings collect the reads they actually perform at runtime. That
-means a binding such as `items[selected].label` follows the selected item, and
-short-circuit or conditional expressions only react to the branch currently in
-use. Replacing a parent object or array still invalidates any reads below it.
-
-Use `batch()` when several state changes belong to one update. Reactive handlers run once after the synchronous callback completes; `engine.batch()` and the CFS `batch(() => { ... })` helper are equivalent conveniences. Synchronous writes from CFS event, lifecycle, and function bodies are batched automatically. An async callback is not held across `await`, so start another batch around a later synchronous update phase when needed:
+The `Engine` API is useful for tests, embedded widgets, custom bootstrapping,
+and applications that keep CFS outside the HTML document:
 
 ```ts
-import { batch } from "vsn";
+import { Engine } from "vsn";
 
-batch(() => {
-  scope.set("page", 2);
-  state.filters.archived = true;
-  state.items.push(nextItem);
-});
+const engine = new Engine({ diagnostics: true });
+engine.registerBehaviors(behaviorSource);
+
+await engine.mount(root);
+// await engine.hydrate(root, { state });
+
+engine.unmount(child);
+engine.dispose();
 ```
 
-Computed state and effects track the scope reads they perform, so derived
-values do not need to be maintained manually:
+`Engine.mount()` attaches VSN to a root; it does not discover behavior source
+blocks. `autoMount()` is the convenience API that loads inline or external
+`script[type="text/vsn"]` sources first.
 
-```ts
-import { computed, effect } from "vsn";
+Applications and plugins can also use `registerGlobals`,
+`registerAttributeHandler`, `registerFlag`, `registerBehaviorModifier`, and
+`registerHtmlTransformer`. Attribute, flag, and behavior-modifier callbacks
+receive a lifetime and an `AbortSignal`; register cleanup with `onCleanup` so
+listeners, timers, and async work stop when the owning element or behavior
+unmounts.
 
-const completed = computed(scope, (current) => {
-  const items = current.get("items") ?? [];
-  return items.filter((item: { done: boolean }) => item.done).length;
-});
+## Behavior libraries
 
-const stop = effect(scope, (current) => {
-  current.set("summary", `${completed.value} complete`);
-});
-
-stop();
-```
-
-Computed values are memoized until one of their reads changes, and effects run
-once immediately before reacting to later changes. Both APIs support
-`{ lifetime }` for automatic cleanup. A named computed value can be exposed
-directly on a scope with `scope.computed("completed", getter)`, making it
-available to CFS bindings. Inside CFS, use
-`computed("completed", () => ...)` and `effect(() => { ... })`; these helpers
-use the current scope and behavior lifetime automatically. Treat computed
-results as read-only and keep getters/effects synchronous.
-
-For browser auto-mount, load the root package and any plugin entry points as modules. VSN creates an engine when an element with `auto-mount` is present, applies registered plugins, loads `script[type="text/vsn"]` blocks, and mounts the document body. Behavior scripts may also use `src`; VSN fetches the file and ignores any inline text when `src` is present:
+Reusable behavior packages should opt in through a namespaced class, keep one
+CFS behavior per module, and document the markup contract around it:
 
 ```html
-<script type="text/vsn" src="/behaviors/common.cfs"></script>
-```
-
-External `.vsn` and `.cfs` files use the same syntax. For library usage, prefer the explicit `Engine` API above.
-
-### Behavior libraries
-
-The first-party behavior library convention is `@vsnjs/behaviors`. A library
-behavior opts in through a namespaced CSS class: `.vsn-<name>`, using a
-lowercase kebab-case name such as `.vsn-dialog` or `.vsn-tabs`. The class is
-the behavior's public activation hook as well as a styling hook; no custom
-element registration or `data-vsn` attribute is required.
-
-Reusable behavior packages publish raw CFS modules under `cfs/` and keep one
-behavior per file:
-
-```text
-@vsnjs/behaviors/
-  cfs/
-    dialog.cfs
-    tabs.cfs
-```
-
-A module should select its public root class directly:
-
-```cfs
-behavior .vsn-dialog !as(dialog) {
-  open: false;
-
-  on click() {
-    dialog.open = !dialog.open;
-  }
-}
-```
-
-Applications opt in by loading only the modules they use. `text/vsn` scripts
-may point at an npm-copied asset, a static asset, or a CDN URL:
-
-```html
-<script
-  type="text/vsn"
-  src="/node_modules/@vsnjs/behaviors/cfs/dialog.cfs"
-></script>
-
 <section class="vsn-dialog">
-  <button type="button">Toggle</button>
+  <button class="vsn-dialog__trigger" type="button">Toggle</button>
+  <div class="vsn-dialog__panel" vsn-show="open">Content</div>
 </section>
+
+<script type="text/vsn" src="/behaviors/dialog.cfs"></script>
 ```
 
-The class prefix reserves `vsn-` for first-party behaviors. Independent
-behavior packages should use their own stable prefix (for example,
-`.acme-dialog`) and can use the same `script[type="text/vsn"]` loading path.
-Loading a `.cfs` file is opt-in: an element without its public class does not
-match the behavior, and applications do not need to load unrelated modules.
-Every published behavior should follow the [behavior contract](./behaviors/CONTRACT.md),
-including its markup, state, events, keyboard, accessibility, and cleanup
-guarantees.
+The `vsn-` prefix is reserved for first-party behaviors. Independent packages
+should use their own stable prefix, such as `.acme-dialog`. See the
+[behavior contract](./behaviors/CONTRACT.md) for the required markup, state,
+event, accessibility, and cleanup documentation.
 
-The [`examples/`](./examples/) directory contains focused cookbook entries for
-behaviors, bindings, lifecycle, requests, templates, and accessibility. See
-[`examples/README.md`](./examples/README.md) for the feature map.
+## Examples and development
 
-## CFS syntax
+The [examples](./examples/) directory is a runnable cookbook covering
+bindings, forms, lists, requests, templates, lifecycle, accessibility, and
+more. Its [README](./examples/README.md) maps each example to the feature it
+demonstrates.
 
-Identifiers may contain hyphens so CSS-style names such as `data-value` remain intact. To subtract numbers, include whitespace around the operator: use `count - 1`, not `count-1`.
+```bash
+npm run build       # build ESM, CommonJS, browser, plugin, and type outputs
+npm test            # run the test suite
+npm run typecheck   # type-check source and tests
+```
 
-Named functions are synchronous unless declared with the `async` keyword. Async named functions return promises and may use `await` in their bodies.
+For CFS syntax, remember that hyphenated identifiers are supported. To
+subtract numbers, put whitespace around the operator: use `count - 1`, not
+`count-1`.
