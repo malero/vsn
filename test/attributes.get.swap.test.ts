@@ -20,6 +20,48 @@ describe("vsn-get swap", () => {
     vi.restoreAllMocks();
   });
 
+  it("binds vsn-get handlers to links introduced by successive inner swaps", async () => {
+    document.body.innerHTML = `
+      <section id="spec-tabs" class="spec-tabs" aria-label="Spec tabs">
+        <nav class="spec-discussion-tabs" aria-label="Spec tabs">
+          <a class="spec-discussion-tab is-active" href="/details" vsn-get!trusted="/details" vsn-swap="inner" vsn-target="#spec-tabs"><span>Details</span></a>
+          <a class="spec-discussion-tab" href="/comments" vsn-get!trusted="/comments" vsn-swap="inner" vsn-target="#spec-tabs"><span>Comments</span></a>
+        </nav>
+        <div id="spec-tab-content"><p>Details</p></div>
+      </section>
+    `;
+
+    (globalThis.fetch as any).mockImplementation(async (input: string) => ({
+      ok: true,
+      text: async () => input === "/details"
+        ? `
+          <nav class="spec-discussion-tabs" aria-label="Spec tabs">
+            <a class="spec-discussion-tab" href="/details" vsn-get!trusted="/details" vsn-swap="inner" vsn-target="#spec-tabs"><span>Details</span></a>
+            <a class="spec-discussion-tab is-active" href="/comments" vsn-get!trusted="/comments" vsn-swap="inner" vsn-target="#spec-tabs"><span>Comments</span></a>
+          </nav>
+          <div id="spec-tab-content"><p>Comments</p></div>
+        `
+        : `
+          <nav class="spec-discussion-tabs" aria-label="Spec tabs">
+            <a class="spec-discussion-tab is-active" href="/details" vsn-get!trusted="/details" vsn-swap="inner" vsn-target="#spec-tabs"><span>Details</span></a>
+            <a class="spec-discussion-tab" href="/comments" vsn-get!trusted="/comments" vsn-swap="inner" vsn-target="#spec-tabs"><span>Comments</span></a>
+          </nav>
+          <div id="spec-tab-content"><p>Details again</p></div>
+        `
+    }));
+
+    const engine = new Engine();
+    await engine.mount(document.body);
+
+    (document.querySelector('a[href="/details"] span') as HTMLSpanElement).click();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    (document.querySelector('a[href="/comments"] span') as HTMLSpanElement).click();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(globalThis.fetch).toHaveBeenCalledTimes(2);
+    expect(document.querySelector("#spec-tab-content")?.textContent).toContain("Details again");
+  });
+
   it("replaces target with outer swap", async () => {
     document.body.innerHTML = `
       <button id="load" vsn-get="/fragment" vsn-target="#panel" vsn-swap="outer"></button>

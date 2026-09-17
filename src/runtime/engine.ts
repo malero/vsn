@@ -3496,7 +3496,12 @@ export class Engine {
       this.addEventListener(lifetime, element, "submit", submitHandler);
     } else {
       const clickHandler = (event: Event) => {
-        if (event.target !== element) {
+        const target = event.target;
+        const clickedTriggerDescendant = target instanceof Node
+          && target !== element
+          && (element instanceof HTMLAnchorElement || element instanceof HTMLButtonElement)
+          && element.contains(target);
+        if (target !== element && !clickedTriggerDescendant) {
           return;
         }
         event.preventDefault();
