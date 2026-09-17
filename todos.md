@@ -45,8 +45,9 @@ HTML-first, selector-driven character. The priority labels are directional:
 
 ## P1 — Reusable behavior library
 
-- [ ] Define a package convention, tentatively `@vsnjs/behaviors`, with a
-  stable opt-in selector convention such as `[data-vsn~="dialog"]`.
+- [x] Define `@vsnjs/behaviors` as the first-party behavior package, with raw
+  `cfs/<name>.cfs` assets and stable class-based opt-in selectors such as
+  `.vsn-dialog`.
 - [ ] Specify a behavior contract: required markup, state names, attributes,
   emitted events, keyboard behavior, accessibility expectations, and cleanup
   guarantees.

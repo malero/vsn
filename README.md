@@ -331,6 +331,56 @@ For browser auto-mount, load the root package and any plugin entry points as mod
 
 External `.vsn` and `.cfs` files use the same syntax. For library usage, prefer the explicit `Engine` API above.
 
+### Behavior libraries
+
+The first-party behavior library convention is `@vsnjs/behaviors`. A library
+behavior opts in through a namespaced CSS class: `.vsn-<name>`, using a
+lowercase kebab-case name such as `.vsn-dialog` or `.vsn-tabs`. The class is
+the behavior's public activation hook as well as a styling hook; no custom
+element registration or `data-vsn` attribute is required.
+
+Reusable behavior packages publish raw CFS modules under `cfs/` and keep one
+behavior per file:
+
+```text
+@vsnjs/behaviors/
+  cfs/
+    dialog.cfs
+    tabs.cfs
+```
+
+A module should select its public root class directly:
+
+```cfs
+behavior .vsn-dialog !as(dialog) {
+  open: false;
+
+  on click() {
+    dialog.open = !dialog.open;
+  }
+}
+```
+
+Applications opt in by loading only the modules they use. `text/vsn` scripts
+may point at an npm-copied asset, a static asset, or a CDN URL:
+
+```html
+<script
+  type="text/vsn"
+  src="/node_modules/@vsnjs/behaviors/cfs/dialog.cfs"
+></script>
+
+<section class="vsn-dialog">
+  <button type="button">Toggle</button>
+</section>
+```
+
+The class prefix reserves `vsn-` for first-party behaviors. Independent
+behavior packages should use their own stable prefix (for example,
+`.acme-dialog`) and can use the same `script[type="text/vsn"]` loading path.
+Loading a `.cfs` file is opt-in: an element without its public class does not
+match the behavior, and applications do not need to load unrelated modules.
+
 The [`examples/`](./examples/) directory contains focused cookbook entries for
 behaviors, bindings, lifecycle, requests, templates, and accessibility. See
 [`examples/README.md`](./examples/README.md) for the feature map.
