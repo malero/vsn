@@ -1,4 +1,4 @@
-import { batch, computed, effect, Scope, unwrapReactiveValue } from "./scope";
+import { batch, computed, effect, markNonReactiveProxy, Scope, unwrapReactiveValue } from "./scope";
 import type { ComputedGetter, ComputedRef, EffectCallback, EffectOptions, ReactiveOptions } from "./scope";
 import { applyBindToElement, applyBindToScope, BindDirection } from "./bindings";
 import { applyShow, readCondition } from "./conditionals";
@@ -90,6 +90,7 @@ export interface RegisteredBehavior {
   selector: string;
   rootSelector: string;
   parentSelector?: string;
+  scopeAlias?: string;
   specificity: number;
   order: number;
   construct?: BlockNode;
@@ -109,6 +110,15 @@ type FunctionBinding = {
   body: BlockNode;
   isAsync: boolean;
 };
+
+type BehaviorScopeAliasBinding = {
+  name: string;
+  scope: Scope;
+  value: Record<string, any>;
+};
+
+const behaviorScopeNamePattern = /^[A-Za-z_][A-Za-z0-9_-]*$/;
+const reservedBehaviorScopeNames = new Set(["root", "parent", "self", "signal"]);
 
 function isPromiseLike(value: unknown): value is PromiseLike<unknown> {
   return Boolean(value) && typeof (value as PromiseLike<unknown>).then === "function";
@@ -696,6 +706,7 @@ export class Engine {
   private pendingAutoBindToScope: Array<{ element: Element; expr: string; scope: Scope }> = [];
   private executionStack: Array<{ element?: Element; lifetime?: Lifetime; scope?: Scope }> = [];
   private groupProxyCache = new WeakMap<Scope, Record<string, any>>();
+  private behaviorScopeAliases = new WeakMap<Element, Map<number, BehaviorScopeAliasBinding>>();
   private scopeElements = new WeakMap<Scope, Element>();
   private classMapBindings = new WeakMap<Element, Map<object, Set<string>>>();
   private dynamicOwnerCleanupLifetimes = new WeakMap<Element, Lifetime>();
@@ -910,37 +921,49 @@ export class Engine {
     this.registerFlag("float", {
       transformValue: (_context, value) => this.coerceFloat(value)
     });
+    // `as` is a framework-owned modifier. Its binding is installed before
+    // declarations run, but registering it here also makes it available to
+    // the parser's behavior-modifier allowlist and extension hooks.
+    this.registerBehaviorModifier("as", {});
     this.registerBehaviorModifier("group", {
       onConstruct: ({ args, scope, rootScope, behavior, element }) => {
-        const key = typeof args === "string" ? args : undefined;
-        if (!key) {
-          return;
-        }
+        const key = this.getBehaviorCollectionName(args);
         const targetScope = this.getGroupTargetScope(element, behavior, scope, rootScope);
-        const existing = targetScope.getPath?.(key);
-        const list = Array.isArray(existing) ? existing : [];
+        if (targetScope.hasAlias?.(key)) {
+          throw this.createScopeCollision(
+            `Behavior group '${key}' conflicts with a visible behavior scope alias`
+          );
+        }
+        const hasLocalCollection = targetScope.hasLocalBinding?.(key) ?? false;
+        const existing = targetScope.getLocal?.(key);
+        if (hasLocalCollection && !Array.isArray(existing)) {
+          throw this.createScopeCollision(
+            `Cannot create behavior group '${key}': the parent behavior scope already defines '${key}'`
+          );
+        }
+        if (!hasLocalCollection) {
+          targetScope.setLocal?.(key, []);
+        }
+        const list = targetScope.getLocal?.(key);
+        if (!Array.isArray(list)) {
+          throw this.createScopeCollision(`Cannot create behavior group '${key}': its collection is not an array`);
+        }
         const proxy = this.getGroupProxy(scope);
         if (!list.includes(proxy)) {
           list.push(proxy);
-          targetScope.setPath?.(key, list);
-        } else if (!Array.isArray(existing)) {
-          targetScope.setPath?.(key, list);
         }
       },
       onUnbind: ({ args, scope, rootScope, behavior, element }) => {
-        const key = typeof args === "string" ? args : undefined;
-        if (!key) {
-          return;
-        }
+        const key = this.getBehaviorCollectionName(args);
         const targetScope = this.getGroupTargetScope(element, behavior, scope, rootScope);
-        const existing = targetScope.getPath?.(key);
+        const existing = targetScope.getLocal?.(key);
         if (!Array.isArray(existing)) {
           return;
         }
         const proxy = this.getGroupProxy(scope);
         const next = existing.filter((entry) => entry !== proxy);
         if (next.length !== existing.length) {
-          targetScope.setPath?.(key, next);
+          targetScope.setLocal?.(key, next);
         }
       }
     });
@@ -1001,6 +1024,101 @@ export class Engine {
     return targetScope;
   }
 
+  private getBehaviorScopeAlias(behavior: BehaviorNode): string | undefined {
+    if (!behavior.flags?.as) {
+      return undefined;
+    }
+    const value = behavior.flagArgs?.as;
+    const name = typeof value === "string" ? value.trim() : "";
+    if (!name) {
+      throw new Error("Behavior scope modifier !as(name) requires a name");
+    }
+    if (!behaviorScopeNamePattern.test(name)) {
+      throw new Error(`Invalid behavior scope alias '${name}'`);
+    }
+    if (reservedBehaviorScopeNames.has(name)) {
+      throw new Error(`Behavior scope alias '${name}' is reserved`);
+    }
+    return name;
+  }
+
+  private getBehaviorCollectionName(args: any): string {
+    const name = typeof args === "string" ? args.trim() : "";
+    if (!name) {
+      throw new Error("Behavior group modifier !group(name) requires a name");
+    }
+    if (!behaviorScopeNamePattern.test(name)) {
+      throw this.createScopeCollision(`Invalid behavior group name '${name}'`);
+    }
+    if (reservedBehaviorScopeNames.has(name)) {
+      throw this.createScopeCollision(`Behavior group '${name}' is reserved`);
+    }
+    return name;
+  }
+
+  private createScopeCollision(message: string): Error {
+    return new Error(`Scope collision: ${message}`);
+  }
+
+  private bindBehaviorScopeAlias(
+    behavior: RegisteredBehavior,
+    element: Element,
+    scope: Scope
+  ): BehaviorScopeAliasBinding | undefined {
+    const name = behavior.scopeAlias;
+    if (!name) {
+      return undefined;
+    }
+    if (scope.hasPath(name)) {
+      throw this.createScopeCollision(
+        `Behavior scope alias '${name}' conflicts with an existing state or alias`
+      );
+    }
+    const value = this.getGroupProxy(scope);
+    scope.defineAlias(name, value);
+    const binding: BehaviorScopeAliasBinding = { name, scope, value };
+    const aliases = this.behaviorScopeAliases.get(element) ?? new Map<number, BehaviorScopeAliasBinding>();
+    aliases.set(behavior.id, binding);
+    this.behaviorScopeAliases.set(element, aliases);
+    return binding;
+  }
+
+  private removeBehaviorScopeAlias(
+    element: Element,
+    behaviorId: number,
+    binding = this.behaviorScopeAliases.get(element)?.get(behaviorId)
+  ): void {
+    if (!binding) {
+      return;
+    }
+    binding.scope.removeAlias(binding.name, binding.value);
+    const aliases = this.behaviorScopeAliases.get(element);
+    if (aliases?.get(behaviorId) === binding) {
+      aliases.delete(behaviorId);
+      if (aliases.size === 0) {
+        this.behaviorScopeAliases.delete(element);
+      }
+    }
+  }
+
+  private scheduleBehaviorScopeAliasCleanup(
+    element: Element,
+    behaviorId: number,
+    binding = this.behaviorScopeAliases.get(element)?.get(behaviorId),
+    pending: Promise<unknown>[] = []
+  ): void {
+    if (!binding) {
+      return;
+    }
+    if (pending.length === 0) {
+      this.removeBehaviorScopeAlias(element, behaviorId, binding);
+      return;
+    }
+    void Promise.allSettled(pending).then(() => {
+      this.removeBehaviorScopeAlias(element, behaviorId, binding);
+    });
+  }
+
   private getGroupProxy(scope: Scope): Record<string, any> {
     const cached = this.groupProxyCache.get(scope);
     if (cached) {
@@ -1056,8 +1174,9 @@ export class Engine {
         ownKeys: () => []
       }
     );
-    this.groupProxyCache.set(scope, proxy);
-    return proxy;
+    const nonReactiveProxy = markNonReactiveProxy(proxy);
+    this.groupProxyCache.set(scope, nonReactiveProxy);
+    return nonReactiveProxy;
   }
 
   async mount(root: HTMLElement): Promise<void> {
@@ -2331,7 +2450,9 @@ export class Engine {
     rootScopes.set(behavior.id, rootScope);
     this.behaviorRootScopes.set(element, rootScopes);
     const lifetime = this.getBehaviorLifetime(element, behavior.id);
+    let aliasBinding: BehaviorScopeAliasBinding | undefined;
     try {
+      aliasBinding = this.bindBehaviorScopeAlias(behavior, element, scope);
       this.applyBehaviorFunctions(element, scope, behavior.functions, rootScope, lifetime);
       await this.applyBehaviorDeclarations(element, scope, behavior.declarations, rootScope, behavior.id, lifetime);
       if (lifetime.isDisposed) {
@@ -2366,6 +2487,10 @@ export class Engine {
       this.logDiagnostic("bind", element, behavior);
     } catch (error) {
       const cancelled = lifetime.signal.aborted || isAbortError(error);
+      if (aliasBinding) {
+        this.removeBehaviorScopeAlias(element, behavior.id, aliasBinding);
+      }
+      this.logScopeCollision(element, behavior, error);
       this.disposeLifetime(element, lifetime);
       this.behaviorLifetimes.get(element)?.delete(behavior.id);
       if (this.behaviorLifetimes.get(element)?.size === 0) {
@@ -2402,12 +2527,16 @@ export class Engine {
       this.behaviorLifetimes.delete(element);
     }
     const rootScope = this.getBehaviorRootScope(element, behavior);
+    const pending: Promise<unknown>[] = [];
     if (behavior.destruct) {
-      void this.safeExecuteBlock(behavior.destruct, scope, element, rootScope, lifetime, null);
+      pending.push(this.safeExecuteBlock(behavior.destruct, scope, element, rootScope, lifetime, null));
     }
     this.behaviorRootScopes.get(element)?.delete(behavior.id);
-    void this.applyBehaviorModifierHook("onDestruct", behavior, element, scope, rootScope, lifetime);
-    void this.applyBehaviorModifierHook("onUnbind", behavior, element, scope, rootScope, lifetime);
+    if (this.behaviorHasModifierHooks(behavior)) {
+      pending.push(this.applyBehaviorModifierHook("onDestruct", behavior, element, scope, rootScope, lifetime));
+      pending.push(this.applyBehaviorModifierHook("onUnbind", behavior, element, scope, rootScope, lifetime));
+    }
+    this.scheduleBehaviorScopeAliasCleanup(element, behavior.id, undefined, pending);
     this.logDiagnostic("unbind", element, behavior);
   }
 
@@ -2418,16 +2547,21 @@ export class Engine {
     }
     const scope = this.getScope(element);
     for (const behavior of this.behaviorRegistry) {
-      if (!bound.has(behavior.id) || (!behavior.destruct && !this.behaviorHasModifierHooks(behavior))) {
+      const hasModifierHooks = this.behaviorHasModifierHooks(behavior);
+      if (!bound.has(behavior.id) || (!behavior.destruct && !hasModifierHooks && !behavior.scopeAlias)) {
         continue;
       }
       const rootScope = this.getBehaviorRootScope(element, behavior);
       const lifetime = this.behaviorLifetimes.get(element)?.get(behavior.id) ?? new Lifetime();
+      const pending: Promise<unknown>[] = [];
       if (behavior.destruct) {
-        void this.safeExecuteBlock(behavior.destruct, scope, element, rootScope, lifetime, null);
+        pending.push(this.safeExecuteBlock(behavior.destruct, scope, element, rootScope, lifetime, null));
       }
-      void this.applyBehaviorModifierHook("onDestruct", behavior, element, scope, rootScope, lifetime);
-      void this.applyBehaviorModifierHook("onUnbind", behavior, element, scope, rootScope, lifetime);
+      if (hasModifierHooks) {
+        pending.push(this.applyBehaviorModifierHook("onDestruct", behavior, element, scope, rootScope, lifetime));
+        pending.push(this.applyBehaviorModifierHook("onUnbind", behavior, element, scope, rootScope, lifetime));
+      }
+      this.scheduleBehaviorScopeAliasCleanup(element, behavior.id, undefined, pending);
     }
   }
 
@@ -3111,6 +3245,22 @@ export class Engine {
     });
   }
 
+  private logScopeCollision(element: Element, behavior: RegisteredBehavior, error: unknown): void {
+    if (!this.diagnostics || !this.logger.warn) {
+      return;
+    }
+    if (!(error instanceof Error) || !error.message.startsWith("Scope collision:")) {
+      return;
+    }
+    this.logger.warn("vsn:collision", {
+      error,
+      selector: this.describeElement(element),
+      behaviorId: behavior.id,
+      behaviorSelector: behavior.selector,
+      scopeAlias: behavior.scopeAlias
+    });
+  }
+
   private emitError(element: Element, error: unknown): void {
     const selector = this.describeElement(element);
     this.logger.warn?.("vsn:error", { error, selector });
@@ -3770,6 +3920,7 @@ export class Engine {
     if (!parentSelector && hasNestingSelector(nestedSelector)) {
       throw new Error("Nesting selector '&' requires a parent behavior");
     }
+    const scopeAlias = this.getBehaviorScopeAlias(behavior);
     const selector = parentSelector
       ? composeNestedSelector(parentSelector, nestedSelector)
       : nestedSelector;
@@ -3798,6 +3949,7 @@ export class Engine {
       flagArgs: behavior.flagArgs ?? {},
       ...cached,
       ...(parentSelector ? { parentSelector } : {}),
+      ...(scopeAlias ? { scopeAlias } : {}),
       persistent: dynamicOwner === undefined,
       dynamicOwners: dynamicOwner ? new Set([dynamicOwner]) : new Set<Element>()
     };
@@ -4641,7 +4793,14 @@ export class Engine {
     }
     const flags = behavior.flags ?? {};
     for (const name of Object.keys(flags)) {
-      if (flags[name] && this.behaviorModifiers.has(name)) {
+      const handler = this.behaviorModifiers.get(name);
+      if (
+        flags[name]
+        && handler
+        && ["onBind", "onConstruct", "onDestruct", "onUnbind"].some(
+          (hook) => typeof handler[hook as keyof BehaviorModifierHandler] === "function"
+        )
+      ) {
         return true;
       }
     }

@@ -67,6 +67,21 @@ button.primary { }
     expect(nestedBehavior.selector.selectorText).toBe("> .btn-close");
   });
 
+  it("parses behavior scope aliases and groups", () => {
+    const source = `behavior .dialog !as(dialog) {
+  behavior .panel !group("panels") { }
+}`;
+
+    const program = new Parser(source).parseProgram();
+    const behavior = program.behaviors[0]!;
+    const nestedBehavior = behavior.body.statements[0] as BehaviorNode;
+
+    expect(behavior.flags.as).toBe(true);
+    expect(behavior.flagArgs.as).toBe("dialog");
+    expect(nestedBehavior.flags.group).toBe(true);
+    expect(nestedBehavior.flagArgs.group).toBe("panels");
+  });
+
   it("parses assignment targets with paths and directives", () => {
     const source = `behavior .card {
   on click() {

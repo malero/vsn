@@ -40,6 +40,7 @@ interface ComputedRef<T> {
 declare class Scope {
     parent?: Scope | undefined;
     private data;
+    private aliases;
     private computedValues;
     private root;
     private listeners;
@@ -52,6 +53,18 @@ declare class Scope {
     setParent(parent: Scope): void;
     get(key: string): any;
     set(key: string, value: any): void;
+    /** @internal Define a behavior-tree alias without making it writable state. */
+    defineAlias(name: string, value: any): void;
+    /** @internal Remove a behavior-tree alias if it still points at value. */
+    removeAlias(name: string, value?: any): void;
+    /** @internal Returns whether this scope owns a root state, computed value, or alias. */
+    hasLocalBinding(path: string): boolean;
+    /** @internal Returns whether an alias with this name is visible in this scope chain. */
+    hasAlias(path: string): boolean;
+    /** @internal Read a binding only from this scope, without parent lookup. */
+    getLocal(name: string): any;
+    /** @internal Set a root binding on this exact scope, without parent lookup. */
+    setLocal(name: string, value: any): void;
     batch<T>(callback: () => T): T;
     computed<T>(getter: ComputedGetter<T>, options?: ReactiveOptions): ComputedRef<T>;
     computed<T>(name: string, getter: ComputedGetter<T>, options?: ReactiveOptions): ComputedRef<T>;
@@ -374,6 +387,7 @@ interface RegisteredBehavior {
     selector: string;
     rootSelector: string;
     parentSelector?: string;
+    scopeAlias?: string;
     specificity: number;
     order: number;
     construct?: BlockNode;
@@ -537,6 +551,7 @@ declare class Engine {
     private pendingAutoBindToScope;
     private executionStack;
     private groupProxyCache;
+    private behaviorScopeAliases;
     private scopeElements;
     private classMapBindings;
     private dynamicOwnerCleanupLifetimes;
@@ -550,6 +565,12 @@ declare class Engine {
     private parseWidthArg;
     private mediaMatches;
     private getGroupTargetScope;
+    private getBehaviorScopeAlias;
+    private getBehaviorCollectionName;
+    private createScopeCollision;
+    private bindBehaviorScopeAlias;
+    private removeBehaviorScopeAlias;
+    private scheduleBehaviorScopeAliasCleanup;
     private getGroupProxy;
     mount(root: HTMLElement): Promise<void>;
     /**
@@ -597,7 +618,7 @@ declare class Engine {
     setHtml(element: Element, value: unknown, options?: HtmlSetOptions): void;
     /**
      * Sends a request and optionally applies its HTML response through the
-    * engine's sanitizer and behavior processor.
+     * engine's sanitizer and behavior processor.
     */
     request(element: Element, config: RequestConfig): Promise<RequestResult>;
     private toTrustedHtml;
@@ -685,6 +706,7 @@ declare class Engine {
     private parseInlineFlagArg;
     private describeElement;
     private logDiagnostic;
+    private logScopeCollision;
     private emitError;
     private emitUseError;
     private attachOnHandler;

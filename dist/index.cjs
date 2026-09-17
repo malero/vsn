@@ -2498,7 +2498,7 @@ var Parser = class _Parser {
   constructor(input, options) {
     this.source = input;
     this.customFlags = options?.customFlags ?? /* @__PURE__ */ new Set(["important", "debounce"]);
-    this.behaviorFlags = options?.behaviorFlags ?? /* @__PURE__ */ new Set();
+    this.behaviorFlags = options?.behaviorFlags ?? /* @__PURE__ */ new Set(["as", "group"]);
     const lexer = new Lexer(input);
     this.stream = new TokenStream(lexer.tokenize());
   }
@@ -4491,6 +4491,7 @@ ${caret}`;
 
 // src/runtime/scope.ts
 var proxyToRaw = /* @__PURE__ */ new WeakMap();
+var nonReactiveProxies = /* @__PURE__ */ new WeakSet();
 var arrayMutators = /* @__PURE__ */ new Set([
   "copyWithin",
   "fill",
@@ -4901,12 +4902,17 @@ function unwrapProxy(value) {
 function unwrapReactiveValue(value) {
   return unwrapProxy(value);
 }
+function markNonReactiveProxy(value) {
+  nonReactiveProxies.add(value);
+  return value;
+}
 var Scope = class _Scope {
   constructor(parent) {
     this.parent = parent;
     this.root = parent ? parent.root : this;
   }
   data = /* @__PURE__ */ new Map();
+  aliases = /* @__PURE__ */ new Map();
   computedValues = /* @__PURE__ */ new Map();
   root;
   listeners = /* @__PURE__ */ new Map();
@@ -4930,6 +4936,80 @@ var Scope = class _Scope {
   set(key, value) {
     this.setPath(key, value);
   }
+  /** @internal Define a behavior-tree alias without making it writable state. */
+  defineAlias(name, value) {
+    const key = name.trim();
+    if (!key || key.includes(".")) {
+      throw new Error("Behavior scope aliases require a non-empty root key");
+    }
+    if (this.hasLocalBinding(key)) {
+      throw new Error(`Scope collision: behavior scope alias '${key}' is already defined on this scope`);
+    }
+    this.aliases.set(key, value);
+    this.emitChange(key);
+  }
+  /** @internal Remove a behavior-tree alias if it still points at value. */
+  removeAlias(name, value) {
+    const key = name.trim();
+    if (!key || !this.aliases.has(key)) {
+      return;
+    }
+    if (value !== void 0 && this.aliases.get(key) !== value) {
+      return;
+    }
+    this.aliases.delete(key);
+    this.emitChange(key);
+  }
+  /** @internal Returns whether this scope owns a root state, computed value, or alias. */
+  hasLocalBinding(path) {
+    const root = path.trim().split(".")[0];
+    if (!root) {
+      return false;
+    }
+    return this.data.has(root) || this.computedValues.has(root) || this.aliases.has(root);
+  }
+  /** @internal Returns whether an alias with this name is visible in this scope chain. */
+  hasAlias(path) {
+    const root = path.trim().split(".")[0];
+    if (!root) {
+      return false;
+    }
+    let cursor = this;
+    while (cursor) {
+      if (cursor.aliases.has(root)) {
+        return true;
+      }
+      cursor = cursor.parent;
+    }
+    return false;
+  }
+  /** @internal Read a binding only from this scope, without parent lookup. */
+  getLocal(name) {
+    const key = name.trim();
+    if (!key || key.includes(".") || !this.hasLocalBinding(key)) {
+      return void 0;
+    }
+    if (this.aliases.has(key)) {
+      return this.aliases.get(key);
+    }
+    return this.wrapValue(this.getLocalPathValue(this, key), key);
+  }
+  /** @internal Set a root binding on this exact scope, without parent lookup. */
+  setLocal(name, value) {
+    const key = name.trim();
+    if (!key || key.includes(".")) {
+      throw new Error("Local scope state requires a non-empty root key");
+    }
+    if (this.aliases.has(key)) {
+      throw new Error(`Scope collision: Cannot replace behavior scope alias '${key}' with state`);
+    }
+    if (this.computedValues.has(key)) {
+      throw new Error(`Cannot assign to computed state '${key}'`);
+    }
+    const nextValue = value && typeof value === "object" && proxyToRaw.has(value) ? value : unwrapProxy(value);
+    this.data.set(key, nextValue);
+    this.emitChange(key);
+  }
   batch(callback) {
     return batch(callback);
   }
@@ -4945,7 +5025,7 @@ var Scope = class _Scope {
     if (typeof getter !== "function") {
       throw new TypeError("Computed state requires a getter function");
     }
-    if (this.data.has(name) || this.computedValues.has(name)) {
+    if (this.data.has(name) || this.computedValues.has(name) || this.aliases.has(name)) {
       throw new Error(`Cannot define computed state '${name}' more than once`);
     }
     const state = new ComputedState(
@@ -4978,7 +5058,7 @@ var Scope = class _Scope {
     if (!root) {
       return false;
     }
-    return this.data.has(root) || this.computedValues.has(root);
+    return this.data.has(root) || this.computedValues.has(root) || this.aliases.has(root);
   }
   /** Returns whether a path is defined on this scope or one of its parents. */
   hasPath(path) {
@@ -5013,12 +5093,13 @@ var Scope = class _Scope {
     if (!targetScope || !targetPath) {
       return void 0;
     }
+    const root = targetPath.split(".")[0] ?? "";
     const localValue = this.getLocalPathValue(targetScope, targetPath);
     if (explicit || targetScope.hasKey(targetPath)) {
       if (!targetScope.computedValues.has(targetPath.split(".")[0] ?? "")) {
         trackScopeRead(targetScope, targetPath);
       }
-      return targetScope.wrapValue(localValue, targetPath);
+      return targetScope.aliases.has(root) && targetPath === root ? localValue : targetScope.wrapValue(localValue, targetPath);
     }
     const lookupScopes = [targetScope];
     let cursor = targetScope.parent;
@@ -5029,7 +5110,7 @@ var Scope = class _Scope {
         if (!cursor.computedValues.has(targetPath.split(".")[0] ?? "")) {
           trackScopeRead(cursor, targetPath);
         }
-        return cursor.wrapValue(value, targetPath);
+        return cursor.aliases.has(root) && targetPath === root ? value : cursor.wrapValue(value, targetPath);
       }
       cursor = cursor.parent;
     }
@@ -5053,6 +5134,9 @@ var Scope = class _Scope {
       if (scopeForSet.computedValues.has(root)) {
         throw new Error(`Cannot assign to computed state '${root}'`);
       }
+      if (scopeForSet.aliases.has(root)) {
+        throw new Error(`Scope collision: Cannot assign to behavior scope alias '${root}'`);
+      }
       scopeForSet.data.set(root, nextValue);
       scopeForSet.emitChange(targetPath);
       return;
@@ -5060,8 +5144,11 @@ var Scope = class _Scope {
     if (scopeForSet.computedValues.has(root)) {
       throw new Error(`Cannot assign to computed state '${root}'`);
     }
-    let obj = unwrapProxy(scopeForSet.data.get(root));
+    let obj = scopeForSet.aliases.has(root) ? scopeForSet.aliases.get(root) : unwrapProxy(scopeForSet.data.get(root));
     if (obj == null || typeof obj !== "object") {
+      if (scopeForSet.aliases.has(root)) {
+        throw new Error(`Scope collision: Cannot assign through behavior scope alias '${root}'`);
+      }
       obj = {};
       scopeForSet.data.set(root, obj);
     }
@@ -5202,7 +5289,7 @@ var Scope = class _Scope {
       return void 0;
     }
     const computed2 = scope.computedValues.get(root);
-    let value = computed2 ? computed2.get() : scope.data.get(root);
+    let value = computed2 ? computed2.get() : scope.aliases.has(root) ? scope.aliases.get(root) : scope.data.get(root);
     for (let i = 1; i < parts.length; i += 1) {
       if (value == null) {
         return void 0;
@@ -5223,7 +5310,7 @@ var Scope = class _Scope {
     }
     let cursor = start;
     while (cursor) {
-      if (cursor.data.has(root)) {
+      if (cursor.hasLocalBinding(root)) {
         return cursor;
       }
       cursor = cursor.parent;
@@ -5231,7 +5318,7 @@ var Scope = class _Scope {
     return void 0;
   }
   wrapValue(value, path) {
-    if (value && typeof value === "object" && proxyToRaw.has(value)) {
+    if (value && typeof value === "object" && (proxyToRaw.has(value) || nonReactiveProxies.has(value))) {
       return value;
     }
     const rawValue = unwrapProxy(value);
@@ -5715,6 +5802,8 @@ function debounce(fn, waitMs) {
 }
 
 // src/runtime/engine.ts
+var behaviorScopeNamePattern = /^[A-Za-z_][A-Za-z0-9_-]*$/;
+var reservedBehaviorScopeNames = /* @__PURE__ */ new Set(["root", "parent", "self", "signal"]);
 function isPromiseLike2(value) {
   return Boolean(value) && typeof value.then === "function";
 }
@@ -6110,6 +6199,7 @@ var Engine = class _Engine {
   pendingAutoBindToScope = [];
   executionStack = [];
   groupProxyCache = /* @__PURE__ */ new WeakMap();
+  behaviorScopeAliases = /* @__PURE__ */ new WeakMap();
   scopeElements = /* @__PURE__ */ new WeakMap();
   classMapBindings = /* @__PURE__ */ new WeakMap();
   dynamicOwnerCleanupLifetimes = /* @__PURE__ */ new WeakMap();
@@ -6323,37 +6413,46 @@ var Engine = class _Engine {
     this.registerFlag("float", {
       transformValue: (_context, value) => this.coerceFloat(value)
     });
+    this.registerBehaviorModifier("as", {});
     this.registerBehaviorModifier("group", {
       onConstruct: ({ args, scope, rootScope, behavior, element }) => {
-        const key = typeof args === "string" ? args : void 0;
-        if (!key) {
-          return;
-        }
+        const key = this.getBehaviorCollectionName(args);
         const targetScope = this.getGroupTargetScope(element, behavior, scope, rootScope);
-        const existing = targetScope.getPath?.(key);
-        const list = Array.isArray(existing) ? existing : [];
+        if (targetScope.hasAlias?.(key)) {
+          throw this.createScopeCollision(
+            `Behavior group '${key}' conflicts with a visible behavior scope alias`
+          );
+        }
+        const hasLocalCollection = targetScope.hasLocalBinding?.(key) ?? false;
+        const existing = targetScope.getLocal?.(key);
+        if (hasLocalCollection && !Array.isArray(existing)) {
+          throw this.createScopeCollision(
+            `Cannot create behavior group '${key}': the parent behavior scope already defines '${key}'`
+          );
+        }
+        if (!hasLocalCollection) {
+          targetScope.setLocal?.(key, []);
+        }
+        const list = targetScope.getLocal?.(key);
+        if (!Array.isArray(list)) {
+          throw this.createScopeCollision(`Cannot create behavior group '${key}': its collection is not an array`);
+        }
         const proxy = this.getGroupProxy(scope);
         if (!list.includes(proxy)) {
           list.push(proxy);
-          targetScope.setPath?.(key, list);
-        } else if (!Array.isArray(existing)) {
-          targetScope.setPath?.(key, list);
         }
       },
       onUnbind: ({ args, scope, rootScope, behavior, element }) => {
-        const key = typeof args === "string" ? args : void 0;
-        if (!key) {
-          return;
-        }
+        const key = this.getBehaviorCollectionName(args);
         const targetScope = this.getGroupTargetScope(element, behavior, scope, rootScope);
-        const existing = targetScope.getPath?.(key);
+        const existing = targetScope.getLocal?.(key);
         if (!Array.isArray(existing)) {
           return;
         }
         const proxy = this.getGroupProxy(scope);
         const next = existing.filter((entry) => entry !== proxy);
         if (next.length !== existing.length) {
-          targetScope.setPath?.(key, next);
+          targetScope.setLocal?.(key, next);
         }
       }
     });
@@ -6402,6 +6501,82 @@ var Engine = class _Engine {
       }
     }
     return targetScope;
+  }
+  getBehaviorScopeAlias(behavior) {
+    if (!behavior.flags?.as) {
+      return void 0;
+    }
+    const value = behavior.flagArgs?.as;
+    const name = typeof value === "string" ? value.trim() : "";
+    if (!name) {
+      throw new Error("Behavior scope modifier !as(name) requires a name");
+    }
+    if (!behaviorScopeNamePattern.test(name)) {
+      throw new Error(`Invalid behavior scope alias '${name}'`);
+    }
+    if (reservedBehaviorScopeNames.has(name)) {
+      throw new Error(`Behavior scope alias '${name}' is reserved`);
+    }
+    return name;
+  }
+  getBehaviorCollectionName(args) {
+    const name = typeof args === "string" ? args.trim() : "";
+    if (!name) {
+      throw new Error("Behavior group modifier !group(name) requires a name");
+    }
+    if (!behaviorScopeNamePattern.test(name)) {
+      throw this.createScopeCollision(`Invalid behavior group name '${name}'`);
+    }
+    if (reservedBehaviorScopeNames.has(name)) {
+      throw this.createScopeCollision(`Behavior group '${name}' is reserved`);
+    }
+    return name;
+  }
+  createScopeCollision(message) {
+    return new Error(`Scope collision: ${message}`);
+  }
+  bindBehaviorScopeAlias(behavior, element, scope) {
+    const name = behavior.scopeAlias;
+    if (!name) {
+      return void 0;
+    }
+    if (scope.hasPath(name)) {
+      throw this.createScopeCollision(
+        `Behavior scope alias '${name}' conflicts with an existing state or alias`
+      );
+    }
+    const value = this.getGroupProxy(scope);
+    scope.defineAlias(name, value);
+    const binding = { name, scope, value };
+    const aliases = this.behaviorScopeAliases.get(element) ?? /* @__PURE__ */ new Map();
+    aliases.set(behavior.id, binding);
+    this.behaviorScopeAliases.set(element, aliases);
+    return binding;
+  }
+  removeBehaviorScopeAlias(element, behaviorId, binding = this.behaviorScopeAliases.get(element)?.get(behaviorId)) {
+    if (!binding) {
+      return;
+    }
+    binding.scope.removeAlias(binding.name, binding.value);
+    const aliases = this.behaviorScopeAliases.get(element);
+    if (aliases?.get(behaviorId) === binding) {
+      aliases.delete(behaviorId);
+      if (aliases.size === 0) {
+        this.behaviorScopeAliases.delete(element);
+      }
+    }
+  }
+  scheduleBehaviorScopeAliasCleanup(element, behaviorId, binding = this.behaviorScopeAliases.get(element)?.get(behaviorId), pending = []) {
+    if (!binding) {
+      return;
+    }
+    if (pending.length === 0) {
+      this.removeBehaviorScopeAlias(element, behaviorId, binding);
+      return;
+    }
+    void Promise.allSettled(pending).then(() => {
+      this.removeBehaviorScopeAlias(element, behaviorId, binding);
+    });
   }
   getGroupProxy(scope) {
     const cached = this.groupProxyCache.get(scope);
@@ -6458,8 +6633,9 @@ var Engine = class _Engine {
         ownKeys: () => []
       }
     );
-    this.groupProxyCache.set(scope, proxy);
-    return proxy;
+    const nonReactiveProxy = markNonReactiveProxy(proxy);
+    this.groupProxyCache.set(scope, nonReactiveProxy);
+    return nonReactiveProxy;
   }
   async mount(root) {
     await this.initializeRoot(root, false);
@@ -6861,7 +7037,7 @@ var Engine = class _Engine {
   }
   /**
    * Sends a request and optionally applies its HTML response through the
-  * engine's sanitizer and behavior processor.
+   * engine's sanitizer and behavior processor.
   */
   async request(element, config) {
     const requestConfig = config.signal ? config : { ...config, signal: this.engineLifetime.signal };
@@ -7611,7 +7787,9 @@ var Engine = class _Engine {
     rootScopes.set(behavior.id, rootScope);
     this.behaviorRootScopes.set(element, rootScopes);
     const lifetime = this.getBehaviorLifetime(element, behavior.id);
+    let aliasBinding;
     try {
+      aliasBinding = this.bindBehaviorScopeAlias(behavior, element, scope);
       this.applyBehaviorFunctions(element, scope, behavior.functions, rootScope, lifetime);
       await this.applyBehaviorDeclarations(element, scope, behavior.declarations, rootScope, behavior.id, lifetime);
       if (lifetime.isDisposed) {
@@ -7646,6 +7824,10 @@ var Engine = class _Engine {
       this.logDiagnostic("bind", element, behavior);
     } catch (error) {
       const cancelled = lifetime.signal.aborted || isAbortError(error);
+      if (aliasBinding) {
+        this.removeBehaviorScopeAlias(element, behavior.id, aliasBinding);
+      }
+      this.logScopeCollision(element, behavior, error);
       this.disposeLifetime(element, lifetime);
       this.behaviorLifetimes.get(element)?.delete(behavior.id);
       if (this.behaviorLifetimes.get(element)?.size === 0) {
@@ -7676,12 +7858,16 @@ var Engine = class _Engine {
       this.behaviorLifetimes.delete(element);
     }
     const rootScope = this.getBehaviorRootScope(element, behavior);
+    const pending = [];
     if (behavior.destruct) {
-      void this.safeExecuteBlock(behavior.destruct, scope, element, rootScope, lifetime, null);
+      pending.push(this.safeExecuteBlock(behavior.destruct, scope, element, rootScope, lifetime, null));
     }
     this.behaviorRootScopes.get(element)?.delete(behavior.id);
-    void this.applyBehaviorModifierHook("onDestruct", behavior, element, scope, rootScope, lifetime);
-    void this.applyBehaviorModifierHook("onUnbind", behavior, element, scope, rootScope, lifetime);
+    if (this.behaviorHasModifierHooks(behavior)) {
+      pending.push(this.applyBehaviorModifierHook("onDestruct", behavior, element, scope, rootScope, lifetime));
+      pending.push(this.applyBehaviorModifierHook("onUnbind", behavior, element, scope, rootScope, lifetime));
+    }
+    this.scheduleBehaviorScopeAliasCleanup(element, behavior.id, void 0, pending);
     this.logDiagnostic("unbind", element, behavior);
   }
   runBehaviorDestruct(element) {
@@ -7691,16 +7877,21 @@ var Engine = class _Engine {
     }
     const scope = this.getScope(element);
     for (const behavior of this.behaviorRegistry) {
-      if (!bound.has(behavior.id) || !behavior.destruct && !this.behaviorHasModifierHooks(behavior)) {
+      const hasModifierHooks = this.behaviorHasModifierHooks(behavior);
+      if (!bound.has(behavior.id) || !behavior.destruct && !hasModifierHooks && !behavior.scopeAlias) {
         continue;
       }
       const rootScope = this.getBehaviorRootScope(element, behavior);
       const lifetime = this.behaviorLifetimes.get(element)?.get(behavior.id) ?? new Lifetime();
+      const pending = [];
       if (behavior.destruct) {
-        void this.safeExecuteBlock(behavior.destruct, scope, element, rootScope, lifetime, null);
+        pending.push(this.safeExecuteBlock(behavior.destruct, scope, element, rootScope, lifetime, null));
       }
-      void this.applyBehaviorModifierHook("onDestruct", behavior, element, scope, rootScope, lifetime);
-      void this.applyBehaviorModifierHook("onUnbind", behavior, element, scope, rootScope, lifetime);
+      if (hasModifierHooks) {
+        pending.push(this.applyBehaviorModifierHook("onDestruct", behavior, element, scope, rootScope, lifetime));
+        pending.push(this.applyBehaviorModifierHook("onUnbind", behavior, element, scope, rootScope, lifetime));
+      }
+      this.scheduleBehaviorScopeAliasCleanup(element, behavior.id, void 0, pending);
     }
   }
   attachAttributes(element) {
@@ -8249,6 +8440,21 @@ var Engine = class _Engine {
       behaviorId: behavior.id
     });
   }
+  logScopeCollision(element, behavior, error) {
+    if (!this.diagnostics || !this.logger.warn) {
+      return;
+    }
+    if (!(error instanceof Error) || !error.message.startsWith("Scope collision:")) {
+      return;
+    }
+    this.logger.warn("vsn:collision", {
+      error,
+      selector: this.describeElement(element),
+      behaviorId: behavior.id,
+      behaviorSelector: behavior.selector,
+      scopeAlias: behavior.scopeAlias
+    });
+  }
   emitError(element, error) {
     const selector = this.describeElement(element);
     this.logger.warn?.("vsn:error", { error, selector });
@@ -8772,6 +8978,7 @@ var Engine = class _Engine {
     if (!parentSelector && hasNestingSelector(nestedSelector)) {
       throw new Error("Nesting selector '&' requires a parent behavior");
     }
+    const scopeAlias = this.getBehaviorScopeAlias(behavior);
     const selector = parentSelector ? composeNestedSelector(parentSelector, nestedSelector) : nestedSelector;
     const rootSelector = rootSelectorOverride ?? (parentSelector ?? behavior.selector.selectorText);
     const behaviorHash = this.hashBehavior(behavior);
@@ -8798,6 +9005,7 @@ var Engine = class _Engine {
       flagArgs: behavior.flagArgs ?? {},
       ...cached,
       ...parentSelector ? { parentSelector } : {},
+      ...scopeAlias ? { scopeAlias } : {},
       persistent: dynamicOwner === void 0,
       dynamicOwners: dynamicOwner ? /* @__PURE__ */ new Set([dynamicOwner]) : /* @__PURE__ */ new Set()
     };
@@ -9527,7 +9735,10 @@ var Engine = class _Engine {
     }
     const flags = behavior.flags ?? {};
     for (const name of Object.keys(flags)) {
-      if (flags[name] && this.behaviorModifiers.has(name)) {
+      const handler = this.behaviorModifiers.get(name);
+      if (flags[name] && handler && ["onBind", "onConstruct", "onDestruct", "onUnbind"].some(
+        (hook) => typeof handler[hook] === "function"
+      )) {
         return true;
       }
     }

@@ -29,6 +29,7 @@ export interface ComputedRef<T> {
 }
 
 const proxyToRaw = new WeakMap<object, object>();
+const nonReactiveProxies = new WeakSet<object>();
 const arrayMutators = new Set([
   "copyWithin",
   "fill",
@@ -497,8 +498,15 @@ export function unwrapReactiveValue<T>(value: T): T {
   return unwrapProxy(value);
 }
 
+/** @internal Mark an extension proxy that must not be wrapped as reactive state. */
+export function markNonReactiveProxy<T extends object>(value: T): T {
+  nonReactiveProxies.add(value);
+  return value;
+}
+
 export class Scope {
   private data = new Map<string, any>();
+  private aliases = new Map<string, any>();
   private computedValues = new Map<string, ComputedState<any>>();
   private root: Scope;
   private listeners = new Map<string, Set<ListenerEntry>>();
@@ -531,6 +539,88 @@ export class Scope {
     this.setPath(key, value);
   }
 
+  /** @internal Define a behavior-tree alias without making it writable state. */
+  defineAlias(name: string, value: any): void {
+    const key = name.trim();
+    if (!key || key.includes(".")) {
+      throw new Error("Behavior scope aliases require a non-empty root key");
+    }
+    if (this.hasLocalBinding(key)) {
+      throw new Error(`Scope collision: behavior scope alias '${key}' is already defined on this scope`);
+    }
+    this.aliases.set(key, value);
+    this.emitChange(key);
+  }
+
+  /** @internal Remove a behavior-tree alias if it still points at value. */
+  removeAlias(name: string, value?: any): void {
+    const key = name.trim();
+    if (!key || !this.aliases.has(key)) {
+      return;
+    }
+    if (value !== undefined && this.aliases.get(key) !== value) {
+      return;
+    }
+    this.aliases.delete(key);
+    this.emitChange(key);
+  }
+
+  /** @internal Returns whether this scope owns a root state, computed value, or alias. */
+  hasLocalBinding(path: string): boolean {
+    const root = path.trim().split(".")[0];
+    if (!root) {
+      return false;
+    }
+    return this.data.has(root) || this.computedValues.has(root) || this.aliases.has(root);
+  }
+
+  /** @internal Returns whether an alias with this name is visible in this scope chain. */
+  hasAlias(path: string): boolean {
+    const root = path.trim().split(".")[0];
+    if (!root) {
+      return false;
+    }
+    let cursor: Scope | undefined = this;
+    while (cursor) {
+      if (cursor.aliases.has(root)) {
+        return true;
+      }
+      cursor = cursor.parent;
+    }
+    return false;
+  }
+
+  /** @internal Read a binding only from this scope, without parent lookup. */
+  getLocal(name: string): any {
+    const key = name.trim();
+    if (!key || key.includes(".") || !this.hasLocalBinding(key)) {
+      return undefined;
+    }
+    if (this.aliases.has(key)) {
+      return this.aliases.get(key);
+    }
+    return this.wrapValue(this.getLocalPathValue(this, key), key);
+  }
+
+  /** @internal Set a root binding on this exact scope, without parent lookup. */
+  setLocal(name: string, value: any): void {
+    const key = name.trim();
+    if (!key || key.includes(".")) {
+      throw new Error("Local scope state requires a non-empty root key");
+    }
+    if (this.aliases.has(key)) {
+      throw new Error(`Scope collision: Cannot replace behavior scope alias '${key}' with state`);
+    }
+    if (this.computedValues.has(key)) {
+      throw new Error(`Cannot assign to computed state '${key}'`);
+    }
+    const nextValue = value && typeof value === "object" && proxyToRaw.has(value)
+      ? value
+      : unwrapProxy(value);
+    this.data.set(key, nextValue);
+    this.emitChange(key);
+  }
+
   batch<T>(callback: () => T): T {
     return batch(callback);
   }
@@ -554,7 +644,7 @@ export class Scope {
     if (typeof getter !== "function") {
       throw new TypeError("Computed state requires a getter function");
     }
-    if (this.data.has(name) || this.computedValues.has(name)) {
+    if (this.data.has(name) || this.computedValues.has(name) || this.aliases.has(name)) {
       throw new Error(`Cannot define computed state '${name}' more than once`);
     }
 
@@ -590,7 +680,7 @@ export class Scope {
     if (!root) {
       return false;
     }
-    return this.data.has(root) || this.computedValues.has(root);
+    return this.data.has(root) || this.computedValues.has(root) || this.aliases.has(root);
   }
 
   /** Returns whether a path is defined on this scope or one of its parents. */
@@ -628,12 +718,15 @@ export class Scope {
       return undefined;
     }
 
+    const root = targetPath.split(".")[0] ?? "";
     const localValue = this.getLocalPathValue(targetScope, targetPath);
     if (explicit || targetScope.hasKey(targetPath)) {
       if (!targetScope.computedValues.has(targetPath.split(".")[0] ?? "")) {
         trackScopeRead(targetScope, targetPath);
       }
-      return targetScope.wrapValue(localValue, targetPath);
+      return targetScope.aliases.has(root) && targetPath === root
+        ? localValue
+        : targetScope.wrapValue(localValue, targetPath);
     }
     const lookupScopes = [targetScope];
     let cursor = targetScope.parent;
@@ -644,7 +737,9 @@ export class Scope {
         if (!cursor.computedValues.has(targetPath.split(".")[0] ?? "")) {
           trackScopeRead(cursor, targetPath);
         }
-        return cursor.wrapValue(value, targetPath);
+        return cursor.aliases.has(root) && targetPath === root
+          ? value
+          : cursor.wrapValue(value, targetPath);
       }
       cursor = cursor.parent;
     }
@@ -672,6 +767,9 @@ export class Scope {
       if (scopeForSet.computedValues.has(root)) {
         throw new Error(`Cannot assign to computed state '${root}'`);
       }
+      if (scopeForSet.aliases.has(root)) {
+        throw new Error(`Scope collision: Cannot assign to behavior scope alias '${root}'`);
+      }
       scopeForSet.data.set(root, nextValue);
       scopeForSet.emitChange(targetPath);
       return;
@@ -679,8 +777,13 @@ export class Scope {
     if (scopeForSet.computedValues.has(root)) {
       throw new Error(`Cannot assign to computed state '${root}'`);
     }
-    let obj = unwrapProxy(scopeForSet.data.get(root));
+    let obj = scopeForSet.aliases.has(root)
+      ? scopeForSet.aliases.get(root)
+      : unwrapProxy(scopeForSet.data.get(root));
     if (obj == null || typeof obj !== "object") {
+      if (scopeForSet.aliases.has(root)) {
+        throw new Error(`Scope collision: Cannot assign through behavior scope alias '${root}'`);
+      }
       obj = {};
       scopeForSet.data.set(root, obj);
     }
@@ -836,7 +939,11 @@ export class Scope {
       return undefined;
     }
     const computed = scope.computedValues.get(root);
-    let value = computed ? computed.get() : scope.data.get(root);
+    let value = computed
+      ? computed.get()
+      : scope.aliases.has(root)
+        ? scope.aliases.get(root)
+        : scope.data.get(root);
     for (let i = 1; i < parts.length; i += 1) {
       if (value == null) {
         return undefined;
@@ -862,7 +969,7 @@ export class Scope {
     }
     let cursor: Scope | undefined = start;
     while (cursor) {
-      if (cursor.data.has(root)) {
+      if (cursor.hasLocalBinding(root)) {
         return cursor;
       }
       cursor = cursor.parent;
@@ -871,7 +978,11 @@ export class Scope {
   }
 
   private wrapValue<T>(value: T, path: string): T {
-    if (value && typeof value === "object" && proxyToRaw.has(value)) {
+    if (
+      value
+      && typeof value === "object"
+      && (proxyToRaw.has(value) || nonReactiveProxies.has(value))
+    ) {
       return value;
     }
     const rawValue = unwrapProxy(value);

@@ -94,7 +94,34 @@ Declarations are evaluated before `construct`, `destruct`, and `on` blocks. Comm
 $color :< theme.color;
 ```
 
-`construct` runs when a behavior binds and `destruct` runs when it unbinds. `self`, `parent`, and `root` address the current, parent, and behavior-root scopes. Named functions are synchronous unless declared `async`; async functions return promises and may use `await`.
+`construct` runs when a behavior binds and `destruct` runs when it unbinds. `self`, `parent`, and `root` address the current, parent, and behavior-root scopes. Each top-level behavior starts an independent behavior tree, while nested selectors retain the parent tree's `root` scope.
+
+Use `!as(name)` to give a behavior's scope a stable name that is visible to
+that behavior and its nested descendants. The alias is a binding,
+not writable state: `dialog.open = true` updates the named behavior's state,
+but assigning `dialog = otherValue` is a scope collision. Use
+`!group("name")` on a nested behavior to add a live proxy for that child to
+the exact parent behavior scope. Groups are useful for parent-to-child calls
+and collection operations:
+
+```vsn
+behavior .dialog !as(dialog) {
+  open: false;
+
+  on click() {
+    dialog.open = panels.length > 0;
+  }
+
+  .panel !group("panels") {
+    refresh() { }
+  }
+}
+```
+
+Aliases and groups must use simple scope names. Reusing a visible state or
+alias name is reported as a scope collision instead of silently overwriting
+the existing binding. Named functions are synchronous unless declared `async`;
+async functions return promises and may use `await`.
 
 Inline attributes include `vsn-bind`, `vsn-if`, `vsn-show`, `vsn-text`, `vsn-html`, `vsn-each`, `vsn-get`, `vsn-transition`, `vsn-enter`, `vsn-leave`, and `vsn-on:<event>`. `vsn-text` writes literal text with `textContent`; `vsn-html` sanitizes HTML by default, while `vsn-html!trusted` explicitly bypasses sanitization. Untrusted HTML never activates VSN behavior scripts or `vsn-*` attributes. `vsn-if` conditionally mounts and unmounts an element, running its lifecycle cleanup and setup each time; `vsn-show` keeps the element mounted and toggles the native `hidden` state without overwriting inline display styles.
 

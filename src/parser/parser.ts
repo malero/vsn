@@ -69,7 +69,7 @@ export class Parser {
   constructor(input: string, options?: { customFlags?: Set<string>; behaviorFlags?: Set<string> }) {
     this.source = input;
     this.customFlags = options?.customFlags ?? new Set<string>(["important", "debounce"]);
-    this.behaviorFlags = options?.behaviorFlags ?? new Set<string>();
+    this.behaviorFlags = options?.behaviorFlags ?? new Set<string>(["as", "group"]);
     const lexer = new Lexer(input);
     this.stream = new TokenStream(lexer.tokenize());
   }
