@@ -380,6 +380,9 @@ behavior packages should use their own stable prefix (for example,
 `.acme-dialog`) and can use the same `script[type="text/vsn"]` loading path.
 Loading a `.cfs` file is opt-in: an element without its public class does not
 match the behavior, and applications do not need to load unrelated modules.
+Every published behavior should follow the [behavior contract](./behaviors/CONTRACT.md),
+including its markup, state, events, keyboard, accessibility, and cleanup
+guarantees.
 
 The [`examples/`](./examples/) directory contains focused cookbook entries for
 behaviors, bindings, lifecycle, requests, templates, and accessibility. See

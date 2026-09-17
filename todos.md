@@ -48,7 +48,7 @@ HTML-first, selector-driven character. The priority labels are directional:
 - [x] Define `@vsnjs/behaviors` as the first-party behavior package, with raw
   `cfs/<name>.cfs` assets and stable class-based opt-in selectors such as
   `.vsn-dialog`.
-- [ ] Specify a behavior contract: required markup, state names, attributes,
+- [x] Specify a behavior contract: required markup, state names, attributes,
   emitted events, keyboard behavior, accessibility expectations, and cleanup
   guarantees.
 - [ ] Make raw, versioned `.cfs` files the primary public behavior-library
