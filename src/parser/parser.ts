@@ -1781,6 +1781,32 @@ export class Parser {
       }
 
       if (parenthesisDepth === 0 && bracketDepth === 0) {
+        // A parameterized behavior modifier is part of the selector header,
+        // not a function call in an expression. Skip it while deciding
+        // whether this is an implicit nested behavior.
+        if (token.type === TokenType.Bang) {
+          const flagName = this.stream.peekNonWhitespace(index + 1);
+          if (!flagName || flagName.type !== TokenType.Identifier) {
+            return false;
+          }
+
+          const flagArgumentStart = index + 2;
+          if (this.stream.peekNonWhitespace(flagArgumentStart)?.type === TokenType.LParen) {
+            const afterFlagArgument = this.stream.indexAfterDelimited(
+              TokenType.LParen,
+              TokenType.RParen,
+              flagArgumentStart
+            );
+            if (afterFlagArgument === null) {
+              return false;
+            }
+            index = afterFlagArgument;
+          } else {
+            index = flagArgumentStart;
+          }
+          continue;
+        }
+
         if (
           token.type === TokenType.Equals
           || token.type === TokenType.Arrow

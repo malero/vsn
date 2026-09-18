@@ -82,6 +82,19 @@ button.primary { }
     expect(nestedBehavior.flagArgs.group).toBe("panels");
   });
 
+  it("parses implicit nested selectors with parameterized modifiers", () => {
+    const source = `#app-header {
+  .header-switcher !group("menus") { }
+}`;
+
+    const program = new Parser(source).parseProgram();
+    const nestedBehavior = program.behaviors[0]!.body.statements[0] as BehaviorNode;
+
+    expect(nestedBehavior.selector.selectorText).toBe(".header-switcher");
+    expect(nestedBehavior.flags.group).toBe(true);
+    expect(nestedBehavior.flagArgs.group).toBe("menus");
+  });
+
   it("parses assignment targets with paths and directives", () => {
     const source = `behavior .card {
   on click() {

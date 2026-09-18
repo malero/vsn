@@ -3946,6 +3946,27 @@ ${caret}`;
         return false;
       }
       if (parenthesisDepth === 0 && bracketDepth === 0) {
+        if (token.type === "Bang" /* Bang */) {
+          const flagName = this.stream.peekNonWhitespace(index + 1);
+          if (!flagName || flagName.type !== "Identifier" /* Identifier */) {
+            return false;
+          }
+          const flagArgumentStart = index + 2;
+          if (this.stream.peekNonWhitespace(flagArgumentStart)?.type === "LParen" /* LParen */) {
+            const afterFlagArgument = this.stream.indexAfterDelimited(
+              "LParen" /* LParen */,
+              "RParen" /* RParen */,
+              flagArgumentStart
+            );
+            if (afterFlagArgument === null) {
+              return false;
+            }
+            index = afterFlagArgument;
+          } else {
+            index = flagArgumentStart;
+          }
+          continue;
+        }
         if (token.type === "Equals" /* Equals */ || token.type === "Arrow" /* Arrow */ || token.type === "DoubleEquals" /* DoubleEquals */ || token.type === "TripleEquals" /* TripleEquals */ || token.type === "NotEquals" /* NotEquals */ || token.type === "StrictNotEquals" /* StrictNotEquals */ || token.type === "And" /* And */ || token.type === "Or" /* Or */ || token.type === "Pipe" /* Pipe */ || token.type === "Question" /* Question */) {
           return false;
         }
@@ -10143,7 +10164,7 @@ var Engine = class _Engine {
 };
 
 // src/index.ts
-var VERSION = true ? "1.0.15" : "0.1.0";
+var VERSION = true ? "1.0.16" : "0.1.0";
 function parseCFS(source) {
   const parser = new Parser(source);
   return parser.parseProgram();
