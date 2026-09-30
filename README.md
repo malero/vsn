@@ -371,3 +371,10 @@ npm run typecheck   # type-check source and tests
 For CFS syntax, remember that hyphenated identifiers are supported. To
 subtract numbers, put whitespace around the operator: use `count - 1`, not
 `count-1`.
+
+## Website and documentation
+
+The website lives in [`site/`](./site/README.md), alongside canonical Markdown
+under `site/content/`. From the repository root, run `go run ./site` with
+Go 1.25+ and open http://localhost:8080. HTML and Markdown share the same docs;
+request `Accept: text/markdown` or use an explicit `.md` URL.
