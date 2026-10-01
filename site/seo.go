@@ -92,8 +92,8 @@ func metadataForExample(name string) metadata {
 	return metadata{Title: info.Label + " Example | VSN.js", Description: info.Description, Heading: info.Label + " example with VSN.js"}
 }
 
-// Only the actual request Host selects the apex redirect. Proxy headers never
-// influence the destination or canonical URLs, and local preview hosts stay local.
+// Only the actual request Host selects the canonical-host redirect. Proxy headers
+// never influence the destination or canonical URLs, and local preview hosts stay local.
 func canonicalHost(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		host := strings.ToLower(r.Host)
@@ -106,7 +106,8 @@ func canonicalHost(next http.Handler) http.Handler {
 			}
 			host = name
 		}
-		if strings.TrimSuffix(host, ".") == "vsnjs.org" {
+		host = strings.TrimSuffix(host, ".")
+		if host == "vsnjs.org" || host == "vsn.fly.dev" {
 			path := r.URL.EscapedPath()
 			if path == "" {
 				path = "/"
