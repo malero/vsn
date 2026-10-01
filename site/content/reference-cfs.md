@@ -1,6 +1,6 @@
-# CFS
+# CFS: Cascading Function Sheets reference
 
-CFS is VSN's behavior language. A CSS selector chooses elements; state declarations, functions, events, and DOM bindings describe how those elements behave. CFS source is parsed by VSN, rather than executed as JavaScript by the browser.
+Cascading Function Sheets (CFS) is VSN's behavior language. A CSS selector chooses elements; state declarations, functions, events, and DOM bindings describe how those elements behave. CFS source is parsed by VSN, rather than executed as JavaScript by the browser.
 
 ## Inline scripts and external .vsn files
 

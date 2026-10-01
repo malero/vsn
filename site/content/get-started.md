@@ -1,4 +1,4 @@
-# Get started
+# Get started with VSN.js
 
 Start with a page, give it a little state, and let VSN connect the two. VSN enhances HTML that already exists, using CFS behavior blocks and `vsn-*` attributes. No component renderer required.
 

@@ -1,4 +1,4 @@
-# Runtime API
+# VSN.js runtime API
 
 Use explicit JavaScript setup when you need control over registration, mounting, hydration, or extensions. [CFS](/reference/cfs) defines the behavior source; [plugins](/reference/plugins) add optional features.
 

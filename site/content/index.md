@@ -1,4 +1,4 @@
-# Website behavior. Programmed like CSS.
+# VSN.js: SEO-friendly JavaScript framework
 
 VSN adds state, events, and bindings to the HTML you already wrote. Because if CSS can describe how a website looks, surely it can describe how it behaves. Surely.
 

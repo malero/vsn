@@ -1,4 +1,4 @@
-# Guide
+# VSN.js guide: state, bindings, and behaviors
 
 VSN keeps the page as the starting point. Write useful HTML, attach behavior to selected elements, and make the parts that change reactive. This guide explains how those pieces fit together; the [reference](/reference) lists the individual APIs.
 

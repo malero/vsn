@@ -1,4 +1,4 @@
-# Examples
+# VSN.js examples
 
 Seventeen small, runnable pages show VSN in real markup. Each one focuses on a few ideas rather than prescribing an application architecture. Open a demo, inspect its behavior, and borrow the part you need.
 

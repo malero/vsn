@@ -1,4 +1,4 @@
-# Reference
+# VSN.js reference
 
 Choose a reference section for the details you need. Start with [Get started](/get-started) for a first page, or the [Guide](/guide) for the mental model.
 

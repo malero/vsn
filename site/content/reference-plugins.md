@@ -1,4 +1,4 @@
-# Plugins
+# VSN.js plugins
 
 Optional modules extend the core runtime. Load or register them before mounting behaviors that depend on them.
 

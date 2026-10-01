@@ -40,6 +40,10 @@ Run tests with `go test ./site` and `go vet ./site`. With the project Node depen
 
 Homepage plus four destinations: `/get-started`, `/guide`, `/reference`, `/examples`. The reference has dedicated `/reference/html`, `/reference/cfs`, `/reference/runtime`, and `/reference/plugins` pages. Existing `/reference#...` bookmarks lead to links into the new sections. The REFERENCE submenu appears within the reference section. The EXAMPLES submenu appears on the gallery and every `/play/{name}` page, links directly to all 17 examples, and highlights the current example. Cookbook pages keep their demos in isolated iframes, with a standalone runner at `/run/{name}`. Their HTML source is displayed on each cookbook page. Example fragments are served under `/examples/raw/` so relative requests work.
 
+At widths up to 850px, the header and sidebar links are replaced by a labeled primary navigation dropdown. Reference and example pages add a second, adjacent dropdown for the current section or example, including its overview. Native selects use full-page navigation; their current selection resets when returning with browser Back/Forward. Desktop links remain unchanged. With JavaScript disabled, mobile visitors retain the link navigation.
+
+With a preview running, `node site/check-navigation.mjs` verifies dropdown navigation and history restoration on every page; pass a custom URL such as `http://localhost:8081` as needed. This complements Go's rendered navigation checks; it uses jsdom and does not verify browser layout.
+
 ## Markdown representations
 
 Every documentation URL serves HTML by default. Ask for `Accept: text/markdown` to receive the exact source. Quality values and specific exclusions are honored; HTML wins equal quality. Unsupported representations return 406. Responses vary on `Accept`.
@@ -51,3 +55,11 @@ The 42 known legacy `/docs/{topic}/` paths redirect permanently to their new sec
 ## Boundaries
 
 This is a local preview implementation, not a production deployment. No deployment, database, analytics, search index, or authentication is configured. The long-form reference is a verified practical API reference, not a generated listing of every internal TypeScript type. Legacy topics are consolidated; redirects point to destination pages rather than claiming old APIs still exist.
+
+## Search metadata and canonical host
+
+`site/seo.go` supplies unique titles and descriptions for the homepage, documentation, and 17 example detail pages. Indexable HTML and its canonical HTTP Link header use `https://www.vsnjs.org`; tracking queries do not enter canonical URLs. The homepage keeps the SEO Friendly JavaScript Framework title and its CSS-inspired copy.
+
+Requests whose actual Host is `vsnjs.org` permanently redirect to `https://www.vsnjs.org`, preserving the escaped path and query. Localhost, loopback, Fly preview domains, and other hosts are not redirected. Forwarded host/protocol headers do not determine redirects or canonical URLs. Fly's existing HTTPS enforcement remains responsible for HTTP-to-HTTPS redirects on the www host. Both production hostnames need working DNS and certificates before an HTTPS request can reach this redirect.
+
+`/sitemap.xml` lists the 26 canonical HTML pages; `/robots.txt` advertises it. Standalone `/run/` demos, raw example sources, explicit Markdown source URLs, and error pages send `noindex`. They remain crawlable so robots can read the directive. Negotiated Markdown retains its content and canonical HTML Link header. Standalone demo templates are in `site/runner.html`; normal pages use `site/layout.html`.

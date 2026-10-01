@@ -1,4 +1,4 @@
-# HTML attributes
+# VSN.js HTML attributes
 
 HTML attributes connect existing markup to behavior state. See [CFS](/reference/cfs) for selectors and actions, or [the Guide](/guide) for complete interactions.
 
