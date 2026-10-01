@@ -9,7 +9,7 @@ Inline CFS belongs in a `text/vsn` script. Load the browser runtime with `auto-m
 ```html
 <section id="counter">
   <strong vsn-bind:from="count">0</strong>
-  <button type="button" vsn-on:click="count = count + 1;">Add one</button>
+  <button type="button" vsn-on:click="count++;">Add one</button>
 </section>
 <script type="text/vsn">
   #counter { count: 0; }
@@ -88,7 +88,7 @@ Within a behavior, put declarations first, then construction, functions and even
   count: 0;
 
   add(amount) {
-    count = count + amount;
+    count += amount;
     return count;
   }
 
@@ -106,6 +106,20 @@ Within a behavior, put declarations first, then construction, functions and even
 
 Values include strings, numbers, booleans, `null`, arrays, and objects. Read members with `user.name` or `items[index]`; call functions with `save()`. Arithmetic, comparisons, `&&`, `||`, `??`, `!`, and conditional `test ? yes : no` expressions support everyday state calculations. Arrays, objects, and function calls support spread; assignment supports object/array destructuring. Template literals interpolate values with `${value}`. Tagged `html` templates require the [templates plugin](/reference/plugins).
 
+Assignment statements and `for` initializer/update clauses support `+=`, `-=`, `*=`, and `/=` on state identifiers, member paths, and indexed paths. Compound assignment is a statement or `for`-clause update, not a general expression operator. Prefix and postfix `++`/`--` update those paths as expressions: prefix returns the new numeric value and postfix returns the previous numeric value. Updates convert the current value to a number, so a non-numeric value becomes `NaN`. For the `@class` directive, `+=` and `-=` add or remove class tokens, and `~=` toggles them; compound assignment on other directives is unsupported.
+
+```cfs
+#counter {
+  count: 0;
+
+  increment() {
+    previous = count++;
+    next = ++count;
+    count += 2;
+  }
+}
+```
+
 ```cfs
 #summary {
   items: [2, 4, 6];
@@ -114,8 +128,8 @@ Values include strings, numbers, booleans, `null`, arrays, and objects. Read mem
 
   calculate() {
     total = 0;
-    for (i = 0; i < items.length; i = i + 1) {
-      total = total + items[i];
+    for (i = 0; i < items.length; i++) {
+      total += items[i];
     }
     if (total > 10) {
       status = "Over ten";

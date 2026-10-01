@@ -70,7 +70,7 @@ try {
   // Exercise the documented .vsn URL through autoMount, including src precedence.
   const doc = await readFile('site/content/reference-cfs.md', 'utf8');
   const externalTag = doc.match(/<script type="text\/vsn" src="\/path\/to\/some\.vsn"><\/script>/)[0];
-  document.body.innerHTML = `<section id="counter"><strong vsn-bind:from="count">0</strong><button vsn-on:click="count = count + 1;">Add one</button></section>${externalTag}`;
+  document.body.innerHTML = `<section id="counter"><strong vsn-bind:from="count">0</strong><button vsn-on:click="count++;">Add one</button></section>${externalTag}`;
   document.querySelector('script').textContent = '#counter { count: 99; }';
   let requested;
   globalThis.fetch = async (url, options) => {

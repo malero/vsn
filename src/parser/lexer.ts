@@ -145,7 +145,7 @@ export class Lexer {
         continue;
       }
       if (ch === "-") {
-        if (this.peek(1) === "-") {
+        if (this.peek(1) === "-" || this.peek(1) === "=") {
           break;
         }
         value += this.next();

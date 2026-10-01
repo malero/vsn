@@ -225,6 +225,7 @@ declare class AssignmentNode extends BaseNode {
     prefix: boolean;
     constructor(target: AssignmentTarget, value: ExpressionNode, operator?: "=" | "+=" | "-=" | "*=" | "/=" | "~=" | "++" | "--", prefix?: boolean);
     evaluate(context: ExecutionContext): any;
+    private assertSupportedOperator;
     private applyCompoundAssignment;
     private applyIncrement;
     private resolveAssignmentTarget;
@@ -571,6 +572,8 @@ declare class Parser {
     private isAssignmentStart;
     private isAssignmentOperatorStart;
     private isExpressionStatementStart;
+    private isMutablePathTarget;
+    private hasOptionalChainInTarget;
     private isImplicitBehaviorStart;
     private isSelectorStartToken;
     private isFunctionDeclarationStart;

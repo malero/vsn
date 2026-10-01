@@ -194,7 +194,7 @@ var Lexer = class {
         continue;
       }
       if (ch === "-") {
-        if (this.peek(1) === "-") {
+        if (this.peek(1) === "-" || this.peek(1) === "=") {
           break;
         }
         value += this.next();
@@ -801,6 +801,7 @@ var AssignmentNode = class extends BaseNode {
   }
   evaluate(context) {
     throwIfAborted(context.signal);
+    this.assertSupportedOperator();
     const target = this.target;
     if (target instanceof DirectiveExpression) {
       const value2 = this.value.evaluate(context);
@@ -837,34 +838,59 @@ var AssignmentNode = class extends BaseNode {
     if (this.operator === "++" || this.operator === "--") {
       return this.applyIncrement(context);
     }
+    if (this.operator !== "=") {
+      return this.applyCompoundAssignment(context);
+    }
+    if (this.target instanceof MemberExpression || this.target instanceof IndexExpression) {
+      const resolved = this.resolveAssignmentTarget(context);
+      return resolveMaybe(resolved, (resolvedTarget) => {
+        throwIfAborted(context.signal);
+        if (!resolvedTarget?.scope?.setPath) {
+          throw new Error("Assignment requires a mutable identifier, member, or index path");
+        }
+        const targetScope = resolvedTarget.scope;
+        const value2 = this.value.evaluate(context);
+        return resolveMaybe(value2, (resolvedValue) => {
+          throwIfAborted(context.signal);
+          targetScope.setPath(resolvedTarget.path, resolvedValue);
+          return resolvedValue;
+        }, context.signal);
+      }, context.signal);
+    }
     const value = this.value.evaluate(context);
     return resolveMaybe(value, (resolvedValue) => {
       throwIfAborted(context.signal);
-      if (this.operator !== "=") {
-        return this.applyCompoundAssignment(context, resolvedValue);
-      }
       if (this.target instanceof IdentifierExpression && this.target.name.startsWith("root.") && context.rootScope) {
         const path = this.target.name.slice("root.".length);
         context.rootScope.setPath?.(`self.${path}`, resolvedValue);
         return resolvedValue;
       }
-      if (this.target instanceof MemberExpression || this.target instanceof IndexExpression) {
-        const resolved = this.resolveAssignmentTarget(context);
-        return resolveMaybe(resolved, (resolvedTarget) => {
-          throwIfAborted(context.signal);
-          if (resolvedTarget?.scope?.setPath) {
-            resolvedTarget.scope.setPath(resolvedTarget.path, resolvedValue);
-            return resolvedValue;
-          }
-          this.assignTarget(context, this.target, resolvedValue);
-          return resolvedValue;
-        }, context.signal);
-      }
       this.assignTarget(context, this.target, resolvedValue, this.operator);
       return resolvedValue;
     }, context.signal);
   }
-  applyCompoundAssignment(context, value) {
+  assertSupportedOperator() {
+    if (this.operator === "++" || this.operator === "--") {
+      if (this.target instanceof IdentifierExpression || this.target instanceof MemberExpression || this.target instanceof IndexExpression) {
+        return;
+      }
+      throw new Error("Increment/decrement requires a mutable state path");
+    }
+    if (this.operator === "=") {
+      return;
+    }
+    const directive = this.target instanceof DirectiveExpression ? this.target : this.target instanceof ElementDirectiveExpression ? this.target.directive : void 0;
+    if (directive) {
+      if (directive.kind === "attr" && directive.name === "class" && (this.operator === "+=" || this.operator === "-=" || this.operator === "~=")) {
+        return;
+      }
+      throw new Error(`Compound assignment is not supported for ${directive.kind === "attr" ? "@" : "$"}${directive.name}`);
+    }
+    if (!(this.target instanceof IdentifierExpression) && !(this.target instanceof MemberExpression) && !(this.target instanceof IndexExpression)) {
+      throw new Error("Compound assignment requires a mutable state path");
+    }
+  }
+  applyCompoundAssignment(context) {
     if (!context.scope || !context.scope.setPath) {
       return void 0;
     }
@@ -876,18 +902,24 @@ var AssignmentNode = class extends BaseNode {
       }
       const { scope, path } = resolvedTarget;
       const current = scope?.getPath ? scope.getPath(path) : void 0;
-      let result;
-      if (this.operator === "+=") {
-        result = current + value;
-      } else if (this.operator === "-=") {
-        result = current - value;
-      } else if (this.operator === "*=") {
-        result = current * value;
-      } else {
-        result = current / value;
-      }
-      scope?.setPath?.(path, result);
-      return result;
+      const value = this.value.evaluate(context);
+      return resolveMaybe(value, (resolvedValue) => {
+        throwIfAborted(context.signal);
+        let result;
+        if (this.operator === "+=") {
+          result = current + resolvedValue;
+        } else if (this.operator === "-=") {
+          result = current - resolvedValue;
+        } else if (this.operator === "*=") {
+          result = current * resolvedValue;
+        } else if (this.operator === "/=") {
+          result = current / resolvedValue;
+        } else {
+          throw new Error(`Unsupported compound assignment operator '${this.operator}'`);
+        }
+        scope?.setPath?.(path, result);
+        return result;
+      }, context.signal);
     }, context.signal);
   }
   applyIncrement(context) {
@@ -904,7 +936,7 @@ var AssignmentNode = class extends BaseNode {
       const current = scope?.getPath ? scope.getPath(path) : void 0;
       const numeric = typeof current === "number" ? current : Number(current);
       const delta = this.operator === "++" ? 1 : -1;
-      const next = (Number.isNaN(numeric) ? 0 : numeric) + delta;
+      const next = numeric + delta;
       scope?.setPath?.(path, next);
       return this.prefix ? next : numeric;
     }, context.signal);
@@ -996,7 +1028,11 @@ var AssignmentNode = class extends BaseNode {
       return target.name;
     }
     if (target instanceof MemberExpression) {
-      return target.getIdentifierPath()?.path ?? null;
+      const base = this.resolveTargetPath(context, target.target);
+      return resolveMaybe(base, (resolvedBase) => {
+        throwIfAborted(context.signal);
+        return resolvedBase ? `${resolvedBase}.${target.property}` : null;
+      }, context.signal);
     }
     if (target instanceof IndexExpression) {
       return this.resolveIndexPath(context, target);
@@ -3035,7 +3071,7 @@ ${caret}`;
     return expr;
   }
   createIncrementNode(token, argument, prefix) {
-    if (!(argument instanceof IdentifierExpression) && !(argument instanceof MemberExpression) && !(argument instanceof IndexExpression) && !(argument instanceof DirectiveExpression) && !(argument instanceof ElementDirectiveExpression)) {
+    if (!this.isMutablePathTarget(argument)) {
       throw new Error("Increment/decrement requires a mutable target");
     }
     const operator = token.type === "PlusPlus" /* PlusPlus */ ? "++" : "--";
@@ -3443,6 +3479,15 @@ ${caret}`;
         throw new Error("Invalid assignment target CallExpression");
       }
       if (expr instanceof IdentifierExpression || expr instanceof MemberExpression || expr instanceof IndexExpression || expr instanceof ElementDirectiveExpression) {
+        if (expr instanceof ElementDirectiveExpression) {
+          if (this.hasOptionalChainInTarget(expr.element)) {
+            throw new Error("Optional chaining is not allowed in a mutable target");
+          }
+        } else if (this.hasOptionalChainInTarget(expr)) {
+          throw new Error("Optional chaining is not allowed in a mutable target");
+        } else if (!this.isMutablePathTarget(expr)) {
+          throw new Error("Assignment requires a mutable identifier, member, or index path");
+        }
         return expr;
       }
       throw new Error("Invalid assignment target");
@@ -3821,8 +3866,24 @@ ${caret}`;
           }
           return false;
         }
+        if (token.type === "OptionalChain" /* OptionalChain */) {
+          const next = this.stream.peekNonWhitespace(index + 1);
+          if (next?.type === "Identifier" /* Identifier */) {
+            index += 2;
+            continue;
+          }
+          return false;
+        }
         if (token.type === "LBracket" /* LBracket */) {
           const indexAfter = this.stream.indexAfterDelimited("LBracket" /* LBracket */, "RBracket" /* RBracket */, index);
+          if (indexAfter === null) {
+            return false;
+          }
+          index = indexAfter;
+          continue;
+        }
+        if (token.type === "LParen" /* LParen */) {
+          const indexAfter = this.stream.indexAfterDelimited("LParen" /* LParen */, "RParen" /* RParen */, index);
           if (indexAfter === null) {
             return false;
           }
@@ -3923,7 +3984,28 @@ ${caret}`;
     if (first.type === "Identifier" /* Identifier */) {
       return true;
     }
-    return first.type === "Number" /* Number */ || first.type === "String" /* String */ || first.type === "Boolean" /* Boolean */ || first.type === "Null" /* Null */ || first.type === "LParen" /* LParen */ || first.type === "LBracket" /* LBracket */ || first.type === "LBrace" /* LBrace */ || first.type === "At" /* At */ || first.type === "Dollar" /* Dollar */ || first.type === "Hash" /* Hash */ || first.type === "Question" /* Question */ || first.type === "Bang" /* Bang */ || first.type === "Minus" /* Minus */;
+    return first.type === "Number" /* Number */ || first.type === "String" /* String */ || first.type === "Boolean" /* Boolean */ || first.type === "Null" /* Null */ || first.type === "LParen" /* LParen */ || first.type === "LBracket" /* LBracket */ || first.type === "LBrace" /* LBrace */ || first.type === "At" /* At */ || first.type === "Dollar" /* Dollar */ || first.type === "Hash" /* Hash */ || first.type === "Question" /* Question */ || first.type === "Bang" /* Bang */ || first.type === "Minus" /* Minus */ || first.type === "PlusPlus" /* PlusPlus */ || first.type === "MinusMinus" /* MinusMinus */;
+  }
+  isMutablePathTarget(expression) {
+    if (expression instanceof IdentifierExpression) {
+      return true;
+    }
+    if (expression instanceof MemberExpression) {
+      return !expression.optional && this.isMutablePathTarget(expression.target);
+    }
+    if (expression instanceof IndexExpression) {
+      return this.isMutablePathTarget(expression.target);
+    }
+    return false;
+  }
+  hasOptionalChainInTarget(expression) {
+    if (expression instanceof MemberExpression) {
+      return expression.optional || this.hasOptionalChainInTarget(expression.target);
+    }
+    if (expression instanceof IndexExpression) {
+      return this.hasOptionalChainInTarget(expression.target);
+    }
+    return false;
   }
   isImplicitBehaviorStart() {
     const first = this.stream.peekNonWhitespace(0);

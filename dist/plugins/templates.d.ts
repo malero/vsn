@@ -169,6 +169,7 @@ declare class AssignmentNode extends BaseNode {
     prefix: boolean;
     constructor(target: AssignmentTarget, value: ExpressionNode, operator?: "=" | "+=" | "-=" | "*=" | "/=" | "~=" | "++" | "--", prefix?: boolean);
     evaluate(context: ExecutionContext): any;
+    private assertSupportedOperator;
     private applyCompoundAssignment;
     private applyIncrement;
     private resolveAssignmentTarget;

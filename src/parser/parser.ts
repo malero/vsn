@@ -771,13 +771,7 @@ export class Parser {
   }
 
   private createIncrementNode(token: Token, argument: ExpressionNode, prefix: boolean): ExpressionNode {
-    if (
-      !(argument instanceof IdentifierExpression)
-      && !(argument instanceof MemberExpression)
-      && !(argument instanceof IndexExpression)
-      && !(argument instanceof DirectiveExpression)
-      && !(argument instanceof ElementDirectiveExpression)
-    ) {
+    if (!this.isMutablePathTarget(argument)) {
       throw new Error("Increment/decrement requires a mutable target");
     }
     const operator = token.type === TokenType.PlusPlus ? "++" : "--";
@@ -1223,6 +1217,15 @@ export class Parser {
         || expr instanceof IndexExpression
         || expr instanceof ElementDirectiveExpression
       ) {
+        if (expr instanceof ElementDirectiveExpression) {
+          if (this.hasOptionalChainInTarget(expr.element)) {
+            throw new Error("Optional chaining is not allowed in a mutable target");
+          }
+        } else if (this.hasOptionalChainInTarget(expr)) {
+          throw new Error("Optional chaining is not allowed in a mutable target");
+        } else if (!this.isMutablePathTarget(expr)) {
+          throw new Error("Assignment requires a mutable identifier, member, or index path");
+        }
         return expr;
       }
       throw new Error("Invalid assignment target");
@@ -1628,8 +1631,24 @@ export class Parser {
           }
           return false;
         }
+        if (token.type === TokenType.OptionalChain) {
+          const next = this.stream.peekNonWhitespace(index + 1);
+          if (next?.type === TokenType.Identifier) {
+            index += 2;
+            continue;
+          }
+          return false;
+        }
         if (token.type === TokenType.LBracket) {
           const indexAfter = this.stream.indexAfterDelimited(TokenType.LBracket, TokenType.RBracket, index);
+          if (indexAfter === null) {
+            return false;
+          }
+          index = indexAfter;
+          continue;
+        }
+        if (token.type === TokenType.LParen) {
+          const indexAfter = this.stream.indexAfterDelimited(TokenType.LParen, TokenType.RParen, index);
           if (indexAfter === null) {
             return false;
           }
@@ -1753,7 +1772,36 @@ export class Parser {
       || first.type === TokenType.Question
       || first.type === TokenType.Bang
       || first.type === TokenType.Minus
+      || first.type === TokenType.PlusPlus
+      || first.type === TokenType.MinusMinus
     );
+  }
+
+  private isMutablePathTarget(
+    expression: ExpressionNode
+  ): expression is IdentifierExpression | MemberExpression | IndexExpression {
+    if (expression instanceof IdentifierExpression) {
+      return true;
+    }
+    if (expression instanceof MemberExpression) {
+      return !expression.optional && this.isMutablePathTarget(expression.target);
+    }
+    if (expression instanceof IndexExpression) {
+      // The index expression is evaluated as part of the reference; optional
+      // chaining inside it does not make the target reference optional.
+      return this.isMutablePathTarget(expression.target);
+    }
+    return false;
+  }
+
+  private hasOptionalChainInTarget(expression: ExpressionNode): boolean {
+    if (expression instanceof MemberExpression) {
+      return expression.optional || this.hasOptionalChainInTarget(expression.target);
+    }
+    if (expression instanceof IndexExpression) {
+      return this.hasOptionalChainInTarget(expression.target);
+    }
+    return false;
   }
 
   private isImplicitBehaviorStart(): boolean {

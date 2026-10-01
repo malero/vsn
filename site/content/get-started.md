@@ -28,8 +28,8 @@ Save this as an HTML page and serve it over HTTP alongside the browser build:
     <main id="counter">
       <h1>A small counter</h1>
       <p>Count: <strong vsn-bind:from="count">0</strong></p>
-      <button type="button" vsn-on:click="count = count - 1;">−1</button>
-      <button type="button" vsn-on:click="count = count + 1;">+1</button>
+      <button type="button" vsn-on:click="count--;">−1</button>
+      <button type="button" vsn-on:click="count++;">+1</button>
       <button type="button" vsn-on:click="active = !active;">
         Toggle status
       </button>
