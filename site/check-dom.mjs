@@ -1,0 +1,20 @@
+// DOM smoke test, not a substitute for visual browser QA.
+import {readFile} from 'node:fs/promises';
+import assert from 'node:assert/strict';
+import {JSDOM} from 'jsdom';
+const html=await readFile('site/layout.html','utf8');
+const dom=new JSDOM(html,{url:'http://localhost:8080/'});
+for(const key of ['window','document','HTMLElement','Element','Node','HTMLInputElement','HTMLTextAreaElement','HTMLSelectElement','HTMLTemplateElement','HTMLFormElement','MutationObserver','CustomEvent','Event','MouseEvent','Document','NodeFilter'])globalThis[key]=dom.window[key];
+document.querySelectorAll('script[auto-mount]').forEach(script=>script.remove());
+const {Engine}=await import('../dist/index.js');
+const engine=new Engine();
+engine.registerBehaviors(document.querySelector('script[type="text/vsn"]').textContent);
+const counter=document.getElementById('homepage-counter');
+await engine.mount(counter);
+const value=counter.querySelector('strong');
+const click=async label=>{counter.querySelector(`[aria-label="${label}"]`).click();await new Promise(r=>setTimeout(r,0));};
+assert.equal(value.textContent,'0');
+await click('Increase count');await click('Increase count');assert.equal(value.textContent,'2');
+await click('Decrease count');assert.equal(value.textContent,'1');
+await click('Decrease count');await click('Decrease count');assert.equal(value.textContent,'-1');
+engine.dispose();dom.window.close();console.log('Homepage VSN counter: initial, repeated increment, decrement, negative state PASS');

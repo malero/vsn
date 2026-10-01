@@ -1,0 +1,26 @@
+# flyctl launch added from .gitignore
+**/.idea
+**/node_modules
+**/coverage
+**/.nyc_output
+
+# flyctl launch added from .idea/.gitignore
+# Default ignored files
+.idea/shelf
+.idea/workspace.xml
+# Editor-based HTTP Client requests
+.idea/httpRequests
+fly.toml
+
+# Local metadata and generated outputs are not build inputs.
+.git
+.github
+.agents
+.codex
+.aws
+**/.DS_Store
+**/*.log
+**/node_modules
+dist
+vsn-site
+run-app
