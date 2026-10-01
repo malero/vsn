@@ -49,6 +49,8 @@
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",
+    "site": "node site/dev.mjs --no-watch",
+    "site:dev": "node site/dev.mjs",
     "test": "vitest run",
     "coverage": "vitest run --coverage",
     "test:watch": "vitest",

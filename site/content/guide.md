@@ -88,7 +88,7 @@ Define `save()` in the containing behavior. Functions are synchronous unless dec
 }
 ```
 
-Flags specialize event handling. `!prevent` prevents the default action, `!stop` stops propagation, `!once` runs once, and `!outside` listens for an event outside the element. Keyboard and modifier-key flags filter events; `!debounce(300)` delays a burst of input events. See the [event flag reference](/reference#event-flags).
+Flags specialize event handling. `!prevent` prevents the default action, `!stop` stops propagation, `!once` runs once, and `!outside` listens for an event outside the element. Keyboard and modifier-key flags filter events; `!debounce(300)` delays a burst of input events. See the [event flag reference](/reference/html#event-flags).
 
 Use native controls and meaningful labels first. Then connect ARIA state to the same state driving visibility. The [tabs](/play/tabs), [modal](/play/modal), and [dropdown](/play/dropdown) examples show the surrounding interaction details.
 
@@ -197,7 +197,7 @@ Explicit trust is for fragments under your application's control:
 
 Trusted fragments can contain VSN behavior scripts, which the engine processes. Trust is a security boundary, not a convenient way to make a sanitizer complaint disappear. Never use it for arbitrary user-supplied content.
 
-The [templates plugin](/reference#plugins) adds the `html` tagged template for composing HTML in CFS. The sanitize plugin configures the sanitizer, including DOMPurify when available. Neither makes untrusted executable behavior safe merely by existing.
+The [templates plugin](/reference/plugins) adds the `html` tagged template for composing HTML in CFS. The sanitize plugin configures the sanitizer, including DOMPurify when available. Neither makes untrusted executable behavior safe merely by existing.
 
 ## Server rendering and hydration
 
@@ -224,7 +224,7 @@ A reusable behavior needs a clear markup contract: selectors, expected state, em
   <button class="acme-dialog__trigger" type="button">Toggle</button>
   <div class="acme-dialog__panel" vsn-show="open">Content</div>
 </section>
-<script type="text/vsn" src="/behaviors/dialog.cfs"></script>
+<script type="text/vsn" src="/behaviors/dialog.vsn"></script>
 ```
 
-The external file supplies the actual behavior. Reserve the `vsn-` class prefix for first-party behavior libraries. Continue to the [reference](/reference) for extension points, or use the [examples](/examples) as small implementation starting points.
+The external `.vsn` file supplies plain CFS source. The loader also accepts `.cfs`; see [inline and external sources](/reference/cfs#inline-scripts-and-external-vsn-files). Reserve the `vsn-` class prefix for first-party behavior libraries. Continue to the [reference](/reference) for extension points, or use the [examples](/examples) as small implementation starting points.

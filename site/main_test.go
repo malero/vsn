@@ -73,7 +73,7 @@ func TestRoutes(t *testing.T) {
 func TestMarkdownIsCanonical(t *testing.T) {
 	h := handler("..")
 	for path := range titles {
-		base := strings.TrimPrefix(path, "/")
+		base := strings.ReplaceAll(strings.TrimPrefix(path, "/"), "/", "-")
 		if base == "" {
 			base = "index"
 		}
@@ -81,7 +81,11 @@ func TestMarkdownIsCanonical(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		for _, requestPath := range []string{path, "/" + base + ".md"} {
+		explicit := path + ".md"
+		if path == "/" {
+			explicit = "/index.md"
+		}
+		for _, requestPath := range []string{path, explicit} {
 			r := httptest.NewRequest("GET", requestPath, nil)
 			r.Header.Set("Accept", "text/markdown")
 			w := httptest.NewRecorder()
@@ -94,14 +98,86 @@ func TestMarkdownIsCanonical(t *testing.T) {
 }
 func TestDocsLinks(t *testing.T) {
 	h := handler("..")
-	link := regexp.MustCompile(`\]\((/[^)#]+)(?:#[^)]*)?\)`)
-	for _, file := range []string{"index", "get-started", "guide", "reference", "examples"} {
+	link := regexp.MustCompile(`\]\((/[^)#]+)(?:#([^)]*))?\)`)
+	for _, file := range []string{"index", "get-started", "guide", "reference", "reference-html", "reference-cfs", "reference-runtime", "reference-plugins", "examples"} {
 		b, _ := os.ReadFile("content/" + file + ".md")
 		for _, m := range link.FindAllSubmatch(b, -1) {
 			w := httptest.NewRecorder()
 			h.ServeHTTP(w, httptest.NewRequest("GET", string(m[1]), nil))
 			if w.Code != 200 {
 				t.Errorf("%s -> %s: %d", file, m[1], w.Code)
+			}
+			if len(m[2]) > 0 && !strings.Contains(w.Body.String(), `id="`+string(m[2])+`"`) {
+				t.Errorf("%s -> %s#%s: missing anchor", file, m[1], m[2])
+			}
+		}
+	}
+}
+
+func TestReferenceNavigationAndBookmarks(t *testing.T) {
+	h := handler("..")
+	old := httptest.NewRecorder()
+	h.ServeHTTP(old, httptest.NewRequest("GET", "/reference", nil))
+	for _, id := range []string{"html-directives", "event-flags", "request-directives", "cfs", "state-functions-and-selectors", "dom-directives", "engine", "initialization-and-teardown", "globals-and-extensions", "html-and-requests", "scope-and-reactivity", "plugins"} {
+		if !strings.Contains(old.Body.String(), `id="`+id+`"`) {
+			t.Errorf("missing old reference bookmark %s", id)
+		}
+	}
+	for _, section := range []string{"html", "cfs", "runtime", "plugins"} {
+		path := "/reference/" + section
+		w := httptest.NewRecorder()
+		h.ServeHTTP(w, httptest.NewRequest("GET", path, nil))
+		if !strings.Contains(w.Body.String(), `href="`+path+`" aria-current="page"`) {
+			t.Errorf("missing active reference navigation %s", path)
+		}
+		slash := httptest.NewRecorder()
+		h.ServeHTTP(slash, httptest.NewRequest("GET", path+"/", nil))
+		if slash.Code != 308 || slash.Header().Get("Location") != path {
+			t.Errorf("bad reference trailing slash %s", path)
+		}
+	}
+	logo := httptest.NewRecorder()
+	h.ServeHTTP(logo, httptest.NewRequest("GET", "/assets/logo.svg", nil))
+	if logo.Code != 200 || !strings.Contains(logo.Body.String(), `viewBox="0 0 3500 2730.02"`) {
+		t.Fatal("original logo unavailable")
+	}
+}
+
+func TestContextualSidebar(t *testing.T) {
+	h := handler("..")
+	paths := []string{"/", "/get-started", "/guide", "/reference", "/reference/html", "/reference/cfs", "/reference/runtime", "/reference/plugins", "/examples"}
+	for _, name := range examples {
+		paths = append(paths, "/play/"+name)
+	}
+	for _, path := range paths {
+		w := httptest.NewRecorder()
+		h.ServeHTTP(w, httptest.NewRequest("GET", path, nil))
+		body := w.Body.String()
+		reference := path == "/reference" || strings.HasPrefix(path, "/reference/")
+		example := path == "/examples" || strings.HasPrefix(path, "/play/")
+		if strings.Contains(body, `class="sidebar-group" role="navigation" aria-label="Reference"`) != reference {
+			t.Errorf("%s: wrong reference submenu visibility", path)
+		}
+		if strings.Contains(body, `class="sidebar-group examples-menu" role="navigation" aria-label="Examples"`) != example {
+			t.Errorf("%s: wrong examples submenu visibility", path)
+		}
+		if path != "/" && !strings.Contains(body, "THE DOCUMENTATION") {
+			t.Errorf("%s: missing main documentation navigation", path)
+		}
+		if example {
+			for _, name := range examples {
+				if !strings.Contains(body, `href="/play/`+name+`"`) {
+					t.Errorf("%s: missing example link %s", path, name)
+				}
+			}
+		}
+		if strings.HasPrefix(path, "/play/") {
+			if !strings.Contains(body, `href="`+path+`" aria-current="page"`) {
+				t.Errorf("%s: current example not highlighted", path)
+			}
+			name := strings.TrimPrefix(path, "/play/")
+			if !strings.Contains(body, `src="/run/`+name+`"`) {
+				t.Errorf("%s: missing isolated live demo", path)
 			}
 		}
 	}

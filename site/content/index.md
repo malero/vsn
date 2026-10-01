@@ -10,9 +10,7 @@ Keep your server-rendered pages. Add a small CFS behavior, mount VSN once, and l
 
 ## From the Developer
 
-“We know how much developers love CSS, so building CFS to program website functionality akin to CSS was a no-brainer!”
-
-“The syntax is intuitive once you stop thinking about it.”
+“We know how much developers love CSS, so building a language to program website functionality akin to CSS was a no-brainer. You're welcome!”
 
 ## A small framework. A short reading list.
 

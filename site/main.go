@@ -25,13 +25,18 @@ var site embed.FS
 var markdown = goldmark.New(goldmark.WithExtensions(extension.GFM), goldmark.WithParserOptions(parser.WithAutoHeadingID()))
 var layout = template.Must(template.ParseFS(site, "layout.html"))
 
-type page struct {
-	Title, Path, Source string
-	Body                template.HTML
-	Home                bool
+type navItem struct {
+	Path, Label string
 }
 
-var titles = map[string]string{"/": "VSN.js", "/get-started": "Get Started", "/guide": "Guide", "/reference": "Reference", "/examples": "Examples"}
+type page struct {
+	Title, Path, Source       string
+	Body                      template.HTML
+	Home, Reference, Examples bool
+	ExampleLinks              []navItem
+}
+
+var titles = map[string]string{"/": "VSN.js", "/get-started": "Get Started", "/guide": "Guide", "/reference": "Reference", "/reference/html": "HTML attributes", "/reference/cfs": "CFS", "/reference/runtime": "Runtime API", "/reference/plugins": "Plugins", "/examples": "Examples"}
 var examples = []string{"counter-toggle", "tabs", "todo", "kanban", "product-filters", "modal", "tooltip", "dropdown", "form-validation", "server-request", "fragment-lifecycle", "nested-list", "async-search", "toast-notifications", "accessible-table", "templates", "bindings"}
 
 func knownExample(s string) bool {
@@ -78,6 +83,15 @@ func quality(accept, kind string) float64 {
 	return q
 }
 func render(w http.ResponseWriter, p page, status int) {
+	p.Reference = p.Path == "/reference" || strings.HasPrefix(p.Path, "/reference/")
+	p.Examples = p.Path == "/examples" || strings.HasPrefix(p.Path, "/play/")
+	if p.Examples {
+		for _, name := range examples {
+			label := strings.ReplaceAll(name, "-", " ")
+			label = strings.ToUpper(label[:1]) + label[1:]
+			p.ExampleLinks = append(p.ExampleLinks, navItem{Path: "/play/" + name, Label: label})
+		}
+	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(status)
 	if err := layout.Execute(w, p); err != nil {
@@ -134,7 +148,7 @@ func handler(root string) http.Handler {
 			if knownExample(name) {
 				source, _ := os.ReadFile(filepath.Join(root, "examples", name+".html"))
 				b := fmt.Sprintf(`<p class="eyebrow">COOKBOOK / LIVE EXAMPLE</p><h1>%s</h1><p>Real markup. Real VSN. Try it below.</p><p><a href="/examples">← All examples</a> · <a href="/run/%s" target="_blank" rel="noopener">Open full screen ↗</a></p><iframe title="%s live example" src="/run/%s"></iframe><details><summary>View example source</summary><pre><code>%s</code></pre></details>`, strings.ReplaceAll(name, "-", " "), name, name, name, template.HTMLEscapeString(string(source)))
-				render(w, page{Title: strings.ReplaceAll(name, "-", " "), Path: "/examples", Body: template.HTML(b)}, 200)
+				render(w, page{Title: strings.ReplaceAll(name, "-", " "), Path: path, Body: template.HTML(b)}, 200)
 				return
 			}
 		}
@@ -150,7 +164,7 @@ func handler(root string) http.Handler {
 			render(w, page{Title: "Page not found", Body: template.HTML(`<p class="eyebrow">404</p><h1>This selector matches nothing.</h1><p>The page may have moved, or never existed. Both are valid states.</p><a class="button" href="/get-started">Get started →</a>`)}, 404)
 			return
 		}
-		file := strings.TrimPrefix(path, "/")
+		file := strings.ReplaceAll(strings.TrimPrefix(path, "/"), "/", "-")
 		if file == "" {
 			file = "index"
 		}
@@ -179,7 +193,11 @@ func handler(root string) http.Handler {
 			http.Error(w, "Rendering failed", 500)
 			return
 		}
-		render(w, page{Title: title, Path: path, Source: "/" + file + ".md", Body: template.HTML(body.String()), Home: path == "/"}, 200)
+		source := path + ".md"
+		if path == "/" {
+			source = "/index.md"
+		}
+		render(w, page{Title: title, Path: path, Source: source, Body: template.HTML(body.String()), Home: path == "/"}, 200)
 	})
 	return mux
 }
@@ -200,6 +218,10 @@ func main() {
 	root := flag.String("root", ".", "repository root")
 	flag.Parse()
 	s := &http.Server{Addr: *addr, Handler: handler(*root), ReadHeaderTimeout: 5 * time.Second}
-	log.Printf("VSN website: http://localhost%s", *addr)
+	urlAddr := *addr
+	if strings.HasPrefix(urlAddr, ":") {
+		urlAddr = "localhost" + urlAddr
+	}
+	log.Printf("VSN website: http://%s", urlAddr)
 	log.Fatal(s.ListenAndServe())
 }

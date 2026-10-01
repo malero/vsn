@@ -57,7 +57,13 @@ Save this as an HTML page and serve it over HTTP alongside the browser build:
 4. `vsn-on:click` runs CFS when a button is clicked
 5. Assignments update dependent bindings; `vsn-show` toggles the native `hidden` state
 
-The module's `auto-mount` setup reads `script[type="text/vsn"]` blocks and mounts the document body. It can also fetch CFS from a script's `src` attribute. Put plugin modules before the core module when using [plugins](/reference#plugins).
+The module's `auto-mount` setup reads `script[type="text/vsn"]` blocks and mounts the document body. It can also fetch CFS from a script's `src` attribute. To keep behavior source in an external `.vsn` file, replace the inline behavior script with:
+
+```html
+<script type="text/vsn" src="/path/to/some.vsn"></script>
+```
+
+Keep the runtime module with `auto-mount`. The file contains plain CFS, without script tags. VSN fetches it before mounting; a nonempty `src` takes precedence over inline text. The extension is a naming convention, so `.cfs` also works. See [CFS source loading](/reference/cfs#inline-scripts-and-external-vsn-files) for ordering and error behavior. Put plugin modules before the core module when using [plugins](/reference/plugins).
 
 CFS is a small JavaScript-like language with CSS-like selectors. It is not JavaScript inside a differently named script tag. One particularly useful detail: hyphenated names are valid identifiers, so subtraction needs whitespace. Write `count - 1`, not `count-1`.
 
